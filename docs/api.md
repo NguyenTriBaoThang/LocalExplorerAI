@@ -127,3 +127,11 @@ Sourced catalog additions:
 Itinerary planning accepts optional origin/destination latitude/longitude and labels, plus `locked_poi_ids`. When a destination is supplied, the solver includes the last route leg in its hard return-deadline check; responses include `estimated_return_at` and the return deadline. The planner UI currently selects origin/destination from known catalog POIs; it does not geocode free-form addresses.
 
 See [authentication and local E5 setup](auth-and-search-setup.md) for Google OAuth settings, the local-only model install switch and demo-account seeding behavior.
+
+## Operational readiness and monitoring
+
+- `GET /health` is liveness only; `GET /ready` checks PostgreSQL and Redis when production rate limiting is enabled.
+- `GET /api/ops/status`, `/api/ops/jobs`, `/api/ops/events`, and `/api/ops/notifications` require administrator authentication. Notification monitor payloads omit destination email and message body.
+- Booking request/decision transitions and provider slot cancellations enter the SMTP outbox when SMTP is configured. The background `worker` delivers and retries; without SMTP, email is reported disabled and existing in-app cancellation notices remain.
+- API request logs include `X-Request-ID`; booking/audit/event records include the same identifier for cross-checking. No query strings, bodies, or credentials are written to request logs.
+- Production Compose enables Redis-backed rate limits. Set `TRUSTED_PROXY_IPS` only to trusted proxy IP/CIDR ranges; see [production operations](operations.md) for backups, restore drills, and release checks.

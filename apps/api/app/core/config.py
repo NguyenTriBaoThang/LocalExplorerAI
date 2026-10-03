@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator
 
 
 from pathlib import Path
@@ -12,6 +13,22 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "sqlite:///./local_explorer.sqlite3"
     redis_url: str = "redis://localhost:6379/0"
+    rate_limit_enabled: bool = False
+    rate_limit_general_per_minute: int = Field(default=120, ge=1, le=10000)
+    rate_limit_auth_per_minute: int = Field(default=10, ge=1, le=10000)
+    rate_limit_chat_per_minute: int = Field(default=20, ge=1, le=10000)
+    rate_limit_prefix: str = "local-explorer:rl"
+    trusted_proxy_ips: str = ""
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_from_name: str = "Local Explorer AI"
+    smtp_starttls: bool = True
+    smtp_use_ssl: bool = False
+    notification_max_attempts: int = Field(default=5, ge=1, le=20)
+    notification_poll_seconds: float = Field(default=5.0, ge=0.5, le=300.0)
     cors_origins: str = "http://localhost:5173"
     routing_provider: str = "goong"
     geocoding_provider: str = "goong"
@@ -44,6 +61,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
 
+    @model_validator(mode="after")
+    def validate_smtp_transport(self):
+        if self.smtp_use_ssl and self.smtp_starttls:
+            raise ValueError("Set only one SMTP transport mode: SMTP_USE_SSL or SMTP_STARTTLS.")
+        return self
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
@@ -55,6 +78,10 @@ class Settings(BaseSettings):
             and self.openai_base_url.strip()
             and self.openai_model.strip()
         )
+
+    @property
+    def email_is_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from_email)
 
 
 @lru_cache

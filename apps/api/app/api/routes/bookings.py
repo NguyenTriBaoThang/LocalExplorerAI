@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db, require_roles
+from app.core.request_context import current_request_id
 from app.models.entities import (
     AuditLog,
     Booking,
@@ -21,6 +22,7 @@ from app.models.entities import (
 )
 from app.schemas.booking import BookingCancelRequest, BookingCancellationDecisionRequest, BookingDecisionRequest, BookingHoldRequest
 from app.services.evidence_service import entity_is_operationally_verified, slot_is_operationally_verified
+from app.services.notifications import queue_booking_status
 
 router = APIRouter(tags=["bookings and payments"])
 _LIVE_STATUSES = ("pending_provider", "awaiting_payment", "confirmed", "cancellation_requested", "refund_pending")
@@ -39,15 +41,19 @@ def _aware(value: datetime | None) -> datetime | None:
 
 
 def _event(db: Session, booking: Booking, actor: User | None, event_type: str, old_status: str | None, details: dict | None = None) -> None:
+    event_details = dict(details or {})
+    if request_id := current_request_id.get():
+        event_details["request_id"] = request_id
     db.add(BookingEvent(
         id=str(uuid4()), booking_id=booking.id, actor_user_id=actor.id if actor else None,
         event_type=event_type, from_status=old_status, to_status=booking.status,
-        details=details or {}, created_at=_now(),
+        details=event_details, created_at=_now(),
     ))
+    queue_booking_status(db, booking, event_type)
     if actor:
         db.add(AuditLog(
             id=str(uuid4()), actor_id=actor.id, action=f"booking.{event_type}",
-            target_type="booking", target_id=booking.id, details=details or {}, created_at=_now(),
+            target_type="booking", target_id=booking.id, details=event_details, created_at=_now(),
         ))
 
 

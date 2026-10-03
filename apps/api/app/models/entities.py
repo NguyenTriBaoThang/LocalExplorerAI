@@ -267,6 +267,55 @@ class BookingEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
+class NotificationDelivery(Base):
+    """Durable email outbox row with retry state and idempotency key."""
+
+    __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        CheckConstraint("channel IN ('email')", name="ck_notification_channel"),
+        CheckConstraint("status IN ('queued', 'sending', 'retry', 'sent', 'failed')", name="ck_notification_status"),
+        CheckConstraint("attempts >= 0", name="ck_notification_attempts"),
+        UniqueConstraint("idempotency_key", name="uq_notification_idempotency_key"),
+        Index("ix_notification_queue", "status", "available_at", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    idempotency_key: Mapped[str] = mapped_column(String(128))
+    recipient_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    recipient_email: Mapped[str] = mapped_column(String(254))
+    channel: Mapped[str] = mapped_column(String(16), default="email")
+    event_id: Mapped[str | None] = mapped_column(ForeignKey("events.id", ondelete="SET NULL"), nullable=True, index=True)
+    booking_id: Mapped[str | None] = mapped_column(ForeignKey("bookings.id", ondelete="SET NULL"), nullable=True, index=True)
+    subject: Mapped[str] = mapped_column(String(255))
+    body_text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="queued", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class OpsJobRun(Base):
+    """Observable execution record for worker jobs (not application request logs)."""
+
+    __tablename__ = "ops_job_runs"
+    __table_args__ = (
+        CheckConstraint("status IN ('running', 'completed', 'failed')", name="ck_ops_job_status"),
+        Index("ix_ops_job_name_started", "job_name", "started_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    job_name: Mapped[str] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="running", index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_summary: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
 class IntentSimilarity(Base):
     __tablename__ = "intent_similarities"
     __table_args__ = (

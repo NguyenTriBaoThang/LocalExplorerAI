@@ -35,6 +35,21 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/local_explorer}
       REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-false}
+      RATE_LIMIT_GENERAL_PER_MINUTE: ${RATE_LIMIT_GENERAL_PER_MINUTE:-120}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+      RATE_LIMIT_CHAT_PER_MINUTE: ${RATE_LIMIT_CHAT_PER_MINUTE:-20}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Local Explorer AI}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+      NOTIFICATION_POLL_SECONDS: ${NOTIFICATION_POLL_SECONDS:-5}
       CORS_ORIGINS: http://localhost:${WEB_PORT:-5173}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-goong}
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-goong}
@@ -74,6 +89,40 @@ services:
     volumes:
       - ./models:/models:ro
     command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  worker:
+    build:
+      context: ./apps/api
+      args:
+        INSTALL_E5: ${INSTALL_E5:-false}
+        INSTALL_ML: ${INSTALL_ML:-false}
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/local_explorer}
+      REDIS_URL: redis://redis:6379/0
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Local Explorer AI}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+      NOTIFICATION_POLL_SECONDS: ${NOTIFICATION_POLL_SECONDS:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["python", "-m", "scripts.worker"]
 
   web:
     build:

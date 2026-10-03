@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session, joinedload
 from geoalchemy2.elements import WKTElement
 
 from app.api.dependencies import get_db, require_roles
-from app.models.entities import AuditLog, Booking, BookingEvent, Event, Evidence, Experience, ExperienceSlot, ItineraryStop, PaymentTransaction, POI, Provider, User
+from app.core.request_context import current_request_id
+from app.models.entities import AuditLog, Booking, BookingEvent, Event, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PaymentTransaction, POI, Provider, User
 from app.schemas.management import EvidenceCreateRequest, ExperienceDraftRequest, POIDraftRequest, SlotCreateRequest, SlotUpdateRequest
 from app.services.auth_service import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, target_revision, utc_now
+from app.services.notifications import enqueue_email, queue_booking_status
 
 router = APIRouter(prefix="/api/provider", tags=["provider portal"])
 
@@ -23,7 +25,10 @@ def _provider(db: Session, user: User) -> Provider:
 
 
 def _audit(db: Session, actor: User, action: str, target_type: str, target_id: str, details: dict | None = None) -> None:
-    db.add(AuditLog(id=str(uuid4()), actor_id=actor.id, action=action, target_type=target_type, target_id=target_id, details=details or {}, created_at=datetime.now(timezone.utc)))
+    audit_details = dict(details or {})
+    if request_id := current_request_id.get():
+        audit_details["request_id"] = request_id
+    db.add(AuditLog(id=str(uuid4()), actor_id=actor.id, action=action, target_type=target_type, target_id=target_id, details=audit_details, created_at=datetime.now(timezone.utc)))
 
 
 @router.get("/me")
@@ -297,8 +302,20 @@ def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(r
         slot.available_reported = payload.available_reported
     if slot.status == "cancelled" and previous_status != "cancelled":
         slot.available_reported = 0
-        db.add(Event(event_type="SLOT_CANCELLED", target_type="experience_slot", target_id=slot.id,
-                     status="active", event_metadata={"source": "provider_portal", "provider_id": provider.id}))
+        slot_event = Event(id=str(uuid4()), event_type="SLOT_CANCELLED", target_type="experience_slot", target_id=slot.id,
+                           status="active", event_metadata={"source": "provider_portal", "provider_id": provider.id,
+                                                              "request_id": current_request_id.get()})
+        db.add(slot_event)
+        db.flush()
+        affected_users = db.scalars(select(User).join(Itinerary, Itinerary.user_id == User.id).join(
+            ItineraryStop, ItineraryStop.itinerary_id == Itinerary.id
+        ).where(ItineraryStop.slot_id == slot.id, ItineraryStop.status == "planned").distinct()).all()
+        for traveler in affected_users:
+            enqueue_email(
+                db, idempotency_key=f"slot-cancelled:{slot_event.id}:user:{traveler.id}", recipient=traveler,
+                event_id=slot_event.id, subject="Local Explorer AI: ca trong lich trinh da bi huy",
+                body=f"Xin chao {traveler.display_name or ''},\n\nMot ca trong lich trinh cua ban vua bi co so huy. Hay dang nhap de xem canh bao va dieu chinh lich.\nMa su kien: {slot_event.id}",
+            )
         for booking in active_reservations:
             old_booking_status = booking.status
             if booking.status in {"pending_provider", "awaiting_payment"}:
@@ -321,6 +338,7 @@ def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(r
                 details={"slot_id": slot.id, "refund_requires_configured_gateway": booking.status == "cancellation_requested"},
                 created_at=now,
             ))
+            queue_booking_status(db, booking, event_type)
     elif previous_status == "cancelled" and slot.status != "cancelled":
         active_events = db.scalars(select(Event).where(Event.target_id == slot.id, Event.event_type == "SLOT_CANCELLED", Event.status == "active")).all()
         for event in active_events:

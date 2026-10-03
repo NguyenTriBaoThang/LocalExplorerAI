@@ -19,7 +19,22 @@ services:
     environment:
       APP_ENV: production
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the PostgreSQL/PostGIS service}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL for shared rate limits and worker heartbeat}
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_GENERAL_PER_MINUTE: ${RATE_LIMIT_GENERAL_PER_MINUTE:-120}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+      RATE_LIMIT_CHAT_PER_MINUTE: ${RATE_LIMIT_CHAT_PER_MINUTE:-20}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Local Explorer AI}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+      NOTIFICATION_POLL_SECONDS: ${NOTIFICATION_POLL_SECONDS:-5}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost}
       ROUTING_PROVIDER: ${ROUTING_PROVIDER:-goong}
       GEOCODING_PROVIDER: ${GEOCODING_PROVIDER:-goong}
@@ -43,3 +58,33 @@ services:
     restart: always
     volumes:
       - ./models:/models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to PostgreSQL}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL for shared rate limits and worker heartbeat}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Local Explorer AI}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+      NOTIFICATION_POLL_SECONDS: ${NOTIFICATION_POLL_SECONDS:-5}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+    command: ["python", "-m", "scripts.worker"]
