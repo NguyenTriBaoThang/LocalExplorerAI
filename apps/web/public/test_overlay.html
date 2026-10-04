@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Goong JS + Three.js WebGL2 Overlay Test</title>
+<link href="https://cdn.jsdelivr.net/npm/@goongmaps/goong-js@1.0.9/dist/goong-js.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@goongmaps/goong-js@1.0.9/dist/goong-js.js"></script>
+<script src="https://unpkg.com/three@0.186.1/build/three.min.js"></script>
+<style>
+body { margin: 0; padding: 0; overflow: hidden; background: #111; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+#three-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<canvas id="three-canvas"></canvas>
+
+<script>
+goongjs.accessToken = '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU';
+var map = new goongjs.Map({
+    container: 'map',
+    style: 'https://tiles.goong.io/assets/goong_map_web.json',
+    center: [106.699018, 10.779785],
+    zoom: 17.6,
+    pitch: 60,
+    bearing: 0
+});
+
+var threeCanvas = document.getElementById('three-canvas');
+var renderer = new THREE.WebGLRenderer({
+    canvas: threeCanvas,
+    alpha: true,
+    antialias: true
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+var scene = new THREE.Scene();
+var camera = new THREE.Camera();
+
+var ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambientLight);
+var dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+dirLight.position.set(50, 100, 50).normalize();
+scene.add(dirLight);
+
+// Test cube at Notre Dame Cathedral
+var geo = new THREE.BoxGeometry(1, 1, 1);
+var mat = new THREE.MeshNormalMaterial();
+var cube = new THREE.Mesh(geo, mat);
+cube.position.y = 0.5; // bottom at y=0
+scene.add(cube);
+
+function renderThree() {
+    if (!map || !map.transform) return;
+    
+    var coord = goongjs.MercatorCoordinate.fromLngLat([106.699018, 10.779785], 0);
+    var meterUnits = coord.meterInMercatorCoordinateUnits();
+    var modelScale = meterUnits * 40; // 40 meters size
+    
+    var rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    var rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), 0);
+    
+    var matrix = map.transform.customLayerMatrix();
+    var m = new THREE.Matrix4().fromArray(matrix);
+    var l = new THREE.Matrix4()
+        .makeTranslation(coord.x, coord.y, coord.z)
+        .scale(new THREE.Vector3(modelScale, -modelScale, modelScale))
+        .multiply(rotationX)
+        .multiply(rotationY);
+        
+    camera.projectionMatrix = m.multiply(l);
+    renderer.render(scene, camera);
+}
+
+map.on('render', renderThree);
+map.on('move', renderThree);
+map.on('resize', function() {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderThree();
+});
+
+renderThree();
+console.log('Overlay initialized successfully!');
+</script>
+</body>
+</html>
