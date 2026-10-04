@@ -668,9 +668,9 @@ flowchart TB
 | **Đa ngôn ngữ (i18n)** | Custom i18n Provider & LanguageSwitcher | Hỗ trợ song ngữ Tiếng Việt (mặc định) và English toàn diện |
 | **Bản đồ & Định tuyến** | Goong API (Directions & Geocoding), Leaflet, CartoDB | Bản đồ CartoDB Voyager/Dark Matter, tính ETA và vẽ geometry tuyến đường thật |
 | **Cổng thanh toán** | VNPay Gateway & Ví MoMo | Tích hợp giữ chỗ 15 phút, chữ ký HMAC-SHA512 (VNPay) & HMAC-SHA256 (MoMo), IPN an toàn |
-| **Backend API** | Python 3.12, FastAPI 0.115, Pydantic v2 | Xây dựng RESTful API hiệu năng cao, xác thực dữ liệu chặt chẽ |
+| **Backend API** | Python 3.12, FastAPI 0.142+, Pydantic v2 | Xây dựng RESTful API hiệu năng cao, xác thực dữ liệu chặt chẽ |
 | **Cơ sở dữ liệu** | PostgreSQL 16, PostGIS 3.4, SQLAlchemy 2.0 | Lưu trữ thực thể địa lý, truy vấn không gian `geography(POINT)` |
-| **Database Migration** | Alembic | Quản lý 9 phiên bản lược đồ cơ sở dữ liệu (`0001_initial` -> `0009_integration_secrets`) |
+| **Database Migration** | Alembic | Quản lý 10 phiên bản lược đồ cơ sở dữ liệu (`0001_initial` -> `0010_place_import_staging`) |
 | **Bảo mật & Mã hóa** | Fernet (AES-128-CBC), HTTP-only Cookies, Google OAuth PKCE | Mã hóa khóa tích hợp động, session an toàn và đăng nhập 1-chạm |
 | **Vận hành & Hàng đợi** | Transactional Email Outbox Worker, Redis Limiter | Xử lý email thông báo đặt chỗ, hàng đợi nền, chống gửi trùng lặp |
 | **Học máy Cục bộ (ML)** | XGBoost 2.1, Scikit-learn 1.5, NumPy, Pandas | Mô hình xếp hạng trải nghiệm NDCG@5 = 0.9516 và mô hình rủi ro ngập lụt |
@@ -1001,27 +1001,28 @@ LoaclExplorerAI/
 │   ├── api/                     # Backend FastAPI, SQLAlchemy, PostGIS & ML
 │   │   ├── app/
 │   │   │   ├── adapters/        # LLM Provider Adapters (OpenAI, Gemini compatible)
-│   │   │   ├── api/routes/      # 12 modules định tuyến API (admin, ai, auth, bookings, catalog, chat, health, ml, ops, planner, provider, routing)
+│   │   │   ├── api/routes/      # 14 modules định tuyến API (admin, admin_bot, ai, auth, bookings, catalog, chat, health, ml, models_3d, ops, planner, provider, routing)
 │   │   │   ├── core/            # Config, Enums, Security & Fernet Secrets Vault
 │   │   │   ├── db/              # Database Engine & Session Management
-│   │   │   ├── models/          # SQLAlchemy Entities (User, Provider, POI, Slot, Booking, Payment...)
+│   │   │   ├── models/          # SQLAlchemy Entities (User, Provider, POI, Slot, Booking, Payment, PlaceImportStaging...)
 │   │   │   ├── prompts/         # Versioned Prompt Catalog v3_0_0 (manifest.json)
 │   │   │   ├── repositories/    # Data Access Layer
 │   │   │   ├── schemas/         # Pydantic Schemas (AI, Auth, Bookings, ML, Planner, Routing)
-│   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, Goong...)
-│   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0009_integration_secrets)
+│   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, BotService...)
+│   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0010_place_import_staging)
 │   │   ├── scripts/             # Scripts tiện ích: seed_db.py, worker.py, download_e5_model.py
 │   │   ├── tests/               # Bộ test tự động với pytest (56+ test cases)
 │   │   └── README.md            # Tài liệu chi tiết hướng dẫn Backend API
+│   ├── models_3d/               # Dữ liệu mô hình 3D landmarks
 │   └── web/                     # Frontend React 18 + TypeScript + Three.js + Leaflet
 │       ├── src/
 │       │   ├── api/             # API Client tích hợp Offline Mock Engine Fallback
 │       │   ├── auth.tsx         # Auth Context, RoleHome, CustomerRoute & RoleRoute
-│       │   ├── components/3d/   # Canvas 3D City WebGL & Thẻ 3D TiltCard
+│       │   ├── components/3d/   # Canvas 3D City WebGL, Map3DLandmarkViewer (GLB loader) & Thẻ 3D TiltCard
 │       │   ├── components/map/  # MapAdapter với CartoDB Voyager / Dark Matter & Goong geometry
 │       │   ├── layouts/         # AppLayout kính mờ, LanguageSwitcher & Theme toggle
 │       │   ├── locales/         # Bộ từ điển song ngữ Tiếng Việt & Tiếng Anh (vi.ts, en.ts)
-│       │   ├── pages/           # 13 trang ứng dụng (Home, Chat, Explore, Planner, Itinerary, Portals...)
+│       │   ├── pages/           # 14 trang ứng dụng (Home, Map3D, Chat, Explore, Planner, Itinerary, Portals...)
 │       │   └── styles.css       # Design tokens 3D, hiệu ứng kính mờ & Warm Light / Dark Theme
 │       └── README.md            # Tài liệu chi tiết hướng dẫn Frontend Web
 ├── assets/                      # Hình ảnh đồ họa, banner, logo, screenshots
@@ -1029,6 +1030,7 @@ LoaclExplorerAI/
 │   ├── experimental/            # flood_training_weak_labels.csv & tài liệu phương pháp
 │   ├── raw/                     # hcmc_flood_reports_2002_2026.csv gốc
 │   └── README.md                # Tài liệu chi tiết về các tập dữ liệu
+├── models_3d/                   # Dữ liệu hiệu chuẩn vị trí, góc xoay và tỉ lệ thực tế các mô hình 3D Landmark (calibration.json)
 ├── docs/                        # Tài liệu kỹ thuật chuyên sâu
 │   ├── api.md                   # Đặc tả kỹ thuật REST API chi tiết
 │   ├── architecture.md          # Đặc tả kiến trúc hệ thống
