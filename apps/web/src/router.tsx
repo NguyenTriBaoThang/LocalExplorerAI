@@ -13,12 +13,14 @@ import { AdminPage } from './pages/AdminPage'
 import { SharedItineraryPage } from './pages/SharedItineraryPage'
 import { ComparePage } from './pages/ComparePage'
 import { ChatPage } from './pages/ChatPage'
+import { Map3DPage } from './pages/Map3DPage'
 import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
 
 export const router = createBrowserRouter([{
   element: <AppLayout />,
   children: [
     { path: '/', element: <RoleHome><HomePage /></RoleHome> },
+    { path: '/map-3d', element: <Map3DPage /> },
     { element: <CustomerRoute />, children: [
       { path: '/explore', element: <ExplorePage /> },
       { path: '/chat', element: <ChatPage /> },

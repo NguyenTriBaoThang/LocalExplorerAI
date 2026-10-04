@@ -30,13 +30,14 @@ export function AppLayout() {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const links = loading ? [] : user?.role === 'admin'
-    ? [{ to: '/admin', label: t('nav.admin') }]
+    ? [{ to: '/admin', label: t('nav.admin') }, { to: '/map-3d', label: t('nav.map3d') }]
     : user?.role === 'provider'
-      ? [{ to: '/provider-portal', label: t('nav.providerPortal') }]
+      ? [{ to: '/provider-portal', label: t('nav.providerPortal') }, { to: '/map-3d', label: t('nav.map3d') }]
       : [
           { to: '/chat', label: t('nav.chat') },
           { to: '/explore', label: t('nav.explore') },
           { to: '/planner', label: t('nav.planner') },
+          { to: '/map-3d', label: t('nav.map3d') },
           { to: '/provider', label: t('nav.provider') },
           { to: '/about', label: t('nav.about') },
         ]
