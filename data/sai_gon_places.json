@@ -1,0 +1,3011 @@
+[
+  {
+    "id": "sai-gon-dinh-oc-lap",
+    "name": "Dinh Độc Lập",
+    "kind": "tham-quan",
+    "lat": 10.777128209000068,
+    "lon": 106.69540061000004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Dinh Độc Lập tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-bao-tang-chung-tich-chien-tranh",
+    "name": "Bảo tàng Chứng tích Chiến tranh",
+    "kind": "tham-quan",
+    "lat": 10.7795106,
+    "lon": 106.6920916,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Bảo tàng Chứng tích Chiến tranh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-nha-tho-uc-ba-sai-gon",
+    "name": "Nhà thờ Đức Bà Sài Gòn",
+    "kind": "tham-quan",
+    "lat": 10.779761528000051,
+    "lon": 106.69907017200006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Nhà thờ Đức Bà Sài Gòn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-buu-ien-trung-tam-sai-gon",
+    "name": "Bưu điện Trung tâm Sài Gòn",
+    "kind": "tham-quan",
+    "lat": 10.7799129,
+    "lon": 106.699902,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Bưu điện Trung tâm Sài Gòn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cho-ben-thanh",
+    "name": "Chợ Bến Thành",
+    "kind": "tham-quan",
+    "lat": 10.77253621500006,
+    "lon": 106.69798153800008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Chợ Bến Thành tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-pho-i-bo-nguyen-hue",
+    "name": "Phố đi bộ Nguyễn Huệ",
+    "kind": "tham-quan",
+    "lat": 10.774097806000043,
+    "lon": 106.70363123800007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Phố đi bộ Nguyễn Huệ tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-tuong-chu-tich-ho-chi-minh",
+    "name": "Tượng Chủ tịch Hồ Chí Minh",
+    "kind": "tham-quan",
+    "lat": 10.7725381,
+    "lon": 106.6662027,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Tượng Chủ tịch Hồ Chí Minh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-nha-hat-thanh-pho-ho-chi-minh",
+    "name": "Nhà hát Thành phố Hồ Chí Minh",
+    "kind": "tham-quan",
+    "lat": 10.776714870000035,
+    "lon": 106.70322045500006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Nhà hát Thành phố Hồ Chí Minh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-uong-sach-nguyen-van-binh",
+    "name": "Đường sách Nguyễn Văn Bình",
+    "kind": "tham-quan",
+    "lat": 10.780533177000052,
+    "lon": 106.69963783300005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Đường sách Nguyễn Văn Bình tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bao-tang-my-thuat-thanh-pho-ho-chi-minh",
+    "name": "Bảo tàng Mỹ thuật Thành phố Hồ Chí Minh",
+    "kind": "tham-quan",
+    "lat": 10.769667426000069,
+    "lon": 106.69945498400006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Bảo tàng Mỹ thuật Thành phố Hồ Chí Minh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bao-tang-thanh-pho-ho-chi-minh",
+    "name": "Bảo tàng Thành phố Hồ Chí Minh",
+    "kind": "tham-quan",
+    "lat": 10.775959490000048,
+    "lon": 106.69964111800005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Bảo tàng Thành phố Hồ Chí Minh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bao-tang-lich-su-thanh-pho-ho-chi-minh",
+    "name": "Bảo tàng Lịch sử Thành phố Hồ Chí Minh",
+    "kind": "tham-quan",
+    "lat": 10.788053453000032,
+    "lon": 106.70481120000005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Bảo tàng Lịch sử Thành phố Hồ Chí Minh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bao-tang-phu-nu-nam-bo",
+    "name": "Bảo tàng Phụ nữ Nam Bộ",
+    "kind": "tham-quan",
+    "lat": 10.783870559000036,
+    "lon": 106.68785084800004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Bảo tàng Phụ nữ Nam Bộ tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bao-tang-ton-uc-thang",
+    "name": "Bảo tàng Tôn Đức Thắng",
+    "kind": "tham-quan",
+    "lat": 10.777430969000022,
+    "lon": 106.70638959800004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Bảo tàng Tôn Đức Thắng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-thao-cam-vien-sai-gon",
+    "name": "Thảo Cầm Viên Sài Gòn",
+    "kind": "tham-quan",
+    "lat": 10.787944526000047,
+    "lon": 106.70572826200004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Thảo Cầm Viên Sài Gòn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cong-vien-tao-an",
+    "name": "Công viên Tao Đàn",
+    "kind": "tham-quan",
+    "lat": 10.774505713000053,
+    "lon": 106.69167653800008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Công viên Tao Đàn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cong-vien-23-thang-9",
+    "name": "Công viên 23 Tháng 9",
+    "kind": "tham-quan",
+    "lat": 10.767387118000045,
+    "lon": 106.68988664800008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Công viên 23 Tháng 9 tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cong-vien-le-van-tam",
+    "name": "Công viên Lê Văn Tám",
+    "kind": "tham-quan",
+    "lat": 10.788287320000052,
+    "lon": 106.69395143800006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Công viên Lê Văn Tám tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cong-vien-ben-bach-ang",
+    "name": "Công viên Bến Bạch Đằng",
+    "kind": "tham-quan",
+    "lat": 10.776925602000063,
+    "lon": 106.70701147900007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Công viên Bến Bạch Đằng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-landmark-81",
+    "name": "Landmark 81",
+    "kind": "tham-quan",
+    "lat": 10.794852193000054,
+    "lon": 106.72183632300005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Landmark 81 tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-saigon-skydeck",
+    "name": "Saigon Skydeck",
+    "kind": "tham-quan",
+    "lat": 10.7715673,
+    "lon": 106.7042465,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Saigon Skydeck tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bitexco-financial-tower",
+    "name": "Bitexco Financial Tower",
+    "kind": "tham-quan",
+    "lat": 10.771843299000068,
+    "lon": 106.70442216400005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Bitexco Financial Tower tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cho-lon",
+    "name": "Chợ Lớn",
+    "kind": "tham-quan",
+    "lat": 10.751212955000028,
+    "lon": 106.65549460400007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Chợ Lớn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cho-binh-tay",
+    "name": "Chợ Bình Tây",
+    "kind": "tham-quan",
+    "lat": 10.74938360300007,
+    "lon": 106.65106417700008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Chợ Bình Tây tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hoi-quan-nghia-an",
+    "name": "Hội quán Nghĩa An",
+    "kind": "tham-quan",
+    "lat": 10.75321,
+    "lon": 106.662125,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Hội quán Nghĩa An tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hoi-quan-on-lang",
+    "name": "Hội quán Ôn Lăng",
+    "kind": "tham-quan",
+    "lat": 10.753772382000022,
+    "lon": 106.65953871900007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Hội quán Ôn Lăng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chua-ba-thien-hau",
+    "name": "Chùa Bà Thiên Hậu",
+    "kind": "tham-quan",
+    "lat": 10.755027894000023,
+    "lon": 106.72213981400006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Chùa Bà Thiên Hậu tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chua-giac-lam",
+    "name": "Chùa Giác Lâm",
+    "kind": "tham-quan",
+    "lat": 10.777316641000027,
+    "lon": 106.64917667100008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Chùa Giác Lâm tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chua-ngoc-hoang",
+    "name": "Chùa Ngọc Hoàng",
+    "kind": "tham-quan",
+    "lat": 10.791743999000062,
+    "lon": 106.69787330000008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Chùa Ngọc Hoàng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chua-vinh-nghiem",
+    "name": "Chùa Vĩnh Nghiêm",
+    "kind": "tham-quan",
+    "lat": 10.790304078000077,
+    "lon": 106.68214765000005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Chùa Vĩnh Nghiêm tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-nha-tho-tan-inh",
+    "name": "Nhà thờ Tân Định",
+    "kind": "tham-quan",
+    "lat": 10.78827306100004,
+    "lon": 106.69061880200007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Nhà thờ Tân Định tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-nha-tho-cha-tam",
+    "name": "Nhà thờ Cha Tam",
+    "kind": "tham-quan",
+    "lat": 10.751991912000051,
+    "lon": 106.65388568700007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Nhà thờ Cha Tam tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ia-ao-cu-chi-ben-duoc",
+    "name": "Địa đạo Củ Chi - Bến Dược",
+    "kind": "tham-quan",
+    "lat": 11.146404820000043,
+    "lon": 106.45920360500008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Địa đạo Củ Chi - Bến Dược tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ia-ao-cu-chi-ben-inh",
+    "name": "Địa đạo Củ Chi - Bến Đình",
+    "kind": "tham-quan",
+    "lat": 11.0626279,
+    "lon": 106.5291429,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "lich-su, van-hoa, check-in"
+    ],
+    "description": "Địa đạo Củ Chi - Bến Đình tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-du-lich-van-thanh",
+    "name": "Khu du lịch Văn Thánh",
+    "kind": "tham-quan",
+    "lat": 10.798337537000066,
+    "lon": 106.71591701300008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Khu du lịch Văn Thánh tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-du-lich-binh-quoi-1",
+    "name": "Khu du lịch Bình Quới 1",
+    "kind": "tham-quan",
+    "lat": 10.829562596000073,
+    "lon": 106.73855793100006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Khu du lịch Bình Quới 1 tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-du-lich-binh-quoi-2",
+    "name": "Khu du lịch Bình Quới 2",
+    "kind": "tham-quan",
+    "lat": 10.833208346000049,
+    "lon": 106.74352601000004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Khu du lịch Bình Quới 2 tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-du-lich-suoi-tien",
+    "name": "Khu du lịch Suối Tiên",
+    "kind": "tham-quan",
+    "lat": 10.865983701000062,
+    "lon": 106.80384063400004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Khu du lịch Suối Tiên tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-am-sen",
+    "name": "Đầm Sen",
+    "kind": "tham-quan",
+    "lat": 10.7686947,
+    "lon": 106.6361507,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Đầm Sen tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pho-nhat-le-thanh-ton",
+    "name": "Phố Nhật Lê Thánh Tôn",
+    "kind": "tham-quan",
+    "lat": 10.78123393900006,
+    "lon": 106.70535122600006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Phố Nhật Lê Thánh Tôn tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pho-tay-bui-vien",
+    "name": "Phố Tây Bùi Viện",
+    "kind": "tham-quan",
+    "lat": 10.766724145000069,
+    "lon": 106.69247173100007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Phố Tây Bùi Viện tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ho-con-rua",
+    "name": "Hồ Con Rùa",
+    "kind": "tham-quan",
+    "lat": 10.782633132000058,
+    "lon": 106.69589712900006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "thien-nhien, view-dep, check-in"
+    ],
+    "description": "Hồ Con Rùa tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cau-mong",
+    "name": "Cầu Mống",
+    "kind": "tham-quan",
+    "lat": 10.768041445499772,
+    "lon": 106.70368534799648,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Cầu Mống tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cau-ba-son",
+    "name": "Cầu Ba Son",
+    "kind": "tham-quan",
+    "lat": 10.7804515,
+    "lon": 106.7086019,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Cầu Ba Son tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ngam-hoang-hon-ben-bach-ang",
+    "name": "Ngắm hoàng hôn Bến Bạch Đằng",
+    "kind": "tham-quan",
+    "lat": 10.7731999,
+    "lon": 106.7067289,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Ngắm hoàng hôn Bến Bạch Đằng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ben-nha-rong",
+    "name": "Bến Nhà Rồng",
+    "kind": "tham-quan",
+    "lat": 10.768613081000069,
+    "lon": 106.70708765400008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Bến Nhà Rồng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-pho-i-bo-bui-vien",
+    "name": "Khu phố đi bộ Bùi Viện",
+    "kind": "tham-quan",
+    "lat": 10.767351,
+    "lon": 106.6938836,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Khu phố đi bộ Bùi Viện tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-khu-o-thi-phu-my-hung",
+    "name": "Khu đô thị Phú Mỹ Hưng",
+    "kind": "tham-quan",
+    "lat": 10.718596189000039,
+    "lon": 106.73029991800007,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Khu đô thị Phú Mỹ Hưng tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-sc-vivocity",
+    "name": "SC VivoCity",
+    "kind": "tham-quan",
+    "lat": 10.729760647000035,
+    "lon": 106.70333558200008,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "SC VivoCity tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-crescent-mall",
+    "name": "Crescent Mall",
+    "kind": "tham-quan",
+    "lat": 10.728768391000074,
+    "lon": 106.71851269800004,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Crescent Mall tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-takashimaya-saigon-centre",
+    "name": "Takashimaya Saigon Centre",
+    "kind": "tham-quan",
+    "lat": 10.77298007500002,
+    "lon": 106.70037291600005,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Takashimaya Saigon Centre tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-vincom-center-ong-khoi",
+    "name": "Vincom Center Đồng Khởi",
+    "kind": "tham-quan",
+    "lat": 10.778151706000074,
+    "lon": 106.70184469300006,
+    "price_vnd": 0,
+    "open_hours": "{}",
+    "outdoor": true,
+    "tags": [
+      "check-in, van-hoa, view-dep"
+    ],
+    "description": "Vincom Center Đồng Khởi tại Sài Gòn, thuộc nhóm tham-quan; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-home-saigon-restaurant-bar",
+    "name": "Home Saigon Restaurant & Bar",
+    "kind": "an-uong",
+    "lat": 10.768258,
+    "lon": 106.693968,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Home Saigon Restaurant & Bar tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-tung-s-restaurant",
+    "name": "Tung's Restaurant",
+    "kind": "an-uong",
+    "lat": 10.7962412,
+    "lon": 106.6731787,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Tung's Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-de-tham-restaurant",
+    "name": "De Tham Restaurant",
+    "kind": "an-uong",
+    "lat": 10.76801426700007,
+    "lon": 106.69373818700006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "De Tham Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-ruth-s-house",
+    "name": "Ruth's House",
+    "kind": "an-uong",
+    "lat": 10.831181340000057,
+    "lon": 106.57910702000004,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Ruth's House tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-secret-house",
+    "name": "Secret House",
+    "kind": "an-uong",
+    "lat": 10.772432715000036,
+    "lon": 106.68368470200005,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Secret House tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-quan-ngon",
+    "name": "Quán Ngon",
+    "kind": "an-uong",
+    "lat": 10.740538351000055,
+    "lon": 106.70743150900006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Quán Ngon tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-banh-xeo-ngoc-son",
+    "name": "Bánh Xèo Ngọc Sơn",
+    "kind": "an-uong",
+    "lat": 10.75442627800004,
+    "lon": 106.66645906600007,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Bánh Xèo Ngọc Sơn tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bun-cha-145",
+    "name": "Bún Chả 145",
+    "kind": "an-uong",
+    "lat": 10.7663698,
+    "lon": 106.6918038,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Bún Chả 145 tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pho-hoa-pasteur",
+    "name": "Phở Hòa Pasteur",
+    "kind": "an-uong",
+    "lat": 10.786674224000024,
+    "lon": 106.68925101200006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Phở Hòa Pasteur tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pho-phu-vuong",
+    "name": "Phở Phú Vương",
+    "kind": "an-uong",
+    "lat": 10.7576113,
+    "lon": 106.6784972,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Phở Phú Vương tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pho-le",
+    "name": "Phở Lệ",
+    "kind": "an-uong",
+    "lat": 10.762842039000077,
+    "lon": 106.69228365000004,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Phở Lệ tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-com-tam-ba-ghien",
+    "name": "Cơm tấm Ba Ghiền",
+    "kind": "an-uong",
+    "lat": 10.794432051000058,
+    "lon": 106.66938936500009,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Cơm tấm Ba Ghiền tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-com-tam-thuan-kieu",
+    "name": "Cơm tấm Thuận Kiều",
+    "kind": "an-uong",
+    "lat": 10.759127013000068,
+    "lon": 106.65875066700005,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Cơm tấm Thuận Kiều tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-com-nieu-sai-gon",
+    "name": "Cơm Niêu Sài Gòn",
+    "kind": "an-uong",
+    "lat": 10.767613121000068,
+    "lon": 106.69379669900007,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Cơm Niêu Sài Gòn tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-nha-hang-ngon",
+    "name": "Nhà Hàng Ngon",
+    "kind": "an-uong",
+    "lat": 10.777231631000063,
+    "lon": 106.69956341300008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Nhà Hàng Ngon tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hum-vegetarian",
+    "name": "Hum Vegetarian",
+    "kind": "an-uong",
+    "lat": 10.77682240300004,
+    "lon": 106.70602203200008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-chay, an-dia-phuong, yen-tinh"
+    ],
+    "description": "Hum Vegetarian tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-prem-bistro-cafe",
+    "name": "Prem Bistro & Café",
+    "kind": "an-uong",
+    "lat": 10.7864681,
+    "lon": 106.6943207,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Prem Bistro & Café tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chay-garden-vegetarian-restaurant",
+    "name": "Chay Garden Vegetarian Restaurant",
+    "kind": "an-uong",
+    "lat": 10.7782235,
+    "lon": 106.690683,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-chay, an-dia-phuong, yen-tinh"
+    ],
+    "description": "Chay Garden Vegetarian Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pi-vegetarian-bistro",
+    "name": "Pi Vegetarian Bistro",
+    "kind": "an-uong",
+    "lat": 10.786464,
+    "lon": 106.694317,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-chay, an-dia-phuong, yen-tinh"
+    ],
+    "description": "Pi Vegetarian Bistro tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bong-sung-vegetarian-food",
+    "name": "Bông Súng Vegetarian Food",
+    "kind": "an-uong",
+    "lat": 10.7753458,
+    "lon": 106.6902814,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-chay, an-dia-phuong, yen-tinh"
+    ],
+    "description": "Bông Súng Vegetarian Food tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-chopsticks-saigon",
+    "name": "The Chopsticks Saigon",
+    "kind": "an-uong",
+    "lat": 10.7828344,
+    "lon": 106.6899007,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "The Chopsticks Saigon tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-propaganda-bistro",
+    "name": "Propaganda Bistro",
+    "kind": "an-uong",
+    "lat": 10.7787806,
+    "lon": 106.6981583,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Propaganda Bistro tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-quan-bui",
+    "name": "Quán Bụi",
+    "kind": "an-uong",
+    "lat": 10.7688855,
+    "lon": 106.7131441,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Quán Bụi tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ua-moc",
+    "name": "Đũa Mộc",
+    "kind": "an-uong",
+    "lat": 10.8230989,
+    "lon": 106.6296638,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Đũa Mộc tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cuc-gach-quan",
+    "name": "Cục Gạch Quán",
+    "kind": "an-uong",
+    "lat": 10.793010884000068,
+    "lon": 106.68900492500006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Cục Gạch Quán tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-banh-mi-huynh-hoa",
+    "name": "Bánh Mì Huynh Hoa",
+    "kind": "an-uong",
+    "lat": 10.771443120000072,
+    "lon": 106.69240641200008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Bánh Mì Huynh Hoa tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-banh-mi-hoa-ma",
+    "name": "Bánh Mì Hòa Mã",
+    "kind": "an-uong",
+    "lat": 10.853525396000066,
+    "lon": 106.78967528200008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Bánh Mì Hòa Mã tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-oc-oanh",
+    "name": "Ốc Oanh",
+    "kind": "an-uong",
+    "lat": 10.76100268700003,
+    "lon": 106.70301882100006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "hai-san, gia-re, gia-dinh"
+    ],
+    "description": "Ốc Oanh tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-oc-ao",
+    "name": "Ốc Đào",
+    "kind": "an-uong",
+    "lat": 10.796106003000034,
+    "lon": 106.69126658200008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "hai-san, gia-re, gia-dinh"
+    ],
+    "description": "Ốc Đào tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hai-san-khanh-hoa",
+    "name": "Hải Sản Khánh Hòa",
+    "kind": "an-uong",
+    "lat": 10.795098,
+    "lon": 106.7348286,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "hai-san, gia-re, gia-dinh"
+    ],
+    "description": "Hải Sản Khánh Hòa tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hai-san-giang-ghe",
+    "name": "Hải Sản Giang Ghẹ",
+    "kind": "an-uong",
+    "lat": 10.85656739600006,
+    "lon": 106.72283938100009,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "hai-san, gia-re, gia-dinh"
+    ],
+    "description": "Hải Sản Giang Ghẹ tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hai-san-tuoi-song-bien-ong",
+    "name": "Hải Sản Tươi Sống Biển Đông",
+    "kind": "an-uong",
+    "lat": 10.7981911,
+    "lon": 106.6806059,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "hai-san, gia-re, gia-dinh"
+    ],
+    "description": "Hải Sản Tươi Sống Biển Đông tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ngoc-suong-sai-gon",
+    "name": "Ngọc Sương Sài Gòn",
+    "kind": "an-uong",
+    "lat": 10.779129941000065,
+    "lon": 106.70564726900005,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Ngọc Sương Sài Gòn tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-view-rooftop-bar-restaurant",
+    "name": "The View Rooftop Bar & Restaurant",
+    "kind": "an-uong",
+    "lat": 10.765818969000065,
+    "lon": 106.69094930500006,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "The View Rooftop Bar & Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chanh-bistro-rooftop",
+    "name": "Chanh Bistro Rooftop",
+    "kind": "an-uong",
+    "lat": 10.76952366300003,
+    "lon": 106.69789155700005,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Chanh Bistro Rooftop tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-mountain-retreat-vietnamese-restaurant",
+    "name": "Mountain Retreat Vietnamese Restaurant",
+    "kind": "an-uong",
+    "lat": 10.7743462,
+    "lon": 106.7003992,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Mountain Retreat Vietnamese Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-vietnam-house-restaurant",
+    "name": "Vietnam House Restaurant",
+    "kind": "an-uong",
+    "lat": 10.774962,
+    "lon": 106.7040873,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Vietnam House Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-refinery-restaurant",
+    "name": "The Refinery Restaurant",
+    "kind": "an-uong",
+    "lat": 10.778299,
+    "lon": 106.703618,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "The Refinery Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-maison-marou-saigon",
+    "name": "Maison Marou Saigon",
+    "kind": "an-uong",
+    "lat": 10.8035001,
+    "lon": 106.7345962,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Maison Marou Saigon tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pizza-4p-s-le-thanh-ton",
+    "name": "Pizza 4P's Lê Thánh Tôn",
+    "kind": "an-uong",
+    "lat": 10.781870523000066,
+    "lon": 106.70507065600003,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Pizza 4P's Lê Thánh Tôn tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pizza-4p-s-phan-ke-binh",
+    "name": "Pizza 4P's Phan Kế Bính",
+    "kind": "an-uong",
+    "lat": 10.7900555,
+    "lon": 106.6991286,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Pizza 4P's Phan Kế Bính tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-dim-tu-tac",
+    "name": "Dim Tu Tac",
+    "kind": "an-uong",
+    "lat": 10.752791620000039,
+    "lon": 106.67140193300008,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Dim Tu Tac tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-tan-hai-van",
+    "name": "Tân Hải Vân",
+    "kind": "an-uong",
+    "lat": 10.76931683500004,
+    "lon": 106.69032423100003,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Tân Hải Vân tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-shamballa-vegetarian-restaurant",
+    "name": "Shamballa Vegetarian Restaurant",
+    "kind": "an-uong",
+    "lat": 10.7795135,
+    "lon": 106.7026522,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-chay, an-dia-phuong, yen-tinh"
+    ],
+    "description": "Shamballa Vegetarian Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-anan-saigon",
+    "name": "Anan Saigon",
+    "kind": "an-uong",
+    "lat": 10.7964408,
+    "lon": 106.6911337,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Anan Saigon tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-secret-garden-restaurant",
+    "name": "Secret Garden Restaurant",
+    "kind": "an-uong",
+    "lat": 10.7771126,
+    "lon": 106.6996871,
+    "price_vnd": 150000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "an-dia-phuong, gia-re, gia-dinh"
+    ],
+    "description": "Secret Garden Restaurant tại Sài Gòn, thuộc nhóm an-uong; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-whisfee-cafe",
+    "name": "Whisfee Café",
+    "kind": "cafe",
+    "lat": 10.769643,
+    "lon": 106.704052,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Whisfee Café tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-little-hanoi-egg-coffee",
+    "name": "Little HaNoi Egg Coffee",
+    "kind": "cafe",
+    "lat": 10.7797001,
+    "lon": 106.6864737,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Little HaNoi Egg Coffee tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-tonkin-specialty-coffee",
+    "name": "Tonkin Specialty Coffee",
+    "kind": "cafe",
+    "lat": 10.7743893,
+    "lon": 106.6978901,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Tonkin Specialty Coffee tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-choice-fresh-coffee-and-tea",
+    "name": "CHOICE - Fresh Coffee and Tea",
+    "kind": "cafe",
+    "lat": 10.7770079,
+    "lon": 106.7038185,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "CHOICE - Fresh Coffee and Tea tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-cong-caphe-nguyen-hue",
+    "name": "Cong Caphe Nguyễn Huệ",
+    "kind": "cafe",
+    "lat": 10.771891359000051,
+    "lon": 106.70551820900005,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Cong Caphe Nguyễn Huệ tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cong-caphe-inh-tien-hoang",
+    "name": "Cong Caphe Đinh Tiên Hoàng",
+    "kind": "cafe",
+    "lat": 10.7886264,
+    "lon": 106.6993987,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Cong Caphe Đinh Tiên Hoàng tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-workshop-coffee",
+    "name": "The Workshop Coffee",
+    "kind": "cafe",
+    "lat": 10.773503212000037,
+    "lon": 106.70563461000006,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "The Workshop Coffee tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-coffee-house-nguyen-hue",
+    "name": "The Coffee House Nguyễn Huệ",
+    "kind": "cafe",
+    "lat": 10.7738229,
+    "lon": 106.7036792,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "The Coffee House Nguyễn Huệ tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-highlands-coffee-nha-tho-uc-ba",
+    "name": "Highlands Coffee Nhà thờ Đức Bà",
+    "kind": "cafe",
+    "lat": 10.779761528000051,
+    "lon": 106.69907017200006,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Highlands Coffee Nhà thờ Đức Bà tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-highlands-coffee-nguyen-hue",
+    "name": "Highlands Coffee Nguyễn Huệ",
+    "kind": "cafe",
+    "lat": 10.7744694,
+    "lon": 106.703677,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Highlands Coffee Nguyễn Huệ tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-starbucks-reserve-han-thuyen",
+    "name": "Starbucks Reserve Hàn Thuyên",
+    "kind": "cafe",
+    "lat": 10.778888,
+    "lon": 106.6982796,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Starbucks Reserve Hàn Thuyên tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-starbucks-nguyen-hue",
+    "name": "Starbucks Nguyễn Huệ",
+    "kind": "cafe",
+    "lat": 10.7733489,
+    "lon": 106.7039086,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Starbucks Nguyễn Huệ tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-okkio-caffe",
+    "name": "Okkio Caffe",
+    "kind": "cafe",
+    "lat": 10.7845491,
+    "lon": 106.69325,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Okkio Caffe tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-okkio-caffe-pasteur",
+    "name": "Okkio Caffe Pasteur",
+    "kind": "cafe",
+    "lat": 10.770754577000048,
+    "lon": 106.69170881300005,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Okkio Caffe Pasteur tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-bosgaurus-coffee-roasters",
+    "name": "Bosgaurus Coffee Roasters",
+    "kind": "cafe",
+    "lat": 10.7794815,
+    "lon": 106.7059074,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Bosgaurus Coffee Roasters tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-every-half-coffee-roasters",
+    "name": "Every Half Coffee Roasters",
+    "kind": "cafe",
+    "lat": 10.784758,
+    "lon": 106.6939609,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Every Half Coffee Roasters tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-running-bean",
+    "name": "The Running Bean",
+    "kind": "cafe",
+    "lat": 10.772814149000055,
+    "lon": 106.70333696300008,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "The Running Bean tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-soo-kafe",
+    "name": "Soo Kafe",
+    "kind": "cafe",
+    "lat": 10.7907672,
+    "lon": 106.698249,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Soo Kafe tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-ca-phe-co-ba-ong-khoi",
+    "name": "Cà Phê Cô Ba Đồng Khởi",
+    "kind": "cafe",
+    "lat": 10.773345514000027,
+    "lon": 106.70613922000007,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Cà Phê Cô Ba Đồng Khởi tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cafe-cardinal",
+    "name": "Café Cardinal",
+    "kind": "cafe",
+    "lat": 10.773791900000049,
+    "lon": 106.70450847100005,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Café Cardinal tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-blank-lounge-landmark-81",
+    "name": "Blank Lounge Landmark 81",
+    "kind": "cafe",
+    "lat": 10.794784246000063,
+    "lon": 106.72192564600005,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, view-dep, lang-man"
+    ],
+    "description": "Blank Lounge Landmark 81 tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-shin-coffee",
+    "name": "Shin Coffee",
+    "kind": "cafe",
+    "lat": 10.785546101000023,
+    "lon": 106.75072722200008,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Shin Coffee tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-trung-nguyen-legend-cafe",
+    "name": "Trung Nguyên Legend Café",
+    "kind": "cafe",
+    "lat": 10.7997161,
+    "lon": 106.74658,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Trung Nguyên Legend Café tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cheese-coffee",
+    "name": "Cheese Coffee",
+    "kind": "cafe",
+    "lat": 10.796873695000045,
+    "lon": 106.69036339000007,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Cheese Coffee tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-katinat-ong-khoi",
+    "name": "Katinat Đồng Khởi",
+    "kind": "cafe",
+    "lat": 10.774766663000037,
+    "lon": 106.70436699600003,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Katinat Đồng Khởi tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-katinat-nguyen-hue",
+    "name": "Katinat Nguyễn Huệ",
+    "kind": "cafe",
+    "lat": 10.773516,
+    "lon": 106.7037579,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Katinat Nguyễn Huệ tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-loft-cafe",
+    "name": "The Loft Café",
+    "kind": "cafe",
+    "lat": 10.777552870000022,
+    "lon": 106.69894440500008,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "The Loft Café tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-saigon-coffee-roastery",
+    "name": "Saigon Coffee Roastery",
+    "kind": "cafe",
+    "lat": 10.775751936000063,
+    "lon": 106.70326405200007,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Saigon Coffee Roastery tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-maison-marou-cafe",
+    "name": "Maison Marou Café",
+    "kind": "cafe",
+    "lat": 10.7791736,
+    "lon": 106.7005216,
+    "price_vnd": 70000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "cafe-chill, yen-tinh, lang-man"
+    ],
+    "description": "Maison Marou Café tại Sài Gòn, thuộc nhóm cafe; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-apocalypse-now-sai-gon",
+    "name": "Apocalypse Now Sai Gon",
+    "kind": "giai-tri",
+    "lat": 10.777148277000038,
+    "lon": 106.70590062000008,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Apocalypse Now Sai Gon tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-bodega-saigon",
+    "name": "Bodega Saigon",
+    "kind": "giai-tri",
+    "lat": 10.80282767400007,
+    "lon": 106.72898110000006,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Bodega Saigon tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-bar-22-girl-bar-ho-chi-minh-city",
+    "name": "Bar 22 Girl Bar Ho Chi Minh City",
+    "kind": "giai-tri",
+    "lat": 10.773104,
+    "lon": 106.702696,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Bar 22 Girl Bar Ho Chi Minh City tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-pub-crawl-saigon",
+    "name": "Pub Crawl Saigon",
+    "kind": "giai-tri",
+    "lat": 10.7679441,
+    "lon": 106.6949956,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Pub Crawl Saigon tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-lush-saigon",
+    "name": "Lush Saigon",
+    "kind": "giai-tri",
+    "lat": 10.78278900600003,
+    "lon": 106.70533598900005,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Lush Saigon tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-chill-skybar",
+    "name": "Chill Skybar",
+    "kind": "giai-tri",
+    "lat": 10.77041859600007,
+    "lon": 106.69431718200008,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Chill Skybar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-social-club-rooftop-bar",
+    "name": "Social Club Rooftop Bar",
+    "kind": "giai-tri",
+    "lat": 10.7823659,
+    "lon": 106.6973005,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Social Club Rooftop Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-glow-skybar",
+    "name": "Glow Skybar",
+    "kind": "giai-tri",
+    "lat": 10.77700462000007,
+    "lon": 106.69829227000008,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Glow Skybar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-rex-hotel-rooftop-garden-bar",
+    "name": "Rex Hotel Rooftop Garden Bar",
+    "kind": "giai-tri",
+    "lat": 10.7755584,
+    "lon": 106.7010418,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Rex Hotel Rooftop Garden Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-layla-eatery-bar",
+    "name": "Layla - Eatery & Bar",
+    "kind": "giai-tri",
+    "lat": 10.7754092,
+    "lon": 106.7041421,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Layla - Eatery & Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-rabbit-hole",
+    "name": "Rabbit Hole",
+    "kind": "giai-tri",
+    "lat": 10.7775902,
+    "lon": 106.697576,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Rabbit Hole tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-snuffbox-lounge",
+    "name": "Snuffbox Lounge",
+    "kind": "giai-tri",
+    "lat": 10.76961065200004,
+    "lon": 106.70405498800005,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Snuffbox Lounge tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-alley-cocktail-bar",
+    "name": "The Alley Cocktail Bar",
+    "kind": "giai-tri",
+    "lat": 10.7746604,
+    "lon": 106.7005466,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "The Alley Cocktail Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-qui-cuisine-mixology",
+    "name": "Qui Cuisine & Mixology",
+    "kind": "giai-tri",
+    "lat": 10.780734514000073,
+    "lon": 106.70471017000006,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Qui Cuisine & Mixology tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-view-rooftop-bar",
+    "name": "The View Rooftop Bar",
+    "kind": "giai-tri",
+    "lat": 10.765818969000065,
+    "lon": 106.69094930500006,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "The View Rooftop Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-broma-not-a-bar",
+    "name": "Broma: Not A Bar",
+    "kind": "giai-tri",
+    "lat": 10.7727153,
+    "lon": 106.7045751,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Broma: Not A Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-fang-pub",
+    "name": "Fang Pub",
+    "kind": "giai-tri",
+    "lat": 10.776650130000064,
+    "lon": 106.68946072100005,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Fang Pub tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-thi-bar",
+    "name": "Thi Bar",
+    "kind": "giai-tri",
+    "lat": 10.76770447000007,
+    "lon": 106.69392593000003,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Thi Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-indika-saigon",
+    "name": "Indika Saigon",
+    "kind": "giai-tri",
+    "lat": 10.802967,
+    "lon": 106.729199,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Indika Saigon tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-saigon-outcast",
+    "name": "Saigon Outcast",
+    "kind": "giai-tri",
+    "lat": 10.817013717000066,
+    "lon": 106.72996799800006,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Saigon Outcast tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-yoko",
+    "name": "Yoko",
+    "kind": "giai-tri",
+    "lat": 10.812716937000062,
+    "lon": 106.66835165800006,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Yoko tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-acoustic-bar",
+    "name": "Acoustic Bar",
+    "kind": "giai-tri",
+    "lat": 10.7813194,
+    "lon": 106.6897389,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Acoustic Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-cargo-bar",
+    "name": "Cargo Bar",
+    "kind": "giai-tri",
+    "lat": 10.766010985000037,
+    "lon": 106.70691156800007,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Cargo Bar tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-blanchy-s-tash",
+    "name": "Blanchy's Tash",
+    "kind": "giai-tri",
+    "lat": 10.777250983000044,
+    "lon": 106.70419374700003,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Blanchy's Tash tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-envy-club",
+    "name": "Envy Club",
+    "kind": "giai-tri",
+    "lat": 10.824010947000033,
+    "lon": 106.71334655400005,
+    "price_vnd": 200000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "dem, soi-dong, check-in"
+    ],
+    "description": "Envy Club tại Sài Gòn, thuộc nhóm giai-tri; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hotel-majestic-saigon",
+    "name": "Hotel Majestic Saigon",
+    "kind": "cho-o",
+    "lat": 10.77298735100004,
+    "lon": 106.70621989500006,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Hotel Majestic Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-hilton-saigon",
+    "name": "Hilton Saigon",
+    "kind": "cho-o",
+    "lat": 10.775090000000034,
+    "lon": 106.70570000000004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Hilton Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-hotel-continental-saigon",
+    "name": "Hotel Continental Saigon",
+    "kind": "cho-o",
+    "lat": 10.776847505000035,
+    "lon": 106.70239198800004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Hotel Continental Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  },
+  {
+    "id": "sai-gon-park-hyatt-saigon",
+    "name": "Park Hyatt Saigon",
+    "kind": "cho-o",
+    "lat": 10.77770268200004,
+    "lon": 106.70340066100005,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Park Hyatt Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-caravelle-saigon",
+    "name": "Caravelle Saigon",
+    "kind": "cho-o",
+    "lat": 10.7762617,
+    "lon": 106.7036128,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Caravelle Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-rex-hotel",
+    "name": "Rex Hotel",
+    "kind": "cho-o",
+    "lat": 10.775855324000077,
+    "lon": 106.70120317200008,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Rex Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-the-reverie-saigon",
+    "name": "The Reverie Saigon",
+    "kind": "cho-o",
+    "lat": 10.773693055000024,
+    "lon": 106.70442368600004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "The Reverie Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-intercontinental-saigon",
+    "name": "InterContinental Saigon",
+    "kind": "cho-o",
+    "lat": 10.781039575000023,
+    "lon": 106.70079783700004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "InterContinental Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-pullman-saigon-centre",
+    "name": "Pullman Saigon Centre",
+    "kind": "cho-o",
+    "lat": 10.764212120000025,
+    "lon": 106.69176779700007,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Pullman Saigon Centre tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-new-world-saigon-hotel",
+    "name": "New World Saigon Hotel",
+    "kind": "cho-o",
+    "lat": 10.77093908300003,
+    "lon": 106.69512120800005,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "New World Saigon Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-liberty-central-saigon-riverside-hotel",
+    "name": "Liberty Central Saigon Riverside Hotel",
+    "kind": "cho-o",
+    "lat": 10.774102,
+    "lon": 106.706214,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Liberty Central Saigon Riverside Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-liberty-central-saigon-citypoint",
+    "name": "Liberty Central Saigon Citypoint",
+    "kind": "cho-o",
+    "lat": 10.7747415,
+    "lon": 106.7007485,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Liberty Central Saigon Citypoint tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-fusion-suites-saigon",
+    "name": "Fusion Suites Saigon",
+    "kind": "cho-o",
+    "lat": 10.772584146000042,
+    "lon": 106.68990020500007,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Fusion Suites Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-alagon-d-antique-hotel-spa",
+    "name": "Alagon D'antique Hotel & Spa",
+    "kind": "cho-o",
+    "lat": 10.771737090000045,
+    "lon": 106.69401956100006,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Alagon D'antique Hotel & Spa tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-silverland-yen-hotel",
+    "name": "Silverland Yen Hotel",
+    "kind": "cho-o",
+    "lat": 10.774702439000066,
+    "lon": 106.69627268300007,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Silverland Yen Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-silverland-ben-thanh-hotel",
+    "name": "Silverland Ben Thanh Hotel",
+    "kind": "cho-o",
+    "lat": 10.771558777000052,
+    "lon": 106.69739903600004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Silverland Ben Thanh Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-m-hotel-saigon",
+    "name": "M Hotel Saigon",
+    "kind": "cho-o",
+    "lat": 10.773253875000023,
+    "lon": 106.70183733400006,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "M Hotel Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-fusion-original-saigon-centre",
+    "name": "Fusion Original Saigon Centre",
+    "kind": "cho-o",
+    "lat": 10.7735593,
+    "lon": 106.7012525,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Fusion Original Saigon Centre tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-mai-house-saigon-hotel",
+    "name": "Mai House Saigon Hotel",
+    "kind": "cho-o",
+    "lat": 10.7818799,
+    "lon": 106.691459,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Mai House Saigon Hotel tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-wink-hotel-saigon-centre",
+    "name": "Wink Hotel Saigon Centre",
+    "kind": "cho-o",
+    "lat": 10.791263,
+    "lon": 106.700486,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Wink Hotel Saigon Centre tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-hotel-nikko-saigon",
+    "name": "Hotel Nikko Saigon",
+    "kind": "cho-o",
+    "lat": 10.7641288,
+    "lon": 106.6829285,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Hotel Nikko Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-lotte-hotel-saigon",
+    "name": "Lotte Hotel Saigon",
+    "kind": "cho-o",
+    "lat": 10.7786426,
+    "lon": 106.7067745,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Lotte Hotel Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-eastin-grand-hotel-saigon",
+    "name": "Eastin Grand Hotel Saigon",
+    "kind": "cho-o",
+    "lat": 10.796652625000036,
+    "lon": 106.67333345200007,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Eastin Grand Hotel Saigon tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-sofitel-saigon-plaza",
+    "name": "Sofitel Saigon Plaza",
+    "kind": "cho-o",
+    "lat": 10.78412413500007,
+    "lon": 106.70254586100003,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Sofitel Saigon Plaza tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": false,
+    "source": "Vietnam Tourism / danh sách ứng viên"
+  },
+  {
+    "id": "sai-gon-vinpearl-landmark-81-autograph-collection",
+    "name": "Vinpearl Landmark 81, Autograph Collection",
+    "kind": "cho-o",
+    "lat": 10.794796641000062,
+    "lon": 106.72196941600004,
+    "price_vnd": 2000000,
+    "open_hours": "{}",
+    "outdoor": false,
+    "tags": [
+      "gia-dinh, yen-tinh, sang-trong"
+    ],
+    "description": "Vinpearl Landmark 81, Autograph Collection tại Sài Gòn, thuộc nhóm cho-o; cần dùng để gợi ý lịch trình và lọc theo mục đích chuyến đi.",
+    "photo_url": "nan",
+    "verified": true,
+    "source": "business search hiện tại"
+  }
+]

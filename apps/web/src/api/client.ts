@@ -61,6 +61,16 @@ export async function getSharedItinerary(token: string): Promise<Itinerary> {
   return data
 }
 
+export async function claimTicket(payload: {
+  share_token: string
+  email: string
+  password: string
+  display_name?: string
+}): Promise<AuthUser> {
+  const { data } = await api.post<AuthUser>('/auth/claim-ticket', payload)
+  return data
+}
+
 export async function submitFeedback(itineraryId: string, rating: number, review_text: string) {
   const { data } = await api.post(`/itineraries/${itineraryId}/feedback`, { rating, review_text })
   return data

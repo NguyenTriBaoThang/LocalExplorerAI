@@ -460,3 +460,10 @@ models/flood-risk/*
 notebooks/
 *.ipynb
 .ipynb_checkpoints/
+
+# Bot runtime store
+apps/api/app/bot_store.json
+
+# Heavy 3D raw models
+models_3d/*.glb
+

@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
 from app.core.config import settings
-from app.models.entities import User
-from app.schemas.auth import LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
+from app.models.entities import User, Itinerary
+from app.schemas.auth import ClaimTicketRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
 from app.services.auth_service import AuthNotConfigured, create_session_token, hash_password, verify_password
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 
@@ -215,3 +215,47 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     response.delete_cookie("le_google_state", path="/api/auth/google", **flags)
     response.delete_cookie("le_google_verifier", path="/api/auth/google", **flags)
     return response
+
+
+@router.post("/claim-ticket", response_model=UserRead)
+def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    itinerary = db.scalar(select(Itinerary).where(Itinerary.share_token == payload.share_token))
+    if itinerary is None:
+        raise HTTPException(status_code=404, detail={"code": "TICKET_NOT_FOUND", "message": "Không tìm thấy chuyến đi tương ứng với vé này."})
+
+    target_email = str(payload.email).strip().lower()
+    existing_user = db.scalar(select(User).where(User.email == target_email))
+
+    if existing_user is not None:
+        if not verify_password(payload.password, existing_user.password_hash):
+            raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Mật khẩu tài khoản không chính xác."})
+        itinerary.user_id = existing_user.id
+        db.commit()
+        db.refresh(existing_user)
+        _session_cookie(response, existing_user, request)
+        return existing_user
+
+    shadow_user = db.scalar(select(User).where(User.id == itinerary.user_id)) if itinerary.user_id else None
+    if shadow_user is not None and shadow_user.email.startswith("zalo_"):
+        shadow_user.email = target_email
+        if payload.display_name:
+            shadow_user.display_name = payload.display_name.strip()
+        shadow_user.password_hash = hash_password(payload.password)
+        db.commit()
+        db.refresh(shadow_user)
+        _session_cookie(response, shadow_user, request)
+        return shadow_user
+
+    new_user = User(
+        email=target_email,
+        display_name=payload.display_name.strip() if payload.display_name else target_email.split("@")[0],
+        password_hash=hash_password(payload.password),
+        role="traveler"
+    )
+    db.add(new_user)
+    db.flush()
+    itinerary.user_id = new_user.id
+    db.commit()
+    db.refresh(new_user)
+    _session_cookie(response, new_user, request)
+    return new_user
