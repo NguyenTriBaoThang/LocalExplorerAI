@@ -1,7 +1,7 @@
 # Optional CPU E5 semantic-search runtime for the Python 3.12 API image.
 # The pinned versions follow the Sentence Transformers 6 / Transformers 5
 # compatibility requirements and keep model download and inference reproducible.
-numpy==2.2.6
+numpy==2.5.3
 torch==2.14.1
 sentence-transformers==6.1.0
 transformers==5.18.0
