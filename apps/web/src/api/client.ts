@@ -155,6 +155,8 @@ export const adminApi = {
   dashboard: async () => (await api.get('/admin/dashboard')).data,
   users: async () => (await api.get('/admin/users')).data,
   providers: async () => (await api.get('/admin/providers')).data,
+  placeImports: async () => (await api.get('/admin/place-imports')).data,
+  placeImportCandidates: async (batchId: string) => (await api.get(`/admin/place-imports/${batchId}/candidates`)).data,
   updateUser: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/admin/users/${id}`, payload)).data,
   createProvider: async (payload: Record<string, unknown>) => (await api.post('/admin/providers', payload)).data,
   moderation: async (status = 'pending') => (await api.get('/admin/moderation', { params: { status } })).data,

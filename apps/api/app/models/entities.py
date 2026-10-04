@@ -487,6 +487,44 @@ class Evidence(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class PlaceImportBatch(Base):
+    """An immutable registration of a raw place-data import."""
+
+    __tablename__ = "place_import_batches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    source_name: Mapped[str] = mapped_column(String(255))
+    source_sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    worksheet_name: Mapped[str] = mapped_column(String(100))
+    imported_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    record_count: Mapped[int] = mapped_column(Integer, default=0)
+    quality_summary: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    candidates: Mapped[list["PlaceImportCandidate"]] = relationship(
+        back_populates="batch", cascade="all, delete-orphan", order_by="PlaceImportCandidate.source_row"
+    )
+
+
+class PlaceImportCandidate(Base):
+    """Raw source row plus explicit quality flags; never a live catalog POI."""
+
+    __tablename__ = "place_import_candidates"
+    __table_args__ = (UniqueConstraint("batch_id", "external_id", name="uq_place_candidate_batch_external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    batch_id: Mapped[str] = mapped_column(ForeignKey("place_import_batches.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(128))
+    source_row: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(180), index=True)
+    kind: Mapped[str] = mapped_column(String(80), index=True)
+    raw_payload: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    quality_flags: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    review_status: Mapped[str] = mapped_column(String(32), default="needs_enrichment", index=True)
+    target_poi_id: Mapped[str | None] = mapped_column(ForeignKey("pois.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    batch: Mapped[PlaceImportBatch] = relationship(back_populates="candidates")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

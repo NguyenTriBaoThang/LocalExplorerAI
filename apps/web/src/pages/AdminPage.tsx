@@ -14,6 +14,7 @@ import {
   KeyRound,
   Save,
   Trash2,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { adminApi } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
@@ -53,7 +54,27 @@ type IntegrationField = {
 
 type IntegrationGroup = { service: string; fields: IntegrationField[] }
 
-type TabKey = 'queue' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations'
+type PlaceImportBatch = {
+  id: string
+  source_name: string
+  worksheet_name: string
+  record_count: number
+  quality_summary: Record<string, unknown>
+  created_at: string
+}
+
+type PlaceImportCandidate = {
+  id: string
+  external_id: string
+  source_row: number
+  name: string
+  kind: string
+  raw_payload: Record<string, unknown>
+  quality_flags: string[]
+  review_status: string
+}
+
+type TabKey = 'queue' | 'imports' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations'
 
 export function AdminPage() {
   const { t } = useTranslation()
@@ -89,6 +110,11 @@ export function AdminPage() {
   const [integrationLoadError, setIntegrationLoadError] = useState('')
   const [integrationDrafts, setIntegrationDrafts] = useState<Record<string, string>>({})
   const [savingIntegration, setSavingIntegration] = useState(false)
+  const [placeImports, setPlaceImports] = useState<PlaceImportBatch[]>([])
+  const [selectedImportId, setSelectedImportId] = useState('')
+  const [placeImportCandidates, setPlaceImportCandidates] = useState<PlaceImportCandidate[]>([])
+  const [placeImportLoadError, setPlaceImportLoadError] = useState('')
+  const [loadingPlaceCandidates, setLoadingPlaceCandidates] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -126,6 +152,7 @@ export function AdminPage() {
       adminApi.duplicates(),
       adminApi.audit(),
       adminApi.integrations(),
+      adminApi.placeImports(),
     ])
     const failures: string[] = []
     const apply = <T,>(result: PromiseSettledResult<T>, label: string, update: (value: T) => void) => {
@@ -158,6 +185,10 @@ export function AdminPage() {
         return next
       })
     })
+    apply(results[7], 'Place imports', (batches: PlaceImportBatch[]) => {
+      setPlaceImports(batches)
+      setSelectedImportId((current) => current || batches[0]?.id || '')
+    })
     if (results[6].status === 'rejected') {
       const detail = describeLoadFailure(results[6].reason)
       const status = (results[6].reason as { response?: { status?: number } })?.response?.status
@@ -173,6 +204,18 @@ export function AdminPage() {
   useEffect(() => {
     void load()
   }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'imports' || !selectedImportId) return
+    let cancelled = false
+    setLoadingPlaceCandidates(true)
+    setPlaceImportLoadError('')
+    adminApi.placeImportCandidates(selectedImportId)
+      .then((rows: PlaceImportCandidate[]) => { if (!cancelled) setPlaceImportCandidates(rows) })
+      .catch((reason: unknown) => { if (!cancelled) setPlaceImportLoadError(describeLoadFailure(reason)) })
+      .finally(() => { if (!cancelled) setLoadingPlaceCandidates(false) })
+    return () => { cancelled = true }
+  }, [activeTab, selectedImportId])
 
   async function review(kind: string, id: string, action: string) {
     try {
@@ -300,6 +343,17 @@ export function AdminPage() {
   }
 
   const queueTotal = queue.pois.length + queue.experiences.length + queue.evidence.length
+  const selectedImport = placeImports.find((batch) => batch.id === selectedImportId)
+  const importFlagLabels: Record<string, string> = {
+    source_url_missing: 'Thiếu URL nguồn',
+    address_missing: 'Thiếu địa chỉ',
+    opening_hours_missing: 'Thiếu giờ mở cửa',
+    price_basis_missing: 'Thiếu đơn vị/phạm vi giá',
+    photo_missing: 'Thiếu ảnh',
+    coordinates_missing: 'Thiếu tọa độ',
+    coordinates_reused: 'Tọa độ bị lặp',
+    verified_flag_unsubstantiated: 'Cờ verified chưa có bằng chứng',
+  }
 
   return (
     <div className="admin-page-3d page-wrap">
@@ -366,6 +420,20 @@ export function AdminPage() {
 
         <button
           type="button"
+          className={`admin-tab-btn ${activeTab === 'imports' ? 'admin-tab-active' : ''}`}
+          onClick={() => setActiveTab('imports')}
+        >
+          <FileSpreadsheet size={15} />
+          <span>{t('admin.tabPlaceImports')}</span>
+          {placeImports.reduce((sum, batch) => sum + batch.record_count, 0) > 0 && (
+            <span className="admin-tab-badge badge-warn">
+              {placeImports.reduce((sum, batch) => sum + batch.record_count, 0)}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           className={`admin-tab-btn ${activeTab === 'duplicates' ? 'admin-tab-active' : ''}`}
           onClick={() => setActiveTab('duplicates')}
         >
@@ -412,6 +480,97 @@ export function AdminPage() {
           <span>Tích hợp & API keys</span>
         </button>
       </div>
+
+      {activeTab === 'imports' && (
+        <div className="admin-tab-content animate-fadeIn">
+          <div className="inline-alert-3d">
+            <AlertCircle size={16} />
+            <span>Dữ liệu ở đây chỉ là bản ghi nguồn chờ bổ sung, chưa phải POI vận hành và không xuất hiện trong tìm kiếm/lập lịch. Không duyệt cờ verified từ Excel nếu thiếu URL nguồn và bằng chứng hiện hành.</span>
+          </div>
+          {placeImports.length === 0 ? (
+            <section className="admin-section-card">
+              <p className="admin-empty-text">Chưa có lô dữ liệu POI nào được nhập.</p>
+            </section>
+          ) : (
+            <>
+              <section className="admin-section-card">
+                <div className="admin-section-header">
+                  <h3>Danh sách địa điểm chờ bổ sung</h3>
+                  <p>{selectedImport?.source_name} · Sheet {selectedImport?.worksheet_name} · {selectedImport?.record_count} dòng</p>
+                </div>
+                <label className="field-group-3d">
+                  <span>Lô dữ liệu</span>
+                  <select value={selectedImportId} onChange={(event) => setSelectedImportId(event.target.value)}>
+                    {placeImports.map((batch) => (
+                      <option key={batch.id} value={batch.id}>{batch.source_name} ({batch.record_count})</option>
+                    ))}
+                  </select>
+                </label>
+                {selectedImport && (
+                  <div className="admin-metrics-grid" style={{ marginTop: 18 }}>
+                    {([
+                      ['Thiếu địa chỉ', 'address_missing'],
+                      ['Tọa độ dùng lại', 'coordinates_reused'],
+                      ['Thiếu giờ mở cửa', 'opening_hours_missing'],
+                      ['Thiếu URL nguồn', 'source_url_missing'],
+                      ['Cờ verified trong file', 'source_verified_true'],
+                    ] as const).map(([label, key]) => (
+                      <div className="admin-kpi-card" key={key}>
+                        <small>{label}</small>
+                        <strong>{Number(selectedImport.quality_summary[key] || 0)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {placeImportLoadError && <div className="inline-alert-3d"><AlertCircle size={16} /><span>{placeImportLoadError}</span></div>}
+              {loadingPlaceCandidates ? (
+                <section className="admin-section-card"><p className="admin-empty-text">Đang tải bản ghi nguồn…</p></section>
+              ) : (
+                <section className="admin-section-card">
+                  <div className="admin-section-header">
+                    <h3>Bản ghi nguồn ({placeImportCandidates.length})</h3>
+                  </div>
+                  <div className="moderation-items-list">
+                    {placeImportCandidates.map((candidate) => {
+                      const raw = candidate.raw_payload
+                      const tags = Array.isArray(raw.tags) ? raw.tags.map(String).join(', ') : String(raw.tags || '')
+                      return (
+                        <details key={candidate.id} className="moderation-item-card">
+                          <summary className="item-meta-info" style={{ cursor: 'pointer' }}>
+                            <strong>{candidate.name}</strong>
+                            <div className="item-sub-meta">
+                              <span>{candidate.kind}</span>
+                              <span>Dòng Excel {candidate.source_row}</span>
+                              <span className="item-status-pill">Chờ bổ sung</span>
+                              <span>{candidate.quality_flags.length} cảnh báo</span>
+                            </div>
+                            <div className="item-sub-meta">
+                              {candidate.quality_flags.map((flag) => <span key={flag}>{importFlagLabels[flag] || flag}</span>)}
+                            </div>
+                          </summary>
+                          <div className="item-sub-meta" style={{ marginTop: 12 }}>
+                            <span>ID nguồn: {candidate.external_id}</span>
+                            <span>Tọa độ trong file: {String(raw.lat ?? 'trống')}, {String(raw.lon ?? 'trống')}</span>
+                            <span>Giá thô trong file: {String(raw.price_vnd ?? 'trống')} VND (chưa rõ cơ sở tính)</span>
+                            <span>Cờ verified gốc trong Excel: {String(raw.verified ?? false)}</span>
+                            <span>Nguồn ghi trong file: {String(raw.source || 'không có')}</span>
+                            <span>Tags: {tags || 'không có'}</span>
+                            {Boolean(raw.description) && <span>{String(raw.description)}</span>}
+                            {Boolean(raw.note) && <span>Ghi chú nguồn: {String(raw.note)}</span>}
+                          </div>
+                        </details>
+                      )
+                    })}
+                    {!placeImportCandidates.length && <p className="admin-empty-text">Lô này chưa có bản ghi.</p>}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Tab 1: Moderation Queue */}
       {activeTab === 'queue' && (

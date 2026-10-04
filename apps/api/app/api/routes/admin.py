@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db, require_roles
-from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, POI, Provider, User
+from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
 from app.services.auth_service import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, covered_fields, current_verified_evidence, get_target, is_current_and_unexpired, target_revision, utc_now
@@ -66,6 +66,36 @@ def list_providers(user: User = Depends(require_roles("admin")), db: Session = D
     rows = db.scalars(select(Provider).order_by(Provider.name).limit(limit)).all()
     return [{"id": item.id, "name": item.name, "slug": item.slug, "verification_status": item.verification_status,
              "is_active": item.is_active} for item in rows]
+
+
+@router.get("/place-imports")
+def list_place_imports(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    batches = db.scalars(select(PlaceImportBatch).order_by(PlaceImportBatch.created_at.desc()).limit(100)).all()
+    return [{"id": item.id, "source_name": item.source_name, "source_sha256": item.source_sha256,
+             "worksheet_name": item.worksheet_name, "record_count": item.record_count,
+             "quality_summary": item.quality_summary, "created_at": item.created_at}
+            for item in batches]
+
+
+@router.get("/place-imports/{batch_id}/candidates")
+def list_place_import_candidates(
+    batch_id: str,
+    user: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=250, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    if db.get(PlaceImportBatch, batch_id) is None:
+        raise HTTPException(status_code=404, detail={"code": "PLACE_IMPORT_NOT_FOUND", "message": "Import batch not found."})
+    rows = db.scalars(
+        select(PlaceImportCandidate).where(PlaceImportCandidate.batch_id == batch_id)
+        .order_by(PlaceImportCandidate.source_row).offset(offset).limit(limit)
+    ).all()
+    return [{"id": item.id, "external_id": item.external_id, "source_row": item.source_row,
+             "name": item.name, "kind": item.kind, "raw_payload": item.raw_payload,
+             "quality_flags": item.quality_flags, "review_status": item.review_status,
+             "target_poi_id": item.target_poi_id, "created_at": item.created_at}
+            for item in rows]
 
 
 @router.patch("/users/{user_id}")
