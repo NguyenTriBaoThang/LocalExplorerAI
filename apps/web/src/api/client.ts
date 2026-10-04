@@ -162,6 +162,9 @@ export const adminApi = {
   duplicates: async () => (await api.get('/admin/duplicates/pois')).data,
   mergeDuplicate: async (keep_id: string, duplicate_id: string, reason: string) => (await api.post('/admin/duplicates/pois/merge', { keep_id, duplicate_id, reason })).data,
   audit: async () => (await api.get('/admin/audit')).data,
+  integrations: async () => (await api.get('/admin/integrations')).data,
+  updateIntegration: async (service: string, values: Record<string, string>, remove_keys: string[] = []) =>
+    (await api.put('/admin/integrations/' + encodeURIComponent(service), { values, remove_keys })).data,
 }
 
 // Rich simulated Saigon demo data

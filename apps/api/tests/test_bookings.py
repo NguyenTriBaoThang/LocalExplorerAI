@@ -6,6 +6,7 @@ from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, select
 
 from app.api.dependencies import get_current_user
+from app.api.routes import bookings as booking_routes
 from app.core.config import settings
 from app.models.entities import (
     Booking,
@@ -20,6 +21,9 @@ from app.models.entities import (
     User,
 )
 from app.services.vnpay import sign_params, verify_params
+from app.services.momo import IPN_SIGNATURE_FIELDS
+import hashlib
+import hmac
 
 
 def _verified_evidence(db_session, target_type, target_id, revision, fields, now, expires):
@@ -240,3 +244,73 @@ def test_vnpay_suspicious_capture_requires_reconciliation(client, db_session, mo
     assert suspicious.json()["RspCode"] == "00"
     assert db_session.get(PaymentTransaction, payment.id).status == "succeeded"
     assert db_session.get(Booking, booking_id).status == "refund_pending"
+
+
+def _prepare_momo_booking(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "payment_provider", "momo")
+    monkeypatch.setattr(settings, "momo_environment", "sandbox")
+    monkeypatch.setattr(settings, "momo_partner_code", "MOMO_TEST")
+    monkeypatch.setattr(settings, "momo_access_key", "access-test")
+    monkeypatch.setattr(settings, "momo_secret_key", "secret-test")
+    monkeypatch.setattr(settings, "momo_api_url", "https://test-payment.momo.vn/v2/gateway/api/create")
+    monkeypatch.setattr(settings, "momo_return_url", "https://payments.example.org/api/payments/momo/return")
+    monkeypatch.setattr(settings, "momo_ipn_url", "https://payments.example.org/api/payments/momo/ipn")
+    monkeypatch.setattr(booking_routes, "create_payment_url", lambda _config, _payload: "https://test-payment.momo.vn/v2/gateway/pay?test=1")
+
+    traveler, provider_user, itinerary, stop, _slot = _booking_fixture(db_session, quantity_capacity=2, price=125_000)
+    current_user = [traveler]
+    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    hold = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 2})
+    assert hold.status_code == 201, hold.text
+    booking_id = hold.json()["id"]
+    current_user[0] = provider_user
+    accepted = client.post(f"/api/provider/me/bookings/{booking_id}/decision", json={"action": "accept", "note": "Capacity checked"})
+    assert accepted.status_code == 200, accepted.text
+    current_user[0] = traveler
+    checkout = client.post(f"/api/bookings/{booking_id}/checkout")
+    assert checkout.status_code == 200, checkout.text
+    payment = db_session.scalar(select(PaymentTransaction).where(PaymentTransaction.booking_id == booking_id))
+    assert payment is not None and payment.provider == "momo"
+    return booking_id, payment, checkout.json()["checkout_url"]
+
+
+def _signed_momo_ipn(payment, *, amount=None, result_code=0):
+    payload = {
+        "orderType": "momo_wallet",
+        "amount": payment.amount_vnd if amount is None else amount,
+        "partnerCode": "MOMO_TEST",
+        "orderId": payment.provider_reference,
+        "extraData": "",
+        "transId": 123456789,
+        "responseTime": 1_760_000_000_000,
+        "resultCode": result_code,
+        "message": "Successful." if result_code == 0 else "Failed.",
+        "payType": "qr",
+        "requestId": payment.idempotency_key,
+        "orderInfo": "LocalExplorer booking",
+    }
+    canonical = "&".join(f"{key}={payload.get(key, '')}" for key in IPN_SIGNATURE_FIELDS)
+    payload["signature"] = hmac.new(b"secret-test", ("accessKey=access-test&" + canonical.split("&", 1)[1]).encode(), hashlib.sha256).hexdigest()
+    return payload
+
+
+def test_momo_checkout_return_and_signed_ipn_are_idempotent(client, db_session, monkeypatch):
+    booking_id, payment, checkout_url = _prepare_momo_booking(client, db_session, monkeypatch)
+    assert checkout_url.startswith("https://test-payment.momo.vn/v2/gateway/pay")
+    browser_return = client.get("/api/payments/momo/return", params={"orderId": payment.provider_reference}, follow_redirects=False)
+    assert browser_return.status_code == 303
+    assert db_session.get(Booking, booking_id).status == "awaiting_payment"
+
+    invalid = _signed_momo_ipn(payment)
+    invalid["signature"] = "0" * 64
+    assert client.post("/api/payments/momo/ipn", json=invalid).status_code == 401
+    mismatch = client.post("/api/payments/momo/ipn", json=_signed_momo_ipn(payment, amount=payment.amount_vnd + 1))
+    assert mismatch.status_code == 400
+    assert db_session.get(Booking, booking_id).status == "awaiting_payment"
+
+    settled = client.post("/api/payments/momo/ipn", json=_signed_momo_ipn(payment))
+    assert settled.status_code == 204
+    assert db_session.get(PaymentTransaction, payment.id).status == "succeeded"
+    assert db_session.get(Booking, booking_id).status == "confirmed"
+    duplicate = client.post("/api/payments/momo/ipn", json=_signed_momo_ipn(payment))
+    assert duplicate.status_code == 204

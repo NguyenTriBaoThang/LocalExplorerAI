@@ -202,7 +202,7 @@ export function ItineraryPage() {
         const returnedBooking = rows.find((row) => row.id === returnedBookingId)
         if (returnedBooking?.status === 'confirmed') {
           trackingPayment = false
-          setNotice(locale === 'en' ? 'VNPay payment was verified by the server; your reservation is confirmed.' : 'Máy chủ đã xác minh thanh toán VNPay; đặt chỗ của bạn đã được xác nhận.')
+          setNotice(locale === 'en' ? 'Payment was verified by the server; your reservation is confirmed.' : 'Máy chủ đã xác minh thanh toán; yêu cầu đặt chỗ của bạn đã được xác nhận.')
           navigate(location.pathname, { replace: true })
         } else if (returnedBooking?.status === 'refund_pending') {
           trackingPayment = false
@@ -210,7 +210,7 @@ export function ItineraryPage() {
           navigate(location.pathname, { replace: true })
         } else if (returnedBooking?.payment_status === 'failed') {
           trackingPayment = false
-          setNotice(locale === 'en' ? 'VNPay reported that the payment did not complete. You can retry checkout.' : 'VNPay báo giao dịch chưa hoàn tất. Bạn có thể thử thanh toán lại.')
+          setNotice(locale === 'en' ? 'The payment provider reported that payment did not complete. You can retry checkout.' : 'Cổng thanh toán báo giao dịch chưa hoàn tất. Bạn có thể thử thanh toán lại.')
           navigate(location.pathname, { replace: true })
         } else if (Date.now() >= deadline) {
           trackingPayment = false
@@ -235,8 +235,8 @@ export function ItineraryPage() {
         : 'Không xác minh được thông tin quay về từ cổng thanh toán. Hãy kiểm tra trạng thái đặt chỗ trước khi thử lại.')
     } else if (paymentResult === 'returned') {
       setNotice(locale === 'en'
-        ? 'Returned from VNPay. Waiting for the server to verify the payment notification…'
-        : 'Đã quay về từ VNPay. Đang chờ máy chủ xác minh thông báo thanh toán…')
+        ? 'Returned from the payment provider. Waiting for the server to verify the payment notification…'
+        : 'Đã quay về từ cổng thanh toán. Đang chờ máy chủ xác minh thông báo thanh toán…')
     }
   }, [location.search, locale])
 
@@ -884,7 +884,7 @@ export function ItineraryPage() {
                             <small>{locale === 'en' ? 'Booking is disabled for demo or unverified catalog data.' : 'Chưa thể đặt chỗ với dữ liệu trình diễn hoặc chưa được xác minh.'}</small>
                           )}
                           {(booking?.amount_vnd || stop.cost_vnd) > 0 && (
-                            <small>{locale === 'en' ? 'Checkout redirects to VNPay. The reservation is confirmed only after the server verifies the payment notification.' : 'Thanh toán sẽ chuyển sang VNPay. Đặt chỗ chỉ được xác nhận sau khi máy chủ xác minh thông báo thanh toán.'}</small>
+                            <small>{locale === 'en' ? 'Checkout redirects to the configured payment provider. The reservation is confirmed only after the server verifies its payment notification.' : 'Thanh toán sẽ chuyển đến cổng đã cấu hình. Đặt chỗ chỉ được xác nhận sau khi máy chủ xác minh thông báo thanh toán.'}</small>
                           )}
                         </div>
                       )

@@ -31,7 +31,7 @@ class PlannerService:
                  engine: PlannerEngine | None = None, ranker=None):
         self.db = db
         self.repository = ExperienceRepository(db)
-        self.routing = RoutingService(routing)
+        self.routing = RoutingService(routing, db=db)
         self.availability = AvailabilityService()
         self.engine = engine or HeuristicPlanner()
         self.ranker = ranker or ranker_service

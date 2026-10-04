@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -13,8 +14,20 @@ from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, 
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
 from app.services.auth_service import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, covered_fields, current_verified_evidence, get_target, is_current_and_unexpired, target_revision, utc_now
+from app.services.integration_config import (
+    INTEGRATION_FIELDS,
+    IntegrationSecretConfigurationError,
+    list_integration_settings,
+    update_integration_settings,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
+
+
+class IntegrationSettingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    values: dict[str, str] = Field(default_factory=dict)
+    remove_keys: list[str] = Field(default_factory=list, max_length=40)
 
 
 def _normalized_name(value: str) -> str:
@@ -199,3 +212,40 @@ def audit_history(actor: User = Depends(require_roles("admin")), db: Session = D
     logs = db.scalars(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)).all()
     return [{"id": item.id, "actor_id": item.actor_id, "action": item.action, "target_type": item.target_type,
              "target_id": item.target_id, "details": item.details, "created_at": item.created_at} for item in logs]
+
+
+@router.get("/integrations")
+def integrations(actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    try:
+        return list_integration_settings(db)
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(status_code=503, detail={
+            "code": "INTEGRATION_SECRETS_NOT_CONFIGURED",
+            "message": str(error),
+        }) from error
+
+
+@router.put("/integrations/{service}")
+def update_integrations(
+    service: str,
+    payload: IntegrationSettingsUpdate,
+    actor: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    if service not in INTEGRATION_FIELDS:
+        raise HTTPException(status_code=404, detail={"code": "INTEGRATION_NOT_FOUND", "message": "This integration is not managed by the application."})
+    try:
+        updated, removed = update_integration_settings(db, service, payload.values, payload.remove_keys, actor.id)
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "INTEGRATION_SECRETS_NOT_CONFIGURED", "message": str(error)}) from error
+    except (KeyError, ValueError) as error:
+        raise HTTPException(status_code=422, detail={"code": "INVALID_INTEGRATION_SETTINGS", "message": str(error)}) from error
+    if updated or removed:
+        _audit(db, actor, "integration.settings_updated", "integration", service, {
+            "updated_keys": sorted(updated), "removed_keys": sorted(removed),
+        })
+        db.commit()
+    try:
+        return list_integration_settings(db)
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "INTEGRATION_SECRETS_NOT_CONFIGURED", "message": str(error)}) from error

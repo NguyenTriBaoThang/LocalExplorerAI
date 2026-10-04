@@ -518,3 +518,18 @@ class DecisionLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     itinerary: Mapped[Itinerary] = relationship(back_populates="decision_logs")
     trigger_event: Mapped[Event | None] = relationship(back_populates="decision_logs")
+
+
+class IntegrationSecret(Base):
+    """Encrypted admin-managed integration setting; ciphertext only is stored."""
+
+    __tablename__ = "integration_secrets"
+    __table_args__ = (UniqueConstraint("service", "config_key", name="uq_integration_service_key"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    service: Mapped[str] = mapped_column(String(40), index=True)
+    config_key: Mapped[str] = mapped_column(String(80))
+    encrypted_value: Mapped[str] = mapped_column(Text)
+    updated_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

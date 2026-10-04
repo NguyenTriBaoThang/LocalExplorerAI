@@ -1,40 +1,47 @@
 from datetime import datetime, timezone
-from functools import lru_cache
+from sqlalchemy.orm import Session
 
 from app.adapters.routing.goong import GoongDirectionsProvider, GoongGeocodingProvider
 from app.adapters.routing.provider import MockRoutingProvider, RouteEstimate, RoutingConfigurationError, RoutingProvider
 from app.core.config import settings
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 
 
-@lru_cache(maxsize=1)
-def make_routing_provider() -> RoutingProvider:
-    if settings.routing_provider == "mock":
-        return MockRoutingProvider()
-    if settings.routing_provider == "goong":
-        return GoongDirectionsProvider(
-            settings.goong_api_key,
-            base_url=settings.goong_api_base_url,
-            eta_ttl_seconds=settings.goong_eta_ttl_seconds,
+def make_routing_provider(db: Session | None = None) -> RoutingProvider:
+    try:
+        provider_name = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
+        if provider_name == "mock":
+            return MockRoutingProvider()
+        if provider_name == "goong":
+            return GoongDirectionsProvider(
+                resolve_integration_value(db, "routing", "goong_api_key"),
+                base_url=resolve_integration_value(db, "routing", "goong_api_base_url") or settings.goong_api_base_url,
+                eta_ttl_seconds=settings.goong_eta_ttl_seconds,
+                timeout_seconds=settings.goong_timeout_seconds,
+            )
+    except IntegrationSecretConfigurationError as error:
+        raise RoutingConfigurationError("Routing integration configuration is unavailable.") from error
+    raise RoutingConfigurationError(f"Unsupported ROUTING_PROVIDER '{provider_name}'.")
+
+
+def make_geocoding_provider(db: Session | None = None) -> GoongGeocodingProvider:
+    try:
+        provider_name = (resolve_integration_value(db, "routing", "geocoding_provider") or "goong").strip().lower()
+        if provider_name != "goong":
+            raise RoutingConfigurationError(f"Unsupported GEOCODING_PROVIDER '{provider_name}'.")
+        return GoongGeocodingProvider(
+            resolve_integration_value(db, "routing", "goong_api_key"),
+            base_url=resolve_integration_value(db, "routing", "goong_api_base_url") or settings.goong_api_base_url,
+            cache_ttl_seconds=settings.geocode_cache_ttl_seconds,
             timeout_seconds=settings.goong_timeout_seconds,
         )
-    raise RoutingConfigurationError(f"Unsupported ROUTING_PROVIDER '{settings.routing_provider}'.")
-
-
-@lru_cache(maxsize=1)
-def make_geocoding_provider() -> GoongGeocodingProvider:
-    if settings.geocoding_provider != "goong":
-        raise RoutingConfigurationError(f"Unsupported GEOCODING_PROVIDER '{settings.geocoding_provider}'.")
-    return GoongGeocodingProvider(
-        settings.goong_api_key,
-        base_url=settings.goong_api_base_url,
-        cache_ttl_seconds=settings.geocode_cache_ttl_seconds,
-        timeout_seconds=settings.goong_timeout_seconds,
-    )
+    except IntegrationSecretConfigurationError as error:
+        raise RoutingConfigurationError("Geocoding integration configuration is unavailable.") from error
 
 
 class RoutingService:
-    def __init__(self, provider: RoutingProvider | None = None):
-        self.provider = provider or make_routing_provider()
+    def __init__(self, provider: RoutingProvider | None = None, db: Session | None = None):
+        self.provider = provider or make_routing_provider(db)
 
     def get_route(self, origin: tuple[float, float], destination: tuple[float, float], mode: str) -> RouteEstimate:
         return self.provider.get_route(origin, destination, mode)

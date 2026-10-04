@@ -47,6 +47,8 @@
   &nbsp;|&nbsp;
   <a href="./docs/auth-and-search-setup.md">Cấu hình LLM, Google OAuth và E5</a>
   &nbsp;|&nbsp;
+  <a href="./docs/integration-settings.md">Tích hợp MoMo, Goong, Gemini và quản lý khóa</a>
+  &nbsp;|&nbsp;
   <a href="./docs/ml-training-and-data.md">Huấn luyện Học máy (ML)</a>
 </p>
 

@@ -113,6 +113,9 @@ def test_geocoding_endpoint_returns_source_and_age(client, monkeypatch):
     )
 
     class FakeGeocoder:
+        def __init__(self, db=None):
+            self.db = db
+
         def forward(self, address):
             assert address == "District 1, Ho Chi Minh City"
             return result

@@ -9,7 +9,7 @@
 
 ## Environment
 
-Copy `.env.example` to an untracked `.env`, replace all demo/default secrets, and configure at least `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `APP_SIGNING_SECRET`, `ADMIN_API_KEY`, exact `CORS_ORIGINS`, and SMTP settings if email is required. For SMTP use port 587 with `SMTP_STARTTLS=true`, or port 465 with `SMTP_USE_SSL=true` (not both). Never commit credentials. If SMTP is blank the app reports email disabled and does not enqueue email messages; the existing in-app event feed continues to work.
+Copy `.env.example` to an untracked `.env`, replace all demo/default secrets, and configure at least `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `APP_SIGNING_SECRET`, `ADMIN_API_KEY`, a stable `INTEGRATION_SECRETS_KEY`, exact `CORS_ORIGINS`, and SMTP settings if email is required. Generate the integration master key once with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`; keep it in the deployment secret store, back it up separately from the database, and never rotate/lose it without decrypting and re-encrypting the stored integration settings. The admin integrations screen stores allowlisted MoMo/VNPay, Goong, Gemini/OpenAI-compatible, and Google OAuth configuration encrypted in the database; it never reads secrets back to the browser or stores secret values in audit logs. For SMTP use port 587 with `SMTP_STARTTLS=true`, or port 465 with `SMTP_USE_SSL=true` (not both). Never commit credentials. If SMTP is blank the app reports email disabled and does not enqueue email messages; the existing in-app event feed continues to work.
 
 ```powershell
 docker compose -f docker-compose.prod.yml config
@@ -40,10 +40,10 @@ Linux/container operators can use `bash scripts/backup-postgres.sh <existing-out
 
 1. Run `docker compose -f docker-compose.prod.yml config`; check no default credentials, wildcard CORS or missing secrets are present.
 2. Run `pytest -q` from `apps/api`. A printed `[100%]` is not sufficient: the process must terminate on its own with exit code **0**. If it hangs, capture the active process/thread and fix or report it; do not report the suite as passing or stop it manually and infer success.
-3. Run migration upgrade against a disposable PostgreSQL/PostGIS database and verify `alembic current` is at `0008_operations_notifications`.
+3. Run migration upgrade against a disposable PostgreSQL/PostGIS database and verify `alembic current` is at `0009_integration_secrets`.
 4. Check `/health`, `/ready`, protected ops endpoints (401/403 without admin, 200 with admin), rate-limit responses, and SMTP outbox delivery/retry in a staging environment.
 5. Rehearse backup plus restore into an isolated database; verify row counts, migrations and application readiness before approving a production release.
 
-An earlier review run printed 19 dots and `[100%]` but did not terminate and had no successful exit code; that run was not evidence of a pass. The current review re-ran the complete API suite: 44 tests passed, pytest terminated normally with exit code 0 (10.81 seconds). The earlier hang was not reproduced; continue to require a normal exit code of zero on each release run.
+An earlier review run printed 19 dots and `[100%]` but did not terminate and had no successful exit code; that run was not evidence of a pass. The latest complete API suite run for payment and integration settings changes: 56 tests passed, pytest terminated normally with exit code 0. Continue to require a normal exit code of zero on each release run.
 
 GitHub Actions now runs the backend suite with `pytest -q` and a 10-minute job timeout, so a hung test job fails instead of staying indefinitely green/pending.

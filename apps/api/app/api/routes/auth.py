@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.models.entities import User
 from app.schemas.auth import LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
 from app.services.auth_service import AuthNotConfigured, create_session_token, hash_password, verify_password
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -36,17 +37,25 @@ def _cookie_flags(request: Request) -> dict:
     return {"httponly": True, "secure": request.url.scheme == "https" or settings.app_env.lower() not in {"development", "test"}, "samesite": "lax"}
 
 
-def _google_configured() -> bool:
-    return _google_configuration_issue() is None
+def _google_config(db: Session) -> dict[str, str]:
+    try:
+        return {
+            "client_id": (resolve_integration_value(db, "google_oauth", "client_id") or "").strip(),
+            "client_secret": (resolve_integration_value(db, "google_oauth", "client_secret") or "").strip(),
+            "redirect_uri": (resolve_integration_value(db, "google_oauth", "redirect_uri") or "").strip(),
+        }
+    except IntegrationSecretConfigurationError:
+        return {"client_id": "", "client_secret": "", "redirect_uri": ""}
 
 
-def _google_configuration_issue() -> str | None:
-    client_id = (settings.google_client_id or "").strip()
-    client_secret = (settings.google_client_secret or "").strip()
+def _google_configuration_issue(db: Session) -> str | None:
+    config = _google_config(db)
+    client_id = config["client_id"]
+    client_secret = config["client_secret"]
     if not client_id or not client_secret:
         return "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google sign-in."
     try:
-        callback = urlsplit(settings.google_redirect_uri)
+        callback = urlsplit(config["redirect_uri"])
         valid_callback = (
             callback.scheme in {"http", "https"}
             and bool(callback.hostname)
@@ -117,16 +126,17 @@ def logout(response: Response):
 
 
 @router.get("/google/start")
-def google_start(request: Request):
-    issue = _google_configuration_issue()
+def google_start(request: Request, db: Session = Depends(get_db)):
+    config = _google_config(db)
+    issue = _google_configuration_issue(db)
     if issue:
         raise HTTPException(status_code=503, detail={"code": "GOOGLE_AUTH_NOT_CONFIGURED", "message": issue})
     state = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode("ascii")
     query = urlencode({
-        "client_id": settings.google_client_id.strip(),
-        "redirect_uri": settings.google_redirect_uri,
+        "client_id": config["client_id"],
+        "redirect_uri": config["redirect_uri"],
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
@@ -142,18 +152,20 @@ def google_start(request: Request):
 
 
 @router.get("/google/status")
-def google_status():
-    issue = _google_configuration_issue()
+def google_status(db: Session = Depends(get_db)):
+    config = _google_config(db)
+    issue = _google_configuration_issue(db)
     return {
         "enabled": issue is None,
-        "redirect_uri": settings.google_redirect_uri,
+        "redirect_uri": config["redirect_uri"],
         "configuration_message": issue,
     }
 
 
 @router.get("/google/callback")
 def google_callback(request: Request, db: Session = Depends(get_db)):
-    if not _google_configured():
+    config = _google_config(db)
+    if _google_configuration_issue(db):
         return RedirectResponse(f"{settings.web_app_url}/login?error=google_not_configured", status_code=303)
     code = request.query_params.get("code")
     returned_state = request.query_params.get("state")
@@ -164,9 +176,9 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     try:
         token_response = httpx.post(GOOGLE_TOKEN_ENDPOINT, data={
             "code": code,
-            "client_id": settings.google_client_id.strip(),
-            "client_secret": settings.google_client_secret.strip(),
-            "redirect_uri": settings.google_redirect_uri,
+            "client_id": config["client_id"],
+            "client_secret": config["client_secret"],
+            "redirect_uri": config["redirect_uri"],
             "grant_type": "authorization_code",
             "code_verifier": verifier,
         }, timeout=10.0)

@@ -46,6 +46,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-30}
       LLM_FALLBACK_ENABLED: ${LLM_FALLBACK_ENABLED:-true}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
@@ -58,6 +62,15 @@ services:
       VNPAY_PAYMENT_URL: ${VNPAY_PAYMENT_URL:-}
       VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-}
       VNPAY_IPN_URL: ${VNPAY_IPN_URL:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-vnpay}
+      MOMO_ENVIRONMENT: ${MOMO_ENVIRONMENT:-production}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_API_URL: ${MOMO_API_URL:-https://payment.momo.vn/v2/gateway/api/create}
+      MOMO_RETURN_URL: ${MOMO_RETURN_URL:-}
+      MOMO_IPN_URL: ${MOMO_IPN_URL:-}
+      INTEGRATION_SECRETS_KEY: ${INTEGRATION_SECRETS_KEY:?Set INTEGRATION_SECRETS_KEY to encrypt admin-managed integration credentials}
       E5_MODEL_PATH: ${E5_MODEL_PATH:-/models/e5}
       ADMIN_API_KEY: ${ADMIN_API_KEY:?Set ADMIN_API_KEY for protected AI routes}
       APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:?Set APP_SIGNING_SECRET for provider confirmation}

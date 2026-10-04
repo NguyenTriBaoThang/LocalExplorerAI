@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 import hmac
+import json
 from ipaddress import ip_address
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -30,7 +31,9 @@ from app.models.entities import (
 from app.schemas.booking import BookingCancelRequest, BookingCancellationDecisionRequest, BookingDecisionRequest, BookingHoldRequest
 from app.services.evidence_service import entity_is_operationally_verified, slot_is_operationally_verified
 from app.services.notifications import queue_booking_status
-from app.services.vnpay import build_payment_url, verify_params
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
+from app.services.momo import MomoProviderError, MomoRejectedError, build_create_payload, create_payment_url, get_momo_config, verify_ipn_signature
+from app.services.vnpay import build_payment_url, get_vnpay_config, verify_params
 
 router = APIRouter(tags=["bookings and payments"])
 _LIVE_STATUSES = ("pending_provider", "awaiting_payment", "confirmed", "cancellation_requested")
@@ -120,17 +123,25 @@ def _payload(db: Session, booking: Booking) -> dict:
 
 
 @router.get("/api/payments/status")
-def payment_status():
-    configured = settings.vnpay_checkout_enabled
+def payment_status(db: Session = Depends(get_db)):
+    try:
+        selected = (resolve_integration_value(db, "payments", "provider") or "vnpay").strip().lower()
+        vnpay = get_vnpay_config(db)
+        momo = get_momo_config(db)
+    except IntegrationSecretConfigurationError:
+        return {"provider": "unavailable", "checkout_enabled": False, "refunds_enabled": False,
+                "message": "Integration configuration could not be decrypted. Check INTEGRATION_SECRETS_KEY."}
+    configured = vnpay.vnpay_checkout_enabled if selected == "vnpay" else momo.checkout_enabled if selected == "momo" else False
     return {
-        "provider": "vnpay",
-        "environment": settings.vnpay_environment,
+        "provider": selected,
+        "environment": momo.environment if selected == "momo" else vnpay.vnpay_environment,
         "checkout_enabled": configured,
+        "available_providers": {"vnpay": vnpay.vnpay_checkout_enabled, "momo": momo.checkout_enabled},
         "refunds_enabled": False,
         "message": (
-            "Thanh toán VNPay đã được cấu hình; xác nhận booking chỉ dựa trên IPN đã xác minh."
+            f"Thanh toán {selected} đã được cấu hình; xác nhận booking chỉ dựa trên IPN đã xác minh."
             if configured else
-            "VNPay chưa sẵn sàng: cần TMN code, Hash Secret, payment URL đúng môi trường và Return/IPN URL HTTPS công khai."
+            f"{selected} chưa sẵn sàng: kiểm tra merchant credentials, endpoint môi trường và Return/IPN URL HTTPS công khai."
         ),
     }
 
@@ -160,10 +171,14 @@ def _payment_return_redirect(*, payment: str, booking: Booking | None = None) ->
 @router.get("/api/payments/vnpay/return", include_in_schema=False)
 def vnpay_return(request: Request, db: Session = Depends(get_db)):
     """Display-only return; settlement is exclusively performed by the signed IPN."""
-    params = _vnpay_callback_params(request)
-    if not params or not settings.vnpay_credentials_configured or not verify_params(params, (settings.vnpay_hash_secret or "").strip()):
+    try:
+        config = get_vnpay_config(db)
+    except IntegrationSecretConfigurationError:
         return _payment_return_redirect(payment="invalid")
-    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (settings.vnpay_tmn_code or "").strip()):
+    params = _vnpay_callback_params(request)
+    if not params or not config.vnpay_credentials_configured or not verify_params(params, (config.vnpay_hash_secret or "").strip()):
+        return _payment_return_redirect(payment="invalid")
+    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (config.vnpay_tmn_code or "").strip()):
         return _payment_return_redirect(payment="invalid")
     reference = params.get("vnp_TxnRef", "")
     payment = db.scalar(select(PaymentTransaction).where(
@@ -179,12 +194,16 @@ def vnpay_return(request: Request, db: Session = Depends(get_db)):
 @router.get("/api/payments/vnpay/ipn", include_in_schema=False)
 def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     """Idempotent VNPay server callback. Never trust browser return parameters for settlement."""
-    params = _vnpay_callback_params(request)
-    if not params or not settings.vnpay_credentials_configured:
+    try:
+        config = get_vnpay_config(db)
+    except IntegrationSecretConfigurationError:
         return _vnpay_reply("99", "Invalid configuration or parameters")
-    if not verify_params(params, (settings.vnpay_hash_secret or "").strip()):
+    params = _vnpay_callback_params(request)
+    if not params or not config.vnpay_credentials_configured:
+        return _vnpay_reply("99", "Invalid configuration or parameters")
+    if not verify_params(params, (config.vnpay_hash_secret or "").strip()):
         return _vnpay_reply("97", "Invalid signature")
-    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (settings.vnpay_tmn_code or "").strip()):
+    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (config.vnpay_tmn_code or "").strip()):
         return _vnpay_reply("97", "Invalid merchant")
 
     reference = params.get("vnp_TxnRef", "")
@@ -281,6 +300,134 @@ def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     })
     db.commit()
     return _vnpay_reply("00", "Confirm Success")
+
+
+@router.get("/api/payments/momo/return", include_in_schema=False)
+def momo_return(request: Request, db: Session = Depends(get_db)):
+    """MoMo browser redirect is display-only; signed IPN alone settles the ledger."""
+    order_id = request.query_params.get("orderId", "")
+    payment = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.provider == "momo",
+        PaymentTransaction.provider_reference == order_id,
+    )) if order_id else None
+    booking = db.get(Booking, payment.booking_id) if payment else None
+    if booking is None:
+        return _payment_return_redirect(payment="invalid")
+    return _payment_return_redirect(payment="returned", booking=booking)
+
+
+@router.post("/api/payments/momo/ipn", include_in_schema=False)
+async def momo_ipn(request: Request, db: Session = Depends(get_db)):
+    """Validate MoMo's HMAC notification and acknowledge it with the documented 204."""
+    try:
+        config = get_momo_config(db)
+    except IntegrationSecretConfigurationError:
+        return Response(status_code=503)
+    if not config.checkout_enabled:
+        return Response(status_code=503)
+    content_length = request.headers.get("content-length", "")
+    if content_length.isdigit() and int(content_length) > 16_384:
+        return Response(status_code=413)
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > 16_384:
+            return Response(status_code=413)
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return Response(status_code=400)
+    if not isinstance(payload, dict) or not verify_ipn_signature(payload, config.access_key, config.secret_key):
+        return Response(status_code=401)
+    if not hmac.compare_digest(str(payload.get("partnerCode", "")), config.partner_code):
+        return Response(status_code=401)
+
+    order_id = str(payload.get("orderId", ""))
+    request_id = str(payload.get("requestId", ""))
+    payment = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.provider == "momo",
+        PaymentTransaction.provider_reference == order_id,
+    )) if order_id else None
+    if payment is None:
+        return Response(status_code=204)
+    amount = payload.get("amount")
+    if isinstance(amount, bool) or not (isinstance(amount, int) or isinstance(amount, str) and amount.isascii() and amount.isdigit()):
+        return Response(status_code=400)
+    if int(amount) != payment.amount_vnd or payment.currency != "VND":
+        return Response(status_code=400)
+    if not hmac.compare_digest(request_id, payment.idempotency_key):
+        return Response(status_code=400)
+    result_code = payload.get("resultCode")
+    if isinstance(result_code, bool) or not isinstance(result_code, int):
+        return Response(status_code=400)
+    trans_id = payload.get("transId")
+    if result_code in {0, 9000} and (isinstance(trans_id, bool) or not str(trans_id).isascii() or not str(trans_id).isdigit()):
+        return Response(status_code=400)
+
+    booking_preview = db.get(Booking, payment.booking_id)
+    if booking_preview is None:
+        return Response(status_code=204)
+    # Keep lock acquisition consistent with VNPay and slot-capacity changes.
+    slot = db.scalar(select(ExperienceSlot).where(ExperienceSlot.id == booking_preview.slot_id).with_for_update())
+    booking = db.scalar(select(Booking).where(Booking.id == payment.booking_id).with_for_update())
+    payment = db.scalar(select(PaymentTransaction).where(PaymentTransaction.id == payment.id)
+                        .with_for_update().execution_options(populate_existing=True))
+    if booking is None or payment is None or payment.status == "succeeded":
+        return Response(status_code=204)
+    if payment.status not in {"created", "pending", "failed"}:
+        return Response(status_code=204)
+    if payment.status == "failed" and result_code not in {0, 9000}:
+        return Response(status_code=204)
+    # 9000 is an authorization, not a captured payment. This integration does not
+    # implement a separate capture call, so never confirm a reservation for it.
+    if result_code == 9000:
+        return Response(status_code=204)
+
+    now = _now()
+    if result_code != 0:
+        payment.status = "failed"
+        payment.updated_at = now
+        _event(db, booking, None, "payment_failed", booking.status, {
+            "payment_transaction_id": payment.id,
+            "gateway": "momo",
+            "gateway_result_code": result_code,
+        })
+        db.commit()
+        return Response(status_code=204)
+
+    payment.status = "succeeded"
+    payment.updated_at = now
+    old_status = booking.status
+    expiry = _aware(booking.hold_expires_at)
+    can_settle_booking = booking.status == "awaiting_payment" and expiry is not None and expiry > now
+    if can_settle_booking:
+        can_settle_booking = bool(
+            slot and slot.status == "open" and slot.available_reported is not None
+            and slot_is_operationally_verified(db, slot)
+            and _held_seats(db, booking.slot_id, now) <= slot.available_reported
+        )
+    if can_settle_booking:
+        booking.status = "confirmed"
+        booking.confirmed_at = now
+        booking.hold_expires_at = None
+        event_type = "payment_confirmed"
+    elif booking.status == "confirmed":
+        event_type = "extra_payment_captured_reconciliation_required"
+    else:
+        booking.status = "refund_pending"
+        booking.hold_expires_at = None
+        event_type = "payment_captured_reconciliation_required"
+    booking.updated_at = now
+    _event(db, booking, None, event_type, old_status, {
+        "payment_transaction_id": payment.id,
+        "gateway": "momo",
+        "gateway_transaction_id": str(trans_id),
+        "gateway_response_time": str(payload.get("responseTime", "")),
+        "amount_vnd": payment.amount_vnd,
+        "manual_refund_reconciliation_required": event_type != "payment_confirmed",
+    })
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/api/bookings", status_code=201)
@@ -402,7 +549,67 @@ def begin_checkout(booking_id: str, request: Request, user: User = Depends(requi
     hold_expires_at = _aware(booking.hold_expires_at)
     if booking.status != "awaiting_payment" or hold_expires_at is None or hold_expires_at <= now + timedelta(seconds=30):
         raise HTTPException(status_code=409, detail={"code": "BOOKING_NOT_READY_FOR_PAYMENT", "message": "Cơ sở chưa xác nhận yêu cầu hoặc thời hạn giữ chỗ đã hết."})
-    if not settings.vnpay_checkout_enabled:
+    try:
+        selected_provider = (resolve_integration_value(db, "payments", "provider") or "vnpay").strip().lower()
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "PAYMENT_CONFIGURATION_UNAVAILABLE", "message": "Payment integration settings could not be decrypted."}) from error
+
+    if selected_provider == "momo":
+        try:
+            momo = get_momo_config(db)
+        except IntegrationSecretConfigurationError as error:
+            raise HTTPException(status_code=503, detail={"code": "PAYMENT_CONFIGURATION_UNAVAILABLE", "message": "Payment integration settings could not be decrypted."}) from error
+        if not momo.checkout_enabled:
+            raise HTTPException(status_code=503, detail={"code": "PAYMENT_GATEWAY_NOT_CONFIGURED", "message": "MoMo is not ready. Configure merchant credentials and public HTTPS return/IPN URLs."})
+        if booking.amount_vnd < 1_000 or booking.amount_vnd > 50_000_000:
+            raise HTTPException(status_code=422, detail={"code": "PAYMENT_AMOUNT_UNSUPPORTED", "message": "MoMo wallet checkout supports amounts from 1,000 to 50,000,000 VND."})
+        pending = db.scalar(select(PaymentTransaction).where(
+            PaymentTransaction.booking_id == booking.id,
+            PaymentTransaction.status.in_(["created", "pending"]),
+        ).order_by(PaymentTransaction.created_at.desc()).with_for_update())
+        if pending and pending.provider != "momo":
+            raise HTTPException(status_code=409, detail={"code": "PAYMENT_ATTEMPT_IN_PROGRESS", "message": "A payment attempt with another provider is still pending."})
+        if pending and pending.checkout_url:
+            return {"checkout_url": pending.checkout_url}
+        if pending is None:
+            pending = PaymentTransaction(
+                id=str(uuid4()), booking_id=booking.id, provider="momo", provider_reference=uuid4().hex,
+                idempotency_key=uuid4().hex, amount_vnd=booking.amount_vnd, currency="VND",
+                status="created", created_at=now, updated_at=now,
+            )
+            db.add(pending)
+            db.add(AuditLog(
+                id=str(uuid4()), actor_id=user.id, action="booking.payment_checkout_created",
+                target_type="booking", target_id=booking.id,
+                details={"provider": "momo", "payment_transaction_id": pending.id}, created_at=now,
+            ))
+            db.commit()
+        try:
+            create_payload = build_create_payload(
+                momo, amount_vnd=booking.amount_vnd, order_id=pending.provider_reference,
+                request_id=pending.idempotency_key, order_info=f"LocalExplorer booking {booking.id}",
+            )
+            checkout_url = create_payment_url(momo, create_payload)
+        except MomoRejectedError as error:
+            pending.status = "failed"
+            pending.updated_at = _now()
+            db.commit()
+            raise HTTPException(status_code=502, detail={"code": "PAYMENT_PROVIDER_REJECTED", "message": "MoMo rejected this payment attempt. Review merchant setup before retrying."}) from error
+        except MomoProviderError as error:
+            raise HTTPException(status_code=502, detail={"code": "PAYMENT_PROVIDER_ERROR", "message": "MoMo could not create a checkout session. The request can be safely retried."}) from error
+        pending.checkout_url = checkout_url
+        pending.status = "pending"
+        pending.updated_at = _now()
+        db.commit()
+        return {"checkout_url": checkout_url}
+
+    if selected_provider != "vnpay":
+        raise HTTPException(status_code=503, detail={"code": "PAYMENT_PROVIDER_UNSUPPORTED", "message": "The configured payment provider is not supported."})
+    try:
+        vnpay = get_vnpay_config(db)
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "PAYMENT_CONFIGURATION_UNAVAILABLE", "message": "Payment integration settings could not be decrypted."}) from error
+    if not vnpay.vnpay_checkout_enabled:
         raise HTTPException(status_code=503, detail={
             "code": "PAYMENT_GATEWAY_NOT_CONFIGURED",
             "message": "VNPay chưa sẵn sàng; chưa có khoản tiền nào bị thu. Cần cấu hình merchant và callback công khai.",
@@ -412,6 +619,14 @@ def begin_checkout(booking_id: str, request: Request, user: User = Depends(requi
             "code": "PAYMENT_AMOUNT_UNSUPPORTED",
             "message": "VNPay yêu cầu tối thiểu 5.000 VND và giới hạn số tiền gửi theo trường 12 chữ số; hạn mức thực tế còn phụ thuộc tài khoản/ngân hàng.",
         })
+
+    other_provider_pending = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.booking_id == booking.id,
+        PaymentTransaction.status.in_(["created", "pending"]),
+        PaymentTransaction.provider != "vnpay",
+    ).order_by(PaymentTransaction.created_at.desc()).with_for_update())
+    if other_provider_pending:
+        raise HTTPException(status_code=409, detail={"code": "PAYMENT_ATTEMPT_IN_PROGRESS", "message": "A payment attempt with another provider is still pending."})
 
     pending = db.scalar(select(PaymentTransaction).where(
         PaymentTransaction.booking_id == booking.id,
@@ -430,10 +645,10 @@ def begin_checkout(booking_id: str, request: Request, user: User = Depends(requi
     transaction_ref = uuid4().hex
     timezone_vn = ZoneInfo("Asia/Ho_Chi_Minh")
     checkout_url = build_payment_url(
-        payment_url=settings.vnpay_payment_url.strip(),
-        tmn_code=(settings.vnpay_tmn_code or "").strip(),
-        hash_secret=(settings.vnpay_hash_secret or "").strip(),
-        return_url=(settings.vnpay_return_url or "").strip(),
+        payment_url=vnpay.vnpay_payment_url.strip(),
+        tmn_code=(vnpay.vnpay_tmn_code or "").strip(),
+        hash_secret=(vnpay.vnpay_hash_secret or "").strip(),
+        return_url=(vnpay.vnpay_return_url or "").strip(),
         amount_vnd=booking.amount_vnd,
         transaction_ref=transaction_ref,
         order_info=f"LocalExplorer booking {booking.id}",

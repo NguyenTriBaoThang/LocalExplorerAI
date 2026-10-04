@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
+    gemini_api_key: str | None = None
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_model: str = "gemini-2.5-flash"
+    llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
     llm_fallback_enabled: bool = True
     admin_api_key: str | None = None
@@ -60,6 +64,15 @@ class Settings(BaseSettings):
     vnpay_payment_url: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
     vnpay_return_url: str | None = None
     vnpay_ipn_url: str | None = None
+    payment_provider: Literal["vnpay", "momo"] = "vnpay"
+    momo_environment: Literal["sandbox", "production"] = "sandbox"
+    momo_partner_code: str | None = None
+    momo_access_key: str | None = None
+    momo_secret_key: str | None = None
+    momo_api_url: str = "https://test-payment.momo.vn/v2/gateway/api/create"
+    momo_return_url: str | None = None
+    momo_ipn_url: str | None = None
+    integration_secrets_key: str | None = None
     demo_admin_email: str = "localexplorerai@admin.com"
     demo_admin_password: str | None = None
     demo_traveler_email: str = "baothang@gmail.com"

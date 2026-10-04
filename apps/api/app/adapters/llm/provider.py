@@ -24,7 +24,7 @@ class NotConfiguredLLMProvider:
     model_name = "not-configured"
 
     def generate(self, system_prompt: str, user_input: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
-        raise LLMNotConfigured("Configure OPENAI_API_KEY to enable prompt-backed workflows.")
+        raise LLMNotConfigured("Configure an AI provider API key to enable prompt-backed workflows.")
 
 
 class OpenAICompatibleLLMProvider:

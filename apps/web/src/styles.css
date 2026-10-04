@@ -7989,3 +7989,47 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+.integration-config-card {
+  margin-bottom: 1.25rem;
+}
+
+.integration-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.integration-setting-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.integration-setting-field .field-group-3d {
+  flex: 1;
+  min-width: 0;
+}
+
+.integration-setting-field .field-group-3d small {
+  color: var(--text-muted, #8f9baa);
+  font-size: 0.72rem;
+}
+
+.integration-remove-btn {
+  margin-bottom: 1.8rem;
+  flex: 0 0 auto;
+}
+
+.integration-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 760px) {
+  .integration-config-grid {
+    grid-template-columns: 1fr;
+  }
+}

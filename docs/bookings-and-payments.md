@@ -18,10 +18,12 @@ Use PostgreSQL in production. `SELECT ... FOR UPDATE` serializes hold creation p
 - `GET /api/bookings?itinerary_id=…` — current traveler's reservations and history.
 - `POST /api/bookings/{id}/cancel` — release an unpaid hold; a paid booking transitions to `cancellation_requested` and does not claim to have refunded money.
 - `GET /api/bookings/{id}/history` — visible only to the traveler, owning provider, or admin.
-- `GET /api/payments/status` — reports VNPay environment and whether signed checkout is ready; never exposes merchant credentials.
-- `POST /api/bookings/{id}/checkout` — creates/reuses a pending VNPay transaction and returns a signed VNPay checkout URL. The API does not handle card data.
+- `GET /api/payments/status` — reports the selected gateway and readiness of VNPay/MoMo; never exposes merchant credentials.
+- `POST /api/bookings/{id}/checkout` — creates/reuses a pending transaction for the configured VNPay or MoMo gateway and returns its checkout URL. The API does not handle card data.
 - `GET /api/payments/vnpay/return` — validates the VNPay signature for display routing only; it never settles a transaction.
 - `GET /api/payments/vnpay/ipn` — verifies the merchant, signature, amount and transaction result; idempotently updates the payment ledger and booking.
+- `GET /api/payments/momo/return` — display-only redirect from MoMo; it never settles a transaction.
+- `POST /api/payments/momo/ipn` — verifies MoMo's HMAC-SHA256 signature, merchant, order reference, request ID, amount and currency before idempotent settlement; valid requests are acknowledged with HTTP 204.
 - `GET /api/provider/me/bookings` — authenticated provider's requests.
 - `POST /api/provider/me/bookings/{id}/decision` — body action `accept` or `reject` with optional note.
 - `POST /api/provider/me/bookings/{id}/cancellation-decision` — provider approves/rejects an unpaid cancellation; paid cancellation cannot be completed until an actual refund adapter returns verified success.
@@ -44,6 +46,12 @@ For production, use merchant-issued live credentials, the production payment URL
 See VNPay's [PAY integration specification](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html), [merchant setup guide](https://sandbox.vnpayment.vn/apis/docs/gioi-thieu/), and [FAQ](https://sandbox.vnpayment.vn/apis/docs/faqs/) for current account-specific setup, amount limits and sandbox test details.
 
 The server creates the payment reference and amount from the held booking, signs the VNPay request with HMAC-SHA512, stores a pending transaction, and reuses its checkout URL on repeat requests. The signed IPN is authoritative. The browser Return URL is display-only and the page polls the authenticated bookings API until it sees the server-set `confirmed` state. Captures received after a hold expired/cancelled or after another capture are recorded and moved to manual reconciliation; the booking is not falsely confirmed.
+
+## MoMo wallet checkout
+
+MoMo uses the official `captureWallet` one-time flow: the API signs the server-created request with HMAC-SHA256, calls `/v2/gateway/api/create`, validates the signed response and redirects the traveler to the returned MoMo payment page. Configure `PAYMENT_PROVIDER=momo` or select MoMo in the admin integrations screen. Sandbox uses `https://test-payment.momo.vn/v2/gateway/api/create`; production must use the merchant-approved live credentials and live endpoint. MoMo supports 1,000–50,000,000 VND per the current wallet guide. A valid IPN with `resultCode=0` is authoritative; the return URL only resumes the booking-status poll. `resultCode=9000` is authorization-only and is not treated as a captured payment. Captures after hold expiry go to manual `refund_pending` reconciliation; automated refunds are not implemented.
+
+For sandbox, enter `momo_partner_code`, `momo_access_key`, `momo_secret_key`, `momo_environment=sandbox`, the sandbox API URL, and public HTTPS Return/IPN URLs ending in `/api/payments/momo/return` and `/api/payments/momo/ipn`. Run `GET /api/payments/status` and confirm MoMo is ready, then test only with the MoMo test app/account. Production MoMo requires onboarding and production credentials from MoMo; do not infer them from sandbox values. The IPN endpoint must be publicly reachable by MoMo. See the [official MoMo wallet checkout guide](https://developers.momo.vn/v3/docs/payment/api/wallet/onetime/) and [notification guide](https://developers.momo.vn/v3/vi/docs/payment/api/result-handling/notification/).
 
 Real checkout is only enabled once credentials and externally reachable callback URLs are supplied. Refund API calls remain disabled; paid cancellations and unexpected/late captures require operator reconciliation/refund outside the application. Do not describe refunds as automated. Test the sandbox flow and verify successful IPN delivery before accepting any production payment.
 

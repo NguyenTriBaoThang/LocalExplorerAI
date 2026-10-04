@@ -3,6 +3,25 @@ import hmac
 from datetime import datetime
 from urllib.parse import urlencode
 
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.services.integration_config import resolve_integration_value
+
+
+def get_vnpay_config(db: Session | None):
+    """Return an effective settings copy with encrypted admin overrides applied."""
+    keys = {
+        "vnpay_environment": "vnpay_environment",
+        "vnpay_tmn_code": "vnpay_tmn_code",
+        "vnpay_hash_secret": "vnpay_hash_secret",
+        "vnpay_payment_url": "vnpay_payment_url",
+        "vnpay_return_url": "vnpay_return_url",
+        "vnpay_ipn_url": "vnpay_ipn_url",
+    }
+    updates = {setting: resolve_integration_value(db, "payments", integration_key) for setting, integration_key in keys.items()}
+    return settings.model_copy(update=updates)
+
 
 def _canonical_query(params: dict[str, str]) -> str:
     values = [

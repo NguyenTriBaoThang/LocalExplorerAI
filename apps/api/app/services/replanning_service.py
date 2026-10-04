@@ -84,7 +84,7 @@ class ReplanningService:
     def __init__(self, db: Session, provider: StructuredOutputProvider | None):
         self.db = db
         self.runner = PromptRunner(provider) if provider else None
-        self.routing = RoutingService()
+        self.routing = RoutingService(db=db)
         self.availability = AvailabilityService()
 
     def _load(self, itinerary_id: str, event_id: str, lock: bool = False):

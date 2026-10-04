@@ -11,6 +11,9 @@ import {
   AlertCircle,
   Plus,
   RefreshCw,
+  KeyRound,
+  Save,
+  Trash2,
 } from 'lucide-react'
 import { adminApi } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
@@ -38,7 +41,19 @@ type DuplicatePair = {
   name_similarity: number
 }
 
-type TabKey = 'queue' | 'duplicates' | 'providers' | 'users' | 'audit'
+type IntegrationField = {
+  key: string
+  label: string
+  secret: boolean
+  configured: boolean
+  source: 'admin' | 'environment' | 'missing'
+  value: string | null
+  updated_at: string | null
+}
+
+type IntegrationGroup = { service: string; fields: IntegrationField[] }
+
+type TabKey = 'queue' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations'
 
 export function AdminPage() {
   const { t } = useTranslation()
@@ -70,6 +85,9 @@ export function AdminPage() {
     }>
   >([])
   const [activeTab, setActiveTab] = useState<TabKey>('queue')
+  const [integrations, setIntegrations] = useState<IntegrationGroup[]>([])
+  const [integrationDrafts, setIntegrationDrafts] = useState<Record<string, string>>({})
+  const [savingIntegration, setSavingIntegration] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -83,7 +101,7 @@ export function AdminPage() {
   async function load() {
     setLoading(true)
     try {
-      const [metrics, accounts, providerRows, pending, nearDuplicates, logs] =
+      const [metrics, accounts, providerRows, pending, nearDuplicates, logs, integrationRows] =
         await Promise.all([
           adminApi.dashboard(),
           adminApi.users(),
@@ -91,6 +109,7 @@ export function AdminPage() {
           adminApi.moderation('pending'),
           adminApi.duplicates(),
           adminApi.audit(),
+          adminApi.integrations(),
         ])
       setDashboard(metrics)
       setUsers(accounts)
@@ -102,6 +121,18 @@ export function AdminPage() {
       })
       setDuplicates(nearDuplicates)
       setAudit(logs)
+      setIntegrations(integrationRows)
+      setIntegrationDrafts((previous) => {
+        const next = { ...previous }
+        for (const group of integrationRows as IntegrationGroup[]) {
+          for (const field of group.fields) {
+            const name = `${group.service}.${field.key}`
+            if (!field.secret) next[name] = field.value || ''
+            else next[name] = ''
+          }
+        }
+        return next
+      })
       setError('')
     } catch (reason) {
       setError(
@@ -194,6 +225,54 @@ export function AdminPage() {
     } catch {
       setError('Không thể gộp hai POI này.')
     }
+  }
+
+  async function saveIntegration(group: IntegrationGroup, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSavingIntegration(true)
+    try {
+      const values: Record<string, string> = {}
+      for (const field of group.fields) {
+        const draft = integrationDrafts[`${group.service}.${field.key}`]?.trim() || ''
+        if (draft && (field.secret || draft !== (field.value || ''))) values[field.key] = draft
+      }
+      if (!Object.keys(values).length) {
+        setMessage('Chưa có thay đổi mới để lưu. Ô bí mật để trống sẽ giữ nguyên khóa đang có.')
+        return
+      }
+      await adminApi.updateIntegration(group.service, values)
+      setMessage(`Đã lưu cấu hình ${group.service}. Giá trị bí mật không được gửi ngược về trình duyệt.`)
+      setError('')
+      await load()
+    } catch (reason) {
+      const detail = (reason as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
+      setError(detail || 'Không lưu được cấu hình tích hợp. Kiểm tra khóa mã hóa và giá trị đã nhập.')
+    } finally {
+      setSavingIntegration(false)
+    }
+  }
+
+  async function removeIntegrationOverride(group: IntegrationGroup, field: IntegrationField) {
+    if (!window.confirm(`Xóa cấu hình admin cho ${group.service}.${field.key}? Cấu hình sẽ quay về biến môi trường nếu có.`)) return
+    setSavingIntegration(true)
+    try {
+      await adminApi.updateIntegration(group.service, {}, [field.key])
+      setMessage(`Đã xóa override ${group.service}.${field.key}.`)
+      setError('')
+      await load()
+    } catch (reason) {
+      const detail = (reason as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
+      setError(detail || 'Không xóa được cấu hình tích hợp.')
+    } finally {
+      setSavingIntegration(false)
+    }
+  }
+
+  const integrationTitle: Record<string, string> = {
+    payments: 'Thanh toán · MoMo / VNPay',
+    routing: 'Tuyến đường · Goong',
+    ai: 'Chat AI · Gemini / OpenAI-compatible',
+    google_oauth: 'Đăng nhập · Google OAuth',
   }
 
   const queueTotal = queue.pois.length + queue.experiences.length + queue.evidence.length
@@ -298,6 +377,15 @@ export function AdminPage() {
         >
           <History size={15} />
           <span>{t('admin.tabAudit')} ({audit.length})</span>
+        </button>
+
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeTab === 'integrations' ? 'admin-tab-active' : ''}`}
+          onClick={() => setActiveTab('integrations')}
+        >
+          <KeyRound size={15} />
+          <span>Tích hợp & API keys</span>
         </button>
       </div>
 
@@ -608,6 +696,80 @@ export function AdminPage() {
               ))}
             </div>
           </section>
+        </div>
+      )}
+
+      {activeTab === 'integrations' && (
+        <div className="admin-tab-content animate-fadeIn">
+          <div className="inline-alert-3d">
+            <AlertCircle size={16} />
+            <span>Khóa được mã hóa trong cơ sở dữ liệu bằng INTEGRATION_SECRETS_KEY ở môi trường máy chủ. Ô bí mật luôn để trống khi tải; lưu ô trống giữ khóa cũ. Không nhập khóa vào log hoặc chia sẻ qua chat.</span>
+          </div>
+          {integrations.map((group) => (
+            <form key={group.service} className="admin-section-card integration-config-card" onSubmit={(event) => void saveIntegration(group, event)}>
+              <div className="admin-section-header">
+                <h3>{integrationTitle[group.service] || group.service}</h3>
+                <p>Override đã mã hóa được ưu tiên hơn biến môi trường. Xóa override sẽ quay về giá trị môi trường nếu có.</p>
+              </div>
+              <div className="integration-config-grid">
+                {group.fields.map((field) => {
+                  const id = `${group.service}.${field.key}`
+                  const fallback = field.key === 'provider'
+                    ? group.service === 'payments' ? 'vnpay' : group.service === 'routing' ? 'goong' : 'openai'
+                    : field.key.endsWith('environment') ? 'sandbox' : ''
+                  const value = integrationDrafts[id] ?? field.value ?? fallback
+                  const choices = group.service === 'payments' && field.key === 'provider'
+                    ? [['vnpay', 'VNPay'], ['momo', 'MoMo']]
+                    : group.service === 'payments' && field.key.endsWith('environment')
+                      ? [['sandbox', 'Sandbox'], ['production', 'Production']]
+                      : group.service === 'routing' && field.key === 'provider'
+                        ? [['goong', 'Goong'], ['mock', 'Mock (development only)']]
+                        : group.service === 'routing' && field.key === 'geocoding_provider'
+                          ? [['goong', 'Goong']]
+                          : group.service === 'ai' && field.key === 'provider'
+                            ? [['openai', 'OpenAI-compatible'], ['gemini', 'Gemini']]
+                            : null
+                  return (
+                    <div className="integration-setting-field" key={field.key}>
+                      <label className="field-group-3d">
+                        <span>{field.label}</span>
+                        {choices ? (
+                          <select value={value} onChange={(event) => setIntegrationDrafts({ ...integrationDrafts, [id]: event.target.value })}>
+                            {choices.map(([choice, label]) => <option key={choice} value={choice}>{label}</option>)}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.secret ? 'password' : field.key.endsWith('_url') || field.key.endsWith('_uri') || field.key.endsWith('_base_url') ? 'url' : 'text'}
+                            autoComplete={field.secret ? 'new-password' : 'off'}
+                            value={value}
+                            placeholder={field.secret && field.configured ? 'Đã có khóa · để trống để giữ nguyên' : field.secret ? 'Nhập khóa mới' : 'Chưa cấu hình'}
+                            onChange={(event) => setIntegrationDrafts({ ...integrationDrafts, [id]: event.target.value })}
+                          />
+                        )}
+                        <small>{field.source === 'admin' ? 'Nguồn: cấu hình admin' : field.source === 'environment' ? 'Nguồn: biến môi trường' : 'Chưa cấu hình'}</small>
+                      </label>
+                      {field.source === 'admin' && (
+                        <button
+                          type="button"
+                          className="btn-secondary-3d btn-sm integration-remove-btn"
+                          disabled={savingIntegration}
+                          aria-label={`Xóa override ${field.label}`}
+                          onClick={() => void removeIntegrationOverride(group, field)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="integration-save-row">
+                <button className="btn-primary-3d btn-sm" type="submit" disabled={savingIntegration}>
+                  <Save size={15} /> {savingIntegration ? 'Đang lưu…' : 'Lưu cấu hình'}
+                </button>
+              </div>
+            </form>
+          ))}
         </div>
       )}
     </div>

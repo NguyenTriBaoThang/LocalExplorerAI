@@ -6,10 +6,13 @@ from app.adapters.llm.provider import (
     StructuredOutputProvider,
 )
 from app.api.dependencies import get_llm_provider
+from app.api.dependencies import get_db
 from app.core.config import settings
 from app.prompts.registry import catalog
 from app.schemas.ai import ChatMessage, StructuredConstraints
 from app.services.offline_chat_fallback import build_offline_constraints
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
+from sqlalchemy.orm import Session
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -43,10 +46,14 @@ def chat_message(payload: ChatMessage, provider: StructuredOutputProvider = Depe
 
 
 @router.get("/status")
-def chat_status():
-    configured = settings.llm_is_configured
+def chat_status(provider: StructuredOutputProvider = Depends(get_llm_provider), db: Session = Depends(get_db)):
+    configured = provider.model_name != "not-configured"
+    try:
+        selected = resolve_integration_value(db, "ai", "provider") or "openai"
+    except IntegrationSecretConfigurationError:
+        selected = "openai"
     return {
-        "assistant_mode": "openai_compatible" if configured else "local_fallback",
+        "assistant_mode": f"{selected}_compatible" if configured else "local_fallback",
         "llm_configured": configured,
         "fallback_available": settings.llm_fallback_enabled,
         "fallback_version": "1.0.0",

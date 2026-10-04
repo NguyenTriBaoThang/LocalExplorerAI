@@ -1,35 +1,46 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
-from app.core.config import settings
 from app.schemas.geocoding import GeocodeResponse
+from app.api.dependencies import get_db
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.services.routing_service import make_geocoding_provider
 
 router = APIRouter(prefix="/api", tags=["routing and geocoding"])
 
 
 @router.get("/routing/capabilities")
-def routing_capabilities():
+def routing_capabilities(db: Session = Depends(get_db)):
+    try:
+        routing_provider = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
+        geocoding_provider = (resolve_integration_value(db, "routing", "geocoding_provider") or "goong").strip().lower()
+        goong_api_key = resolve_integration_value(db, "routing", "goong_api_key")
+    except IntegrationSecretConfigurationError as error:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "ROUTING_CONFIGURATION_UNAVAILABLE", "message": "Routing integration settings are unavailable."},
+        ) from error
     modes = {
         "mock": ["walking", "bicycling", "driving", "motorcycle", "car", "transit"],
         "goong": ["motorcycle", "walking", "car"],
-    }.get(settings.routing_provider, [])
+    }.get(routing_provider, [])
     return {
-        "provider": settings.routing_provider,
-        "configured": settings.routing_provider == "mock" or (settings.routing_provider == "goong" and bool(settings.goong_api_key)),
+        "provider": routing_provider,
+        "configured": routing_provider == "mock" or (routing_provider == "goong" and bool(goong_api_key)),
         "supported_modes": modes,
         "eta_is_realtime": False,
-        "geocoding_provider": settings.geocoding_provider,
-        "geocoding_configured": settings.geocoding_provider == "goong" and bool(settings.goong_api_key),
+        "geocoding_provider": geocoding_provider,
+        "geocoding_configured": geocoding_provider == "goong" and bool(goong_api_key),
     }
 
 
 @router.get("/geocoding/forward", response_model=GeocodeResponse)
-def forward_geocode(address: str = Query(min_length=3, max_length=300)):
+def forward_geocode(address: str = Query(min_length=3, max_length=300), db: Session = Depends(get_db)):
     try:
-        result = make_geocoding_provider().forward(address)
+        result = make_geocoding_provider(db).forward(address)
     except RoutingConfigurationError as error:
         raise HTTPException(status_code=503, detail={"code": "GEOCODING_NOT_CONFIGURED", "message": str(error)}) from error
     except RoutingProviderError as error:
