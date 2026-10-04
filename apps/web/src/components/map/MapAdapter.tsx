@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Marker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import type { LatLngExpression } from 'leaflet'
 import { divIcon } from 'leaflet'
-import { MapPin, Layers, Sparkles } from 'lucide-react'
+import { MapPin, Layers, Sparkles, Box } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export const LEG_COLORS = [
   '#10b981', // 1: Emerald
@@ -238,6 +239,16 @@ export function MapAdapter({
           <span className="badge-live-pulse" />
           <span>GOONG MAPS & DIRECTIONS V2 · SÀI GÒN</span>
         </div>
+
+        <Link
+          to="/map-3d"
+          className="map-layer-toggle"
+          style={{ textDecoration: 'none', background: 'rgba(99, 102, 241, 0.2)', borderColor: 'rgba(129, 140, 248, 0.4)' }}
+          title="Xem mô hình 3D Landmark & Tùy chỉnh vị trí"
+        >
+          <Box size={13} />
+          <span>Bản đồ 3D Landmark</span>
+        </Link>
 
         <button
           type="button"
