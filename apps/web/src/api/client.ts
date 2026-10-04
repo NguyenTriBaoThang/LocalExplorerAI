@@ -149,6 +149,13 @@ export const providerApi = {
     (await api.post<Booking>(`/provider/me/bookings/${id}/decision`, { action, note })).data,
   decideBookingCancellation: async (id: string, action: 'approve' | 'reject', note = '') =>
     (await api.post<Booking>(`/provider/me/bookings/${id}/cancellation-decision`, { action, note })).data,
+  previewSlotAssistant: async (providerId: string, message: string, slotIds: string[]) =>
+    (await api.post(`/providers/${providerId}/slot-assistant/preview`, { message, slot_ids: slotIds })).data,
+  confirmSlotAssistant: async (providerId: string, confirmationToken: string, expiresAt?: string) =>
+    (await api.post(`/providers/${providerId}/slot-assistant/confirm`, {
+      confirmation_token: confirmationToken,
+      ...(expiresAt ? { expires_at: expiresAt } : {}),
+    })).data,
 }
 
 export const adminApi = {
@@ -157,6 +164,20 @@ export const adminApi = {
   providers: async () => (await api.get('/admin/providers')).data,
   placeImports: async () => (await api.get('/admin/place-imports')).data,
   placeImportCandidates: async (batchId: string) => (await api.get(`/admin/place-imports/${batchId}/candidates`)).data,
+  aiTargets: async () => (await api.get('/admin/ai/targets')).data,
+  operationsStatus: async () => (await api.get('/ops/status')).data,
+  operationsJobs: async () => (await api.get('/ops/jobs')).data,
+  operationsEvents: async () => (await api.get('/ops/events')).data,
+  operationsNotifications: async () => (await api.get('/ops/notifications')).data,
+  promptCatalog: async () => (await api.get('/ai/prompts')).data,
+  tagExperience: async (experienceId: string, additional_context: string) =>
+    (await api.post(`/experiences/${experienceId}/ai-tag`, { additional_context })).data,
+  compareIntent: async (experience_a_id: string, experience_b_id: string) =>
+    (await api.post('/ai/intent-similarity', { experience_a_id, experience_b_id })).data,
+  labelFeedback: async (itineraryId: string, review_text: string, rating: number | null) =>
+    (await api.post(`/itineraries/${itineraryId}/feedback/label`, { review_text, rating })).data,
+  weatherAdvisory: async (itineraryId: string, payload: Record<string, unknown>) =>
+    (await api.post(`/itineraries/${itineraryId}/weather-advisory`, payload)).data,
   updateUser: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/admin/users/${id}`, payload)).data,
   createProvider: async (payload: Record<string, unknown>) => (await api.post('/admin/providers', payload)).data,
   moderation: async (status = 'pending') => (await api.get('/admin/moderation', { params: { status } })).data,
@@ -167,6 +188,12 @@ export const adminApi = {
   integrations: async () => (await api.get('/admin/integrations')).data,
   updateIntegration: async (service: string, values: Record<string, string>, remove_keys: string[] = []) =>
     (await api.put('/admin/integrations/' + encodeURIComponent(service), { values, remove_keys })).data,
+}
+
+export const mlApi = {
+  status: async () => (await api.get('/ml/status')).data,
+  predictFloodRisk: async (samples: Array<Record<string, string | number>>) =>
+    (await api.post('/ml/flood-risk', { samples })).data,
 }
 
 // Rich simulated Saigon demo data

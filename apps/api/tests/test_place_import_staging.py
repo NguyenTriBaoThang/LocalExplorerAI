@@ -46,3 +46,18 @@ def test_place_import_queue_is_admin_only(client, db_session):
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "ROLE_FORBIDDEN"
+
+
+def test_ai_tool_target_list_is_admin_only_and_does_not_expose_account_data(client, db_session, sample_experience):
+    admin = User(email="ai-tools-admin@example.test", display_name="Admin", role="admin")
+    db_session.add(admin)
+    db_session.commit()
+    client.cookies.set("le_session", create_session_token(admin.id))
+
+    response = client.get("/api/admin/ai/targets")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["experiences"][0]["id"] == sample_experience.id
+    assert "email" not in payload["experiences"][0]
+    assert all("user_id" not in itinerary for itinerary in payload["itineraries"])

@@ -68,6 +68,24 @@ def list_providers(user: User = Depends(require_roles("admin")), db: Session = D
              "is_active": item.is_active} for item in rows]
 
 
+@router.get("/ai/targets")
+def ai_tool_targets(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+    """Return minimal identifiers for admin AI tools without exposing traveler data."""
+    experiences = db.execute(
+        select(Experience.id, Experience.title, Experience.name)
+        .order_by(Experience.name).limit(500)
+    ).all()
+    itineraries = db.execute(
+        select(Itinerary.id, Itinerary.planned_date, Itinerary.created_at)
+        .order_by(Itinerary.created_at.desc()).limit(500)
+    ).all()
+    return {
+        "experiences": [{"id": row.id, "title": row.title or row.name} for row in experiences],
+        "itineraries": [{"id": row.id, "planned_date": row.planned_date, "created_at": row.created_at}
+                        for row in itineraries],
+    }
+
+
 @router.get("/place-imports")
 def list_place_imports(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
     batches = db.scalars(select(PlaceImportBatch).order_by(PlaceImportBatch.created_at.desc()).limit(100)).all()

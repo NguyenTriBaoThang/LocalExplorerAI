@@ -8,9 +8,11 @@ import {
   AlertCircle,
   History,
   X,
+  MessageSquareText,
 } from 'lucide-react'
 import { getPOIs, providerApi } from '../api/client'
 import type { Booking, POI } from '../types'
+import { ProviderSlotAssistantPanel } from './ProviderSlotAssistantPanel'
 
 type SlotItem = {
   id: string
@@ -69,6 +71,7 @@ const blank: Draft = {
 }
 
 export function ProviderPortalPage() {
+  const [providerId, setProviderId] = useState('')
   const [items, setItems] = useState<ExperienceItem[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pois, setPois] = useState<POI[]>([])
@@ -110,6 +113,7 @@ export function ProviderPortalPage() {
   const [error, setError] = useState('')
   const [showExpForm, setShowExpForm] = useState(false)
   const [showPoiForm, setShowPoiForm] = useState(false)
+  const [showSlotAssistant, setShowSlotAssistant] = useState(false)
   const [editingPoi, setEditingPoi] = useState('')
   const [poiDraft, setPoiDraft] = useState({
     name: '', description: '', district: '', latitude: '', longitude: '', category: '', address: '',
@@ -124,14 +128,16 @@ export function ProviderPortalPage() {
 
   async function load() {
     try {
-      const [experiences, points, history, ownedPoints, sources, reservationRows] = await Promise.all([
+      const [experiences, points, history, ownedPoints, sources, reservationRows, profile] = await Promise.all([
         providerApi.experiences(),
         getPOIs(),
         providerApi.audit(),
         providerApi.pois(),
         providerApi.evidence(),
         providerApi.bookings(),
+        providerApi.profile(),
       ])
+      setProviderId(profile.id)
       setItems(experiences)
       setPois(points)
       setAudit(history)
@@ -403,6 +409,10 @@ export function ProviderPortalPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secondary-3d" onClick={() => setShowSlotAssistant((open) => !open)}>
+            {showSlotAssistant ? <X size={16} /> : <MessageSquareText size={16} />}
+            <span>{showSlotAssistant ? 'Đóng trợ lý' : 'Trợ lý cập nhật ca'}</span>
+          </button>
           <button
             type="button"
             className="btn-secondary-3d"
@@ -445,6 +455,14 @@ export function ProviderPortalPage() {
           <AlertCircle size={16} className="text-amber" />
           <span>{error}</span>
         </div>
+      )}
+
+      {showSlotAssistant && (
+        <ProviderSlotAssistantPanel
+          providerId={providerId}
+          experiences={items}
+          onConfirmed={() => { void load() }}
+        />
       )}
 
       <section className="portal-experiences-section booking-provider-section">

@@ -15,10 +15,16 @@ import {
   Save,
   Trash2,
   FileSpreadsheet,
+  Activity,
+  Brain,
+  MapPinned,
 } from 'lucide-react'
 import { adminApi } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { useTranslation } from '../i18n'
+import { AdminOperationsPanel } from './AdminOperationsPanel'
+import { AdminAiToolsPanel } from './AdminAiToolsPanel'
+import { AdminFloodRiskPanel } from './AdminFloodRiskPanel'
 
 type QueueItem = {
   id: string
@@ -74,7 +80,7 @@ type PlaceImportCandidate = {
   review_status: string
 }
 
-type TabKey = 'queue' | 'imports' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations'
+type TabKey = 'queue' | 'imports' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations' | 'operations' | 'ai-tools' | 'flood-risk'
 
 export function AdminPage() {
   const { t } = useTranslation()
@@ -479,7 +485,21 @@ export function AdminPage() {
           <KeyRound size={15} />
           <span>Tích hợp & API keys</span>
         </button>
+
+        <button type="button" className={`admin-tab-btn ${activeTab === 'operations' ? 'admin-tab-active' : ''}`} onClick={() => setActiveTab('operations')}>
+          <Activity size={15} /><span>Vận hành</span>
+        </button>
+        <button type="button" className={`admin-tab-btn ${activeTab === 'ai-tools' ? 'admin-tab-active' : ''}`} onClick={() => setActiveTab('ai-tools')}>
+          <Brain size={15} /><span>Công cụ AI</span>
+        </button>
+        <button type="button" className={`admin-tab-btn ${activeTab === 'flood-risk' ? 'admin-tab-active' : ''}`} onClick={() => setActiveTab('flood-risk')}>
+          <MapPinned size={15} /><span>Rủi ro ngập</span>
+        </button>
       </div>
+
+      {activeTab === 'operations' && <AdminOperationsPanel />}
+      {activeTab === 'ai-tools' && <AdminAiToolsPanel />}
+      {activeTab === 'flood-risk' && <AdminFloodRiskPanel />}
 
       {activeTab === 'imports' && (
         <div className="admin-tab-content animate-fadeIn">
