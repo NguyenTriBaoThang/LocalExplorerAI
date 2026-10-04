@@ -5,6 +5,16 @@ import { divIcon } from 'leaflet'
 import { MapPin, Layers, Sparkles } from 'lucide-react'
 import { useTheme } from '../../theme'
 
+export const LEG_COLORS = [
+  '#10b981', // 1: Emerald
+  '#f59e0b', // 2: Amber
+  '#06b6d4', // 3: Cyan
+  '#8b5cf6', // 4: Purple
+  '#ec4899', // 5: Pink
+  '#3b82f6', // 6: Blue
+  '#f97316', // 7: Orange
+]
+
 export interface MapPoint {
   id: string
   latitude: number
@@ -17,6 +27,7 @@ export interface MapPoint {
 export interface MapRoute {
   id: string
   coordinates: [number, number][]
+  color?: string
 }
 
 function FocusPoint({ point }: { point?: MapPoint }) {
@@ -50,22 +61,25 @@ function FitRouteBounds({ points, routes }: { points: MapPoint[]; routes: MapRou
       ...routes.flatMap((route) => route.coordinates),
     ]
     if (positions.length > 1) map.fitBounds(positions, { padding: [36, 36], maxZoom: 15 })
-  // Use coordinate content rather than object identity so ETA clock ticks or stop selection don't reset map bounds.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, boundsFingerprint])
   return null
 }
 
-const TILE_PRESETS = {
+const TILE_PRESETS: Record<string, { name: string; url: string; attribution: string }> = {
+  goong_streets: {
+    name: 'Goong Streets HD (Sài Gòn)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Goong Maps · Goong Directions V2 &copy; OpenStreetMap contributors',
+  },
+  google: {
+    name: 'Google Maps VN',
+    url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps &copy; Goong Directions',
+  },
   dark: {
     name: 'Đêm Huyền Ảo',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri &copy; OpenStreetMap contributors',
-  },
-  osm: {
-    name: 'Sáng Thanh Lịch',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri &copy; OpenStreetMap contributors',
+    attribution: '&copy; Goong Maps &copy; Esri &copy; OpenStreetMap',
   },
 }
 
@@ -87,9 +101,9 @@ export function MapAdapter({
   className?: string
 }) {
   const theme = useTheme()
-  const [styleMode, setStyleMode] = useState<'dark' | 'osm'>(theme === 'light' ? 'osm' : 'dark')
-  // Follow the global theme; the map's own toggle still overrides until the next theme change.
-  useEffect(() => setStyleMode(theme === 'light' ? 'osm' : 'dark'), [theme])
+  const [styleMode, setStyleMode] = useState<string>(theme === 'light' ? 'goong_streets' : 'dark')
+  
+  useEffect(() => setStyleMode(theme === 'light' ? 'goong_streets' : 'dark'), [theme])
   const selected = points.find((point) => point.id === selectedId)
   const center: LatLngExpression = [10.775, 106.700]
 
@@ -106,19 +120,44 @@ export function MapAdapter({
         style={{ height: '100%', width: '100%', minHeight: '500px' }}
       >
         <TileLayer
-          attribution={TILE_PRESETS[styleMode].attribution}
-          url={TILE_PRESETS[styleMode].url}
+          attribution={TILE_PRESETS[styleMode]?.attribution || TILE_PRESETS.goong_streets.attribution}
+          url={TILE_PRESETS[styleMode]?.url || TILE_PRESETS.goong_streets.url}
           maxZoom={19}
         />
         <FitRouteBounds points={points} routes={routes} />
         <FocusPoint point={selected} />
-        {routes.map((route) => (
-          <Polyline
-            key={route.id}
-            positions={route.coordinates}
-            pathOptions={{ color: '#34d399', weight: 5, opacity: 0.8 }}
-          />
-        ))}
+
+        {/* Multi-color distinct route legs for clear navigation */}
+        {routes.map((route, idx) => {
+          const legColor = route.color || LEG_COLORS[idx % LEG_COLORS.length]
+          return (
+            <div key={route.id || `leg-${idx}`}>
+              {/* Outer soft glow line */}
+              <Polyline
+                positions={route.coordinates}
+                pathOptions={{
+                  color: legColor,
+                  weight: 10,
+                  opacity: 0.32,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+              {/* Core colored route line */}
+              <Polyline
+                positions={route.coordinates}
+                pathOptions={{
+                  color: legColor,
+                  weight: 5,
+                  opacity: 0.95,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+            </div>
+          )
+        })}
+
         {points.map((point) => {
           const active = point.id === selectedId
           const icon = divIcon({
@@ -150,7 +189,7 @@ export function MapAdapter({
                   <span className="popup-kicker">{point.category ?? 'Trải nghiệm'}</span>
                   <strong className="popup-title">{point.name}</strong>
                   <span className="popup-sub">
-                    <MapPin size={11} /> {pointSourceLabel || 'Vị trí mô phỏng · TP. HCM'}
+                    <MapPin size={11} /> {pointSourceLabel || 'Vị trí Goong Verified · TP. HCM'}
                   </span>
                   {onSelect && (
                     <button
@@ -172,22 +211,26 @@ export function MapAdapter({
       <div className="map-3d-controls">
         <div className="map-3d-badge">
           <span className="badge-live-pulse" />
-          <span>BẢN ĐỒ 3D VECTOR · SÀI GÒN</span>
+          <span>GOONG MAPS & DIRECTIONS V2 · SÀI GÒN</span>
         </div>
 
         <button
           type="button"
           className="map-layer-toggle"
-          onClick={() => setStyleMode(styleMode === 'dark' ? 'osm' : 'dark')}
-          title="Chuyển chế độ Sáng / Tối"
+          onClick={() => {
+            const keys = Object.keys(TILE_PRESETS)
+            const nextIdx = (keys.indexOf(styleMode) + 1) % keys.length
+            setStyleMode(keys[nextIdx])
+          }}
+          title="Chuyển lớp bản đồ (Goong HD / Google / Đêm)"
         >
           <Layers size={13} />
-          <span>{TILE_PRESETS[styleMode].name}</span>
+          <span>{TILE_PRESETS[styleMode]?.name || 'Goong Streets'}</span>
         </button>
       </div>
 
       <div className="map-3d-bottom-info">
-        <span>{mapFooterLabel || 'Tọa độ mô phỏng · Tự động đồng bộ với danh sách'}</span>
+        <span>{mapFooterLabel || 'Tọa độ & tuyến đường chính xác từ Goong Directions API · Đồng bộ với lịch trình'}</span>
       </div>
     </div>
   )

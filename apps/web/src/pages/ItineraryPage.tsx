@@ -36,7 +36,7 @@ import {
   requestBooking,
   submitFeedback,
 } from '../api/client'
-import { MapAdapter, type MapPoint } from '../components/map/MapAdapter'
+import { MapAdapter, LEG_COLORS, type MapPoint, type MapRoute } from '../components/map/MapAdapter'
 import { SimulatedBadge } from '../components/common/StatusBadge'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import type { Booking, Itinerary } from '../types'
@@ -408,11 +408,12 @@ export function ItineraryPage() {
       name: itinerary.destination_label || (locale === 'en' ? 'Return destination' : 'Điểm về'), category: locale === 'en' ? 'Destination' : 'Điểm về',
     })
   }
-  const mapRoutes = itinerary.routes
+  const mapRoutes: MapRoute[] = (itinerary.routes ?? [])
     .filter((route) => route.geometry && route.geometry.length > 1)
     .map((route, index) => ({
       id: `${route.from_experience_id ?? 'origin'}-${route.to_experience_id ?? 'destination'}-${index}`,
       coordinates: route.geometry!,
+      color: LEG_COLORS[index % LEG_COLORS.length],
     }))
 
   const activeStop = itinerary.stops.find((stop) => stop.experience_id === selectedId)
@@ -818,9 +819,9 @@ export function ItineraryPage() {
                       )}
                       {([
                         [locale === 'en' ? 'Place' : 'Địa điểm', stop.poi.source_evidence ?? []],
-                        [locale === 'en' ? 'Experience' : 'Trải nghiệm', stop.source_evidence],
-                        [locale === 'en' ? 'Availability' : 'Khung giờ', stop.slot_source_evidence],
-                      ] as const).map(([label, evidence]) => evidence.length > 0 && (
+                        [locale === 'en' ? 'Experience' : 'Trải nghiệm', stop.source_evidence ?? []],
+                        [locale === 'en' ? 'Availability' : 'Khung giờ', stop.slot_source_evidence ?? []],
+                      ] as const).map(([label, evidence]) => (evidence?.length ?? 0) > 0 && (
                         <div className="stop-source-group" key={label}>
                           <span>{label}:</span>
                           {evidence.map((item) => (
@@ -892,15 +893,51 @@ export function ItineraryPage() {
                   </div>
                 </article>
 
-                {/* Travel Leg between stops */}
-                {nextStop && nextLeg && (
-                  <div className="travel-leg-indicator">
-                    <div className="travel-leg-pill">
-                      <Car size={13} className="text-emerald" />
-                      <span>{t('itinerary.transitLeg', { min: nextLeg.duration_min })}</span>
+                {/* Travel Leg between stops with distinct color */}
+                {nextStop && nextLeg && (() => {
+                  const legIdx = index
+                  const legColor = LEG_COLORS[legIdx % LEG_COLORS.length]
+                  return (
+                    <div className="travel-leg-indicator">
+                      <div
+                        className="travel-leg-pill"
+                        style={{
+                          borderLeft: `4px solid ${legColor}`,
+                          background: 'rgba(15, 23, 42, 0.85)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          margin: '10px 0',
+                        }}
+                      >
+                        <span
+                          className="leg-mini-badge"
+                          style={{
+                            backgroundColor: legColor,
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          Chặng {legIdx + 1}
+                        </span>
+                        <Car size={14} style={{ color: legColor }} />
+                        <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '0.85rem' }}>
+                          {nextLeg.duration_min} {locale === 'en' ? 'mins travel' : 'phút di chuyển'}
+                          {nextLeg.distance_m ? ` (~${(nextLeg.distance_m / 1000).toFixed(1)} km)` : ''}
+                        </span>
+                        <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginLeft: 'auto' }}>
+                          · Goong Directions
+                        </small>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
               )
             })}
@@ -933,6 +970,56 @@ export function ItineraryPage() {
             <span className="route-dot-active" />
             <span>{t('itinerary.routeMatrixNote')}</span>
           </div>
+
+          {itinerary.routes && itinerary.routes.length > 0 && (
+            <div
+              className="itinerary-legs-legend-bar"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginTop: '12px',
+                marginBottom: '12px',
+                padding: '10px 14px',
+                background: 'rgba(15, 23, 42, 0.75)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              {itinerary.routes.map((leg, i) => {
+                const color = LEG_COLORS[i % LEG_COLORS.length]
+                return (
+                  <div
+                    key={i}
+                    className="leg-legend-chip"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      background: 'rgba(30, 41, 59, 0.85)',
+                      borderLeft: `3px solid ${color}`,
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: color,
+                      }}
+                    />
+                    <strong style={{ color }}>Chặng {i + 1}</strong>
+                    <span style={{ color: '#cbd5e1' }}>
+                      {leg.duration_min}p ({(leg.distance_m / 1000).toFixed(1)}km)
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           {itinerary.routes.length > 0 && (
             <div className="route-estimate-list" aria-label={t('itinerary.routeEstimates')}>
               <h3>{t('itinerary.routeEstimates')}</h3>
@@ -943,10 +1030,28 @@ export function ItineraryPage() {
                 const ageSeconds = leg.eta_calculated_at
                   ? Math.max(0, Math.floor((currentTimeMs - new Date(leg.eta_calculated_at).getTime()) / 1000))
                   : leg.eta_age_seconds
+                const legColor = LEG_COLORS[index % LEG_COLORS.length]
                 return (
-                  <article className="route-estimate-card" key={`${leg.from_experience_id ?? 'origin'}-${leg.to_experience_id ?? 'destination'}-${index}`}>
+                  <article
+                    className="route-estimate-card"
+                    key={`${leg.from_experience_id ?? 'origin'}-${leg.to_experience_id ?? 'destination'}-${index}`}
+                    style={{ borderLeft: `4px solid ${legColor}` }}
+                  >
                     <div className="route-estimate-heading">
-                      <Route size={14} className="text-emerald" />
+                      <span
+                        style={{
+                          backgroundColor: legColor,
+                          color: '#ffffff',
+                          fontSize: '0.72rem',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontWeight: 700,
+                          marginRight: '6px',
+                        }}
+                      >
+                        Chặng {index + 1}
+                      </span>
+                      <Route size={14} style={{ color: legColor }} />
                       <strong>{fromName} → {toName}</strong>
                       <span>{(leg.distance_m / 1000).toFixed(1)} km · {t('itinerary.transitLeg', { min: leg.duration_min })}</span>
                     </div>

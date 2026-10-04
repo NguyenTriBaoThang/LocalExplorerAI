@@ -51,3 +51,18 @@ class UserRead(BaseModel):
     phone: str | None
     is_active: bool
     created_at: datetime
+
+
+class ClaimTicketRequest(BaseModel):
+    share_token: str = Field(min_length=3, max_length=120)
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str | None = Field(default=None, max_length=180)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if "@" not in value or "." not in value.rsplit("@", 1)[1]:
+            raise ValueError("Enter a valid email address")
+        return value
