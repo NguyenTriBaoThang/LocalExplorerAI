@@ -1,0 +1,39 @@
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/**/*'
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/api/**/*'
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/api/migrations/**/*'
+          - 'apps/api/alembic.ini'
+          - 'apps/api/app/models/**/*'
+
+ci/cd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**/*'
+          - 'Dockerfile'
+          - 'docker-compose*.yml'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**/*'
+          - '*.md'
+
+data/dataset:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'data/**/*'
+          - 'Places/**/*'
+
+models/ai:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'models/**/*'
+          - 'notebooks/**/*'
