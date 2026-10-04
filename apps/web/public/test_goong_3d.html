@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<title>Goong JS + Three.js Test</title>
+<link href='https://cdn.jsdelivr.net/npm/@goongmaps/goong-js@1.0.9/dist/goong-js.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/@goongmaps/goong-js@1.0.9/dist/goong-js.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+goongjs.accessToken = '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU';
+var map = new goongjs.Map({
+    container: 'map',
+    style: 'https://tiles.goong.io/assets/goong_map_web.json',
+    center: [106.699018, 10.779785],
+    zoom: 17.5,
+    pitch: 60,
+    bearing: 0
+});
+
+var modelOrigin = [106.699018, 10.779785];
+var modelAltitude = 0;
+var modelRotate = [Math.PI / 2, 0, 0];
+
+var modelAsMercatorCoordinate = goongjs.MercatorCoordinate.fromLngLat(
+    modelOrigin,
+    modelAltitude
+);
+
+var modelTransform = {
+    translateX: modelAsMercatorCoordinate.x,
+    translateY: modelAsMercatorCoordinate.y,
+    translateZ: modelAsMercatorCoordinate.z,
+    rotateX: modelRotate[0],
+    rotateY: modelRotate[1],
+    rotateZ: modelRotate[2],
+    scale: modelAsMercatorCoordinate.meterInMercatorCoordinateUnits() * 40
+};
+
+var customLayer = {
+    id: '3d-model',
+    type: 'custom',
+    renderingMode: '3d',
+    onAdd: function (map, gl) {
+        this.camera = new THREE.Camera();
+        this.scene = new THREE.Scene();
+
+        var ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        this.scene.add(ambientLight);
+        var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(50, 100, 50).normalize();
+        this.scene.add(dirLight);
+
+        // Test cube
+        var geo = new THREE.BoxGeometry(1, 1, 1);
+        var mat = new THREE.MeshNormalMaterial();
+        var cube = new THREE.Mesh(geo, mat);
+        this.scene.add(cube);
+
+        this.map = map;
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: map.getCanvas(),
+            context: gl,
+            antialias: true
+        });
+        this.renderer.autoClear = false;
+    },
+    render: function (gl, matrix) {
+        var rotationX = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(1, 0, 0),
+            modelTransform.rotateX
+        );
+        var rotationY = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(0, 1, 0),
+            modelTransform.rotateY
+        );
+        var rotationZ = new THREE.Matrix4().makeRotationAxis(
+            new THREE.Vector3(0, 0, 1),
+            modelTransform.rotateZ
+        );
+
+        var m = new THREE.Matrix4().fromArray(matrix);
+        var l = new THREE.Matrix4()
+            .makeTranslation(
+                modelTransform.translateX,
+                modelTransform.translateY,
+                modelTransform.translateZ
+            )
+            .scale(
+                new THREE.Vector3(
+                    modelTransform.scale,
+                    -modelTransform.scale,
+                    modelTransform.scale
+                )
+            )
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ);
+
+        this.camera.projectionMatrix = m.multiply(l);
+        this.renderer.resetState();
+        this.renderer.render(this.scene, this.camera);
+        this.map.triggerRepaint();
+    }
+};
+
+map.on('style.load', function () {
+    map.addLayer(customLayer);
+});
+</script>
+</body>
+</html>

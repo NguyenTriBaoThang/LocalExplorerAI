@@ -50,10 +50,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install --no-audit
+        run: npm install --no-audit
 
       - name: Validate PR Commits
         if: github.event_name == 'pull_request'
