@@ -57,6 +57,11 @@ def queue_booking_status(db: Session, booking: Booking, event_type: str) -> bool
             "cancelled_before_payment": "yêu cầu giữ chỗ đã được hủy",
             "slot_cancelled_before_payment": "ca hoạt động đã bị hủy; yêu cầu giữ chỗ đã kết thúc",
             "provider_cancelled_paid_booking_refund_review_required": "ca hoạt động bị hủy; yêu cầu cần được hỗ trợ hoàn tiền",
+            "payment_confirmed": "VNPay đã xác minh thanh toán và booking đã được xác nhận",
+            "payment_failed": "lần thanh toán VNPay gần nhất chưa thành công; giữ chỗ vẫn còn hạn nếu booking chưa hết hạn",
+            "payment_captured_reconciliation_required": "đã ghi nhận tiền nhưng booking cần đối soát thủ công",
+            "payment_suspicious_reconciliation_required": "giao dịch VNPay cần được kiểm tra thủ công trước khi xác nhận booking",
+            "extra_payment_captured_reconciliation_required": "phát hiện thêm một khoản thu cho booking đã xác nhận; cần đối soát thủ công",
         }.get(event_type)
         if not verb:
             return False

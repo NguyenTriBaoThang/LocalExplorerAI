@@ -219,6 +219,7 @@ export interface Booking {
   amount_vnd: number
   currency: string
   status: 'pending_provider' | 'awaiting_payment' | 'confirmed' | 'rejected' | 'cancelled' | 'expired' | 'cancellation_requested' | 'refund_pending' | 'refunded'
+  payment_status?: 'created' | 'pending' | 'succeeded' | 'failed' | 'refund_pending' | 'refunded' | null
   hold_expires_at: string | null
   provider_confirmed_at: string | null
   confirmed_at: string | null

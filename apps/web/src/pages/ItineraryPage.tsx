@@ -20,7 +20,7 @@ import {
   X,
   ShieldAlert,
 } from 'lucide-react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   acceptReplan,
   api,
@@ -106,6 +106,7 @@ export function ItineraryPage() {
   const { t, locale } = useTranslation()
   const { id = '' } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const initial = (location.state as { itinerary?: Itinerary } | null)?.itinerary
   const [itinerary, setItinerary] = useState<Itinerary | null>(initial ?? null)
   const [loading, setLoading] = useState(!initial)
@@ -189,16 +190,55 @@ export function ItineraryPage() {
       return
     }
     let active = true
+    const returnParams = new URLSearchParams(location.search)
+    const returnedPayment = returnParams.get('payment') === 'returned'
+    const returnedBookingId = returnParams.get('booking')
+    const deadline = Date.now() + 60_000
+    let trackingPayment = returnedPayment && Boolean(returnedBookingId)
     const refresh = () => getMyBookings(id).then((rows) => {
-      if (active) setBookings(rows)
+      if (!active) return
+      setBookings(rows)
+      if (trackingPayment && returnedBookingId) {
+        const returnedBooking = rows.find((row) => row.id === returnedBookingId)
+        if (returnedBooking?.status === 'confirmed') {
+          trackingPayment = false
+          setNotice(locale === 'en' ? 'VNPay payment was verified by the server; your reservation is confirmed.' : 'Máy chủ đã xác minh thanh toán VNPay; đặt chỗ của bạn đã được xác nhận.')
+          navigate(location.pathname, { replace: true })
+        } else if (returnedBooking?.status === 'refund_pending') {
+          trackingPayment = false
+          setNotice(locale === 'en' ? 'Payment was received, but the reservation needs manual reconciliation. Please contact support.' : 'Đã nhận thanh toán nhưng đặt chỗ cần được đối soát thủ công. Vui lòng liên hệ hỗ trợ.')
+          navigate(location.pathname, { replace: true })
+        } else if (returnedBooking?.payment_status === 'failed') {
+          trackingPayment = false
+          setNotice(locale === 'en' ? 'VNPay reported that the payment did not complete. You can retry checkout.' : 'VNPay báo giao dịch chưa hoàn tất. Bạn có thể thử thanh toán lại.')
+          navigate(location.pathname, { replace: true })
+        } else if (Date.now() >= deadline) {
+          trackingPayment = false
+          setNotice(locale === 'en' ? 'Payment confirmation is still pending. Refresh your bookings shortly; do not pay again yet.' : 'Thanh toán vẫn đang chờ xác nhận. Hãy tải lại đặt chỗ sau ít phút; chưa thanh toán lại lúc này.')
+          navigate(location.pathname, { replace: true })
+        }
+      }
     }).catch(() => undefined)
     void refresh()
-    const timer = window.setInterval(refresh, 15000)
+    const timer = window.setInterval(refresh, returnedPayment ? 2000 : 15000)
     return () => {
       active = false
       window.clearInterval(timer)
     }
-  }, [id, user?.id, user?.role])
+  }, [id, location.pathname, location.search, locale, navigate, user?.id, user?.role])
+
+  useEffect(() => {
+    const paymentResult = new URLSearchParams(location.search).get('payment')
+    if (paymentResult === 'invalid') {
+      setNotice(locale === 'en'
+        ? 'The payment return could not be verified. Check the reservation status before trying again.'
+        : 'Không xác minh được thông tin quay về từ cổng thanh toán. Hãy kiểm tra trạng thái đặt chỗ trước khi thử lại.')
+    } else if (paymentResult === 'returned') {
+      setNotice(locale === 'en'
+        ? 'Returned from VNPay. Waiting for the server to verify the payment notification…'
+        : 'Đã quay về từ VNPay. Đang chờ máy chủ xác minh thông báo thanh toán…')
+    }
+  }, [location.search, locale])
 
   useEffect(() => {
     if (!user || !id) return
@@ -278,7 +318,8 @@ export function ItineraryPage() {
 
   async function checkoutBooking(booking: Booking) {
     try {
-      await beginBookingCheckout(booking.id)
+      const { checkout_url } = await beginBookingCheckout(booking.id)
+      window.location.assign(checkout_url)
     } catch (reason) {
       setNotice(apiErrorMessage(reason))
     }
@@ -805,6 +846,9 @@ export function ItineraryPage() {
                               {booking.hold_expires_at && ['pending_provider', 'awaiting_payment'].includes(booking.status) && (
                                 <small>{locale === 'en' ? 'Hold expires' : 'Giữ chỗ đến'}: {dateTimeLabel(booking.hold_expires_at, locale)}</small>
                               )}
+                              {booking.payment_status === 'failed' && (
+                                <small>{locale === 'en' ? 'Latest payment attempt did not complete; you may retry before the hold expires.' : 'Lần thanh toán gần nhất chưa hoàn tất; bạn có thể thử lại trước khi giữ chỗ hết hạn.'}</small>
+                              )}
                               {booking.cancellation_reason && <small>{booking.cancellation_reason}</small>}
                             </div>
                           ) : (
@@ -840,7 +884,7 @@ export function ItineraryPage() {
                             <small>{locale === 'en' ? 'Booking is disabled for demo or unverified catalog data.' : 'Chưa thể đặt chỗ với dữ liệu trình diễn hoặc chưa được xác minh.'}</small>
                           )}
                           {(booking?.amount_vnd || stop.cost_vnd) > 0 && (
-                            <small>{locale === 'en' ? 'Payment is unavailable until the project configures a gateway; no charge is made now.' : 'Chưa thu tiền: nhóm chưa cấu hình cổng thanh toán.'}</small>
+                            <small>{locale === 'en' ? 'Checkout redirects to VNPay. The reservation is confirmed only after the server verifies the payment notification.' : 'Thanh toán sẽ chuyển sang VNPay. Đặt chỗ chỉ được xác nhận sau khi máy chủ xác minh thông báo thanh toán.'}</small>
                           )}
                         </div>
                       )

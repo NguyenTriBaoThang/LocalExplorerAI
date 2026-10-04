@@ -245,9 +245,11 @@ provider-submitted POIs. See [sourced catalog workflow](sourced-catalog.md).
 
 Migration `0007_booking_payments` adds temporary reservations (`bookings`), a
 gateway transaction ledger (`payment_transactions`), and state/audit history
-(`booking_events`). Provider acceptance is distinct from paid confirmation;
-checkout/refunds remain disabled until a real payment provider is selected and
-integrated. See [booking and payment workflow](bookings-and-payments.md).
+(`booking_events`). Provider acceptance is distinct from paid confirmation.
+VNPay transaction references and payment state are stored in the ledger, while
+the signed IPN—not the browser redirect—settles paid bookings. Refund execution
+remains disabled and requires manual reconciliation. See [booking and payment
+workflow](bookings-and-payments.md).
 
 The PRD lists 32 HCMC POI names grouped into eight areas, but does not provide
 their coordinates, addresses, source attribution, provider links, activities,

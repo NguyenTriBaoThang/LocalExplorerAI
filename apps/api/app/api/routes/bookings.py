@@ -1,11 +1,18 @@
 from datetime import datetime, timedelta, timezone
+import hmac
+from ipaddress import ip_address
+from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db, require_roles
+from app.core.client_ip import client_ip as request_client_ip
+from app.core.config import settings
 from app.core.request_context import current_request_id
 from app.models.entities import (
     AuditLog,
@@ -23,9 +30,10 @@ from app.models.entities import (
 from app.schemas.booking import BookingCancelRequest, BookingCancellationDecisionRequest, BookingDecisionRequest, BookingHoldRequest
 from app.services.evidence_service import entity_is_operationally_verified, slot_is_operationally_verified
 from app.services.notifications import queue_booking_status
+from app.services.vnpay import build_payment_url, verify_params
 
 router = APIRouter(tags=["bookings and payments"])
-_LIVE_STATUSES = ("pending_provider", "awaiting_payment", "confirmed", "cancellation_requested", "refund_pending")
+_LIVE_STATUSES = ("pending_provider", "awaiting_payment", "confirmed", "cancellation_requested")
 _HOLD_STATUSES = ("pending_provider", "awaiting_payment")
 _HOLD_MINUTES = 15
 
@@ -83,6 +91,9 @@ def _payload(db: Session, booking: Booking) -> dict:
     experience = db.get(Experience, booking.experience_id)
     slot = db.get(ExperienceSlot, booking.slot_id)
     provider = db.get(Provider, booking.provider_id)
+    payment_status = db.scalar(select(PaymentTransaction.status).where(
+        PaymentTransaction.booking_id == booking.id,
+    ).order_by(PaymentTransaction.created_at.desc()).limit(1))
     return {
         "id": booking.id,
         "itinerary_id": booking.itinerary_id,
@@ -98,6 +109,7 @@ def _payload(db: Session, booking: Booking) -> dict:
         "amount_vnd": booking.amount_vnd,
         "currency": booking.currency,
         "status": booking.status,
+        "payment_status": payment_status,
         "hold_expires_at": booking.hold_expires_at,
         "provider_confirmed_at": booking.provider_confirmed_at,
         "confirmed_at": booking.confirmed_at,
@@ -109,10 +121,166 @@ def _payload(db: Session, booking: Booking) -> dict:
 
 @router.get("/api/payments/status")
 def payment_status():
-    # Fail closed until the team chooses a gateway, configures its credentials,
-    # webhook verification, and cancellation/refund policy.
-    return {"provider": "unconfigured", "checkout_enabled": False, "refunds_enabled": False,
-            "message": "Chưa cấu hình cổng thanh toán; hệ thống không thu tiền hoặc xác nhận đã thanh toán."}
+    configured = settings.vnpay_checkout_enabled
+    return {
+        "provider": "vnpay",
+        "environment": settings.vnpay_environment,
+        "checkout_enabled": configured,
+        "refunds_enabled": False,
+        "message": (
+            "Thanh toán VNPay đã được cấu hình; xác nhận booking chỉ dựa trên IPN đã xác minh."
+            if configured else
+            "VNPay chưa sẵn sàng: cần TMN code, Hash Secret, payment URL đúng môi trường và Return/IPN URL HTTPS công khai."
+        ),
+    }
+
+
+def _vnpay_callback_params(request: Request) -> dict[str, str] | None:
+    pairs = [(key, value) for key, value in request.query_params.multi_items() if key.startswith("vnp_")]
+    params: dict[str, str] = {}
+    for key, value in pairs:
+        if key in params:
+            return None
+        params[key] = value
+    return params
+
+
+def _vnpay_reply(code: str, message: str) -> dict[str, str]:
+    return {"RspCode": code, "Message": message}
+
+
+def _payment_return_redirect(*, payment: str, booking: Booking | None = None) -> RedirectResponse:
+    target = f"{settings.web_app_url.rstrip('/')}/itinerary/{booking.itinerary_id}" if booking and booking.itinerary_id else settings.web_app_url.rstrip("/")
+    query = {"payment": payment}
+    if booking:
+        query["booking"] = booking.id
+    return RedirectResponse(f"{target}?{urlencode(query)}", status_code=303)
+
+
+@router.get("/api/payments/vnpay/return", include_in_schema=False)
+def vnpay_return(request: Request, db: Session = Depends(get_db)):
+    """Display-only return; settlement is exclusively performed by the signed IPN."""
+    params = _vnpay_callback_params(request)
+    if not params or not settings.vnpay_credentials_configured or not verify_params(params, (settings.vnpay_hash_secret or "").strip()):
+        return _payment_return_redirect(payment="invalid")
+    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (settings.vnpay_tmn_code or "").strip()):
+        return _payment_return_redirect(payment="invalid")
+    reference = params.get("vnp_TxnRef", "")
+    payment = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.provider == "vnpay",
+        PaymentTransaction.provider_reference == reference,
+    )) if reference else None
+    booking = db.get(Booking, payment.booking_id) if payment else None
+    if booking is None:
+        return _payment_return_redirect(payment="invalid")
+    return _payment_return_redirect(payment="returned", booking=booking)
+
+
+@router.get("/api/payments/vnpay/ipn", include_in_schema=False)
+def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
+    """Idempotent VNPay server callback. Never trust browser return parameters for settlement."""
+    params = _vnpay_callback_params(request)
+    if not params or not settings.vnpay_credentials_configured:
+        return _vnpay_reply("99", "Invalid configuration or parameters")
+    if not verify_params(params, (settings.vnpay_hash_secret or "").strip()):
+        return _vnpay_reply("97", "Invalid signature")
+    if not hmac.compare_digest(params.get("vnp_TmnCode", ""), (settings.vnpay_tmn_code or "").strip()):
+        return _vnpay_reply("97", "Invalid merchant")
+
+    reference = params.get("vnp_TxnRef", "")
+    payment = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.provider == "vnpay",
+        PaymentTransaction.provider_reference == reference,
+    )) if reference else None
+    if payment is None:
+        return _vnpay_reply("01", "Order not found")
+    amount_text = params.get("vnp_Amount", "")
+    if not amount_text.isascii() or not amount_text.isdigit():
+        return _vnpay_reply("04", "Invalid amount")
+    received_amount = int(amount_text)
+    if received_amount != payment.amount_vnd * 100 or payment.currency != "VND":
+        return _vnpay_reply("04", "Invalid amount")
+    if params.get("vnp_CurrCode") != "VND":
+        return _vnpay_reply("04", "Invalid currency")
+    response_code = params.get("vnp_ResponseCode")
+    transaction_status = params.get("vnp_TransactionStatus")
+    if response_code is None or transaction_status is None:
+        return _vnpay_reply("99", "Missing transaction status")
+    if response_code in {"00", "07"} and transaction_status != "00":
+        return _vnpay_reply("99", "Transaction result is not final")
+    gateway_transaction_no = params.get("vnp_TransactionNo", "")
+    if response_code in {"00", "07"} and (not gateway_transaction_no or not gateway_transaction_no.isascii()):
+        return _vnpay_reply("99", "Missing gateway transaction reference")
+
+    booking_preview = db.get(Booking, payment.booking_id)
+    if booking_preview is None:
+        return _vnpay_reply("01", "Order not found")
+    # Follow slot -> booking -> payment lock order, shared with provider slot edits,
+    # so a callback cannot deadlock while reconciling a slot cancellation.
+    slot = db.scalar(select(ExperienceSlot).where(ExperienceSlot.id == booking_preview.slot_id).with_for_update())
+    booking = db.scalar(select(Booking).where(Booking.id == payment.booking_id).with_for_update())
+    payment = db.scalar(select(PaymentTransaction).where(PaymentTransaction.id == payment.id)
+                        .with_for_update().execution_options(populate_existing=True))
+    if booking is None or payment is None:
+        return _vnpay_reply("01", "Order not found")
+    if payment.status == "succeeded":
+        return _vnpay_reply("02", "Order already confirmed")
+    if payment.status not in {"created", "pending", "failed"}:
+        return _vnpay_reply("02", "Order already processed")
+    if payment.status == "failed" and (response_code != "00" or transaction_status != "00"):
+        return _vnpay_reply("02", "Order already processed")
+
+    now = _now()
+    if response_code not in {"00", "07"} or transaction_status != "00":
+        payment.status = "failed"
+        payment.updated_at = now
+        _event(db, booking, None, "payment_failed", booking.status, {
+            "payment_transaction_id": payment.id,
+            "gateway_response_code": response_code,
+            "gateway_transaction_status": transaction_status,
+        })
+        db.commit()
+        return _vnpay_reply("00", "Confirm Success")
+
+    payment.status = "succeeded"
+    payment.updated_at = now
+    old_status = booking.status
+    expiry = _aware(booking.hold_expires_at)
+    can_settle_booking = booking.status == "awaiting_payment" and expiry is not None and expiry > now
+    if can_settle_booking:
+        can_settle_booking = bool(
+            slot and slot.status == "open" and slot.available_reported is not None
+            and slot_is_operationally_verified(db, slot)
+            and _held_seats(db, booking.slot_id, now) <= slot.available_reported
+        )
+    if can_settle_booking and response_code == "00":
+        booking.status = "confirmed"
+        booking.confirmed_at = now
+        booking.hold_expires_at = None
+        event_type = "payment_confirmed"
+    elif booking.status == "confirmed":
+        # This can occur only after a separate payment attempt captured late; keep the
+        # existing confirmed reservation and flag the extra capture for manual review.
+        event_type = "extra_payment_captured_reconciliation_required"
+    else:
+        booking.status = "refund_pending"
+        booking.hold_expires_at = None
+        event_type = (
+            "payment_suspicious_reconciliation_required"
+            if response_code == "07" else "payment_captured_reconciliation_required"
+        )
+    booking.updated_at = now
+    _event(db, booking, None, event_type, old_status, {
+        "payment_transaction_id": payment.id,
+        "gateway_transaction_no": params.get("vnp_TransactionNo"),
+        "gateway_pay_date": params.get("vnp_PayDate"),
+        "gateway_response_code": response_code,
+        "gateway_transaction_status": transaction_status,
+        "amount_vnd": payment.amount_vnd,
+        "manual_refund_reconciliation_required": event_type != "payment_confirmed",
+    })
+    db.commit()
+    return _vnpay_reply("00", "Confirm Success")
 
 
 @router.post("/api/bookings", status_code=201)
@@ -226,16 +394,66 @@ def cancel_booking(booking_id: str, payload: BookingCancelRequest, user: User = 
 
 
 @router.post("/api/bookings/{booking_id}/checkout")
-def begin_checkout(booking_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
-    booking = db.get(Booking, booking_id)
+def begin_checkout(booking_id: str, request: Request, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+    booking = db.scalar(select(Booking).where(Booking.id == booking_id).with_for_update())
     if booking is None or booking.user_id != user.id:
         raise HTTPException(status_code=404, detail={"code": "BOOKING_NOT_FOUND", "message": "Không tìm thấy yêu cầu đặt chỗ."})
-    if booking.status != "awaiting_payment" or (_aware(booking.hold_expires_at) is None or _aware(booking.hold_expires_at) <= _now()):
+    now = _now()
+    hold_expires_at = _aware(booking.hold_expires_at)
+    if booking.status != "awaiting_payment" or hold_expires_at is None or hold_expires_at <= now + timedelta(seconds=30):
         raise HTTPException(status_code=409, detail={"code": "BOOKING_NOT_READY_FOR_PAYMENT", "message": "Cơ sở chưa xác nhận yêu cầu hoặc thời hạn giữ chỗ đã hết."})
-    raise HTTPException(status_code=503, detail={
-        "code": "PAYMENT_GATEWAY_NOT_CONFIGURED",
-        "message": "Cơ sở đã xác nhận chỗ, nhưng cổng thanh toán chưa được nhóm cấu hình. Chưa có khoản tiền nào bị thu.",
-    })
+    if not settings.vnpay_checkout_enabled:
+        raise HTTPException(status_code=503, detail={
+            "code": "PAYMENT_GATEWAY_NOT_CONFIGURED",
+            "message": "VNPay chưa sẵn sàng; chưa có khoản tiền nào bị thu. Cần cấu hình merchant và callback công khai.",
+        })
+    if booking.amount_vnd < 5_000 or booking.amount_vnd * 100 > 999_999_999_999:
+        raise HTTPException(status_code=422, detail={
+            "code": "PAYMENT_AMOUNT_UNSUPPORTED",
+            "message": "VNPay yêu cầu tối thiểu 5.000 VND và giới hạn số tiền gửi theo trường 12 chữ số; hạn mức thực tế còn phụ thuộc tài khoản/ngân hàng.",
+        })
+
+    pending = db.scalar(select(PaymentTransaction).where(
+        PaymentTransaction.booking_id == booking.id,
+        PaymentTransaction.provider == "vnpay",
+        PaymentTransaction.status.in_(["created", "pending"]),
+    ).order_by(PaymentTransaction.created_at.desc()).with_for_update())
+    if pending and pending.checkout_url:
+        return {"checkout_url": pending.checkout_url}
+
+    try:
+        remote_ip = str(ip_address(request_client_ip(request, settings.trusted_proxy_ips)))
+    except ValueError:
+        if settings.app_env.lower() in {"prod", "production"}:
+            raise HTTPException(status_code=503, detail={"code": "PAYMENT_CLIENT_IP_UNAVAILABLE", "message": "Không xác định được địa chỉ IP yêu cầu thanh toán."})
+        remote_ip = "127.0.0.1"
+    transaction_ref = uuid4().hex
+    timezone_vn = ZoneInfo("Asia/Ho_Chi_Minh")
+    checkout_url = build_payment_url(
+        payment_url=settings.vnpay_payment_url.strip(),
+        tmn_code=(settings.vnpay_tmn_code or "").strip(),
+        hash_secret=(settings.vnpay_hash_secret or "").strip(),
+        return_url=(settings.vnpay_return_url or "").strip(),
+        amount_vnd=booking.amount_vnd,
+        transaction_ref=transaction_ref,
+        order_info=f"LocalExplorer booking {booking.id}",
+        client_ip=remote_ip,
+        created_at=now.astimezone(timezone_vn),
+        expires_at=hold_expires_at.astimezone(timezone_vn),
+    )
+    payment = PaymentTransaction(
+        id=str(uuid4()), booking_id=booking.id, provider="vnpay", provider_reference=transaction_ref,
+        idempotency_key=str(uuid4()), amount_vnd=booking.amount_vnd, currency="VND",
+        status="pending", checkout_url=checkout_url, created_at=now, updated_at=now,
+    )
+    db.add(payment)
+    db.add(AuditLog(
+        id=str(uuid4()), actor_id=user.id, action="booking.payment_checkout_created",
+        target_type="booking", target_id=booking.id,
+        details={"provider": "vnpay", "payment_transaction_id": payment.id}, created_at=now,
+    ))
+    db.commit()
+    return {"checkout_url": checkout_url}
 
 
 @router.get("/api/provider/me/bookings")

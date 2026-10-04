@@ -52,6 +52,12 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://localhost:8000/api/auth/google/callback}
       WEB_APP_URL: ${WEB_APP_URL:-https://localhost}
+      VNPAY_ENVIRONMENT: ${VNPAY_ENVIRONMENT:-production}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_PAYMENT_URL: ${VNPAY_PAYMENT_URL:-}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-}
+      VNPAY_IPN_URL: ${VNPAY_IPN_URL:-}
       E5_MODEL_PATH: ${E5_MODEL_PATH:-/models/e5}
       ADMIN_API_KEY: ${ADMIN_API_KEY:?Set ADMIN_API_KEY for protected AI routes}
       APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:?Set APP_SIGNING_SECRET for provider confirmation}

@@ -1,5 +1,4 @@
 import hashlib
-import ipaddress
 import json
 import logging
 import re
@@ -16,6 +15,7 @@ from app.api.routes import admin, ai, auth, bookings, catalog, chat, health, ml,
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.core.config import settings
 from app.core.request_context import current_request_id
+from app.core.client_ip import client_ip
 from app.services.prompt_service import InvalidStructuredOutput
 from app.services.rate_limit import check_rate_limit
 
@@ -26,27 +26,7 @@ _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,96}$")
 
 
 def _client_ip(request: Request) -> str:
-    peer = request.client.host if request.client else "unknown"
-    if not settings.trusted_proxy_ips.strip():
-        return peer
-    try:
-        trusted_networks = [ipaddress.ip_network(item.strip(), strict=False) for item in settings.trusted_proxy_ips.split(",") if item.strip()]
-        peer_ip = ipaddress.ip_address(peer)
-    except ValueError:
-        return peer
-    if not any(peer_ip in network for network in trusted_networks):
-        return peer
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    chain = [item.strip() for item in forwarded.split(",") if item.strip()] + [peer]
-    for item in reversed(chain):
-        try:
-            address = ipaddress.ip_address(item)
-        except ValueError:
-            return peer
-        if any(address in network for network in trusted_networks):
-            continue
-        return str(address)
-    return peer
+    return client_ip(request, settings.trusted_proxy_ips)
 
 
 @app.middleware("http")

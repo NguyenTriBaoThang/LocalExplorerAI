@@ -1,4 +1,8 @@
 from functools import lru_cache
+import ipaddress
+import re
+from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, model_validator
@@ -50,6 +54,12 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
     web_app_url: str = "http://localhost:5173"
+    vnpay_environment: Literal["sandbox", "production"] = "sandbox"
+    vnpay_tmn_code: str | None = None
+    vnpay_hash_secret: str | None = None
+    vnpay_payment_url: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    vnpay_return_url: str | None = None
+    vnpay_ipn_url: str | None = None
     demo_admin_email: str = "localexplorerai@admin.com"
     demo_admin_password: str | None = None
     demo_traveler_email: str = "baothang@gmail.com"
@@ -82,6 +92,65 @@ class Settings(BaseSettings):
     @property
     def email_is_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_from_email)
+
+    @property
+    def vnpay_credentials_configured(self) -> bool:
+        return bool(
+            self.vnpay_tmn_code and self.vnpay_tmn_code.strip()
+            and self.vnpay_hash_secret and self.vnpay_hash_secret.strip()
+        )
+
+    @property
+    def vnpay_checkout_enabled(self) -> bool:
+        if not self.vnpay_credentials_configured or not self.vnpay_return_url or not self.vnpay_ipn_url:
+            return False
+        if not re.fullmatch(r"[A-Za-z0-9]{8}", self.vnpay_tmn_code or ""):
+            return False
+        try:
+            payment = urlparse(self.vnpay_payment_url.strip())
+            return_url = urlparse(self.vnpay_return_url.strip())
+            ipn_url = urlparse(self.vnpay_ipn_url.strip())
+            payment_host = payment.hostname
+            return_host = return_url.hostname
+            ipn_host = ipn_url.hostname
+        except ValueError:
+            return False
+        if payment.scheme != "https" or not payment.netloc or payment.query:
+            return False
+        if (
+            not return_url.netloc or not ipn_url.netloc
+            or return_url.scheme != "https" or ipn_url.scheme != "https"
+            or return_url.path != "/api/payments/vnpay/return"
+            or ipn_url.path != "/api/payments/vnpay/ipn"
+            or return_url.query or ipn_url.query or return_url.username or ipn_url.username
+            or return_url.password or ipn_url.password or return_url.fragment or ipn_url.fragment
+            or payment.username or payment.password or payment.fragment
+        ):
+            return False
+        if not _public_https_host(return_host) or not _public_https_host(ipn_host):
+            return False
+        if self.vnpay_environment == "sandbox" and payment_host != "sandbox.vnpayment.vn":
+            return False
+        if self.vnpay_environment == "production" and payment_host == "sandbox.vnpayment.vn":
+            return False
+        if self.app_env.lower() in {"prod", "production"}:
+            return (
+                self.vnpay_environment == "production"
+                and payment_host != "sandbox.vnpayment.vn"
+            )
+        return True
+
+
+def _public_https_host(hostname: str | None) -> bool:
+    if not hostname:
+        return False
+    host = hostname.lower().rstrip(".")
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal", ".test", ".invalid", ".example")):
+        return False
+    try:
+        return ipaddress.ip_address(host).is_global
+    except ValueError:
+        return "." in host
 
 
 @lru_cache

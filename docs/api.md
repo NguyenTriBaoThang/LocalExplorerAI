@@ -83,12 +83,14 @@ The current booking flow supports verified-data seat holds and explicit provider
 - `GET /api/bookings` and `GET /api/bookings?itinerary_id=...` — signed-in traveler's booking state.
 - `POST /api/bookings/{id}/cancel` — cancels an unpaid hold, or records a cancellation request after payment.
 - `GET /api/bookings/{id}/history` — permission-checked booking event history.
-- `GET /api/payments/status` — gateway readiness (currently disabled).
-- `POST /api/bookings/{id}/checkout` — currently fails closed with `PAYMENT_GATEWAY_NOT_CONFIGURED`; it cannot collect a payment or claim payment success.
+- `GET /api/payments/status` — VNPay sandbox/production readiness, with no secret values returned.
+- `POST /api/bookings/{id}/checkout` — creates or reuses a signed VNPay checkout URL while configuration is valid; otherwise fails closed.
+- `GET /api/payments/vnpay/return` — signature-checked browser return for display only; does not update payment state.
+- `GET /api/payments/vnpay/ipn` — public, signed and idempotent VNPay settlement callback. VNPay must be able to reach this URL over HTTPS.
 - `GET /api/provider/me/bookings` and `POST /api/provider/me/bookings/{id}/decision` — provider request inbox and accept/reject action.
 - `POST /api/provider/me/bookings/{id}/cancellation-decision` — process an unpaid cancellation; paid refunds stay pending until a configured gateway confirms them.
 
-The database has payment/refund lifecycle ledger fields, but no payment provider is selected yet; real charge, signed webhook settlement, and actual refund execution remain disabled pending that decision and credentials.
+VNPay checkout/IPN settlement is implemented but only activates after merchant credentials and public HTTPS callback URLs are configured. Refund execution remains disabled; paid cancellation and late-capture cases require manual reconciliation. See [booking and payment workflow](bookings-and-payments.md) for setup and constraints.
 
 ## Lỗi
 

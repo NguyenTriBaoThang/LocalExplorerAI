@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+from urllib.parse import parse_qs, urlsplit
 
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, select
 
 from app.api.dependencies import get_current_user
+from app.core.config import settings
 from app.models.entities import (
     Booking,
     Evidence,
@@ -17,6 +19,7 @@ from app.models.entities import (
     Provider,
     User,
 )
+from app.services.vnpay import sign_params, verify_params
 
 
 def _verified_evidence(db_session, target_type, target_id, revision, fields, now, expires):
@@ -118,3 +121,122 @@ def test_free_reservation_becomes_confirmed_after_provider_capacity_acceptance(c
     assert confirmation.status_code == 200, confirmation.text
     assert confirmation.json()["status"] == "confirmed"
     assert confirmation.json()["confirmed_at"] is not None
+
+
+def _prepare_vnpay_booking(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "vnpay_environment", "sandbox")
+    monkeypatch.setattr(settings, "vnpay_tmn_code", "TESTTMN1")
+    monkeypatch.setattr(settings, "vnpay_hash_secret", "test-vnpay-secret")
+    monkeypatch.setattr(settings, "vnpay_payment_url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+    monkeypatch.setattr(settings, "vnpay_return_url", "https://payments.example.org/api/payments/vnpay/return")
+    monkeypatch.setattr(settings, "vnpay_ipn_url", "https://payments.example.org/api/payments/vnpay/ipn")
+
+    traveler, provider_user, itinerary, stop, _slot = _booking_fixture(db_session, quantity_capacity=2, price=125_000)
+    current_user = [traveler]
+    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    hold = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 2})
+    assert hold.status_code == 201, hold.text
+    booking_id = hold.json()["id"]
+    current_user[0] = provider_user
+    accepted = client.post(f"/api/provider/me/bookings/{booking_id}/decision", json={"action": "accept", "note": "Capacity checked"})
+    assert accepted.status_code == 200, accepted.text
+    current_user[0] = traveler
+    checkout = client.post(f"/api/bookings/{booking_id}/checkout")
+    assert checkout.status_code == 200, checkout.text
+    payment = db_session.scalar(select(PaymentTransaction).where(PaymentTransaction.booking_id == booking_id))
+    assert payment is not None
+    return traveler, booking_id, payment, checkout.json()["checkout_url"]
+
+
+def _signed_ipn(payment, *, amount_vnd=None, response_code="00", transaction_status="00"):
+    params = {
+        "vnp_TmnCode": "TESTTMN1",
+        "vnp_TxnRef": payment.provider_reference,
+        "vnp_Amount": str((amount_vnd if amount_vnd is not None else payment.amount_vnd) * 100),
+        "vnp_CurrCode": "VND",
+        "vnp_ResponseCode": response_code,
+        "vnp_TransactionStatus": transaction_status,
+        "vnp_TransactionNo": "9988776655",
+        "vnp_PayDate": "20261004120000",
+    }
+    params["vnp_SecureHash"] = sign_params(params, "test-vnpay-secret")
+    return params
+
+
+def test_vnpay_checkout_uses_signed_gateway_url_and_reuses_pending_transaction(client, db_session, monkeypatch):
+    _traveler, booking_id, payment, checkout_url = _prepare_vnpay_booking(client, db_session, monkeypatch)
+    params = {key: values[0] for key, values in parse_qs(urlsplit(checkout_url).query).items()}
+    assert urlsplit(checkout_url).netloc == "sandbox.vnpayment.vn"
+    assert params["vnp_TmnCode"] == "TESTTMN1"
+    assert params["vnp_TxnRef"] == payment.provider_reference
+    assert params["vnp_Amount"] == str(payment.amount_vnd * 100)
+    assert verify_params(params, "test-vnpay-secret")
+    again = client.post(f"/api/bookings/{booking_id}/checkout")
+    assert again.status_code == 200
+    assert again.json()["checkout_url"] == checkout_url
+    assert db_session.scalar(select(func.count(PaymentTransaction.id)).where(PaymentTransaction.booking_id == booking_id)) == 1
+
+
+def test_vnpay_return_is_display_only_and_signed_ipn_confirms_idempotently(client, db_session, monkeypatch):
+    _traveler, booking_id, payment, _checkout_url = _prepare_vnpay_booking(client, db_session, monkeypatch)
+    params = _signed_ipn(payment)
+
+    browser_return = client.get("/api/payments/vnpay/return", params=params, follow_redirects=False)
+    assert browser_return.status_code == 303
+    assert f"booking={booking_id}" in browser_return.headers["location"]
+    assert db_session.get(Booking, booking_id).status == "awaiting_payment"
+
+    invalid_signature = dict(params, vnp_SecureHash="0" * 128)
+    invalid = client.get("/api/payments/vnpay/ipn", params=invalid_signature)
+    assert invalid.json()["RspCode"] == "97"
+    mismatch = _signed_ipn(payment, amount_vnd=payment.amount_vnd + 1)
+    mismatched = client.get("/api/payments/vnpay/ipn", params=mismatch)
+    assert mismatched.json()["RspCode"] == "04"
+    assert db_session.get(Booking, booking_id).status == "awaiting_payment"
+
+    settled = client.get("/api/payments/vnpay/ipn", params=params)
+    assert settled.json()["RspCode"] == "00"
+    assert db_session.get(PaymentTransaction, payment.id).status == "succeeded"
+    assert db_session.get(Booking, booking_id).status == "confirmed"
+    duplicate = client.get("/api/payments/vnpay/ipn", params=params)
+    assert duplicate.json()["RspCode"] == "02"
+
+
+def test_vnpay_capture_after_hold_expiry_goes_to_reconciliation_not_confirmation(client, db_session, monkeypatch):
+    _traveler, booking_id, payment, _checkout_url = _prepare_vnpay_booking(client, db_session, monkeypatch)
+    booking = db_session.get(Booking, booking_id)
+    booking.hold_expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db_session.commit()
+
+    response = client.get("/api/payments/vnpay/ipn", params=_signed_ipn(payment))
+    assert response.json()["RspCode"] == "00"
+    assert db_session.get(PaymentTransaction, payment.id).status == "succeeded"
+    assert db_session.get(Booking, booking_id).status == "refund_pending"
+
+
+def test_vnpay_failed_attempt_is_visible_and_checkout_can_be_retried(client, db_session, monkeypatch):
+    _traveler, booking_id, payment, _checkout_url = _prepare_vnpay_booking(client, db_session, monkeypatch)
+    failed = client.get("/api/payments/vnpay/ipn", params=_signed_ipn(payment, response_code="24", transaction_status="02"))
+    assert failed.json()["RspCode"] == "00"
+    assert db_session.get(PaymentTransaction, payment.id).status == "failed"
+    assert db_session.get(Booking, booking_id).status == "awaiting_payment"
+    listing = client.get("/api/bookings")
+    assert listing.status_code == 200
+    assert listing.json()[0]["payment_status"] == "failed"
+
+    retry = client.post(f"/api/bookings/{booking_id}/checkout")
+    assert retry.status_code == 200
+    assert retry.json()["checkout_url"] != _checkout_url
+    assert db_session.scalar(select(func.count(PaymentTransaction.id)).where(PaymentTransaction.booking_id == booking_id)) == 2
+
+
+def test_vnpay_suspicious_capture_requires_reconciliation(client, db_session, monkeypatch):
+    _traveler, booking_id, payment, _checkout_url = _prepare_vnpay_booking(client, db_session, monkeypatch)
+    nonfinal = client.get("/api/payments/vnpay/ipn", params=_signed_ipn(payment, response_code="00", transaction_status="01"))
+    assert nonfinal.json()["RspCode"] == "99"
+    assert db_session.get(PaymentTransaction, payment.id).status == "pending"
+
+    suspicious = client.get("/api/payments/vnpay/ipn", params=_signed_ipn(payment, response_code="07", transaction_status="00"))
+    assert suspicious.json()["RspCode"] == "00"
+    assert db_session.get(PaymentTransaction, payment.id).status == "succeeded"
+    assert db_session.get(Booking, booking_id).status == "refund_pending"
