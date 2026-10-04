@@ -1,0 +1,18 @@
+{
+  "nhathoducba": {
+    "model_name": "nhathoducba",
+    "display_name": "Nhà thờ Đức Bà Sài Gòn",
+    "file_url": "/models_3d/NhaThoDucBa2_cathedral_textured_1004080927_texture.glb",
+    "latitude": 10.77974,
+    "longitude": 106.6990404,
+    "altitude": 0.0,
+    "heading": 312.5,
+    "pitch": 0.0,
+    "roll": 0.0,
+    "scale": 77.5,
+    "poi_id": "exp-sai-gon-nha-tho-uc-ba-sai-gon",
+    "description": "Biểu tượng kiến trúc Công giáo La Mã cổ kính hơn 140 năm tại Công xã Paris, Quận 1.",
+    "updated_at": "2026-10-04T09:46:56.463287+00:00",
+    "updated_by": "25c48083-a826-46ab-9185-db4f53709731"
+  }
+}
