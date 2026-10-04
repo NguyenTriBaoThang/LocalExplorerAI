@@ -25,20 +25,23 @@
   </a>
   <img src="https://img.shields.io/badge/PRD-3.0_Production_Ready-blueviolet" alt="PRD 3.0 Ready"/>
   <img src="https://img.shields.io/badge/ML_Ranker-NDCG%405%200.9516-success" alt="ML Ranker"/>
-  <img src="https://img.shields.io/badge/Alembic-0009_Integration_Secrets-teal?logo=alembic" alt="Alembic Migrations"/>
+  <img src="https://img.shields.io/badge/Alembic-0010_Place_Import_Staging-teal?logo=alembic" alt="Alembic Migrations"/>
   <img src="https://img.shields.io/badge/Payments-VNPay%20%7C%20MoMo-blue" alt="Payments"/>
   <img src="https://img.shields.io/badge/Maps-Goong_Directions_%26_Geocoding-orange" alt="Goong API"/>
+  <img src="https://img.shields.io/badge/3D_Digital_Twin-GLB_Landmarks-purple" alt="3D Landmarks"/>
   <img src="https://img.shields.io/badge/i18n-Bilingual_VI_%7C_EN-indigo" alt="Bilingual"/>
   <img src="https://img.shields.io/badge/Theme-Warm_Light_%26_Nocturnal_Dark-yellow" alt="Dual Theme"/>
 </p>
 
 <p align="center">
-  <b>3D WebGL Digital Twin · AI Concierge Chat · Local E5 Semantic Search · XGBoost ML Ranker · Dynamic Replanning · Goong Directions & Geocoding · CartoDB 3D Map · Seat Holds & VNPay / MoMo · Provider & Admin Portals · Bilingual VI/EN · Operations Outbox</b><br/>
-  React 18.3 + TypeScript 5.6 · Three.js · Vite 6 · FastAPI 0.115 · Python 3.12+ · PostgreSQL 16 + PostGIS 3.4 · Goong API · Docker Compose
+  <b>3D WebGL Digital Twin · 3D Landmark Viewer · AI Concierge Chat · Local E5 Semantic Search · XGBoost ML Ranker · Dynamic Replanning · Goong Directions & Geocoding · CartoDB 3D Map · Seat Holds & VNPay / MoMo · Telegram Bot & n8n · Provider & Admin Portals · Bilingual VI/EN · Operations Outbox</b><br/>
+  React 18.3 + TypeScript 5.6 · Three.js · Vite 6 · FastAPI 0.142+ · Python 3.12+ · PostgreSQL 16 + PostGIS 3.4 · Goong API · Docker Compose
 </p>
 
 <p align="center">
   <a href="http://localhost:5173/"><strong>Khám phá Dashboard 3D</strong></a>
+  &nbsp;|&nbsp;
+  <a href="http://localhost:5173/map-3d"><strong>Trình xem 3D Landmark</strong></a>
   &nbsp;|&nbsp;
   <a href="http://localhost:5173/chat"><strong>Trợ lý AI Concierge</strong></a>
   &nbsp;|&nbsp;
@@ -123,11 +126,14 @@ Local Explorer AI chuyển đổi phương thức tiếp cận từ các chấm 
   - Bộ công cụ sao lưu và phục hồi dữ liệu tự động (`scripts/backup-postgres.*`, `scripts/restore-postgres.*`).
 - 🔐 **Quản lý Khóa Tích hợp Động & Mã hóa Fernet (Dynamic Secrets Vault)**: Quản trị viên cấu hình API keys cho Goong, Google OAuth, Gemini LLM, VNPay và MoMo trực tiếp trên giao diện Admin; toàn bộ secret được mã hóa AES-128-CBC / HMAC-SHA256 (Fernet) trong database, không lưu trữ plain-text.
 - 🌐 **Hệ thống Song ngữ Toàn diện (VI/EN) & Bộ Theme Kép (Light/Dark)**: Chuyển đổi ngôn ngữ linh hoạt Tiếng Việt / English toàn diện, cùng 2 giao diện đồ họa cao cấp: Warm Light Theme (Ấm áp, thanh lịch) và Nocturnal Emerald Theme (Đêm cyberpunk huyền bí).
+- 🏛️ **Bản Sao Số 3D Công Trình Biểu Tượng (`/map-3d`)**: Tích hợp mô hình 3D thực tế chi tiết dạng `.glb` (Nhà thờ Đức Bà Sài Gòn...), tương tác xoay 360°, phóng to thu nhỏ, kiểm soát chính xác góc xoay (`heading`), cao độ (`altitude`), tỉ lệ thực (`scale`) và tọa độ thực địa qua endpoint `/api/models-3d/*`.
+- 🤖 **Tự Động Hóa Telegram Bot & Quản Trị Hệ Thống Toàn Diện (`/api/admin/bot/*`, `/admin`)**: Đồng bộ Webhook tự động, chuyển tiếp sự kiện sang workflow n8n, tùy biến persona và mô hình AI cho bot trợ lý, cùng bảng tinh chỉnh tham số lõi toàn hệ thống (giới hạn điểm dừng, phạt thời gian di chuyển, chế độ bảo trì, thông báo toàn trang).
+- 📥 **Vùng Đệm Nhập Liệu Địa Danh Hàng Loạt (Place Import Staging)**: Hỗ trợ import danh mục địa danh từ file ngoài (CSV/JSON) vào bảng đệm `place_import_staging`, tự động lọc trùng và kiểm duyệt trước khi đưa vào catalog chính.
 - 🚦 **Điều hướng Phân quyền Theo Vai trò (Role-based Navigation & Route Guards)**: Phân luồng trải nghiệm người dùng thông minh (`RoleHome`, `CustomerRoute`, `RoleRoute`).
 - 🛡️ **Hệ Thống Phân Quyền Đa Tầng (RBAC) & Cổng Quản Lý Chuyên Biệt**:
-  - **Traveler**: Lưu lịch sử chuyến đi, quản lý hồ sơ, chia sẻ lịch trình qua link bảo mật (`/shared/:token`), đánh giá trải nghiệm theo rubric chuẩn 5 sao.
-  - **Provider Portal (`/provider-portal`)**: Quản lý chi tiết hoạt động, thêm/sửa slot với Optimistic Locking (`version`), duyệt/từ chối đặt chỗ, quản lý minh chứng pháp lý, trợ lý AI `PROVIDER_ASSISTANT` với cơ chế xác nhận 2 bước bằng token chữ ký số HMAC-SHA256.
-  - **Admin Portal (`/admin`)**: Dashboard KPI thời gian thực, hàng đợi kiểm duyệt (Moderation Queue), công cụ phát hiện & hợp nhất POI trùng lặp (Fuzzy string similarity merge), cấu hình tích hợp các cổng thanh toán và bên thứ 3, quản lý người dùng và nhật ký kiểm toán (Audit Logs).
+  - **Traveler**: Lưu lịch sử chuyến đi, quản lý hồ sơ, chia sẻ lịch trình qua link bảo mật (`/shared/:token`), so sánh đa phương án (`/compare`), đánh giá trải nghiệm theo rubric chuẩn 5 sao.
+  - **Provider Portal (`/provider-portal`)**: Quản lý chi tiết hoạt động, thêm/sửa slot với Optimistic Locking (`version`), duyệt/từ chối đặt chỗ, quản lý minh chứng pháp lý, trợ lý AI `PROVIDER_ASSISTANT` với cơ chế xác nhận 2 bước bằng token chữ ký số HMAC-SHA256 (`ProviderSlotAssistantPanel`).
+  - **Admin Portal (`/admin`)**: Dashboard KPI thời gian thực, hàng đợi kiểm duyệt (Moderation Queue), công cụ phát hiện & hợp nhất POI trùng lặp (Fuzzy string similarity merge), cấu hình tích hợp các cổng thanh toán và bên thứ 3, quản lý Telegram bot & n8n, tinh chỉnh tham số lõi hệ thống, khu vực đệm staging địa danh, bảng công cụ AI (`AdminAiToolsPanel`), bảng rủi ro ngập (`AdminFloodRiskPanel`), bảng vận hành (`AdminOperationsPanel`) và nhật ký kiểm toán (Audit Logs).
 - 🌧️ **Mô hình Cảnh báo Nguy cơ Ngập lụt & Chỉ số Thời tiết/AQI**: Tích hợp mô hình phân tích rủi ro ngập lụt tại các tuyến đường TP. Hồ Chí Minh (`/api/ml/flood-risk`) và tự động điều chỉnh ưu tiên điểm dừng trong nhà khi mưa lớn hoặc AQI vượt ngưỡng an toàn.
 
 ---

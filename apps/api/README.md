@@ -6,7 +6,7 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 
 ## 🛠️ Ngăn xếp Công nghệ (Tech Stack)
 
-- **Framework Web**: [FastAPI 0.115+](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) (Asynchronous ASGI)
+- **Framework Web**: [FastAPI 0.142+](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) (Asynchronous ASGI)
 - **Cơ sở Dữ liệu & ORM**: PostgreSQL 16 + PostGIS 3.4, [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [GeoAlchemy2](https://geoalchemy-2.readthedocs.io/), [Alembic](https://alembic.sqlalchemy.org/)
 - **Xác thực & Bảo mật**: HTTP-only Session Cookie (`le_session`), Google OAuth 2.0 PKCE, Argon2/PBKDF2 Password Hashing, Fernet AES-128-CBC encryption cho khóa tích hợp động
 - **Học máy Cục bộ (Local ML)**:
@@ -16,6 +16,7 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 - **Định tuyến & Địa lý**: Goong Directions API + Goong Forward Geocoding (với cache in-memory TTL và provenance)
 - **Thanh toán Trực tuyến**: Cổng VNPay (HMAC-SHA512 với sandbox/production) và Ví MoMo (HMAC-SHA256 captureWallet)
 - **Vận hành & Hàng đợi**: Transactional Email Outbox worker (`worker.py`), Redis Rate Limiting, HTTP structured JSON logging
+- **Bot Tự Động & 3D**: Telegram Bot Webhook sync & n8n forwarding (`admin_bot.py`), 3D Digital Twin Landmark calibration service (`models_3d.py`)
 
 ---
 
@@ -25,8 +26,9 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 apps/api/
 ├── app/
 │   ├── adapters/          # LLM Provider Adapters (OpenAI, Gemini compatible)
-│   ├── api/routes/        # 12 modules định tuyến API:
-│   │   ├── admin.py       # Dashboard KPI, Moderation, Duplicates Merge, Integrations, Audit
+│   ├── api/routes/        # 14 modules định tuyến API:
+│   │   ├── admin.py       # Dashboard KPI, Moderation, Duplicates Merge, Staging Places, Integrations, Audit
+│   │   ├── admin_bot.py   # Telegram Bot Config, Webhook Sync, n8n Forwarding, Core System Settings
 │   │   ├── ai.py          # AI Prompts, Replan Advice, Tagging, Similarity, XAI
 │   │   ├── auth.py        # Đăng ký, Đăng nhập, Profile, Google OAuth 2.0 PKCE
 │   │   ├── bookings.py    # Giữ chỗ 15p, Quyết định đối tác, VNPay & MoMo checkout & IPN
@@ -34,19 +36,20 @@ apps/api/
 │   │   ├── chat.py        # Trợ lý AI Concierge Chatbot & Constraints Parser
 │   │   ├── health.py      # /health (Liveness) & /ready (Readiness PostGIS + Redis)
 │   │   ├── ml.py          # /status, /rank-experiences, /flood-risk
+│   │   ├── models_3d.py   # 3D Landmark Models, Toạ độ Calibrate, Cập nhật thông số 3D
 │   │   ├── ops.py         # Giám sát Outbox Email, Background Jobs, Events
 │   │   ├── planner.py     # Heuristic Planner, Itinerary CRUD, Versioning, Share, Feedback
 │   │   ├── provider.py    # Quản lý POI, Hoạt động, Khung giờ, Evidence, Slot Assistant
 │   │   └── routing.py     # Goong Routing capabilities & Forward Geocoding
 │   ├── core/              # Config (pydantic-settings), Enums, Security & Fernet Vault
 │   ├── db/                # SessionLocal, Base entity, Connection lifecycle
-│   ├── models/            # SQLAlchemy Entities (User, Provider, POI, Slot, Itinerary...)
+│   ├── models/            # SQLAlchemy Entities (User, Provider, POI, Slot, Itinerary, PlaceImportStaging...)
 │   ├── prompts/           # Danh mục 8 prompt AI (manifest.json v3_0_0)
 │   ├── repositories/      # Data Access Layer & DB Queries
 │   ├── schemas/           # Pydantic Schemas xác thực dữ liệu vào/ra
-│   └── services/          # Business Logic (Planner, Replanner, Ranker, VNPay, MoMo...)
+│   └── services/          # Business Logic (Planner, Replanner, Ranker, VNPay, MoMo, BotService...)
 ├── migrations/            # Lịch sử lược đồ cơ sở dữ liệu Alembic:
-│   └── versions/          # 0001_initial -> 0009_integration_secrets
+│   └── versions/          # 0001_initial -> 0010_place_import_staging
 ├── scripts/               # Scripts tiện ích hệ thống:
 │   ├── seed_db.py         # Nạp dữ liệu mô phỏng demo & tài khoản dev
 │   ├── worker.py          # Background worker xử lý Email Outbox & Job nền
@@ -105,7 +108,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 ### Bước 4: Chạy Migration & Nạp dữ liệu mô phỏng
 ```powershell
-# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất (0009_integration_secrets)
+# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất (0010_place_import_staging)
 alembic upgrade head
 
 # Nạp dữ liệu mô phỏng ban đầu và tài khoản thử nghiệm
@@ -125,6 +128,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 📖 **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - 🩺 **Kiểm tra Liveness**: [http://localhost:8000/health](http://localhost:8000/health)
 - 🩺 **Kiểm tra Readiness**: [http://localhost:8000/ready](http://localhost:8000/ready)
+- 🤖 **Telegram Bot & System Settings**: `/api/admin/bot/*`, `/api/admin/system-settings`
+- 🏢 **3D Landmark Calibration**: `/api/models-3d/*`
+- 📥 **Place Import Staging**: `/api/admin/staging-places/*`
 
 ### Bước 7: Khởi chạy Background Outbox Worker (Trong terminal riêng)
 ```powershell

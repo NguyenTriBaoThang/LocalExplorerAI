@@ -59,3 +59,22 @@ Dữ liệu trong thư mục này được liên kết trực tiếp với các 
 1. `models/ai-ranker/`: Sử dụng đặc trưng trải nghiệm, thời tiết và người dùng để huấn luyện mô hình XGBRanker (NDCG@5 = 0.9516).
 2. `models/flood-risk/`: Mô hình Scikit-learn đánh giá rủi ro ngập lụt đô thị khi lập tuyến đường di chuyển.
 3. `models/e5/`: Mô hình vector Multilingual E5 phục vụ tìm kiếm ngữ nghĩa văn bản tiếng Việt cho các hoạt động trong catalog.
+
+---
+
+## 5. Dữ liệu Hiệu chuẩn Bản sao số 3D (`models_3d/`)
+
+- **Tập tin**: [`models_3d/calibration.json`](file:///g:/GITHUB/LoaclExplorerAI/models_3d/calibration.json)
+- **Mục đích**: Lưu trữ thông số hiệu chuẩn không gian thực địa phục vụ trình diễn 3D Digital Twin trên trang `/map-3d` và bản đồ trải nghiệm:
+  - `nhathoducba` (Nhà thờ Đức Bà Sài Gòn): Tọa độ (10.779740, 106.699040), góc xoay heading `312.5°`, cao độ `0.0m`, tỉ lệ chiều cao thực tế `77.5m`, liên kết với POI `exp-sai-gon-nha-tho-uc-ba-sai-gon`.
+- **Cập nhật & Quản trị**: API endpoint `PUT /api/models-3d/{model_id}/calibration` cho phép Quản trị viên tinh chỉnh trực tiếp và lưu bền vững vào hệ thống.
+
+---
+
+## 6. Dữ liệu Vùng Đệm Nhập Địa Điểm (Place Import Staging)
+
+- **Cơ chế**: Quản lý qua migration `0010_place_import_staging` và router `apps/api/app/api/routes/admin.py` (`/api/admin/staging-places/*`).
+- **Mục đích**: Cung cấp khu vực lưu trữ đệm (staging area) khi import danh sách địa danh, quán ăn, xưởng thủ công từ nguồn ngoài (CSV / JSON) trước khi nạp chính thức vào bảng `pois`. Hỗ trợ:
+  - Kiểm tra tính hợp lệ của tọa độ địa lý và giờ mở cửa.
+  - Tự động phát hiện trùng lặp bằng thuật toán so khớp chuỗi mờ (Fuzzy string matching).
+  - Phê duyệt đơn lẻ hoặc phê duyệt hàng loạt vào hệ thống chính thức.
