@@ -27,6 +27,8 @@ DEMO_EXPERIENCES = [
 
 
 def seed(session_factory=SessionLocal) -> None:
+    if settings.real_data_only:
+        raise RuntimeError("Demo seeding is disabled while REAL_DATA_ONLY is enabled. Use a separate test/development configuration to seed fixtures.")
     with session_factory() as db:
         if settings.app_env.lower() == "development":
             demo_accounts = [

@@ -25,10 +25,10 @@ export interface ChatReply {
 }
 
 export interface ChatServiceStatus {
-  assistant_mode: 'openai_compatible' | 'local_fallback'
+  assistant_mode: 'openai_compatible' | 'gemini_compatible' | 'local_fallback' | 'unavailable'
   llm_configured: boolean
   fallback_available: boolean
-  fallback_version: string
+  fallback_version: string | null
 }
 
 export interface GoogleOAuthStatus {

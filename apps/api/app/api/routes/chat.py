@@ -56,14 +56,14 @@ def chat_message(
 def chat_status(provider: StructuredOutputProvider = Depends(get_llm_provider), db: Session = Depends(get_db)):
     configured = provider.model_name != "not-configured"
     try:
-        selected = resolve_integration_value(db, "ai", "provider") or "openai"
+        selected = resolve_integration_value(db, "ai", "provider") or settings.llm_provider
     except IntegrationSecretConfigurationError:
-        selected = "openai"
+        selected = settings.llm_provider
     return {
-        "assistant_mode": f"{selected}_compatible" if configured else "local_fallback",
+        "assistant_mode": f"{selected}_compatible" if configured else ("local_fallback" if settings.llm_fallback_enabled else "unavailable"),
         "llm_configured": configured,
         "fallback_available": settings.llm_fallback_enabled,
-        "fallback_version": "1.0.0",
+        "fallback_version": "1.0.0" if settings.llm_fallback_enabled else None,
     }
 
 

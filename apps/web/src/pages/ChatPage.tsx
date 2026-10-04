@@ -440,7 +440,7 @@ export function ChatPage() {
         destination_latitude: destination.latitude,
         destination_longitude: destination.longitude,
         destination_label: destination.name,
-      }, { allowSimulation: false })
+      })
       navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
     } catch (reason) {
       setError(getChatError(reason))
@@ -515,8 +515,10 @@ export function ChatPage() {
             </div>
             <div className="chat-topbar-badges">
               <span className="chat-prompt-version">
-                {chatServiceStatus?.assistant_mode === 'openai_compatible'
-                  ? (locale === 'en' ? 'LLM · OpenAI-compatible' : 'LLM · OpenAI-compatible')
+                {chatServiceStatus?.assistant_mode === 'openai_compatible' || chatServiceStatus?.assistant_mode === 'gemini_compatible'
+                  ? (chatServiceStatus.assistant_mode === 'gemini_compatible'
+                    ? 'LLM · Gemini'
+                    : (locale === 'en' ? 'LLM · OpenAI-compatible' : 'LLM · OpenAI-compatible'))
                   : chatServiceStatus?.fallback_available
                     ? (locale === 'en' ? 'Offline fallback available' : 'Có dự phòng ngoại tuyến')
                     : chatServiceStatus

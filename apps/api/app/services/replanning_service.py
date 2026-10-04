@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.adapters.llm.provider import StructuredOutputProvider
+from app.core.config import settings
 from app.core.enums import ItineraryStatus, PriceBasis, normalize_intent_tag
 from app.models.entities import (
     DecisionLog,
@@ -133,16 +134,18 @@ class ReplanningService:
         mode = {"motorcycle": "motorcycle", "car": "driving"}.get(itinerary.travel_mode, itinerary.travel_mode)
         now = datetime.now(timezone.utc)
 
+        allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]
         experiences = self.db.scalars(
             select(Experience)
             .join(POI)
             .where(Experience.id != affected.experience_id,
-                   Experience.verification_status.in_(["verified", "simulated"]),
-                   POI.verification_status.in_(["verified", "simulated"]))
+                   Experience.verification_status.in_(allowed_statuses),
+                   POI.verification_status.in_(allowed_statuses))
             .options(selectinload(Experience.slots), joinedload(Experience.poi))
         ).all()
         experiences = [experience for experience in experiences if (
-            experience.verification_status == "simulated" and experience.poi.verification_status == "simulated"
+            not settings.real_data_only and experience.verification_status == "simulated"
+            and experience.poi.verification_status == "simulated"
         ) or (
             entity_is_operationally_verified(self.db, "experience", experience)
             and entity_is_operationally_verified(self.db, "poi", experience.poi)

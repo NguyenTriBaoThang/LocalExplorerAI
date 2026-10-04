@@ -15,6 +15,7 @@ _API_DIR_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 class Settings(BaseSettings):
     app_env: str = "development"
+    real_data_only: bool = True
     database_url: str = "sqlite:///./local_explorer.sqlite3"
     redis_url: str = "redis://localhost:6379/0"
     rate_limit_enabled: bool = False
@@ -49,7 +50,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
-    llm_fallback_enabled: bool = True
+    llm_fallback_enabled: bool = False
     admin_api_key: str | None = None
     app_signing_secret: str | None = None
     auth_secret: str | None = None

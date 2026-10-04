@@ -2,14 +2,18 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from geoalchemy2.elements import WKTElement
 
-from app.api.dependencies import get_db, require_roles
+from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
+from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
+from app.api.dependencies import get_db, get_llm_provider, require_roles
 from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
 from app.services.auth_service import hash_password
@@ -20,6 +24,7 @@ from app.services.integration_config import (
     list_integration_settings,
     update_integration_settings,
 )
+from app.services.routing_service import make_geocoding_provider, make_routing_provider
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
 
@@ -28,6 +33,29 @@ class IntegrationSettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     values: dict[str, str] = Field(default_factory=dict)
     remove_keys: list[str] = Field(default_factory=list, max_length=40)
+
+
+class PlaceCandidatePromotion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    address: str = Field(min_length=5, max_length=300)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    category: str = Field(min_length=2, max_length=40)
+    description: str = Field(default="", max_length=4000)
+    source_uri: str = Field(min_length=12, max_length=1000)
+    source_type: str = Field(min_length=3, max_length=40)
+    source_label: str = Field(min_length=2, max_length=180)
+    license: str | None = Field(default=None, max_length=120)
+    fields_covered: list[str] = Field(min_length=1, max_length=10)
+    observed_at: datetime
+    expires_at: datetime
+
+    @field_validator("observed_at", "expires_at")
+    @classmethod
+    def require_timezone_aware_dates(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Evidence timestamps must include a timezone.")
+        return value
 
 
 def _normalized_name(value: str) -> str:
@@ -105,15 +133,96 @@ def list_place_import_candidates(
 ):
     if db.get(PlaceImportBatch, batch_id) is None:
         raise HTTPException(status_code=404, detail={"code": "PLACE_IMPORT_NOT_FOUND", "message": "Import batch not found."})
-    rows = db.scalars(
-        select(PlaceImportCandidate).where(PlaceImportCandidate.batch_id == batch_id)
+    rows = db.execute(
+        select(PlaceImportCandidate, POI.verification_status)
+        .outerjoin(POI, POI.id == PlaceImportCandidate.target_poi_id)
+        .where(PlaceImportCandidate.batch_id == batch_id)
         .order_by(PlaceImportCandidate.source_row).offset(offset).limit(limit)
     ).all()
     return [{"id": item.id, "external_id": item.external_id, "source_row": item.source_row,
              "name": item.name, "kind": item.kind, "raw_payload": item.raw_payload,
              "quality_flags": item.quality_flags, "review_status": item.review_status,
-             "target_poi_id": item.target_poi_id, "created_at": item.created_at}
-            for item in rows]
+             "target_poi_id": item.target_poi_id, "target_poi_status": poi_status,
+             "created_at": item.created_at}
+            for item, poi_status in rows]
+
+
+@router.post("/place-imports/{batch_id}/candidates/{candidate_id}/promote")
+def promote_place_candidate(
+    batch_id: str,
+    candidate_id: str,
+    payload: PlaceCandidatePromotion,
+    actor: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    """Submit one imported POI with current source evidence; moderation publishes it later."""
+    candidate = db.scalar(select(PlaceImportCandidate).where(
+        PlaceImportCandidate.id == candidate_id,
+        PlaceImportCandidate.batch_id == batch_id,
+    ))
+    if candidate is None:
+        raise HTTPException(status_code=404, detail={"code": "PLACE_CANDIDATE_NOT_FOUND", "message": "Place candidate not found in this import."})
+    if candidate.target_poi_id:
+        return {"poi_id": candidate.target_poi_id, "status": "already_submitted"}
+    if candidate.review_status != "needs_enrichment":
+        raise HTTPException(status_code=409, detail={"code": "PLACE_CANDIDATE_NOT_PROMOTABLE", "message": "Only candidates awaiting enrichment can be promoted."})
+
+    required_fields = REQUIRED_FIELDS["poi"]
+    if set(payload.fields_covered) != required_fields:
+        missing = sorted(required_fields - set(payload.fields_covered))
+        extra = sorted(set(payload.fields_covered) - required_fields)
+        raise HTTPException(status_code=422, detail={"code": "POI_EVIDENCE_FIELDS_INCOMPLETE", "message": "The source must explicitly support every required POI field.", "details": {"missing": missing, "unsupported": extra}})
+    source = urlparse(payload.source_uri.strip())
+    if source.scheme != "https" or not source.hostname or source.username or source.password:
+        raise HTTPException(status_code=422, detail={"code": "INVALID_EVIDENCE_URL", "message": "Evidence URL must be an HTTPS URL without embedded credentials."})
+    now = datetime.now(timezone.utc)
+    if payload.observed_at > now or payload.expires_at <= now or payload.expires_at <= payload.observed_at:
+        raise HTTPException(status_code=422, detail={"code": "EVIDENCE_NOT_CURRENT", "message": "Evidence must have a past observation time and a future expiry time."})
+
+    poi_id = str(uuid4())
+    poi = POI(
+        id=poi_id,
+        name=candidate.name,
+        description=payload.description.strip() or str(candidate.raw_payload.get("description") or "").strip(),
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        geom=WKTElement(f"POINT({payload.longitude} {payload.latitude})", srid=4326),
+        category=payload.category.strip(),
+        address=payload.address.strip(),
+        source_attribution=payload.source_label.strip(),
+        verification_status="pending",
+        data_revision=1,
+    )
+    db.add(poi)
+    db.add(Evidence(
+        id=str(uuid4()),
+        source_uri=payload.source_uri.strip(),
+        source_type=payload.source_type.strip(),
+        source_label=payload.source_label.strip(),
+        license=payload.license.strip() if payload.license else None,
+        notes=f"Admin-verified enrichment of source row {candidate.source_row}.",
+        submitted_by=actor.id,
+        target_type="poi",
+        target_id=poi_id,
+        target_revision=1,
+        fields_covered=sorted(required_fields),
+        observed_at=payload.observed_at,
+        valid_from=payload.observed_at,
+        expires_at=payload.expires_at,
+        verification_status="pending",
+    ))
+    candidate.review_status = "submitted_for_review"
+    candidate.target_poi_id = poi_id
+    _audit(db, actor, "place_import.candidate_evidence_submitted", "poi", poi_id, {
+        "batch_id": batch_id,
+        "candidate_id": candidate.id,
+        "source_row": candidate.source_row,
+        "source_uri": payload.source_uri,
+        "fields_covered": sorted(required_fields),
+        "expires_at": payload.expires_at.isoformat(),
+    })
+    db.commit()
+    return {"poi_id": poi_id, "status": "pending_review", "data_mode": "not_public"}
 
 
 @router.patch("/users/{user_id}")
@@ -297,3 +406,52 @@ def update_integrations(
         return list_integration_settings(db)
     except IntegrationSecretConfigurationError as error:
         raise HTTPException(status_code=503, detail={"code": "INTEGRATION_SECRETS_NOT_CONFIGURED", "message": str(error)}) from error
+
+
+@router.post("/integrations/{service}/test")
+def test_integration_connection(
+    service: str,
+    actor: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+):
+    """Run a small, non-customer-data health check and never return provider payloads or secrets."""
+    if service not in {"ai", "routing"}:
+        raise HTTPException(status_code=404, detail={"code": "INTEGRATION_TEST_UNSUPPORTED", "message": "Connection tests are available for AI and routing integrations."})
+
+    status = "failed"
+    if service == "ai":
+        provider = get_llm_provider(db)
+        if provider.model_name == "not-configured":
+            status = "not_configured"
+        else:
+            try:
+                response = provider.generate(
+                    "Connection check only. Return the requested JSON object.",
+                    {"check": "connection"},
+                    {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"], "additionalProperties": False},
+                )
+                status = "connected" if response.get("ok") is True else "invalid_response"
+            except (LLMNotConfigured, LLMProviderError):
+                status = "failed"
+    else:
+        try:
+            resolution = make_geocoding_provider(db).forward("Ho Chi Minh City, Vietnam", limit=1)
+            route = make_routing_provider(db).get_route(
+                (10.7769, 106.7009), (10.7829, 106.6951), "motorcycle",
+            )
+            status = "connected" if resolution.results and route.distance_m > 0 and route.duration_min > 0 else "no_results"
+        except (IntegrationSecretConfigurationError, RoutingConfigurationError):
+            status = "not_configured"
+        except RoutingProviderError:
+            status = "failed"
+
+    _audit(db, actor, "integration.connection_tested", "integration", service, {"status": status})
+    db.commit()
+    messages = {
+        "connected": "Kết nối dịch vụ thành công.",
+        "not_configured": "Chưa cấu hình đầy đủ hoặc chưa thể giải mã khóa tích hợp.",
+        "invalid_response": "Dịch vụ đã trả lời nhưng không đúng định dạng kiểm tra.",
+        "no_results": "Kết nối được nhưng dịch vụ không trả kết quả kiểm tra.",
+        "failed": "Không kết nối được. Kiểm tra khóa, endpoint và quyền truy cập; chi tiết bí mật đã được lược bỏ.",
+    }
+    return {"service": service, "status": status, "ok": status == "connected", "message_vi": messages[status]}

@@ -184,7 +184,7 @@ export function PlannerPage() {
               destination_label: 'formatted_address' in destinationPoint ? destinationPoint.formatted_address : destinationPoint.name,
             }
           : {}),
-      }, { allowSimulation: false })
+      })
       navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
     } catch (reason) {
       setError(apiErrorMessage(reason))

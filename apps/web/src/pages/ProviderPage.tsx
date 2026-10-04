@@ -13,7 +13,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { apiErrorMessage, getExperiences } from '../api/client'
-import { SimulatedBadge } from '../components/common/StatusBadge'
+import { VerificationBadge } from '../components/common/StatusBadge'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import type { Experience } from '../types'
 import { useTranslation } from '../i18n'
@@ -102,7 +102,7 @@ export function ProviderPage() {
               <Clock3 size={13} /> {t('provider.realtime')}
             </span>
           </div>
-          <small>{t('provider.simulatedInDay')}</small>
+          <small>{locale === 'en' ? 'Verified slots with current partner confirmation' : 'Ca đã xác minh, còn xác nhận từ đối tác'}</small>
         </TiltCard3D>
 
         <TiltCard3D maxTilt={6} className="provider-stat-card">
@@ -213,7 +213,7 @@ export function ProviderPage() {
                   </div>
 
                   <div className="col-badge">
-                    <SimulatedBadge />
+                    <VerificationBadge status={experience.data_mode === 'real' ? 'verified' : 'unverified'} />
                   </div>
 
                   <div className="col-action">
@@ -230,7 +230,7 @@ export function ProviderPage() {
                     <div className="exp-extra-info">
                       <span>{locale === 'en' ? `Duration: ${experience.duration_min} mins` : `Thời lượng: ${experience.duration_min} phút`}</span>
                       <span>
-                        {locale === 'en' ? `Demo price: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / person` : `Giá demo: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / người`}
+                        {locale === 'en' ? `Price: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / person` : `Giá: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / người`}
                       </span>
                       <span>{locale === 'en' ? `Address: ${experience.poi.address}` : `Địa chỉ: ${experience.poi.address}`}</span>
                     </div>
@@ -262,8 +262,8 @@ export function ProviderPage() {
 
       <p className="provider-disclaimer">
         {locale === 'en'
-          ? 'Provider workspace in current version is an interactive demonstration of real-time slot and capacity management.'
-          : 'Bảng quản trị đối tác trong phiên bản hiện tại là giao diện trình diễn quy trình cập nhật khung giờ và sức chứa. Xác thực tài khoản đa yếu tố sẽ được tích hợp trong giai đoạn tiếp theo.'}
+          ? 'Only source-verified catalog entries and recently confirmed slots are shown. Manage listings after signing in with a provider account.'
+          : 'Chỉ hiển thị địa điểm có nguồn đã xác minh và ca còn xác nhận mới. Đăng nhập bằng tài khoản đối tác để quản lý dữ liệu.'}
       </p>
     </div>
   )

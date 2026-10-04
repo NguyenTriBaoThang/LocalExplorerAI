@@ -11,6 +11,8 @@ def make_routing_provider(db: Session | None = None) -> RoutingProvider:
     try:
         provider_name = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
         if provider_name == "mock":
+            if settings.real_data_only:
+                raise RoutingConfigurationError("Mock routing is disabled while REAL_DATA_ONLY is enabled.")
             return MockRoutingProvider()
         if provider_name == "goong":
             return GoongDirectionsProvider(

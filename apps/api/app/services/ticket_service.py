@@ -9,6 +9,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.entities import User, Itinerary, ItineraryStop, POI, Experience, ExperienceSlot
 from app.services.auth_service import hash_password, create_session_token
@@ -152,10 +153,13 @@ class TicketService:
         group_size: int = 2,
     ) -> Dict[str, Any]:
         """
-        Generate a unique, real database Itinerary with a dedicated share_token ticket
-        for each customer who confirms their schedule.
-        All destinations are selected directly from real POIs and Experiences in the web database.
+        Generate a legacy ticket. Disabled whenever REAL_DATA_ONLY is enabled.
         """
+        if settings.real_data_only:
+            raise RuntimeError(
+                "Legacy ticket generation is disabled in REAL_DATA_ONLY mode. "
+                "Use the itinerary planner and booking APIs instead."
+            )
         db = self._get_db()
         should_close = self._db is None
         try:

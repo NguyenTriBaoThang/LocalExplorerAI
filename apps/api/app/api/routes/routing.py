@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from app.schemas.geocoding import GeocodeResponse
 from app.api.dependencies import get_db
+from app.core.config import settings
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.services.routing_service import make_geocoding_provider
 
@@ -27,13 +28,16 @@ def routing_capabilities(db: Session = Depends(get_db)):
         "mock": ["walking", "bicycling", "driving", "motorcycle", "car", "transit"],
         "goong": ["motorcycle", "walking", "car"],
     }.get(routing_provider, [])
+    mock_allowed = not settings.real_data_only
     return {
         "provider": routing_provider,
-        "configured": routing_provider == "mock" or (routing_provider == "goong" and bool(goong_api_key)),
+        "configured": (routing_provider == "mock" and mock_allowed) or (routing_provider == "goong" and bool(goong_api_key)),
         "supported_modes": modes,
         "eta_is_realtime": False,
         "geocoding_provider": geocoding_provider,
         "geocoding_configured": geocoding_provider == "goong" and bool(goong_api_key),
+        "mock_allowed": mock_allowed,
+        "data_mode": "real" if settings.real_data_only else "mixed",
     }
 
 

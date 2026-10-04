@@ -23,16 +23,16 @@ DEFAULT_PERSONA = (
 )
 
 DEFAULT_CONFIG = {
-    'bot_token': '1762747968237845532:TeULpekgBwYOmzgXSMOyzPROGqHritypnpmkqIPJhDyatRJxLwwoisPdssiRdYNK',
-    'webhook_url': 'https://kientrung.app.n8n.cloud/webhook/91110a88-8457-4eef-a65f-b74426b01eac',
-    'secret_token': 'kientrung_zalo_bot_secret_2026',
-    'is_active': True,
-    'auto_reply_enabled': True,
+    'bot_token': os.getenv("ZALO_BOT_TOKEN", ""),
+    'webhook_url': os.getenv("ZALO_WEBHOOK_URL", ""),
+    'secret_token': os.getenv("ZALO_WEBHOOK_SECRET", ""),
+    'is_active': False,
+    'auto_reply_enabled': False,
     'persona_system_prompt': DEFAULT_PERSONA,
     'ai_model': 'gemini-1.5-flash',
     'temperature': 0.7,
-    'forward_to_n8n': True,
-    'forward_n8n_url': 'https://kientrung.app.n8n.cloud/webhook/91110a88-8457-4eef-a65f-b74426b01eac',
+    'forward_to_n8n': False,
+    'forward_n8n_url': os.getenv("ZALO_FORWARD_WEBHOOK_URL", ""),
 }
 
 DEFAULT_SYSTEM_SETTINGS = {
@@ -41,10 +41,10 @@ DEFAULT_SYSTEM_SETTINGS = {
     'buffer_minutes': 20,
     'min_budget_vnd': 200000,
     'max_budget_vnd': 20000000,
-    'routing_provider': 'goong',
+    'routing_provider': "goong",
     'map_provider': 'goong',
-    'goong_api_key': 'HWtLAIWyYKULXcRG74gdd9lkXx2Sl5EpObEu2sQb',
-    'goong_maptiles_key': '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU',
+    'goong_api_key': os.getenv("GOONG_API_KEY", ""),
+    'goong_maptiles_key': os.getenv("GOONG_MAPTILES_API_KEY", ""),
     'gemini_api_key': os.getenv("GEMINI_API_KEY", ""),
     'openai_model': 'gpt-4o-mini',
     'verified_provider_boost': 1.25,
@@ -52,115 +52,9 @@ DEFAULT_SYSTEM_SETTINGS = {
     'maintenance_mode': False,
 }
 
-DEFAULT_SESSIONS = [
-    {
-        'id': '84901234567',
-        'chat_type': 'private',
-        'customer_name': 'Anh Tuấn',
-        'customer_phone': '0901234567',
-        'travel_party': 'family',
-        'budget_vnd': 2500000,
-        'interest_tags': ['Làm gốm thủ công', 'Ẩm thực Chợ Lớn', 'Trải nghiệm cho trẻ em'],
-        'dietary_or_special': 'Gia đình có 2 bé nhỏ (6t & 10t), hạn chế đi bộ xa lúc trưa nắng',
-        'extracted_summary': 'Đoàn gia đình 4 người cần chuyến đi thư giãn, có trải nghiệm cho trẻ em tại Xưởng gốm và ăn trưa đồ Hoa nhẹ nhàng.',
-        'last_message_at': '2026-10-03T19:45:00Z',
-        'message_count': 6,
-        'status': 'active',
-    },
-    {
-        'id': '84987654321',
-        'chat_type': 'private',
-        'customer_name': 'Chị Mai Anh',
-        'customer_phone': '0987654321',
-        'travel_party': 'couple',
-        'budget_vnd': 1800000,
-        'interest_tags': ['Cà phê di sản Đỗ Phủ', 'Hoàng hôn sông Sài Gòn', 'Cơm niêu truyền thống'],
-        'dietary_or_special': 'Đi cặp đôi kỷ niệm ngày cưới, ưu tiên không gian lãng mạn, yên tĩnh',
-        'extracted_summary': 'Chuyến đi kỷ niệm ngày cưới cuối tuần, thích không gian hoài niệm và ngắm cảnh sông chiều.',
-        'last_message_at': '2026-10-03T20:10:00Z',
-        'message_count': 4,
-        'status': 'active',
-    },
-    {
-        'id': 'group_sg_trip_2026',
-        'chat_type': 'group',
-        'customer_name': 'Nhóm bạn Phượt Sài Gòn Đêm (6 người)',
-        'customer_phone': '',
-        'travel_party': 'group_friends',
-        'budget_vnd': 4200000,
-        'interest_tags': ['Cà phê bít tất Chợ Thiếc', 'Phố ẩm thực đêm Nguyễn Trãi', 'Check-in Bến Bạch Đằng'],
-        'dietary_or_special': 'Nhóm thích chụp ảnh sống ảo, năng động, thích các quán ăn mở khuya',
-        'extracted_summary': 'Nhóm 6 bạn trẻ từ Đà Nẵng vào TP.HCM, cần lịch trình trải nghiệm cuộc sống đêm và ẩm thực hè phố.',
-        'last_message_at': '2026-10-03T20:25:00Z',
-        'message_count': 9,
-        'status': 'active',
-    },
-]
+DEFAULT_SESSIONS = []
 
-DEFAULT_MESSAGES = {
-    '84901234567': [
-        {
-            'id': 'msg-101',
-            'sender_type': 'user',
-            'sender_name': 'Anh Tuấn',
-            'text': 'Chào bạn, gia đình mình gồm 2 vợ chồng và 2 bé muốn tìm chỗ chơi vui và trải nghiệm ở Sài Gòn vào thứ Bảy này.',
-            'created_at': '2026-10-03T19:30:00Z',
-        },
-        {
-            'id': 'msg-102',
-            'sender_type': 'bot',
-            'sender_name': 'Bot botHK2T (Tour Guide AI)',
-            'text': 'Dạ em chào anh Tuấn ạ! Rất vui được đồng hành cùng gia đình mình khám phá Sài Gòn. Anh Tuấn cho em hỏi 2 bé nhà mình khoảng mấy tuổi và các bé thích làm đồ thủ công như nặn gốm, vẽ tranh hay thích các hoạt động vận động hơn ạ? Em cũng muốn biết dự kiến thời gian đi trong ngày của nhà mình nha.',
-            'created_at': '2026-10-03T19:31:15Z',
-        },
-        {
-            'id': 'msg-103',
-            'sender_type': 'user',
-            'sender_name': 'Anh Tuấn',
-            'text': 'Bé lớn 10 tuổi, bé nhỏ 6 tuổi. Các bé thích nặn gốm lắm. Nhà mình đi từ 8h30 sáng đến tầm 16h chiều thôi vì sợ trời nắng các bé mệt. Ngân sách tầm 2-3 triệu.',
-            'created_at': '2026-10-03T19:35:00Z',
-        },
-        {
-            'id': 'msg-104',
-            'sender_type': 'bot',
-            'sender_name': 'Bot botHK2T (Tour Guide AI)',
-            'text': 'Dạ tuyệt vời quá ạ! Em gợi ý lịch trình cực kỳ phù hợp cho nhà mình:\n\n1. **9:00 - 11:30**: Trải nghiệm xoay gốm thủ công tại **Xưởng Gốm Sài Gòn Art (Quận 3)** - các bé sẽ tự tay nặn ly tách và vẽ màu men bản địa.\n2. **12:00 - 13:30**: Ăn trưa tại **Bếp Cơm Niêu & Bánh Dân Gian Nam Bộ (Quận 1)** mát mẻ, đồ ăn hợp khẩu vị cả người lớn và trẻ nhỏ.\n3. **14:00 - 15:30**: Ghé góc cà phê thủ công giấy Dó nghe kể chuyện Sài Gòn xưa.\n\nTổng chi phí ước tính khoảng **2.200.000đ**, vừa vặn ngân sách của anh ạ!',
-            'created_at': '2026-10-03T19:36:30Z',
-        },
-    ],
-    '84987654321': [
-        {
-            'id': 'msg-201',
-            'sender_type': 'user',
-            'sender_name': 'Chị Mai Anh',
-            'text': 'Em ơi, cuối tuần này vợ chồng chị kỷ niệm 3 năm ngày cưới, em gợi ý cho chị 1 buổi hẹn hò thật lãng mạn mà đậm chất Sài Gòn được không?',
-            'created_at': '2026-10-03T20:05:00Z',
-        },
-        {
-            'id': 'msg-202',
-            'sender_type': 'bot',
-            'sender_name': 'Bot botHK2T (Tour Guide AI)',
-            'text': 'Dạ em chúc mừng kỷ niệm 3 năm ngày cưới của anh chị ạ! ❤️ Để có một buổi hẹn ngọt ngào và đáng nhớ, em gợi ý anh chị ghé **Cà Phê Di Sản Đỗ Phủ** buổi chiều ngắm không gian hoài niệm xưa, sau đó 17:30 đón hoàng hôn buông trên sông Sài Gòn tại Ga tàu thủy Bạch Đằng, và kết thúc bằng bữa tối ấm cúng tại nhà hàng ven sông ạ.',
-            'created_at': '2026-10-03T20:06:20Z',
-        },
-    ],
-    'group_sg_trip_2026': [
-        {
-            'id': 'msg-301',
-            'sender_type': 'user',
-            'sender_name': 'Minh Huy',
-            'text': 'Alo bot ơi, nhóm mình 6 người từ Đà Nẵng bay vào Sài Gòn tối nay, muốn kiếm quán ăn đêm và cà phê mở muộn thì đi đâu?',
-            'created_at': '2026-10-03T20:20:00Z',
-        },
-        {
-            'id': 'msg-302',
-            'sender_type': 'bot',
-            'sender_name': 'Bot botHK2T (Tour Guide AI)',
-            'text': 'Chào cả team Đà Nẵng đã đến với thành phố không ngủ Sài Gòn! 🎉 Nếu nhóm mình 6 người thích đồ ăn đêm và không khí nhộn nhịp, nhất định phải làm ngay combo:\n\n1. **Phố ẩm thực Chợ Lớn (Nguyễn Trãi - Hà Tôn Quyền)**: Thưởng thức sủi cảo nóng hổi giòn rụm và chè mè đen truyền thống.\n2. **Cà phê vợt Ba Lù / Cà phê bít tất Chợ Thiếc**: Uống cà phê pha siêu bốc khói mở thâu đêm chuẩn phong cách người Hoa Sài Gòn.',
-            'created_at': '2026-10-03T20:21:40Z',
-        },
-    ],
-}
+DEFAULT_MESSAGES = {}
 
 
 class BotService:

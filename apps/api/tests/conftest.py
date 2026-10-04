@@ -16,6 +16,11 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models.entities import Experience, ExperienceSlot, POI, Provider
+from app.core.config import settings
+
+# Keep simulation available only to explicit legacy fixtures; runtime defaults to real-only.
+settings.real_data_only = False
+settings.llm_fallback_enabled = True
 
 
 @pytest.fixture

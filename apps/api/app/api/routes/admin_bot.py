@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+import secrets
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -64,20 +65,24 @@ class TestMapsRequest(BaseModel):
 @router.get('/api/admin/bot/config', dependencies=[Depends(require_admin)])
 def get_bot_config():
     cfg = bot_service.get_config()
-    # Mask token for safety when displaying
     token = cfg.get('bot_token', '')
-    masked_token = f'{token[:10]}...{token[-8:]}' if len(token) > 20 else token
+    sensitive_fields = {'bot_token', 'secret_token', 'webhook_url', 'forward_n8n_url'}
+    safe_config = {key: value for key, value in cfg.items() if key not in sensitive_fields}
     return {
-        **cfg,
-        'masked_bot_token': masked_token,
+        **safe_config,
+        'bot_configured': bool(token),
     }
 
 
 @router.post('/api/admin/bot/config', dependencies=[Depends(require_admin)])
 def update_bot_config(payload: BotConfigPatch):
     patch = payload.model_dump(exclude_unset=True)
+    sensitive_fields = {'bot_token', 'secret_token', 'webhook_url', 'forward_n8n_url'}
+    if sensitive_fields.intersection(patch):
+        raise HTTPException(status_code=422, detail='Bot tokens and webhook URLs cannot be stored in the legacy plaintext settings file. Configure them as server environment secrets.')
     updated = bot_service.update_config(patch)
-    return {'status': 'success', 'config': updated}
+    safe_config = {key: value for key, value in updated.items() if key not in sensitive_fields}
+    return {'status': 'success', 'config': safe_config, 'bot_configured': bool(updated.get('bot_token'))}
 
 
 @router.post('/api/admin/bot/test-connection', dependencies=[Depends(require_admin)])
@@ -125,12 +130,19 @@ async def send_bot_message(payload: SendMessageRequest):
 
 @router.get('/api/admin/system/settings', dependencies=[Depends(require_admin)])
 def get_system_settings():
-    return bot_service.get_system_settings()
+    current = bot_service.get_system_settings()
+    secret_keys = {'goong_api_key', 'goong_maptiles_key', 'gemini_api_key'}
+    safe = {key: value for key, value in current.items() if key not in secret_keys}
+    safe.update({f'{key}_configured': bool(current.get(key)) for key in secret_keys})
+    return safe
 
 
 @router.post('/api/admin/system/settings', dependencies=[Depends(require_admin)])
 def update_system_settings(payload: SystemSettingsPatch):
     patch = payload.model_dump(exclude_unset=True)
+    secret_keys = {'goong_api_key', 'goong_maptiles_key', 'gemini_api_key'}
+    if secret_keys.intersection(patch):
+        raise HTTPException(status_code=422, detail='Store API credentials through the encrypted Integrations page.')
     updated = bot_service.update_system_settings(patch)
     return {'status': 'success', 'settings': updated}
 
@@ -165,7 +177,8 @@ def get_system_metrics(db: Session = Depends(get_db)):
         'audit_logs_count': audit_count,
         'bot_sessions_total': len(sessions),
         'bot_messages_total': total_messages,
-        'feasibility_success_rate': 94.2,
+        'feasibility_success_rate': None,
+        'feasibility_metric_available': False,
     }
 
 
@@ -182,8 +195,9 @@ async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional
     cfg = bot_service.get_config()
     expected_secret = cfg.get('secret_token')
 
-    # If secret_token is set, check match
-    if expected_secret and x_bot_api_secret_token and x_bot_api_secret_token != expected_secret:
+    if not expected_secret:
+        raise HTTPException(status_code=503, detail='Webhook secret is not configured.')
+    if not x_bot_api_secret_token or not secrets.compare_digest(x_bot_api_secret_token, expected_secret):
         raise HTTPException(status_code=403, detail='Invalid secret token.')
 
     # Process incoming message

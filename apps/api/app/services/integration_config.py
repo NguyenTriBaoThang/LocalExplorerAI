@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 from urllib.parse import urlparse
@@ -15,6 +17,37 @@ from app.models.entities import IntegrationSecret
 
 class IntegrationSecretConfigurationError(RuntimeError):
     pass
+
+
+def _development_key_file() -> Path:
+    return Path(__file__).resolve().parents[2] / ".local-secrets" / "integration-secrets.key"
+
+
+def _development_fernet_key() -> str:
+    """Create a stable local key for development; production must inject its own key."""
+    from cryptography.fernet import Fernet
+
+    key_file = _development_key_file()
+    key_file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    try:
+        with key_file.open("xb") as stream:
+            stream.write(Fernet.generate_key())
+        try:
+            os.chmod(key_file.parent, 0o700)
+            os.chmod(key_file, 0o600)
+        except OSError:
+            # Windows ACLs inherit from the workspace; production uses an injected key.
+            pass
+    except FileExistsError:
+        pass
+    try:
+        key = key_file.read_text(encoding="ascii").strip()
+        Fernet(key.encode("ascii"))
+        return key
+    except (OSError, UnicodeEncodeError, ValueError) as error:
+        raise IntegrationSecretConfigurationError(
+            "The local integration encryption key is unreadable or invalid."
+        ) from error
 
 
 @dataclass(frozen=True)
@@ -66,6 +99,9 @@ INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
 
 def _fernet():
     key = (settings.integration_secrets_key or "").strip()
+    if not key and settings.app_env.lower() == "development":
+        key = _development_fernet_key()
+        settings.integration_secrets_key = key
     if not key:
         raise IntegrationSecretConfigurationError(
             "Set INTEGRATION_SECRETS_KEY to a persistent Fernet key before storing integration credentials."
@@ -163,6 +199,8 @@ def update_integration_settings(
             raise ValueError(f"{key} must be one of: {', '.join(sorted(allowed))}.")
         if any(ord(character) < 32 for character in normalized):
             raise ValueError(f"{key} contains a control character.")
+        if service == "routing" and key == "provider" and normalized.lower() == "mock" and settings.real_data_only:
+            raise ValueError("Mock routing cannot be enabled while REAL_DATA_ONLY is enabled.")
         if key.endswith(("_url", "_uri", "_base_url")):
             parsed = urlparse(normalized)
             if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:

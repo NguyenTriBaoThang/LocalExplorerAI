@@ -78,6 +78,8 @@ type PlaceImportCandidate = {
   raw_payload: Record<string, unknown>
   quality_flags: string[]
   review_status: string
+  target_poi_id?: string | null
+  target_poi_status?: string | null
 }
 
 type TabKey = 'queue' | 'imports' | 'duplicates' | 'providers' | 'users' | 'audit' | 'integrations' | 'operations' | 'ai-tools' | 'flood-risk'
@@ -116,6 +118,8 @@ export function AdminPage() {
   const [integrationLoadError, setIntegrationLoadError] = useState('')
   const [integrationDrafts, setIntegrationDrafts] = useState<Record<string, string>>({})
   const [savingIntegration, setSavingIntegration] = useState(false)
+  const [testingIntegration, setTestingIntegration] = useState<Record<string, boolean>>({})
+  const [integrationTestResults, setIntegrationTestResults] = useState<Record<string, { ok: boolean; message: string }>>({})
   const [placeImports, setPlaceImports] = useState<PlaceImportBatch[]>([])
   const [selectedImportId, setSelectedImportId] = useState('')
   const [placeImportCandidates, setPlaceImportCandidates] = useState<PlaceImportCandidate[]>([])
@@ -322,6 +326,52 @@ export function AdminPage() {
       setError(detail || 'Không lưu được cấu hình tích hợp. Kiểm tra khóa mã hóa và giá trị đã nhập.')
     } finally {
       setSavingIntegration(false)
+    }
+  }
+
+  async function promotePlaceCandidate(candidate: PlaceImportCandidate, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedImportId) return
+    const formData = new FormData(event.currentTarget)
+    const observedAt = new Date(String(formData.get('observed_at') || ''))
+    const expiresAt = new Date(String(formData.get('expires_at') || ''))
+    if (Number.isNaN(observedAt.getTime()) || Number.isNaN(expiresAt.getTime())) {
+      setError('Enter valid observation and expiry dates.')
+      return
+    }
+    try {
+      await adminApi.promotePlaceCandidate(selectedImportId, candidate.id, {
+        address: String(formData.get('address') || ''),
+        latitude: Number(formData.get('latitude')),
+        longitude: Number(formData.get('longitude')),
+        category: String(formData.get('category') || ''),
+        source_uri: String(formData.get('source_uri') || ''),
+        source_type: String(formData.get('source_type') || ''),
+        source_label: String(formData.get('source_label') || ''),
+        license: String(formData.get('license') || '') || null,
+        fields_covered: ['name', 'address', 'latitude', 'longitude', 'category'],
+        observed_at: observedAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      setMessage(`Submitted ${candidate.name} for evidence review. It remains hidden from travelers until moderation is complete.`)
+      setError('')
+      const rows = await adminApi.placeImportCandidates(selectedImportId) as PlaceImportCandidate[]
+      setPlaceImportCandidates(rows)
+    } catch (reason) {
+      setError(describeLoadFailure(reason))
+    }
+  }
+
+  async function testIntegration(group: IntegrationGroup) {
+    setTestingIntegration((current) => ({ ...current, [group.service]: true }))
+    setIntegrationTestResults((current) => ({ ...current, [group.service]: { ok: false, message: 'Testing connection…' } }))
+    try {
+      const result = await adminApi.testIntegration(group.service)
+      setIntegrationTestResults((current) => ({ ...current, [group.service]: { ok: result.ok, message: result.message_vi } }))
+    } catch {
+      setIntegrationTestResults((current) => ({ ...current, [group.service]: { ok: false, message: 'Connection test failed; secret details were not displayed.' } }))
+    } finally {
+      setTestingIntegration((current) => ({ ...current, [group.service]: false }))
     }
   }
 
@@ -563,13 +613,30 @@ export function AdminPage() {
                             <div className="item-sub-meta">
                               <span>{candidate.kind}</span>
                               <span>Dòng Excel {candidate.source_row}</span>
-                              <span className="item-status-pill">Chờ bổ sung</span>
+                              <span className="item-status-pill">{candidate.target_poi_status === 'verified' ? 'Verified and public' : candidate.target_poi_id ? 'Awaiting evidence review' : 'Needs enrichment'}</span>
                               <span>{candidate.quality_flags.length} cảnh báo</span>
                             </div>
                             <div className="item-sub-meta">
                               {candidate.quality_flags.map((flag) => <span key={flag}>{importFlagLabels[flag] || flag}</span>)}
                             </div>
                           </summary>
+                          {candidate.review_status === 'needs_enrichment' && (
+                            <form className="form-fields-grid-2" style={{ marginTop: 18 }} onSubmit={(event) => void promotePlaceCandidate(candidate, event)}>
+                              <h4 style={{ gridColumn: '1 / -1' }}>Enrich and submit POI evidence for review</h4>
+                              <label className="field-group-3d"><span>Verified street address</span><input name="address" required minLength={5} maxLength={300} /></label>
+                              <label className="field-group-3d"><span>Latitude (re-enter and verify)</span><input name="latitude" type="number" min={-90} max={90} step="any" required /></label>
+                              <label className="field-group-3d"><span>Longitude (re-enter and verify)</span><input name="longitude" type="number" min={-180} max={180} step="any" required /></label>
+                              <label className="field-group-3d"><span>Verified category</span><input name="category" defaultValue={candidate.kind} required minLength={2} maxLength={40} /></label>
+                              <label className="field-group-3d"><span>HTTPS source URL</span><input name="source_uri" type="url" required placeholder="https://..." /></label>
+                              <label className="field-group-3d"><span>Source type</span><select name="source_type" defaultValue="official"><option value="official">Official</option><option value="provider">Provider</option><option value="website">Website</option><option value="dataset">Sourced dataset</option><option value="field_check">Field check</option></select></label>
+                              <label className="field-group-3d"><span>Source label / verifier</span><input name="source_label" required minLength={2} maxLength={180} /></label>
+                              <label className="field-group-3d"><span>License (optional)</span><input name="license" maxLength={120} /></label>
+                              <label className="field-group-3d"><span>Observed at</span><input name="observed_at" type="datetime-local" required /></label>
+                              <label className="field-group-3d"><span>Evidence expires at</span><input name="expires_at" type="datetime-local" required /></label>
+                              <label className="field-group-3d" style={{ gridColumn: '1 / -1' }}><span><input type="checkbox" name="source_confirmed" required /> I checked that this source supports the POI name, address, coordinates, and category.</span></label>
+                              <button className="btn-primary-3d btn-sm" type="submit" style={{ gridColumn: '1 / -1' }}><Check size={14} /> Submit for moderation</button>
+                            </form>
+                          )}
                           <div className="item-sub-meta" style={{ marginTop: 12 }}>
                             <span>ID nguồn: {candidate.external_id}</span>
                             <span>Tọa độ trong file: {String(raw.lat ?? 'trống')}, {String(raw.lon ?? 'trống')}</span>
@@ -932,7 +999,7 @@ export function AdminPage() {
                     : group.service === 'payments' && field.key.endsWith('environment')
                       ? [['sandbox', 'Sandbox'], ['production', 'Production']]
                       : group.service === 'routing' && field.key === 'provider'
-                        ? [['goong', 'Goong'], ['mock', 'Mock (development only)']]
+                        ? [['goong', 'Goong']]
                         : group.service === 'routing' && field.key === 'geocoding_provider'
                           ? [['goong', 'Goong']]
                           : group.service === 'ai' && field.key === 'provider'
@@ -973,6 +1040,16 @@ export function AdminPage() {
                 })}
               </div>
               <div className="integration-save-row">
+                {['ai', 'routing'].includes(group.service) && (
+                  <button className="btn-secondary-3d btn-sm" type="button" disabled={testingIntegration[group.service] || savingIntegration} onClick={() => void testIntegration(group)}>
+                    <Activity size={15} /> {testingIntegration[group.service] ? 'Testing…' : 'Test connection'}
+                  </button>
+                )}
+                {integrationTestResults[group.service] && (
+                  <span role="status" className={integrationTestResults[group.service].ok ? 'text-emerald' : 'text-amber'}>
+                    {integrationTestResults[group.service].message}
+                  </span>
+                )}
                 <button className="btn-primary-3d btn-sm" type="submit" disabled={savingIntegration}>
                   <Save size={15} /> {savingIntegration ? 'Đang lưu…' : 'Lưu cấu hình'}
                 </button>

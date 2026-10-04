@@ -19,7 +19,7 @@ from app.core.client_ip import client_ip
 from app.services.prompt_service import InvalidStructuredOutput
 from app.services.rate_limit import check_rate_limit
 
-app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore simulated local experiences and build feasible itineraries.", openapi_url="/openapi.json")
+app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore verified local experiences and build feasible itineraries.", openapi_url="/openapi.json")
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 _request_logger = logging.getLogger("local_explorer.request")
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,96}$")
@@ -109,7 +109,7 @@ async def invalid_output_handler(request: Request, exc: InvalidStructuredOutput)
 
 @app.get("/")
 def root():
-    return {"name": "Local Explorer AI API", "docs": "/docs", "data_mode": "simulated"}
+    return {"name": "Local Explorer AI API", "docs": "/docs", "data_mode": "real" if settings.real_data_only else "mixed"}
 
 
 app.include_router(health.router)
@@ -124,4 +124,4 @@ app.include_router(chat.router)
 app.include_router(ai.router)
 app.include_router(ml.router)
 app.include_router(routing.router)
-app.include_router(admin_bot.router, prefix="/api")
+app.include_router(admin_bot.router)

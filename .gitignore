@@ -463,6 +463,7 @@ notebooks/
 
 # Bot runtime store
 apps/api/app/bot_store.json
+apps/api/.local-secrets/
 
 # Heavy 3D raw models
 models_3d/*.glb
