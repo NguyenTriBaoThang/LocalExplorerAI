@@ -91,7 +91,14 @@ class GoongDirectionsProvider:
         except httpx.TimeoutException as error:
             raise RoutingProviderError("Goong request timed out; no estimated route was substituted.") from error
         except httpx.HTTPStatusError as error:
-            raise RoutingProviderError(f"Goong returned HTTP {error.response.status_code}.") from error
+            try:
+                err_body = error.response.json()
+                err_code = (err_body.get("error") or {}).get("code") or ""
+                err_msg = (err_body.get("error") or {}).get("message") or error.response.text
+                detail = f"{error.response.status_code} [{err_code}]: {err_msg}" if err_code else f"{error.response.status_code}: {err_msg}"
+            except Exception:
+                detail = f"{error.response.status_code}"
+            raise RoutingProviderError(f"Goong returned HTTP {detail}.") from error
         except (httpx.HTTPError, ValueError) as error:
             raise RoutingProviderError("Goong returned an invalid response; no estimated route was substituted.") from error
         if not isinstance(body, dict):

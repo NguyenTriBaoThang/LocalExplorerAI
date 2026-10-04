@@ -193,7 +193,7 @@ export function AdminPage() {
   const [savingIntegration, setSavingIntegration] = useState(false)
   const [testingIntegration, setTestingIntegration] = useState<Record<string, boolean>>({})
   const [integrationTestResults, setIntegrationTestResults] = useState<
-    Record<string, { ok: boolean; message: string }>
+    Record<string, { ok: boolean; message: string; detail?: string }>
   >({})
   const [placeImports, setPlaceImports] = useState<PlaceImportBatch[]>([])
   const [selectedImportId, setSelectedImportId] = useState('')
@@ -509,7 +509,7 @@ export function AdminPage() {
       const result = await adminApi.testIntegration(group.service)
       setIntegrationTestResults((current) => ({
         ...current,
-        [group.service]: { ok: result.ok, message: result.message_vi },
+        [group.service]: { ok: result.ok, message: result.message_vi, detail: result.detail_vi },
       }))
       if (result.ok) {
         notifySuccess(result.message_vi, `Kết nối ${group.service} OK`)
@@ -521,7 +521,8 @@ export function AdminPage() {
         ...current,
         [group.service]: {
           ok: false,
-          message: 'Kiểm tra kết nối thất bại; chi tiết bí mật không hiển thị.',
+          message: 'Không thể kết nối tới dịch vụ.',
+          detail: 'Kiểm tra máy chủ backend đang chạy và kết nối internet ổn định.',
         },
       }))
       notifyError('Kiểm tra kết nối thất bại.')
@@ -563,12 +564,15 @@ export function AdminPage() {
   const importFlagLabels: Record<string, string> = {
     source_url_missing: 'Thiếu URL nguồn',
     address_missing: 'Thiếu địa chỉ',
+    address_geocode_needs_confirmation: 'Địa chỉ tra ngược, chưa xác nhận đúng POI',
     opening_hours_missing: 'Thiếu giờ mở cửa',
     price_basis_missing: 'Thiếu đơn vị/phạm vi giá',
+    price_amount_unverified: 'Giá trong file chưa được kiểm chứng',
     photo_missing: 'Thiếu ảnh',
     coordinates_missing: 'Thiếu tọa độ',
     coordinates_reused: 'Tọa độ bị lặp',
     verified_flag_unsubstantiated: 'Cờ verified chưa có bằng chứng',
+    field_level_evidence_pending: 'Chưa duyệt bằng chứng theo từng trường',
   }
 
   // Display metrics mapping
@@ -915,6 +919,11 @@ export function AdminPage() {
                         ['Tọa độ dùng lại', 'coordinates_reused'],
                         ['Thiếu giờ mở cửa', 'opening_hours_missing'],
                         ['Thiếu URL nguồn', 'source_url_missing'],
+                        ['Thiếu cơ sở giá', 'price_basis_missing'],
+                        ['Giá chưa xác minh', 'price_amount_unverified'],
+                        ['Địa chỉ cần đối chiếu', 'address_geocode_needs_confirmation'],
+                        ['Bằng chứng theo trường còn thiếu', 'field_level_evidence_pending'],
+                        ['Cờ verified thiếu chứng cứ', 'verified_flag_unsubstantiated'],
                         ['Cờ verified trong file', 'source_verified_true'],
                       ] as const
                     ).map(([label, key]) => (
@@ -982,8 +991,14 @@ export function AdminPage() {
                                 Enrich and submit POI evidence for review
                               </h4>
                               <label className="field-group-3d">
-                                <span>Verified street address</span>
-                                <input name="address" required minLength={5} maxLength={300} />
+                                <span>Address suggestion (verify against source)</span>
+                                <input
+                                  name="address"
+                                  defaultValue={String(raw.address || '')}
+                                  required
+                                  minLength={5}
+                                  maxLength={300}
+                                />
                               </label>
                               <label className="field-group-3d">
                                 <span>Latitude (re-enter and verify)</span>
@@ -1083,9 +1098,28 @@ export function AdminPage() {
                               {String(raw.lon ?? 'trống')}
                             </span>
                             <span>
-                              Giá thô trong file: {String(raw.price_vnd ?? 'trống')} VND (chưa rõ cơ
-                              sở tính)
+                              Giá trong file: {String(raw.price_vnd ?? 'trống')} VND · cơ sở:{' '}
+                              {String(raw.price_basis || 'chưa có')} · đơn vị:{' '}
+                              {String(raw.price_unit || 'chưa rõ')}
                             </span>
+                            {Boolean(raw.address) && (
+                              <span>Địa chỉ Goong gợi ý: {String(raw.address)}</span>
+                            )}
+                            {Boolean(raw.address_source_reference) && (
+                              <span>Nguồn địa chỉ: {String(raw.address_source_reference)}</span>
+                            )}
+                            {Boolean(raw.address_status) && (
+                              <span>Trạng thái địa chỉ: {String(raw.address_status)}</span>
+                            )}
+                            {Boolean(raw.price_status) && (
+                              <span>Trạng thái giá: {String(raw.price_status)}</span>
+                            )}
+                            {Boolean(raw.verification_basis) && (
+                              <span>Căn cứ cờ xác minh: {String(raw.verification_basis)}</span>
+                            )}
+                            {Boolean(raw.evidence_status) && (
+                              <span>Bằng chứng: {String(raw.evidence_status)}</span>
+                            )}
                             <span>Cờ verified gốc trong Excel: {String(raw.verified ?? false)}</span>
                             <span>Nguồn ghi trong file: {String(raw.source || 'không có')}</span>
                             <span>Tags: {tags || 'không có'}</span>
@@ -1596,6 +1630,36 @@ export function AdminPage() {
                             ? 'Nguồn: biến môi trường'
                             : 'Chưa cấu hình'}
                         </small>
+                        {field.key === 'goong_api_key' && (
+                          <div className="field-hint-tip">
+                            <span>🔑 <strong>REST API Key:</strong> Dùng khóa loại <code>API Key</code> (ví dụ: <code>HWtLA...</code>) để tính tuyến đường và tìm kiếm tọa độ Geocoding.</span>
+                          </div>
+                        )}
+                        {field.key === 'goong_maptiles_key' && (
+                          <div className="field-hint-tip">
+                            <span>🗺️ <strong>Maptiles Key:</strong> Dùng khóa loại <code>Maptiles Key</code> (ví dụ: <code>7LMSz...</code>) từ account.goong.io để tải gạch hiển thị bản đồ và lớp 3D.</span>
+                          </div>
+                        )}
+                        {field.key === 'gemini_api_key' && (
+                          <div className="field-hint-tip">
+                            <span>🤖 Lấy Gemini API Key từ <strong>Google AI Studio</strong> (aistudio.google.com).</span>
+                          </div>
+                        )}
+                        {field.key === 'openai_api_key' && (
+                          <div className="field-hint-tip">
+                            <span>⚡ Khóa OpenAI API bắt đầu bằng <code>sk-...</code> hoặc endpoint tương thích.</span>
+                          </div>
+                        )}
+                        {field.key === 'vnpay_tmn_code' && (
+                          <div className="field-hint-tip">
+                            <span>💳 Mã Terminal ID (TMN Code) do VNPay cấp cho Merchant Sandbox / Production.</span>
+                          </div>
+                        )}
+                        {field.key === 'client_id' && group.service === 'google_oauth' && (
+                          <div className="field-hint-tip">
+                            <span>🌐 Lấy OAuth 2.0 Client ID từ Google Cloud Console (APIs &amp; Services &gt; Credentials).</span>
+                          </div>
+                        )}
                       </label>
                       {field.source === 'admin' && (
                         <button
@@ -1612,37 +1676,55 @@ export function AdminPage() {
                   )
                 })}
               </div>
-              <div className="integration-save-row">
-                {['ai', 'routing'].includes(group.service) && (
-                  <button
-                    className="btn-secondary-3d btn-sm"
-                    type="button"
-                    disabled={testingIntegration[group.service] || savingIntegration}
-                    onClick={() => void testIntegration(group)}
-                  >
-                    <Activity size={15} />{' '}
-                    {testingIntegration[group.service] ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}
-                  </button>
-                )}
-                {integrationTestResults[group.service] && (
-                  <span
-                    role="status"
-                    className={
-                      integrationTestResults[group.service].ok
-                        ? 'text-emerald'
-                        : 'text-amber'
-                    }
-                  >
-                    {integrationTestResults[group.service].message}
-                  </span>
-                )}
-                <button
-                  className="btn-primary-3d btn-sm"
-                  type="submit"
-                  disabled={savingIntegration}
+              {/* Dedicated Connection Status Alert Card */}
+              {integrationTestResults[group.service] && (
+                <div
+                  role="status"
+                  className={`integration-test-result-box ${
+                    integrationTestResults[group.service].ok
+                      ? 'result-success'
+                      : 'result-warning'
+                  }`}
                 >
-                  <Save size={15} /> {savingIntegration ? 'Đang lưu…' : 'Lưu cấu hình'}
-                </button>
+                  <div className="test-result-header">
+                    {integrationTestResults[group.service].ok ? (
+                      <CheckCircle2 size={18} className="text-emerald" />
+                    ) : (
+                      <AlertCircle size={18} className="text-amber" />
+                    )}
+                    <strong>{integrationTestResults[group.service].message}</strong>
+                  </div>
+                  {integrationTestResults[group.service].detail && (
+                    <div className="test-result-detail">
+                      {integrationTestResults[group.service].detail}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="integration-actions-toolbar">
+                <div className="integration-test-action">
+                  {['ai', 'routing', 'payments', 'google_oauth'].includes(group.service) && (
+                    <button
+                      className="btn-secondary-3d btn-sm"
+                      type="button"
+                      disabled={testingIntegration[group.service] || savingIntegration}
+                      onClick={() => void testIntegration(group)}
+                    >
+                      <Activity size={15} />{' '}
+                      {testingIntegration[group.service] ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}
+                    </button>
+                  )}
+                </div>
+                <div className="integration-save-action">
+                  <button
+                    className="btn-primary-3d btn-sm"
+                    type="submit"
+                    disabled={savingIntegration}
+                  >
+                    <Save size={15} /> {savingIntegration ? 'Đang lưu…' : 'Lưu cấu hình'}
+                  </button>
+                </div>
               </div>
             </form>
           ))}

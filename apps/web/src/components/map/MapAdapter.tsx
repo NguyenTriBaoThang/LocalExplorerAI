@@ -3,7 +3,6 @@ import { Marker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-
 import type { LatLngExpression } from 'leaflet'
 import { divIcon } from 'leaflet'
 import { MapPin, Layers, Sparkles } from 'lucide-react'
-import { useTheme } from '../../theme'
 
 export const LEG_COLORS = [
   '#10b981', // 1: Emerald
@@ -22,6 +21,9 @@ export interface MapPoint {
   name: string
   category?: string
   number?: number
+  imageUrl?: string
+  priceVnd?: number
+  district?: string | null
 }
 
 export interface MapRoute {
@@ -65,11 +67,11 @@ function FitRouteBounds({ points, routes }: { points: MapPoint[]; routes: MapRou
   return null
 }
 
-const TILE_PRESETS: Record<string, { name: string; url: string; attribution: string }> = {
+const TILE_PRESETS: Record<string, { name: string; url: string; attribution: string; subdomains?: string }> = {
   goong_streets: {
-    name: 'Goong Streets HD (Sài Gòn)',
+    name: 'Đường phố Sài Gòn (HD)',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Goong Maps · Goong Directions V2 &copy; OpenStreetMap contributors',
+    attribution: '&copy; Goong Directions V2 · Sài Gòn &copy; OpenStreetMap contributors',
   },
   google: {
     name: 'Google Maps VN',
@@ -77,9 +79,10 @@ const TILE_PRESETS: Record<string, { name: string; url: string; attribution: str
     attribution: '&copy; Google Maps &copy; Goong Directions',
   },
   dark: {
-    name: 'Đêm Huyền Ảo',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Goong Maps &copy; Esri &copy; OpenStreetMap',
+    name: 'Đêm Huyền Ảo (Carto Dark)',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; CARTO &copy; OpenStreetMap &copy; Goong Directions',
+    subdomains: 'abcd',
   },
 }
 
@@ -100,10 +103,7 @@ export function MapAdapter({
   mapFooterLabel?: string
   className?: string
 }) {
-  const theme = useTheme()
-  const [styleMode, setStyleMode] = useState<string>(theme === 'light' ? 'goong_streets' : 'dark')
-  
-  useEffect(() => setStyleMode(theme === 'light' ? 'goong_streets' : 'dark'), [theme])
+  const [styleMode, setStyleMode] = useState<string>('goong_streets')
   const selected = points.find((point) => point.id === selectedId)
   const center: LatLngExpression = [10.775, 106.700]
 
@@ -122,6 +122,7 @@ export function MapAdapter({
         <TileLayer
           attribution={TILE_PRESETS[styleMode]?.attribution || TILE_PRESETS.goong_streets.attribution}
           url={TILE_PRESETS[styleMode]?.url || TILE_PRESETS.goong_streets.url}
+          subdomains={TILE_PRESETS[styleMode]?.subdomains || 'abc'}
           maxZoom={19}
         />
         <FitRouteBounds points={points} routes={routes} />
@@ -186,20 +187,44 @@ export function MapAdapter({
             >
               <Popup className="custom-3d-popup">
                 <div className="map-popup-3d">
-                  <span className="popup-kicker">{point.category ?? 'Trải nghiệm'}</span>
-                  <strong className="popup-title">{point.name}</strong>
-                  <span className="popup-sub">
-                    <MapPin size={11} /> {pointSourceLabel || 'Vị trí Goong Verified · TP. HCM'}
-                  </span>
-                  {onSelect && (
-                    <button
-                      type="button"
-                      className="popup-select-btn"
-                      onClick={() => onSelect(point.id)}
-                    >
-                      <Sparkles size={12} /> Xem chi tiết
-                    </button>
+                  {point.imageUrl && (
+                    <div className="popup-photo-wrap">
+                      <img
+                        src={point.imageUrl}
+                        alt={point.name}
+                        className="popup-photo-img"
+                        loading="lazy"
+                        onError={(e) => {
+                          ;(e.target as HTMLElement).style.display = 'none'
+                        }}
+                      />
+                      <div className="popup-photo-gradient" />
+                      <span className="popup-kicker-floating">{point.category ?? 'Trải nghiệm'}</span>
+                    </div>
                   )}
+                  <div className="popup-content-box">
+                    {!point.imageUrl && <span className="popup-kicker">{point.category ?? 'Trải nghiệm'}</span>}
+                    <strong className="popup-title">{point.name}</strong>
+                    <div className="popup-sub-row">
+                      <span className="popup-sub">
+                        <MapPin size={11} /> {point.district || pointSourceLabel || 'TP. Hồ Chí Minh'}
+                      </span>
+                      {point.priceVnd !== undefined && (
+                        <span className="popup-price-pill">
+                          {point.priceVnd > 0 ? `${point.priceVnd.toLocaleString('vi-VN')}₫` : 'Miễn phí'}
+                        </span>
+                      )}
+                    </div>
+                    {onSelect && (
+                      <button
+                        type="button"
+                        className="popup-select-btn"
+                        onClick={() => onSelect(point.id)}
+                      >
+                        <Sparkles size={12} /> Xem chi tiết
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Popup>
             </Marker>

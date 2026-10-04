@@ -59,6 +59,7 @@ export interface POI {
   verification_status: string
   source_evidence?: SourceEvidence[]
   district?: string | null
+  image_urls?: string[]
   data_mode?: DataMode
   data_status?: 'verified' | 'stale' | 'simulated' | 'unverified'
 }

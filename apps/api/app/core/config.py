@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     routing_provider: str = "goong"
     geocoding_provider: str = "goong"
     goong_api_key: str | None = None
+    goong_maptiles_api_key: str | None = None
     goong_api_base_url: str = "https://rsapi.goong.io"
     goong_timeout_seconds: float = 8.0
     goong_eta_ttl_seconds: int = 300

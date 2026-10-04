@@ -117,12 +117,21 @@ def candidate_flags(record: dict, reused_coordinates: set[tuple[float, float]]) 
     source_url = urlparse(source)
     if not source_url.scheme or not source_url.netloc:
         flags.append("source_url_missing")
-    flags.append("address_missing")
+    address = str(record.get("address") or "").strip()
+    address_status = str(record.get("address_status") or "").strip().lower()
+    if not address:
+        flags.append("address_missing")
+    elif address_status.startswith("reverse_geocoded"):
+        flags.append("address_geocode_needs_confirmation")
     hours = record.get("open_hours")
     if not hours:
         flags.append("opening_hours_missing")
-    if record.get("price_vnd") is not None:
+    price_basis = str(record.get("price_basis") or "").strip().lower()
+    if record.get("price_vnd") is not None and price_basis not in {"per_person", "per_group"}:
         flags.append("price_basis_missing")
+    price_status = str(record.get("price_status") or "").strip().lower()
+    if record.get("price_vnd") is not None and price_status not in {"verified_source", "reviewed_current_source"}:
+        flags.append("price_amount_unverified")
     if not record.get("photo_url"):
         flags.append("photo_missing")
     lat, lon = record.get("lat"), record.get("lon")
@@ -132,6 +141,8 @@ def candidate_flags(record: dict, reused_coordinates: set[tuple[float, float]]) 
         flags.append("coordinates_reused")
     if record.get("verified") and ("source_url_missing" in flags or not record.get("observed_at")):
         flags.append("verified_flag_unsubstantiated")
+    if str(record.get("evidence_status") or "").strip().lower() == "field_level_evidence_pending_not_publishable":
+        flags.append("field_level_evidence_pending")
     return flags
 
 
@@ -143,9 +154,32 @@ def make_quality_summary(records: list[tuple[dict, int]], reused_coordinates: se
         "by_source": dict(Counter(record.get("source") or "unknown" for record in source_rows)),
         "source_verified_true": sum(bool(record.get("verified")) for record in source_rows),
         "source_url_missing": sum(not urlparse(str(record.get("source") or "")).netloc for record in source_rows),
-        "address_missing": len(source_rows),
+        "verified_flag_unsubstantiated": sum(
+            bool(record.get("verified"))
+            and (not urlparse(str(record.get("source") or "")).netloc or not record.get("observed_at"))
+            for record in source_rows
+        ),
+        "field_level_evidence_pending": sum(
+            str(record.get("evidence_status") or "").strip().lower() == "field_level_evidence_pending_not_publishable"
+            for record in source_rows
+        ),
+        "address_missing": sum(not str(record.get("address") or "").strip() for record in source_rows),
+        "address_geocode_needs_confirmation": sum(
+            bool(str(record.get("address") or "").strip())
+            and str(record.get("address_status") or "").strip().lower().startswith("reverse_geocoded")
+            for record in source_rows
+        ),
         "opening_hours_missing": sum(not record.get("open_hours") for record in source_rows),
-        "price_basis_missing": sum(record.get("price_vnd") is not None for record in source_rows),
+        "price_basis_missing": sum(
+            record.get("price_vnd") is not None
+            and str(record.get("price_basis") or "").strip().lower() not in {"per_person", "per_group"}
+            for record in source_rows
+        ),
+        "price_amount_unverified": sum(
+            record.get("price_vnd") is not None
+            and str(record.get("price_status") or "").strip().lower() not in {"verified_source", "reviewed_current_source"}
+            for record in source_rows
+        ),
         "coordinates_reused": sum(
             record.get("lat") is not None and record.get("lon") is not None
             and (record["lat"], record["lon"]) in reused_coordinates

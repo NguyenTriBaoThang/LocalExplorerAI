@@ -134,6 +134,9 @@ export function ExplorePage() {
     name: item.name,
     category: item.poi.category,
     number: index + 1,
+    imageUrl: item.poi.image_urls?.[0],
+    priceVnd: item.price_vnd,
+    district: item.poi.district,
   }))
 
   const resetFilters = () => {

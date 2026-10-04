@@ -68,6 +68,8 @@ class POIRead(ORMModel):
     longitude: float
     category: str
     address: str
+    district: str | None = None
+    image_urls: list[str] = Field(default_factory=list)
     verification_status: str
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"

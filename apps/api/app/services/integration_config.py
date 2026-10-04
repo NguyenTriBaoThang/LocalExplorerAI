@@ -77,7 +77,8 @@ INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
     "routing": {
         "provider": IntegrationField("Routing provider", fallback_setting="routing_provider"),
         "geocoding_provider": IntegrationField("Geocoding provider", fallback_setting="geocoding_provider"),
-        "goong_api_key": IntegrationField("Goong API key", secret=True, fallback_setting="goong_api_key"),
+        "goong_api_key": IntegrationField("Goong REST API key (Tuyến đường & Geocode)", secret=True, fallback_setting="goong_api_key"),
+        "goong_maptiles_key": IntegrationField("Goong Maptiles key (Hiển thị bản đồ nền & 3D)", secret=True, fallback_setting="goong_maptiles_api_key"),
         "goong_api_base_url": IntegrationField("Goong API base URL", fallback_setting="goong_api_base_url"),
     },
     "ai": {

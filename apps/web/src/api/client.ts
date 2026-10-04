@@ -201,7 +201,7 @@ export const adminApi = {
   updateIntegration: async (service: string, values: Record<string, string>, remove_keys: string[] = []) =>
     (await api.put('/admin/integrations/' + encodeURIComponent(service), { values, remove_keys })).data,
   testIntegration: async (service: string) =>
-    (await api.post<{ service: string; status: string; ok: boolean; message_vi: string }>(`/admin/integrations/${encodeURIComponent(service)}/test`)).data,
+    (await api.post<{ service: string; status: string; ok: boolean; message_vi: string; detail_vi?: string }>(`/admin/integrations/${encodeURIComponent(service)}/test`)).data,
 }
 
 export const mlApi = {

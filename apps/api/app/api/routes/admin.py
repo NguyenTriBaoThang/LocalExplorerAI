@@ -22,6 +22,7 @@ from app.services.integration_config import (
     INTEGRATION_FIELDS,
     IntegrationSecretConfigurationError,
     list_integration_settings,
+    resolve_integration_value,
     update_integration_settings,
 )
 from app.services.routing_service import make_geocoding_provider, make_routing_provider
@@ -415,14 +416,19 @@ def test_integration_connection(
     db: Session = Depends(get_db),
 ):
     """Run a small, non-customer-data health check and never return provider payloads or secrets."""
-    if service not in {"ai", "routing"}:
-        raise HTTPException(status_code=404, detail={"code": "INTEGRATION_TEST_UNSUPPORTED", "message": "Connection tests are available for AI and routing integrations."})
+    if service not in {"ai", "routing", "payments", "google_oauth"}:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "INTEGRATION_TEST_UNSUPPORTED", "message": "Connection tests are available for AI, routing, payments, and Google OAuth integrations."},
+        )
 
     status = "failed"
+    detail_vi = None
     if service == "ai":
         provider = get_llm_provider(db)
         if provider.model_name == "not-configured":
             status = "not_configured"
+            detail_vi = "Chưa cấu hình API Key hoặc nhà cung cấp AI (Gemini hoặc OpenAI)."
         else:
             try:
                 response = provider.generate(
@@ -430,20 +436,95 @@ def test_integration_connection(
                     {"check": "connection"},
                     {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"], "additionalProperties": False},
                 )
-                status = "connected" if response.get("ok") is True else "invalid_response"
-            except (LLMNotConfigured, LLMProviderError):
+                if response.get("ok") is True:
+                    status = "connected"
+                    detail_vi = f"Đã kết nối thành công tới mô hình '{provider.model_name}'."
+                else:
+                    status = "invalid_response"
+                    detail_vi = "Mô hình AI phản hồi nhưng không khớp dữ liệu kiểm tra."
+            except LLMNotConfigured as exc:
+                status = "not_configured"
+                detail_vi = str(exc)
+            except LLMProviderError as exc:
                 status = "failed"
-    else:
-        try:
-            resolution = make_geocoding_provider(db).forward("Ho Chi Minh City, Vietnam", limit=1)
-            route = make_routing_provider(db).get_route(
-                (10.7769, 106.7009), (10.7829, 106.6951), "motorcycle",
-            )
-            status = "connected" if resolution.results and route.distance_m > 0 and route.duration_min > 0 else "no_results"
-        except (IntegrationSecretConfigurationError, RoutingConfigurationError):
+                err_text = str(exc)
+                if "API_KEY_INVALID" in err_text or "400" in err_text or "403" in err_text:
+                    detail_vi = f"Khóa AI API không hợp lệ hoặc bị từ chối: {err_text}. Vui lòng kiểm tra lại khóa Gemini / OpenAI."
+                else:
+                    detail_vi = f"Lỗi gọi AI: {err_text}"
+    elif service == "routing":
+        provider_name = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
+        if provider_name == "mock":
+            status = "connected"
+            detail_vi = "Chế độ Tuyến đường giả lập (Mock Routing) đang hoạt động bình thường."
+        else:
+            api_key = resolve_integration_value(db, "routing", "goong_api_key")
+            if not api_key:
+                status = "not_configured"
+                detail_vi = "Chưa nhập Goong API Key."
+            else:
+                try:
+                    resolution = make_geocoding_provider(db).forward("Ho Chi Minh City, Vietnam", limit=1)
+                    route = make_routing_provider(db).get_route(
+                        (10.7769, 106.7009), (10.7829, 106.6951), "motorcycle",
+                    )
+                    if resolution.results and route.distance_m > 0 and route.duration_min > 0:
+                        status = "connected"
+                        maptiles_key = resolve_integration_value(db, "routing", "goong_maptiles_key")
+                        maptiles_note = f" Đồng thời phát hiện Goong Maptiles Key ({maptiles_key[:6]}...) sẵn sàng cho đồ họa bản đồ nền." if maptiles_key else ""
+                        detail_vi = f"Kết nối Goong thành công! Geocode tìm thấy '{resolution.results[0].formatted_address}', Tuyến đường: {route.distance_m}m (~{route.duration_min} phút).{maptiles_note}"
+                    else:
+                        status = "no_results"
+                        detail_vi = "Kết nối được nhưng Goong không trả kết quả kiểm tra mẫu."
+                except (IntegrationSecretConfigurationError, RoutingConfigurationError) as exc:
+                    status = "not_configured"
+                    detail_vi = str(exc)
+                except RoutingProviderError as exc:
+                    status = "failed"
+                    err_msg = str(exc)
+                    if "403" in err_msg or "API_KEY_INVALID" in err_msg or "401" in err_msg:
+                        detail_vi = (
+                            "Lỗi từ chối truy cập (403 Forbidden / API_KEY_INVALID).\n"
+                            "⚠️ LƯU Ý QUAN TRỌNG: Goong phân chia 2 loại khóa riêng biệt:\n"
+                            "1. 'Maptiles Key' (chỉ dùng tải bản đồ nền tile — bạn có thể đã lấy nhầm loại này)\n"
+                            "2. 'API Key' (dùng cho REST API Tuyến đường & Geocode)\n"
+                            "👉 Cách khắc phục: Vào account.goong.io -> mục 'API Keys' -> bấm nút 'Tạo Key' -> CHỌN LOẠI 'API Key' (không chọn Maptiles Key) -> Copy khóa đó và dán lại vào ô 'Goong API key'."
+                        )
+                    else:
+                        detail_vi = f"Lỗi phản hồi từ Goong: {err_msg}"
+    elif service == "payments":
+        provider_name = (resolve_integration_value(db, "payments", "provider") or "vnpay").strip().lower()
+        if provider_name == "vnpay":
+            tmn = resolve_integration_value(db, "payments", "vnpay_tmn_code")
+            secret = resolve_integration_value(db, "payments", "vnpay_hash_secret")
+            if tmn and secret:
+                status = "connected"
+                detail_vi = f"Cấu hình VNPay hợp lệ (TMN Code: {tmn}, Hash Secret: đã thiết lập)."
+            else:
+                status = "not_configured"
+                detail_vi = "Chưa cấu hình đầy đủ VNPay TMN Code hoặc Hash Secret."
+        else:
+            partner = resolve_integration_value(db, "payments", "momo_partner_code")
+            access = resolve_integration_value(db, "payments", "momo_access_key")
+            secret = resolve_integration_value(db, "payments", "momo_secret_key")
+            if partner and access and secret:
+                status = "connected"
+                detail_vi = f"Cấu hình MoMo hợp lệ (Partner Code: {partner}, Access Key: đã thiết lập)."
+            else:
+                status = "not_configured"
+                detail_vi = "Chưa cấu hình đầy đủ MoMo Partner Code, Access Key hoặc Secret Key."
+    elif service == "google_oauth":
+        client_id = resolve_integration_value(db, "google_oauth", "client_id")
+        client_secret = resolve_integration_value(db, "google_oauth", "client_secret")
+        if client_id and client_secret:
+            status = "connected"
+            detail_vi = f"Cấu hình Google OAuth hợp lệ (Client ID: {client_id[:16]}...)."
+        else:
             status = "not_configured"
-        except RoutingProviderError:
-            status = "failed"
+            detail_vi = "Chưa cấu hình đầy đủ Google OAuth Client ID hoặc Client Secret."
+    else:
+        status = "not_configured"
+        detail_vi = "Dịch vụ không hỗ trợ kiểm tra trực tiếp."
 
     _audit(db, actor, "integration.connection_tested", "integration", service, {"status": status})
     db.commit()
@@ -452,6 +533,12 @@ def test_integration_connection(
         "not_configured": "Chưa cấu hình đầy đủ hoặc chưa thể giải mã khóa tích hợp.",
         "invalid_response": "Dịch vụ đã trả lời nhưng không đúng định dạng kiểm tra.",
         "no_results": "Kết nối được nhưng dịch vụ không trả kết quả kiểm tra.",
-        "failed": "Không kết nối được. Kiểm tra khóa, endpoint và quyền truy cập; chi tiết bí mật đã được lược bỏ.",
+        "failed": "Không thể kết nối tới dịch vụ.",
     }
-    return {"service": service, "status": status, "ok": status == "connected", "message_vi": messages[status]}
+    return {
+        "service": service,
+        "status": status,
+        "ok": status == "connected",
+        "message_vi": messages[status],
+        "detail_vi": detail_vi,
+    }
