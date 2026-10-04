@@ -5,7 +5,7 @@ from app.adapters.llm.provider import (
     LLMProviderError,
     StructuredOutputProvider,
 )
-from app.api.dependencies import get_llm_provider
+from app.api.dependencies import get_llm_provider, get_optional_user
 from app.api.dependencies import get_db
 from app.core.config import settings
 from app.prompts.registry import catalog
@@ -14,12 +14,19 @@ from app.services.offline_chat_fallback import build_offline_constraints
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from sqlalchemy.orm import Session
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
+from app.models.entities import User
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 @router.post("/message")
-def chat_message(payload: ChatMessage, provider: StructuredOutputProvider = Depends(get_llm_provider)):
+def chat_message(
+    payload: ChatMessage,
+    provider: StructuredOutputProvider = Depends(get_llm_provider),
+    user: User | None = Depends(get_optional_user),
+):
+    if user is not None and user.role != "traveler":
+        raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "AI chat is a traveler feature."})
     try:
         constraints = PromptRunner(provider).run(
             "CONVERSATION_PARSER",

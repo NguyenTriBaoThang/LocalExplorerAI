@@ -1,4 +1,7 @@
-# HCMC historical flood reports — raw source
+# HCMC historical flood reports — raw source / Dữ liệu Báo cáo Ngập lụt Thô TP.HCM
+
+> **Tóm tắt (Vietnamese Summary):**
+> Thư mục này chứa tập dữ liệu thô các báo cáo ngập lụt tại TP. Hồ Chí Minh giai đoạn 2002–2026 được chuyển đổi sang chuẩn UTF-8 CSV từ bảng `Flood_event_locations.tab` của DataSuds. Dữ liệu bao gồm 425 quan trắc và 22 cột thuộc tính nguyên bản; không tự ý suy diễn nhãn, không tự tạo dữ liệu đường khô, và không tự gán `edge_id`. Tập tin này phục vụ lưu trữ nguồn gốc (traceability) và **chưa sẵn sàng** để nạp trực tiếp vào notebook huấn luyện mô hình Flood Colab nếu chưa có dữ liệu quan sát âm bản đối chứng.
 
 `hcmc_flood_reports_2002_2026.csv` is a UTF-8 CSV conversion of the public
 `Flood_event_locations.tab` table from the dataset below. The conversion

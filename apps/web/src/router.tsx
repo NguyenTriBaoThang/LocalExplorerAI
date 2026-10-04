@@ -13,23 +13,29 @@ import { AdminPage } from './pages/AdminPage'
 import { SharedItineraryPage } from './pages/SharedItineraryPage'
 import { ComparePage } from './pages/ComparePage'
 import { ChatPage } from './pages/ChatPage'
-import { RoleRoute } from './auth'
+import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
 
 export const router = createBrowserRouter([{
   element: <AppLayout />,
   children: [
-    { path: '/', element: <HomePage /> },
-    { path: '/explore', element: <ExplorePage /> },
-    { path: '/chat', element: <ChatPage /> },
-    { path: '/planner', element: <PlannerPage /> },
-    { path: '/itinerary/:id', element: <ItineraryPage /> },
+    { path: '/', element: <RoleHome><HomePage /></RoleHome> },
+    { element: <CustomerRoute />, children: [
+      { path: '/explore', element: <ExplorePage /> },
+      { path: '/chat', element: <ChatPage /> },
+      { path: '/planner', element: <PlannerPage /> },
+      { path: '/itinerary/:id', element: <ItineraryPage /> },
+      { path: '/provider', element: <ProviderPage /> },
+      { path: '/about', element: <AboutPage /> },
+    ] },
     { path: '/shared/:token', element: <SharedItineraryPage /> },
-    { path: '/login', element: <AuthPage /> },
-    { path: '/register', element: <AuthPage register /> },
-    { path: '/about', element: <AboutPage /> },
-    { path: '/provider', element: <ProviderPage /> },
+    { element: <GuestRoute />, children: [
+      { path: '/login', element: <AuthPage /> },
+      { path: '/register', element: <AuthPage register /> },
+    ] },
     { element: <RoleRoute roles={['traveler', 'provider', 'admin']} />, children: [
       { path: '/profile', element: <ProfilePage /> },
+    ] },
+    { element: <RoleRoute roles={['traveler']} />, children: [
       { path: '/compare', element: <ComparePage /> },
     ] },
     { element: <RoleRoute roles={['provider']} />, children: [

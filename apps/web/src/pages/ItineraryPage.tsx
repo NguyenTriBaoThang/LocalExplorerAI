@@ -1019,7 +1019,7 @@ export function ItineraryPage() {
           </div>
         </div>
 
-        {user?.role === 'traveler' || user?.role === 'admin' ? (
+        {user?.role === 'traveler' ? (
           <form onSubmit={handleFeedback} className="feedback-form-layout">
             <div className="feedback-rating-row">
               <span className="rating-label">{t('itinerary.satisfactionLevel')}</span>

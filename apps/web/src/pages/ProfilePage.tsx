@@ -32,10 +32,14 @@ export function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false)
 
   useEffect(() => {
+    if (user?.role !== 'traveler') {
+      setTrips([])
+      return
+    }
     getMyItineraries()
       .then(setTrips)
       .catch(() => setTrips([]))
-  }, [])
+  }, [user?.role])
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -95,16 +99,18 @@ export function ProfilePage() {
           </div>
         </div>
 
-        <div className="profile-quick-stats">
-          <div className="profile-stat-box">
-            <small>{t('profile.savedTripsKpi')}</small>
-            <strong>{trips.length}</strong>
+        {user?.role === 'traveler' && (
+          <div className="profile-quick-stats">
+            <div className="profile-stat-box">
+              <small>{t('profile.savedTripsKpi')}</small>
+              <strong>{trips.length}</strong>
+            </div>
+            <Link to="/planner" className="btn-primary-3d btn-sm">
+              <span>{t('profile.createNewTrip')}</span>
+              <ArrowRight size={14} />
+            </Link>
           </div>
-          <Link to="/planner" className="btn-primary-3d btn-sm">
-            <span>{t('profile.createNewTrip')}</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
+        )}
       </div>
 
       {notice && (
@@ -122,7 +128,7 @@ export function ProfilePage() {
       )}
 
       {/* 2-Column Split: Settings + Trip History */}
-      <div className="profile-layout-grid">
+      <div className="profile-layout-grid" style={user?.role === 'traveler' ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {/* Left Column: Account & Security Forms */}
         <div className="profile-forms-col">
           {/* Personal Info Card */}
@@ -207,7 +213,7 @@ export function ProfilePage() {
         </div>
 
         {/* Right Column: Saved Itineraries Gallery */}
-        <section className="profile-trips-col">
+        {user?.role === 'traveler' && <section className="profile-trips-col">
           <div className="trips-section-header">
             <div>
               <span className="results-sub">{locale === 'en' ? 'YOUR COLLECTION' : 'BỘ SƯU TẬP CỦA BẠN'}</span>
@@ -266,7 +272,7 @@ export function ProfilePage() {
               </Link>
             </div>
           )}
-        </section>
+        </section>}
       </div>
     </div>
   )

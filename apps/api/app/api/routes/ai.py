@@ -73,7 +73,7 @@ def _provider_auth(db: Session, provider_id: str, access_key: str | None, user: 
     if provider is None or not provider.is_active:
         _not_found("Provider not found or inactive.")
     if user is not None:
-        if user.role == "admin" or (user.role == "provider" and user.provider_id == provider.id):
+        if user.role == "provider" and user.provider_id == provider.id:
             return provider
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_FORBIDDEN", "message": "This account cannot manage the selected provider."})
     if not access_key or not provider.portal_access_key or not secrets.compare_digest(access_key, provider.portal_access_key):
@@ -204,7 +204,9 @@ def get_replan_advice(
     user: User | None = Depends(get_optional_user),
 ):
     itinerary = db.get(Itinerary, itinerary_id)
-    if itinerary and itinerary.user_id and (user is None or (user.id != itinerary.user_id and user.role != "admin")):
+    if user is not None and user.role != "traveler":
+        raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Replanning is a traveler feature."})
+    if itinerary and itinerary.user_id and (user is None or user.id != itinerary.user_id):
         raise HTTPException(status_code=403, detail={"code": "ITINERARY_FORBIDDEN", "message": "This itinerary belongs to another account."})
     try:
         return ReplanningService(db, provider).advise(itinerary_id, payload.event_id)
@@ -228,7 +230,9 @@ def accept_replan(
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         _not_found("Itinerary not found.")
-    if itinerary.user_id and (user is None or (user.id != itinerary.user_id and user.role != "admin")):
+    if user is not None and user.role != "traveler":
+        raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Replanning is a traveler feature."})
+    if itinerary.user_id and (user is None or user.id != itinerary.user_id):
         raise HTTPException(status_code=403, detail={"code": "ITINERARY_FORBIDDEN", "message": "This itinerary belongs to another account."})
     if itinerary.current_version != payload.base_version:
         raise HTTPException(status_code=409, detail={"code": "STALE_ITINERARY_VERSION", "message": "The itinerary changed after this advice. Request fresh advice before accepting."})

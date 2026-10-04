@@ -23,6 +23,7 @@ import {
   Layers,
   Zap,
   Info,
+  ChevronDown,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
@@ -168,7 +169,26 @@ export function ChatPage() {
   const [originId, setOriginId] = useState('')
   const [destinationId, setDestinationId] = useState('')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
+  const feedContainerRef = useRef<HTMLDivElement>(null)
   const feedEndRef = useRef<HTMLDivElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+
+  const scrollToBottom = (smooth = true) => {
+    const el = feedContainerRef.current
+    if (!el) return
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto',
+    })
+    setIsAtBottom(true)
+  }
+
+  const handleFeedScroll = () => {
+    const el = feedContainerRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    setIsAtBottom(distanceFromBottom < 75)
+  }
 
   // Update initial message on locale change if conversation has not started
   useEffect(() => {
@@ -201,9 +221,15 @@ export function ChatPage() {
     return () => { active = false }
   }, [])
 
+  // Auto-scroll inside feed container only when user is near bottom or messages change
   useEffect(() => {
-    feedEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages, busy])
+    if (isAtBottom && feedContainerRef.current) {
+      feedContainerRef.current.scrollTo({
+        top: feedContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  }, [messages, busy, isAtBottom])
 
   const lockedPlaces = useMemo(() => (constraints?.locked_pois ?? []).map((name, index) => ({
     name,
@@ -501,7 +527,13 @@ export function ChatPage() {
           </div>
 
           {/* Messages Feed */}
-          <div className="chat-message-feed" aria-live="polite" aria-relevant="additions text">
+          <div
+            className="chat-message-feed"
+            ref={feedContainerRef}
+            onScroll={handleFeedScroll}
+            aria-live="polite"
+            aria-relevant="additions text"
+          >
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -600,6 +632,20 @@ export function ChatPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Floating Jump to Bottom Button */}
+          {!isAtBottom && (
+            <button
+              type="button"
+              className="chat-scroll-bottom-btn"
+              onClick={() => scrollToBottom(true)}
+              aria-label={locale === 'en' ? 'Scroll to bottom' : 'Cuộn xuống tin nhắn mới nhất'}
+              title={locale === 'en' ? 'Scroll to bottom' : 'Cuộn xuống tin nhắn mới nhất'}
+            >
+              <ChevronDown size={15} />
+              <span>{locale === 'en' ? 'Latest messages' : 'Tin nhắn mới nhất'}</span>
+            </button>
           )}
 
           {/* Composer Form */}

@@ -14,7 +14,8 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
         role="provider", provider_id=provider.id, is_active=True,
     )
     admin = User(id=str(uuid4()), email="source-admin@example.com", display_name="Admin", role="admin", is_active=True)
-    db_session.add_all([provider_user, admin])
+    traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler", role="traveler", is_active=True)
+    db_session.add_all([provider_user, admin, traveler])
     db_session.commit()
 
     client.cookies.set("le_session", create_session_token(provider_user.id))
@@ -106,6 +107,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert poi_detail.json()["source_evidence"]
 
     trip_start = slot_start - timedelta(hours=1)
+    client.cookies.set("le_session", create_session_token(traveler.id))
     planned = client.post("/api/itineraries/plan", json={
         "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=95)).isoformat(),
         "group_size": 2, "budget_vnd": 1000000, "transport_mode": "walking",

@@ -40,6 +40,31 @@ export function RoleRoute({ roles }: { roles: AuthUser['role'][] }) {
   const location = useLocation()
   if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  if (!roles.includes(user.role)) return <Navigate to="/" replace />
+  if (!roles.includes(user.role)) return <Navigate to={roleHome(user.role)} replace />
   return <Outlet />
+}
+
+export function CustomerRoute() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
+  if (user?.role === 'admin' || user?.role === 'provider') return <Navigate to={roleHome(user.role)} replace />
+  return <Outlet />
+}
+
+export function GuestRoute() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
+  if (user) return <Navigate to={roleHome(user.role)} replace />
+  return <Outlet />
+}
+
+export function RoleHome({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
+  if (user?.role === 'admin' || user?.role === 'provider') return <Navigate to={roleHome(user.role)} replace />
+  return <>{children}</>
+}
+
+function roleHome(role: AuthUser['role']) {
+  return role === 'admin' ? '/admin' : role === 'provider' ? '/provider-portal' : '/explore'
 }

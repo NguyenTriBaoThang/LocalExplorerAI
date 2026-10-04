@@ -8,8 +8,6 @@ import {
   User,
   LogOut,
   GitCompare,
-  Store,
-  ShieldCheck,
   ChevronDown,
   CheckCircle2,
   Sun,
@@ -25,19 +23,23 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 export function AppLayout() {
   const [open, setOpen] = useState(false)
   const [userDropdown, setUserDropdown] = useState(false)
-  const { user, setUser } = useAuth()
+  const { user, loading, setUser } = useAuth()
   const navigate = useNavigate()
   const theme = useTheme()
   const { t } = useTranslation()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const links = [
-    { to: '/chat', label: t('nav.chat') },
-    { to: '/explore', label: t('nav.explore') },
-    { to: '/planner', label: t('nav.planner') },
-    { to: '/provider', label: t('nav.provider') },
-    { to: '/about', label: t('nav.about') },
-  ]
+  const links = loading ? [] : user?.role === 'admin'
+    ? [{ to: '/admin', label: t('nav.admin') }]
+    : user?.role === 'provider'
+      ? [{ to: '/provider-portal', label: t('nav.providerPortal') }]
+      : [
+          { to: '/chat', label: t('nav.chat') },
+          { to: '/explore', label: t('nav.explore') },
+          { to: '/planner', label: t('nav.planner') },
+          { to: '/provider', label: t('nav.provider') },
+          { to: '/about', label: t('nav.about') },
+        ]
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -110,10 +112,12 @@ export function AppLayout() {
           {/* Header Action / User Menu Area */}
           <div className="header-actions-area">
             {/* Quick CTA */}
-            <NavLink to="/chat" className="header-cta-3d">
-              <span>{t('nav.planNow')}</span>
-              <Sparkles size={15} />
-            </NavLink>
+            {!loading && (!user || user.role === 'traveler') && (
+              <NavLink to="/chat" className="header-cta-3d">
+                <span>{t('nav.planNow')}</span>
+                <Sparkles size={15} />
+              </NavLink>
+            )}
 
             {/* Language Switcher (VN / EN) */}
             <LanguageSwitcher />
@@ -171,42 +175,16 @@ export function AppLayout() {
                         </div>
                       </NavLink>
 
-                      <NavLink
-                        to="/compare"
-                        className="dropdown-menu-item"
-                        onClick={() => setUserDropdown(false)}
-                      >
-                        <GitCompare size={16} className="text-cyan" />
-                        <div>
-                          <span>{t('nav.compare')}</span>
-                          <small>{t('nav.compareDesc')}</small>
-                        </div>
-                      </NavLink>
-
-                      {user.role === 'provider' && (
+                      {user.role === 'traveler' && (
                         <NavLink
-                          to="/provider-portal"
+                          to="/compare"
                           className="dropdown-menu-item"
                           onClick={() => setUserDropdown(false)}
                         >
-                          <Store size={16} className="text-amber" />
+                          <GitCompare size={16} className="text-cyan" />
                           <div>
-                            <span>{t('nav.providerPortal')}</span>
-                            <small>{t('nav.providerPortalDesc')}</small>
-                          </div>
-                        </NavLink>
-                      )}
-
-                      {user.role === 'admin' && (
-                        <NavLink
-                          to="/admin"
-                          className="dropdown-menu-item"
-                          onClick={() => setUserDropdown(false)}
-                        >
-                          <ShieldCheck size={16} className="text-rose" />
-                          <div>
-                            <span>{t('nav.admin')}</span>
-                            <small>{t('nav.adminDesc')}</small>
+                            <span>{t('nav.compare')}</span>
+                            <small>{t('nav.compareDesc')}</small>
                           </div>
                         </NavLink>
                       )}
@@ -290,32 +268,14 @@ export function AppLayout() {
                     <User size={16} className="text-emerald" />
                     <span>{t('nav.profile')} ({user.display_name || user.email.split('@')[0]})</span>
                   </NavLink>
-                  <NavLink
-                    to="/compare"
-                    onClick={() => setOpen(false)}
-                    className="mobile-nav-item"
-                  >
-                    <GitCompare size={16} className="text-cyan" />
-                    <span>{t('nav.compare')}</span>
-                  </NavLink>
-                  {user.role === 'provider' && (
+                  {user.role === 'traveler' && (
                     <NavLink
-                      to="/provider-portal"
+                      to="/compare"
                       onClick={() => setOpen(false)}
                       className="mobile-nav-item"
                     >
-                      <Store size={16} className="text-amber" />
-                      <span>{t('nav.providerPortal')}</span>
-                    </NavLink>
-                  )}
-                  {user.role === 'admin' && (
-                    <NavLink
-                      to="/admin"
-                      onClick={() => setOpen(false)}
-                      className="mobile-nav-item"
-                    >
-                      <ShieldCheck size={16} className="text-rose" />
-                      <span>{t('nav.admin')}</span>
+                      <GitCompare size={16} className="text-cyan" />
+                      <span>{t('nav.compare')}</span>
                     </NavLink>
                   )}
                   <button
@@ -380,11 +340,19 @@ export function AppLayout() {
 
             <div className="footer-links-col">
               <span className="footer-col-title">{t('footer.colExplore')}</span>
-              <NavLink to="/explore">{t('nav.explore')}</NavLink>
-              <NavLink to="/planner">{t('nav.planner')}</NavLink>
-              <NavLink to="/provider">{t('nav.provider')}</NavLink>
-              <NavLink to="/about">{t('nav.about')}</NavLink>
-              <NavLink to="/compare">{t('nav.compare')}</NavLink>
+              {loading ? null : (!user || user.role === 'traveler') ? (
+                <>
+                  <NavLink to="/explore">{t('nav.explore')}</NavLink>
+                  <NavLink to="/planner">{t('nav.planner')}</NavLink>
+                  <NavLink to="/provider">{t('nav.provider')}</NavLink>
+                  <NavLink to="/about">{t('nav.about')}</NavLink>
+                  {user && <NavLink to="/compare">{t('nav.compare')}</NavLink>}
+                </>
+              ) : (
+                <NavLink to={user.role === 'admin' ? '/admin' : '/provider-portal'}>
+                  {user.role === 'admin' ? t('nav.admin') : t('nav.providerPortal')}
+                </NavLink>
+              )}
             </div>
 
             <div className="footer-links-col">

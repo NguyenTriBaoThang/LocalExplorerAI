@@ -1,4 +1,7 @@
-# Experimental weak labels for public flood-report occurrence
+# Experimental weak labels for public flood-report occurrence / Nhãn Thực nghiệm Xuất hiện Báo cáo Ngập
+
+> **Tóm tắt (Vietnamese Summary):**
+> Tập tin `flood_training_weak_labels.csv` là sản phẩm dẫn xuất phục vụ mục đích nghiên cứu từ bộ dữ liệu báo cáo ngập lụt lịch sử TP.HCM. Mục tiêu dự đoán ở đây là **xác suất xuất hiện bản ghi báo cáo ngập lụt công khai** cho một địa danh cụ thể trong một tháng theo lịch, chứ **không phải** dự đoán tuyến đường đó có bị ngập nước vật lý hay không. File gồm 662 dòng cân bằng (331 quan sát dương bản + 331 giả định âm bản có trọng số sampling). Tuyệt đối không dùng file này để gán nhãn an toàn tuyến đường thực tế.
 
 `flood_training_weak_labels.csv` is a research-only derivative of the public
 HCMC historical flood-report dataset. Its target is whether that source contains
