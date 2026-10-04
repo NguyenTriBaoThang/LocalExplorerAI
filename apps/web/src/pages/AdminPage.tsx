@@ -86,6 +86,7 @@ export function AdminPage() {
   >([])
   const [activeTab, setActiveTab] = useState<TabKey>('queue')
   const [integrations, setIntegrations] = useState<IntegrationGroup[]>([])
+  const [integrationLoadError, setIntegrationLoadError] = useState('')
   const [integrationDrafts, setIntegrationDrafts] = useState<Record<string, string>>({})
   const [savingIntegration, setSavingIntegration] = useState(false)
   const [error, setError] = useState('')
@@ -98,33 +99,56 @@ export function AdminPage() {
   const [providerPassword, setProviderPassword] = useState('')
   const [providerAddress, setProviderAddress] = useState('')
 
+  function describeLoadFailure(reason: unknown): string {
+    if (!reason || typeof reason !== 'object') return 'Lỗi không xác định.'
+    const failure = reason as {
+      message?: string
+      response?: {
+        status?: number
+        data?: { error?: { code?: string; message?: string }; detail?: { code?: string; message?: string } }
+      }
+    }
+    const response = failure.response
+    const apiError = response?.data?.error || response?.data?.detail
+    const code = apiError?.code ? ` [${apiError.code}]` : ''
+    if (apiError?.message) return `${apiError.message}${code}`
+    if (response?.status) return `API trả về HTTP ${response.status}${code}.`
+    return failure.message || 'Không kết nối được API.'
+  }
+
   async function load() {
     setLoading(true)
-    try {
-      const [metrics, accounts, providerRows, pending, nearDuplicates, logs, integrationRows] =
-        await Promise.all([
-          adminApi.dashboard(),
-          adminApi.users(),
-          adminApi.providers(),
-          adminApi.moderation('pending'),
-          adminApi.duplicates(),
-          adminApi.audit(),
-          adminApi.integrations(),
-        ])
-      setDashboard(metrics)
-      setUsers(accounts)
-      setProviders(providerRows)
-      setQueue({
-        pois: pending.pois,
-        experiences: pending.experiences,
-        evidence: pending.evidence,
-      })
-      setDuplicates(nearDuplicates)
-      setAudit(logs)
+    const results = await Promise.allSettled([
+      adminApi.dashboard(),
+      adminApi.users(),
+      adminApi.providers(),
+      adminApi.moderation('pending'),
+      adminApi.duplicates(),
+      adminApi.audit(),
+      adminApi.integrations(),
+    ])
+    const failures: string[] = []
+    const apply = <T,>(result: PromiseSettledResult<T>, label: string, update: (value: T) => void) => {
+      if (result.status === 'fulfilled') update(result.value)
+      else failures.push(`${label}: ${describeLoadFailure(result.reason)}`)
+    }
+
+    apply(results[0], 'Tổng quan', setDashboard)
+    apply(results[1], 'Người dùng', setUsers)
+    apply(results[2], 'Cơ sở', setProviders)
+    apply(results[3], 'Hàng chờ duyệt', (pending) => setQueue({
+      pois: pending.pois,
+      experiences: pending.experiences,
+      evidence: pending.evidence,
+    }))
+    apply(results[4], 'POI trùng', setDuplicates)
+    apply(results[5], 'Nhật ký', setAudit)
+    apply(results[6], 'Tích hợp & API keys', (integrationRows) => {
       setIntegrations(integrationRows)
+      setIntegrationLoadError('')
       setIntegrationDrafts((previous) => {
         const next = { ...previous }
-        for (const group of integrationRows as IntegrationGroup[]) {
+        for (const group of integrationRows) {
           for (const field of group.fields) {
             const name = `${group.service}.${field.key}`
             if (!field.secret) next[name] = field.value || ''
@@ -133,17 +157,17 @@ export function AdminPage() {
         }
         return next
       })
-      setError('')
-    } catch (reason) {
-      setError(
-        String(
-          (reason as { response?: { data?: { error?: { message?: string } } } })?.response?.data
-            ?.error?.message || 'Không tải được dữ liệu quản trị.'
-        )
-      )
-    } finally {
-      setLoading(false)
+    })
+    if (results[6].status === 'rejected') {
+      const detail = describeLoadFailure(results[6].reason)
+      const status = (results[6].reason as { response?: { status?: number } })?.response?.status
+      const migrationHint = status === 500
+        ? ' Có thể database chưa cập nhật migration; hãy chạy `alembic upgrade head` trong apps/api rồi tải lại.'
+        : ''
+      setIntegrationLoadError(`${detail}${migrationHint}`)
     }
+    setError(failures.length ? `Một số dữ liệu quản trị chưa tải được: ${failures.join(' · ')}` : '')
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -701,6 +725,12 @@ export function AdminPage() {
 
       {activeTab === 'integrations' && (
         <div className="admin-tab-content animate-fadeIn">
+          {integrationLoadError && (
+            <div className="inline-alert-3d" role="alert">
+              <AlertCircle size={16} className="text-amber" />
+              <span>Không tải được cấu hình tích hợp: {integrationLoadError}</span>
+            </div>
+          )}
           <div className="inline-alert-3d">
             <AlertCircle size={16} />
             <span>Khóa được mã hóa trong cơ sở dữ liệu bằng INTEGRATION_SECRETS_KEY ở môi trường máy chủ. Ô bí mật luôn để trống khi tải; lưu ô trống giữ khóa cũ. Không nhập khóa vào log hoặc chia sẻ qua chat.</span>

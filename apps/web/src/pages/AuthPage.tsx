@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Compass,
   Mail,
   Lock,
   User,
@@ -73,7 +72,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         <div className="auth-brand-header">
           <Link to="/" className="auth-brand-logo">
             <div className="brand-gem-3d">
-              <Compass size={24} className="brand-compass" />
+              <img src="/logo-icon.png" alt="Local Explorer AI" className="brand-logo-img" />
               <div className="gem-glow" />
             </div>
           </Link>

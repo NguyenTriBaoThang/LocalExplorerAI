@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  Compass,
   Sparkles,
   Menu,
   X,
@@ -82,7 +81,7 @@ export function AppLayout() {
         <div className="header-inner">
           <NavLink to="/" className="brand-3d" onClick={() => setOpen(false)}>
             <div className="brand-gem-3d">
-              <Compass size={22} className="brand-compass" />
+              <img src="/logo-icon.png" alt="Local Explorer AI" className="brand-logo-img" />
               <div className="gem-glow" />
             </div>
             <div className="brand-text">
@@ -363,7 +362,7 @@ export function AppLayout() {
           <div className="footer-top">
             <div className="footer-brand-col">
               <NavLink to="/" className="footer-brand-title">
-                <Compass size={22} className="text-emerald animate-spin-slow" />
+                <img src="/logo-icon.png" alt="Local Explorer AI" className="footer-logo-img" />
                 <span>Local Explorer AI</span>
               </NavLink>
               <p className="footer-desc">

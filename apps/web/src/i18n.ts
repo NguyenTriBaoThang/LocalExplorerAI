@@ -65,6 +65,11 @@ export const translations = {
     'nav.close': 'Đóng',
     'nav.themeLight': 'Chuyển sang giao diện sáng',
     'nav.themeDark': 'Chuyển sang giao diện tối',
+    'admin.tabQueue': 'Duyệt dữ liệu',
+    'admin.tabDuplicates': 'POI trùng',
+    'admin.tabProviders': 'Cơ sở',
+    'admin.tabUsers': 'Người dùng',
+    'admin.tabAudit': 'Kiểm toán',
 
     // Home Page
     'home.badge': 'TP. HỒ CHÍ MINH · NỀN TẢNG KHÁM PHÁ 3D',
@@ -544,6 +549,11 @@ export const translations = {
     'nav.close': 'Close',
     'nav.themeLight': 'Switch to Light Theme',
     'nav.themeDark': 'Switch to Dark Theme',
+    'admin.tabQueue': 'Review queue',
+    'admin.tabDuplicates': 'Duplicate POIs',
+    'admin.tabProviders': 'Providers',
+    'admin.tabUsers': 'Users',
+    'admin.tabAudit': 'Audit',
 
     // Home Page
     'home.badge': 'HO CHI MINH CITY · 3D EXPLORATION PLATFORM',

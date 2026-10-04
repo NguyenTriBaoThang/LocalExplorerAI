@@ -3,7 +3,6 @@ import {
   ArrowRight,
   CalendarDays,
   Clock3,
-  Compass,
   MapPin,
   Minus,
   Plus,
@@ -562,7 +561,7 @@ export function PlannerPage() {
           <TiltCard3D maxTilt={8} className="live-preview-card-3d">
             <div className="preview-card-header">
               <div className="preview-icon-box">
-                <Compass size={22} className="brand-compass" />
+                <img src="/logo-icon.png" alt="Local Explorer AI" className="brand-logo-img" />
               </div>
               <div>
                 <span className="preview-kicker">{t('planner.previewKicker')}</span>
