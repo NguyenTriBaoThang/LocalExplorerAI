@@ -2,5 +2,5 @@
 numpy>=2.5.3,<3.0
 pandas>=3.0.6,<4.0
 scikit-learn>=1.5,<2.0
-joblib>=1.4,<2.0
+joblib>=1.6.0,<2.0
 xgboost>=3.4.1,<4.0
