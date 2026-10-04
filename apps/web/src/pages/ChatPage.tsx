@@ -24,6 +24,9 @@ import {
   Zap,
   Info,
   ChevronDown,
+  Compass,
+  MessageSquareText,
+  X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
@@ -36,7 +39,7 @@ type ChatLine = {
   text: string
   time?: string
   snapshot?: Partial<ChatConstraints>
-  assistantMode?: 'openai_compatible' | 'local_fallback'
+  assistantMode?: 'openai_compatible' | 'local_fallback' | 'gemini_compatible'
 }
 
 const localDate = (date: Date) =>
@@ -169,6 +172,7 @@ export function ChatPage() {
   const [originId, setOriginId] = useState('')
   const [destinationId, setDestinationId] = useState('')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
+  const [mobileTab, setMobileTab] = useState<'chat' | 'hud'>('chat')
   const feedContainerRef = useRef<HTMLDivElement>(null)
   const feedEndRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -193,9 +197,14 @@ export function ChatPage() {
   // Update initial message on locale change if conversation has not started
   useEffect(() => {
     if (userTurns.length === 0) {
-      setMessages([initialMessage])
+      setMessages([{
+        id: 'welcome',
+        role: 'assistant',
+        text: t('chat.welcome'),
+        time: t('chat.justNow'),
+      }])
     }
-  }, [initialMessage, userTurns.length])
+  }, [locale, userTurns.length, t])
 
   useEffect(() => {
     let active = true
@@ -290,23 +299,53 @@ export function ChatPage() {
       icon: '🍜',
       title: t('chat.presetFoodTitle'),
       prompt: t('chat.presetFoodPrompt'),
+      tag: locale === 'en' ? 'Culinary & Cafe' : 'Ẩm thực & Cafe',
     },
     {
       icon: '🎨',
       title: t('chat.presetCraftTitle'),
       prompt: t('chat.presetCraftPrompt'),
+      tag: locale === 'en' ? 'Craft & Workshop' : 'Thủ công & Workshop',
     },
     {
       icon: '🏛️',
       title: t('chat.presetCultureTitle'),
       prompt: t('chat.presetCulturePrompt'),
+      tag: locale === 'en' ? 'Heritage & History' : 'Văn hóa & Di sản',
     },
     {
       icon: '⛵',
       title: t('chat.presetNightTitle'),
       prompt: t('chat.presetNightPrompt'),
+      tag: locale === 'en' ? 'Sunset & Nightwalk' : 'Hoàng hôn & Phố đêm',
     },
-  ], [t])
+  ], [t, locale])
+
+  // Contextual smart quick reply chips
+  const quickSuggestions = useMemo(() => {
+    const list: { label: string; text: string }[] = []
+    if (!criteriaStatus.hasGroup) {
+      list.push({ label: '👥 2 người', text: locale === 'en' ? 'Our group has 2 people.' : 'Nhóm mình đi 2 người.' })
+      list.push({ label: '👥 4 người', text: locale === 'en' ? 'Our group has 4 people.' : 'Nhóm mình đi 4 người.' })
+    }
+    if (!criteriaStatus.hasTime) {
+      list.push({ label: '⏰ 08:30 - 17:30', text: locale === 'en' ? 'We want to travel from 08:30 to 17:30.' : 'Tụi mình muốn đi từ 08:30 đến 17:30.' })
+      list.push({ label: '⏰ 14:00 - 21:30', text: locale === 'en' ? 'We want to travel from 14:00 to 21:30.' : 'Tụi mình muốn đi từ 14:00 đến 21:30.' })
+    }
+    if (!criteriaStatus.hasBudget) {
+      list.push({ label: '💰 500k/người', text: locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.' })
+      list.push({ label: '💰 1.200.000₫ tổng', text: locale === 'en' ? 'Total group budget is 1,200,000 VND.' : 'Tổng ngân sách của nhóm là 1.200.000₫.' })
+    }
+    if (!constraints?.travel_mode || constraints.travel_mode === 'motorcycle') {
+      list.push({ label: '🛵 Xe máy', text: locale === 'en' ? 'We will travel by motorbike.' : 'Phương tiện di chuyển bằng xe máy.' })
+      list.push({ label: '🚗 Ô tô / Taxi', text: locale === 'en' ? 'We will travel by car or taxi.' : 'Phương tiện di chuyển bằng ô tô hoặc taxi.' })
+    }
+    if (!criteriaStatus.hasIntents) {
+      list.push({ label: '🍜 Ẩm thực & Cafe', text: locale === 'en' ? 'We want to focus on authentic street food and specialty cafes.' : 'Mình muốn ưu tiên ăn uống đặc sản và cà phê.' })
+      list.push({ label: '🎨 Thủ công & Gốm', text: locale === 'en' ? 'We love hands-on pottery workshops and craft studios.' : 'Mình thích làm gốm và các xưởng thủ công.' })
+    }
+    return list.slice(0, 5)
+  }, [criteriaStatus, constraints?.travel_mode, locale])
 
   const intentConfigs: Record<string, { label: string; icon: string; color: string; barClass: string }> = useMemo(() => ({
     'thủ_công': { label: t('home.catCraft'), icon: '🎨', color: '#f59e0b', barClass: 'intent-bar-craft' },
@@ -387,6 +426,14 @@ export function ChatPage() {
 
   function selectPreset(promptText: string) {
     setDraft(promptText)
+    const textarea = document.getElementById('chat-message') as HTMLTextAreaElement | null
+    textarea?.focus()
+  }
+
+  function applySuggestion(suggestionText: string) {
+    setDraft(suggestionText)
+    const textarea = document.getElementById('chat-message') as HTMLTextAreaElement | null
+    textarea?.focus()
   }
 
   async function createFromChat() {
@@ -481,6 +528,18 @@ export function ChatPage() {
         </div>
 
         <div className="chat-heading-actions">
+          <div className="chat-model-indicator">
+            <span className="model-dot-live" />
+            <span className="model-name">
+              {chatServiceStatus?.assistant_mode === 'gemini_compatible'
+                ? 'Gemini 1.5 Flash'
+                : chatServiceStatus?.assistant_mode === 'openai_compatible'
+                  ? 'OpenAI-compatible LLM'
+                  : chatServiceStatus?.fallback_available
+                    ? (locale === 'en' ? 'Offline Fallback Engine' : 'Quy tắc ngoại tuyến')
+                    : (locale === 'en' ? 'AI Offline' : 'AI Ngoại tuyến')}
+            </span>
+          </div>
           <button
             type="button"
             className="chat-reset-button"
@@ -494,13 +553,42 @@ export function ChatPage() {
         </div>
       </header>
 
+      {/* Mobile Tab Switcher */}
+      <div className="chat-mobile-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'chat'}
+          className={`chat-mobile-tab-btn ${mobileTab === 'chat' ? 'active' : ''}`}
+          onClick={() => setMobileTab('chat')}
+        >
+          <MessageSquareText size={15} />
+          <span>{t('chat.tabChat')}</span>
+          <span className="tab-counter-badge">{messages.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'hud'}
+          className={`chat-mobile-tab-btn ${mobileTab === 'hud' ? 'active' : ''}`}
+          onClick={() => setMobileTab('hud')}
+        >
+          <Compass size={15} />
+          <span>{t('chat.tabHud')}</span>
+          <span className={`tab-progress-badge ${criteriaStatus.percentage === 100 ? 'ready' : ''}`}>
+            {criteriaStatus.percentage}%
+          </span>
+        </button>
+      </div>
+
       {/* Main Grid Workspace */}
-      <div className="chat-workspace">
+      <div className={`chat-workspace mobile-view-${mobileTab}`}>
         {/* Left Side: Interactive Chat Panel */}
         <section className="chat-panel" aria-label="AI Chat Panel">
           <div className="chat-panel-topbar">
             <div className="chat-avatar-ring">
               <Bot size={22} className="chat-assistant-bot" />
+              <div className="avatar-radar-wave" />
             </div>
             <div className="chat-topbar-meta">
               <div className="chat-assistant-name-row">
@@ -518,12 +606,10 @@ export function ChatPage() {
                 {chatServiceStatus?.assistant_mode === 'openai_compatible' || chatServiceStatus?.assistant_mode === 'gemini_compatible'
                   ? (chatServiceStatus.assistant_mode === 'gemini_compatible'
                     ? 'LLM · Gemini'
-                    : (locale === 'en' ? 'LLM · OpenAI-compatible' : 'LLM · OpenAI-compatible'))
+                    : 'LLM · OpenAI')
                   : chatServiceStatus?.fallback_available
-                    ? (locale === 'en' ? 'Offline fallback available' : 'Có dự phòng ngoại tuyến')
-                    : chatServiceStatus
-                      ? (locale === 'en' ? 'AI parsing unavailable' : 'Bộ phân tích AI chưa sẵn sàng')
-                      : (locale === 'en' ? 'AI status unknown' : 'Chưa xác định trạng thái AI')}
+                    ? (locale === 'en' ? 'Offline rule engine' : 'Bộ quy tắc ngoại tuyến')
+                    : (locale === 'en' ? 'AI parsing offline' : 'Bộ phân tích AI chưa sẵn sàng')}
               </span>
             </div>
           </div>
@@ -536,6 +622,22 @@ export function ChatPage() {
             aria-live="polite"
             aria-relevant="additions text"
           >
+            {/* Welcoming Hero Banner when no user turns yet */}
+            {userTurns.length === 0 && (
+              <div className="chat-welcome-hero">
+                <div className="welcome-hero-badge">
+                  <Sparkles size={14} className="text-amber" />
+                  <span>{locale === 'en' ? 'AI TRAVEL ARCHITECT' : 'TRỢ LÝ THIẾT KẾ DU LỊCH'}</span>
+                </div>
+                <h3>{locale === 'en' ? 'Ready to explore Ho Chi Minh City?' : 'Sẵn sàng trải nghiệm Sài Gòn theo cách của bạn?'}</h3>
+                <p>
+                  {locale === 'en'
+                    ? 'Tell me your group size, free time window, budget, and passions. I will automatically match real-time venues and compute the optimal itinerary.'
+                    : 'Hãy chia sẻ số lượng người, khung giờ bạn rảnh, ngân sách và sở thích. Mình sẽ tự động bắt cặp địa điểm thực tế và tính toán lộ trình tối ưu nhất.'}
+                </p>
+              </div>
+            )}
+
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -598,7 +700,8 @@ export function ChatPage() {
                   <Bot size={16} />
                 </div>
                 <div className="chat-bubble chat-bubble-assistant chat-thinking">
-                  <div className="chat-pulse-dots">
+                  <div className="chat-waveform">
+                    <span />
                     <span />
                     <span />
                     <span />
@@ -628,6 +731,7 @@ export function ChatPage() {
                     <div className="starter-card-top">
                       <span className="starter-emoji">{preset.icon}</span>
                       <strong className="starter-title">{preset.title}</strong>
+                      <span className="starter-tag-pill">{preset.tag}</span>
                     </div>
                     <p className="starter-desc">{preset.prompt}</p>
                   </button>
@@ -650,24 +754,61 @@ export function ChatPage() {
             </button>
           )}
 
+          {/* Contextual Smart Quick Reply Chips Bar */}
+          {quickSuggestions.length > 0 && (
+            <div className="chat-quick-suggestions-bar">
+              <div className="suggestions-header">
+                <Sparkles size={11} className="text-amber" />
+                <span>{t('chat.tapToAnswer')}</span>
+              </div>
+              <div className="suggestions-chips-scroll">
+                {quickSuggestions.map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className="suggestion-chip"
+                    onClick={() => applySuggestion(item.text)}
+                    title={item.text}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Composer Form */}
           <form className="chat-composer" onSubmit={submitMessage}>
             <label className="sr-only" htmlFor="chat-message">
               {t('chat.placeholder')}
             </label>
-            <textarea
-              id="chat-message"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              placeholder={t('chat.composerPlaceholder')}
-              maxLength={1000}
-              rows={2}
-              disabled={busy}
-            />
+            <div className="chat-composer-input-row">
+              <textarea
+                id="chat-message"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                placeholder={t('chat.composerPlaceholder')}
+                maxLength={1000}
+                rows={2}
+                disabled={busy}
+              />
+              {draft.trim() && (
+                <button
+                  type="button"
+                  className="chat-clear-draft-btn"
+                  onClick={() => setDraft('')}
+                  title={t('chat.clearDraft')}
+                  aria-label={t('chat.clearDraft')}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
             <div className="chat-composer-bottom">
               <div className="chat-composer-hint">
-                {t('chat.composerHint')}
+                <span>{t('chat.composerHint')}</span>
+                <span className="composer-char-count">{draft.length}/1000</span>
               </div>
               <button
                 type="submit"
@@ -687,11 +828,13 @@ export function ChatPage() {
         </section>
 
         {/* Right Side: Trip Dashboard & Constraints HUD */}
-        <aside className="chat-trip-sidebar">
-          {/* Realtime Progress & HUD Card */}
+        <aside className="chat-trip-sidebar" aria-label="Trip HUD Sidebar">
+          {/* Realtime Progress & HUD Cockpit Card */}
           <section className="chat-sidebar-card hud-progress-card">
             <div className="chat-sidebar-title">
-              <Sparkles size={17} className="text-emerald" />
+              <div className="title-icon-badge">
+                <Sparkles size={16} className="text-emerald" />
+              </div>
               <h2>{t('chat.conditionsCardTitle')}</h2>
               <span className={`hud-state-pill ${constraints?.is_complete ? 'is-complete' : ''}`}>
                 {constraints?.is_complete ? (
@@ -720,13 +863,33 @@ export function ChatPage() {
               </div>
             </div>
 
+            {/* Dynamic Readiness Banner */}
+            {constraints?.is_complete ? (
+              <div className="hud-ready-banner">
+                <CheckCircle2 size={15} className="text-emerald" />
+                <span>{t('chat.readyToLaunch')} · {locale === 'en' ? 'All core constraints matched' : 'Đã đủ ràng buộc AI'}</span>
+              </div>
+            ) : (
+              <div className="hud-pending-banner">
+                <Info size={14} className="text-amber" />
+                <span>{t('chat.inProgress')} ({criteriaStatus.metCriteria}/4)</span>
+              </div>
+            )}
+
             {/* 4 Essential Parameter Grid */}
             <div className="hud-param-grid">
               {/* Group Size */}
-              <div className={`param-cell ${criteriaStatus.hasGroup ? 'param-active' : ''}`}>
+              <div
+                className={`param-cell ${criteriaStatus.hasGroup ? 'param-active' : ''}`}
+                onClick={() => !criteriaStatus.hasGroup && applySuggestion(locale === 'en' ? 'Our group has 2 people.' : 'Nhóm mình đi 2 người.')}
+                role="button"
+                tabIndex={0}
+                title={criteriaStatus.hasGroup ? '' : (locale === 'en' ? 'Click to suggest' : 'Nhấn để bổ sung nhanh')}
+              >
                 <div className="param-header">
                   <Users size={14} className="text-cyan" />
                   <span>{t('chat.scaleLabel')}</span>
+                  {criteriaStatus.hasGroup && <span className="param-check-dot" />}
                 </div>
                 <div className="param-val">
                   {constraints?.group_size ? `${constraints.group_size} ${t('chat.peopleUnit')}` : '—'}
@@ -737,10 +900,17 @@ export function ChatPage() {
               </div>
 
               {/* Time Window */}
-              <div className={`param-cell ${criteriaStatus.hasTime ? 'param-active' : ''}`}>
+              <div
+                className={`param-cell ${criteriaStatus.hasTime ? 'param-active' : ''}`}
+                onClick={() => !criteriaStatus.hasTime && applySuggestion(locale === 'en' ? 'We want to travel from 08:30 to 17:30.' : 'Tụi mình muốn đi từ 08:30 đến 17:30.')}
+                role="button"
+                tabIndex={0}
+                title={criteriaStatus.hasTime ? '' : (locale === 'en' ? 'Click to suggest' : 'Nhấn để bổ sung nhanh')}
+              >
                 <div className="param-header">
                   <Clock size={14} className="text-emerald" />
                   <span>{t('chat.timeWindow')}</span>
+                  {criteriaStatus.hasTime && <span className="param-check-dot" />}
                 </div>
                 <div className="param-val">
                   {constraints?.start_time && constraints?.return_deadline
@@ -753,10 +923,17 @@ export function ChatPage() {
               </div>
 
               {/* Budget */}
-              <div className={`param-cell ${criteriaStatus.hasBudget ? 'param-active' : ''}`}>
+              <div
+                className={`param-cell ${criteriaStatus.hasBudget ? 'param-active' : ''}`}
+                onClick={() => !criteriaStatus.hasBudget && applySuggestion(locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.')}
+                role="button"
+                tabIndex={0}
+                title={criteriaStatus.hasBudget ? '' : (locale === 'en' ? 'Click to suggest' : 'Nhấn để bổ sung nhanh')}
+              >
                 <div className="param-header">
                   <Wallet size={14} className="text-amber" />
                   <span>{t('chat.budget')}</span>
+                  {criteriaStatus.hasBudget && <span className="param-check-dot" />}
                 </div>
                 <div className="param-val">
                   {constraints?.budget_vnd != null ? formatMoney(constraints.budget_vnd) : '—'}
@@ -773,6 +950,7 @@ export function ChatPage() {
                 <div className="param-header">
                   {travelModeIcons[constraints?.travel_mode ?? 'motorcycle']}
                   <span>{t('chat.transport')}</span>
+                  <span className="param-check-dot" />
                 </div>
                 <div className="param-val">
                   {modeLabels[constraints?.travel_mode ?? 'motorcycle']}
@@ -790,19 +968,46 @@ export function ChatPage() {
             {/* Missing Fields Checklist */}
             {constraints && !constraints.is_complete && (
               <div className="hud-missing-checklist">
-                <span className="checklist-title">{t('chat.missingTitle')}</span>
+                <div className="checklist-header-row">
+                  <span className="checklist-title">{t('chat.missingTitle')}</span>
+                  <small className="checklist-hint">{locale === 'en' ? 'Tap to answer' : 'Nhấn để trả lời nhanh'}</small>
+                </div>
                 <div className="checklist-items">
                   {!criteriaStatus.hasGroup && (
-                    <span className="missing-badge">👥 {t('chat.group')}</span>
+                    <button
+                      type="button"
+                      className="missing-badge-btn"
+                      onClick={() => applySuggestion(locale === 'en' ? 'Our group has 2 people.' : 'Nhóm mình đi 2 người.')}
+                    >
+                      👥 {t('chat.group')}
+                    </button>
                   )}
                   {!criteriaStatus.hasTime && (
-                    <span className="missing-badge">⏰ {t('chat.timeWindow')}</span>
+                    <button
+                      type="button"
+                      className="missing-badge-btn"
+                      onClick={() => applySuggestion(locale === 'en' ? 'We want to travel from 08:30 to 17:30.' : 'Tụi mình muốn đi từ 08:30 đến 17:30.')}
+                    >
+                      ⏰ {t('chat.timeWindow')}
+                    </button>
                   )}
                   {!criteriaStatus.hasBudget && (
-                    <span className="missing-badge">💰 {t('chat.budget')}</span>
+                    <button
+                      type="button"
+                      className="missing-badge-btn"
+                      onClick={() => applySuggestion(locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.')}
+                    >
+                      💰 {t('chat.budget')}
+                    </button>
                   )}
                   {!criteriaStatus.hasIntents && (
-                    <span className="missing-badge">🏷️ {t('chat.intents')}</span>
+                    <button
+                      type="button"
+                      className="missing-badge-btn"
+                      onClick={() => applySuggestion(locale === 'en' ? 'We love authentic food and pottery craft workshops.' : 'Mình thích ăn uống và làm gốm thủ công.')}
+                    >
+                      🏷️ {t('chat.intents')}
+                    </button>
                   )}
                 </div>
               </div>
@@ -841,7 +1046,9 @@ export function ChatPage() {
           {/* Route Terminals (Điểm đi & Điểm về) */}
           <section className="chat-sidebar-card chat-location-card">
             <div className="chat-sidebar-title">
-              <MapPin size={17} className="text-amber" />
+              <div className="title-icon-badge">
+                <MapPin size={16} className="text-amber" />
+              </div>
               <h2>{t('chat.routeSectionTitle')}</h2>
             </div>
             <p className="card-desc-text">
@@ -876,7 +1083,9 @@ export function ChatPage() {
                 </div>
 
                 {/* Vertical connector line */}
-                <div className="location-route-line" />
+                <div className="location-route-line">
+                  <span className="route-pulse-orb" />
+                </div>
 
                 {/* Destination */}
                 <div className="location-field-group">
@@ -922,7 +1131,9 @@ export function ChatPage() {
           {constraints?.locked_pois?.length ? (
             <section className="chat-sidebar-card">
               <div className="chat-sidebar-title">
-                <Lock size={16} className="text-rose" />
+                <div className="title-icon-badge">
+                  <Lock size={15} className="text-rose" />
+                </div>
                 <h2>{t('chat.pinnedHeading', { count: constraints.locked_pois.length })}</h2>
               </div>
               <p className="card-desc-text">
@@ -978,7 +1189,7 @@ export function ChatPage() {
           <div className="chat-launch-area">
             <button
               type="button"
-              className="chat-create-button"
+              className={`chat-create-button ${canCreateItinerary ? 'chat-create-button-ready' : ''}`}
               onClick={() => void createFromChat()}
               disabled={!canCreateItinerary}
             >

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 export type Locale = 'vi' | 'en'
 
@@ -200,6 +200,13 @@ export const translations = {
     'chat.chkPinned': 'Điểm ghim đã khớp POI',
     'chat.sidebarFootnote':
       'Khung giờ thực tế, sức chứa và cước phí di chuyển sẽ được thuật toán tối ưu hóa trước khi trình bày lịch trình.',
+    'chat.tabChat': 'Trò chuyện AI',
+    'chat.tabHud': 'Thông số hành trình',
+    'chat.quickSuggestions': 'Gợi ý nhanh',
+    'chat.readyToLaunch': 'Sẵn sàng khởi tạo',
+    'chat.inProgress': 'Đang hoàn thiện',
+    'chat.tapToAnswer': 'Gợi ý phản hồi',
+    'chat.clearDraft': 'Xóa nháp',
 
     // Explore Page
     'explore.title': 'Khám Phá Trải Nghiệm Địa Phương',
@@ -687,6 +694,13 @@ export const translations = {
     'chat.chkPinned': 'Pinned stops verified',
     'chat.sidebarFootnote':
       'Actual timeslots, capacity, and travel distances are mathematically optimized before display.',
+    'chat.tabChat': 'AI Chat',
+    'chat.tabHud': 'Trip Parameters',
+    'chat.quickSuggestions': 'Quick Suggestions',
+    'chat.readyToLaunch': 'Ready to Launch',
+    'chat.inProgress': 'In Progress',
+    'chat.tapToAnswer': 'Suggested replies',
+    'chat.clearDraft': 'Clear',
 
     // Explore Page
     'explore.title': 'Explore Local Experiences',
@@ -1030,18 +1044,20 @@ export function t(key: TranslationKey | string, params?: Record<string, string |
 
 export function useTranslation() {
   const locale = useLocale()
+  const translate = useCallback((key: TranslationKey | string, params?: Record<string, string | number>) => {
+    const dict = translations[locale] || translations.vi
+    let text = (dict as Record<string, string>)[key] || (translations.vi as Record<string, string>)[key] || key
+    if (params) {
+      for (const [paramKey, paramVal] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramVal))
+      }
+    }
+    return text
+  }, [locale])
+
   return {
     locale,
     setLocale,
-    t: (key: TranslationKey | string, params?: Record<string, string | number>) => {
-      const dict = translations[locale] || translations.vi
-      let text = (dict as Record<string, string>)[key] || (translations.vi as Record<string, string>)[key] || key
-      if (params) {
-        for (const [paramKey, paramVal] of Object.entries(params)) {
-          text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramVal))
-        }
-      }
-      return text
-    },
+    t: translate,
   }
 }
