@@ -45,4 +45,8 @@ export const router = createBrowserRouter([{
       { path: '/admin', element: <AdminPage /> },
     ] },
   ],
-}])
+}], {
+  future: {
+    v7_relativeSplatPath: true,
+  },
+})

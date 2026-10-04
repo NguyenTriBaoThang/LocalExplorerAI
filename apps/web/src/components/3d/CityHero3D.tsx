@@ -300,11 +300,11 @@ export function CityHero3D() {
 
     // Animation Loop
     let animationFrameId: number
-    let clock = new THREE.Clock()
+    const startTime = performance.now()
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate)
-      const elapsed = clock.getElapsedTime()
+      const elapsed = (performance.now() - startTime) / 1000
 
       // Smooth camera damping
       camera.position.lerp(targetCameraPos, 0.05)
