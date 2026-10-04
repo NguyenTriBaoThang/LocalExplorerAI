@@ -70,6 +70,7 @@ type IntegrationGroup = { service: string; fields: IntegrationField[] }
 type PlaceImportBatch = {
   id: string
   source_name: string
+  source_sha256: string
   worksheet_name: string
   record_count: number
   quality_summary: Record<string, unknown>
@@ -258,7 +259,7 @@ export function AdminPage() {
     return failure.message || 'Không kết nối được API.'
   }
 
-  async function load() {
+  async function load(preferLatestPlaceImport = false) {
     setLoading(true)
     const results = await Promise.allSettled([
       adminApi.dashboard(),
@@ -309,7 +310,9 @@ export function AdminPage() {
     })
     apply(results[7], 'Place imports', (batches: PlaceImportBatch[]) => {
       setPlaceImports(batches)
-      setSelectedImportId((current) => current || batches[0]?.id || '')
+      setSelectedImportId((current) =>
+        preferLatestPlaceImport ? batches[0]?.id || '' : current || batches[0]?.id || ''
+      )
     })
 
     if (results[6].status === 'rejected') {
@@ -689,7 +692,7 @@ export function AdminPage() {
             <button
               type="button"
               className="btn-secondary-3d btn-sm"
-              onClick={() => void load()}
+              onClick={() => void load(true)}
               disabled={loading}
             >
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -897,7 +900,9 @@ export function AdminPage() {
                   >
                     {placeImports.map((batch) => (
                       <option key={batch.id} value={batch.id}>
-                        {batch.source_name} ({batch.record_count})
+                        {batch.source_name} ({batch.record_count}) ·{' '}
+                        {new Date(batch.created_at).toLocaleString('vi-VN')} ·{' '}
+                        {batch.source_sha256.slice(0, 8)}
                       </option>
                     ))}
                   </select>

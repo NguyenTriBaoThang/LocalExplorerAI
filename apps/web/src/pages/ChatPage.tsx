@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
 import type { ChatConstraints, ChatServiceStatus, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
+import { TiltCard3D } from '../components/3d/TiltCard3D'
 
 type ChatLine = {
   id: string
@@ -722,10 +723,11 @@ export function ChatPage() {
               </div>
               <div className="starter-grid">
                 {quickPresets.map((preset, idx) => (
-                  <button
+                  <TiltCard3D
                     key={idx}
-                    type="button"
-                    className="starter-card"
+                    maxTilt={9}
+                    scale={1.03}
+                    className="starter-card starter-card-3d"
                     onClick={() => selectPreset(preset.prompt)}
                   >
                     <div className="starter-card-top">
@@ -734,7 +736,7 @@ export function ChatPage() {
                       <span className="starter-tag-pill">{preset.tag}</span>
                     </div>
                     <p className="starter-desc">{preset.prompt}</p>
-                  </button>
+                  </TiltCard3D>
                 ))}
               </div>
             </div>
