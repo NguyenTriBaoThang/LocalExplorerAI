@@ -9,7 +9,7 @@
     "test:api": "cd apps/api && pytest"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.6.1",
+    "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3"
   }
 }
