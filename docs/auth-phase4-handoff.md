@@ -1,8 +1,8 @@
 # Giai đoạn 4: ghi chú bàn giao (đang làm dở)
 
 Nhánh: `fix/authentication-flow`. Thiết kế tổng: `docs/auth-design.md`, mục 6, 10 và 12.
-Trạng thái lúc dừng (2026-10-05): **backend gần xong, chưa có test riêng cho giai đoạn 4, chưa đụng frontend**.
-`pytest` backend: **183 passed** (bằng baseline; các test cũ đã được cập nhật theo quy tắc mới).
+Trạng thái lúc bàn giao (2026-10-05): backend gần xong, chưa có test riêng cho giai đoạn 4, chưa đụng frontend (183 passed).
+**Cập nhật 2026-10-06: các mục 1–4 trong "Còn lại" đã xong** (216 passed, PostgreSQL thật, E2E trình duyệt 32/32); xem `docs/auth-design.md`, mục "Ghi chú Giai đoạn 4".
 
 ## Đã làm
 
@@ -47,39 +47,11 @@ Trạng thái lúc dừng (2026-10-05): **backend gần xong, chưa có test ri�
   - Vé tạo trước migration `0013` không có claim token nên vẫn xem được nhưng không claim được nữa.
 
 ## Còn lại (theo thứ tự)
-1. **Viết `tests/test_account_recovery.py`.** Để lấy raw token, monkeypatch `app.api.routes.auth.queue_account_link` (outbox chỉ ghi row khi SMTP được cấu hình). Các ca cần có:
-   - **Quên mật khẩu:** email lạ vẫn 202 và không tạo token; gọi lần 2 trong 60 giây không tạo token mới; tài khoản bóng và tài khoản bị khóa không nhận token.
-   - **Đặt lại mật khẩu:**
-     - thành công: mật khẩu mới đăng nhập được, phiên cũ chết ngay;
-     - token chỉ dùng được một lần;
-     - mật khẩu yếu trả 422 và token vẫn dùng lại được;
-     - token hết hạn, hoặc token verify đem đi dùng cho reset, đều trả 400.
-   - **Xác minh email:**
-     - đăng ký có gửi email xác minh;
-     - `POST /api/bookings` của người chưa xác minh trả `EMAIL_NOT_VERIFIED`; sau khi verify thì qua được bước kiểm tra này (ví dụ chuyển sang `404 ITINERARY_NOT_FOUND`);
-     - gửi lại: đã xác minh thì trả `already_verified`, gửi lại liên tục thì 429.
-   - **Đăng ký:** mật khẩu phổ biến trả `WEAK_PASSWORD`; email bóng trả `EMAIL_RESERVED`.
-   - **Quản lý phiên:**
-     - list có đúng cờ `current`;
-     - xóa phiên khác chỉ phiên đó mất;
-     - xóa phiên hiện tại thì cookie bị xóa và access token bị từ chối ngay;
-     - id phiên của người khác trả 404;
-     - `logout-all` làm chết mọi token;
-     - sau `logout`, access token cũ bị từ chối.
-   - **Claim:**
-     - email mới: tạo tài khoản, token thành đã dùng, claim lần 2 trả 400;
-     - email cũ đúng mật khẩu: lịch trình chuyển chủ, tài khoản giữ nguyên;
-     - sai mật khẩu: 401 và token còn dùng được;
-     - lịch trình đã có chủ thật: 409;
-     - tài khoản admin: 403;
-     - token hết hạn: 400;
-     - body cũ chỉ có `share_token`: 422.
-2. Chạy `alembic upgrade head` rồi `downgrade` về `0012` trên **PostgreSQL thật** (cả 0011–0013 chưa từng chạy trên PG). Có thể dùng container `db` trong `docker-compose.yml`.
-3. **Frontend** (design mục 11):
-   - Bắt buộc: `SharedItineraryPage.tsx` đọc `?claim=` và gửi `claim_token`, mật khẩu tối thiểu 12 ký tự, chỉ hiện form claim khi có `claim`. Hiện trang này đang gửi `share_token` nên **sẽ bị 422**.
-   - Cần thêm: trang `/forgot-password`, `/reset-password`, `/verify-email`; danh sách phiên trong Profile; xử lý mã `EMAIL_NOT_VERIFIED`, `WEAK_PASSWORD`.
-4. Cập nhật `docs/api.md`, `.env.example` (`WEB_APP_URL` và SMTP bắt buộc cho reset/verify), rồi mục 15 của `docs/auth-design.md`.
-5. Cân nhắc sau: rate limit riêng cho `/password/forgot` theo email (hiện chỉ có giới hạn 60 giây mỗi tài khoản cộng rate limit chung `/api/auth` theo IP khi bật).
+1. ~~Viết `tests/test_account_recovery.py`~~ **Xong**: 33 ca, kiểm tra đột biến cho 8 cơ chế bảo mật.
+2. ~~Chạy migration trên PostgreSQL thật~~ **Xong cho 0011–0013** (dựng sẵn hai bảng nền). Phát hiện: chuỗi migration gốc không chạy từ đầu được (`0002`) và `create_all` cũng lỗi trên PostgreSQL; hai lỗi này có sẵn trên `main`, chưa sửa.
+3. ~~Frontend~~ **Xong**: `SharedItineraryPage` dùng `?claim=` và `claim_token`; trang `/forgot-password`, `/reset-password`, `/verify-email`; danh sách thiết bị trong Profile; banner xác minh email; xử lý 401 khi phiên bị thu hồi.
+4. ~~Cập nhật `docs/api.md`, `.env.example`, `docs/auth-design.md`~~ **Xong**.
+5. Cân nhắc sau: rate limit riêng cho `/password/forgot` theo email và theo IP (Giai đoạn 6). MFA (Giai đoạn 5) phải chặn việc đặt lại mật khẩu bỏ qua MFA của admin.
 
 ## Chạy test
 ```bash

@@ -14,6 +14,7 @@ import { SharedItineraryPage } from './pages/SharedItineraryPage'
 import { ComparePage } from './pages/ComparePage'
 import { ChatPage } from './pages/ChatPage'
 import { Map3DPage } from './pages/Map3DPage'
+import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/RecoveryPages'
 import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
 
 export const router = createBrowserRouter([{
@@ -30,6 +31,9 @@ export const router = createBrowserRouter([{
       { path: '/about', element: <AboutPage /> },
     ] },
     { path: '/shared/:token', element: <SharedItineraryPage /> },
+    { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    { path: '/reset-password', element: <ResetPasswordPage /> },
+    { path: '/verify-email', element: <VerifyEmailPage /> },
     { element: <GuestRoute />, children: [
       { path: '/login', element: <AuthPage /> },
       { path: '/register', element: <AuthPage register /> },

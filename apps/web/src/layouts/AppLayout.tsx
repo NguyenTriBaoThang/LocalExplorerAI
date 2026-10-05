@@ -1,3 +1,4 @@
+import { EmailVerificationBanner } from '../components/account/EmailVerificationBanner'
 import { useState, useRef, useEffect } from 'react'
 import {
   Sparkles,
@@ -314,6 +315,7 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <main className="main-content-3d">
+        <EmailVerificationBanner />
         <Outlet />
       </main>
 

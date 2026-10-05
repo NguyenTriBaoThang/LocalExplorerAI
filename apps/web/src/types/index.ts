@@ -45,7 +45,21 @@ export interface AuthUser {
   provider_id: string | null
   phone: string | null
   is_active: boolean
+  email_verified_at?: string | null
+  mfa_enabled?: boolean
   created_at: string
+}
+
+export interface SessionInfo {
+  id: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string
+  absolute_expires_at: string
+  ip: string | null
+  user_agent: string | null
+  amr: string[]
+  current: boolean
 }
 
 export interface POI {

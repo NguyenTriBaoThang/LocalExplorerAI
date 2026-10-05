@@ -51,9 +51,9 @@ class _ResilientStore:
             return None
         try:
             return getattr(self._inner, name)(*args)
-        except Exception:
+        except Exception as error:
             self._skip_until = time.monotonic() + _REDIS_RETRY_SECONDS
-            log.warning("auth state cache unavailable; using the database for %.0fs", _REDIS_RETRY_SECONDS, exc_info=True)
+            log.warning("auth state cache unavailable (%s); using the database for %.0fs", error, _REDIS_RETRY_SECONDS)
             return None
 
     def get(self, user_id):
@@ -118,5 +118,5 @@ def bump_matrix_version() -> None:
     try:
         from app.services.rate_limit import _redis
         _redis().incr(_PERM_VERSION_KEY)
-    except Exception:
-        log.warning("could not publish the permission matrix version; other workers refresh on their TTL", exc_info=True)
+    except Exception as error:  # Redis is optional for CLI use; other workers simply refresh on their TTL
+        log.warning("could not publish the permission matrix version (%s); other workers refresh on their TTL", error)

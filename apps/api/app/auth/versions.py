@@ -81,14 +81,14 @@ class TokenVersionChecker:
             cached = self._store.get(user_id)
             if cached is not None:
                 return cached
-        except Exception:
-            log.warning("auth state cache unavailable; reading the database", exc_info=True)
+        except Exception as error:
+            log.warning("auth state cache unavailable (%s); reading the database", error)
         state = self._loader(user_id)
         if state is not None:
             try:
                 self._store.set(user_id, state)
-            except Exception:
-                log.warning("auth state cache write failed", exc_info=True)
+            except Exception as error:
+                log.warning("auth state cache write failed (%s)", error)
         return state
 
     def check(self, claims: AccessClaims) -> UserState:
@@ -103,5 +103,5 @@ class TokenVersionChecker:
         """Call after bumping ``token_version`` or changing ``is_active`` so the change applies immediately."""
         try:
             self._store.invalidate(user_id)
-        except Exception:
-            log.warning("auth state cache invalidation failed", exc_info=True)
+        except Exception as error:
+            log.warning("auth state cache invalidation failed (%s)", error)

@@ -148,6 +148,9 @@ export function AuthPage({ register = false }: { register?: boolean }) {
               {register && (
                 <span className="auth-hint-text">{t('auth.passMin12')}</span>
               )}
+              {!register && (
+                <Link to="/forgot-password" className="auth-hint-text">{t('recovery.forgotLink')}</Link>
+              )}
             </div>
             <div className="auth-input-shell">
               <Lock size={16} className="auth-input-icon" />

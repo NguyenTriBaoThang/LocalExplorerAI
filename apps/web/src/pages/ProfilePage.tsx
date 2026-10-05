@@ -14,6 +14,7 @@ import {
 import { apiErrorMessage, changePassword, getMyItineraries, updateProfile } from '../api/client'
 import { useAuth } from '../auth'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
+import { SessionsCard } from '../components/account/SessionsCard'
 import { useTranslation } from '../i18n'
 
 export function ProfilePage() {
@@ -210,6 +211,8 @@ export function ProfilePage() {
               </button>
             </form>
           </section>
+
+          <SessionsCard />
         </div>
 
         {/* Right Column: Saved Itineraries Gallery */}

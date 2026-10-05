@@ -1,7 +1,19 @@
 import axios from 'axios'
-import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities } from '../types'
+import { t } from '../i18n'
+import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
+
+/** Fired when the server says the session is over (the access token is refreshed transparently, so a 401 here is final). */
+export const AUTH_EXPIRED_EVENT = 'auth:expired'
+api.interceptors.response.use(
+  (response) => response,
+  (error: { response?: { status?: number }; config?: { url?: string } }) => {
+    const url = error.config?.url ?? ''
+    if (error.response?.status === 401 && !url.startsWith('/auth/')) window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+    return Promise.reject(error)
+  },
+)
 
 export async function login(email: string, password: string): Promise<AuthUser> {
   const { data } = await api.post<AuthUser>('/auth/login', { email, password })
@@ -62,13 +74,43 @@ export async function getSharedItinerary(token: string): Promise<Itinerary> {
 }
 
 export async function claimTicket(payload: {
-  share_token: string
+  claim_token: string
   email: string
   password: string
   display_name?: string
 }): Promise<AuthUser> {
   const { data } = await api.post<AuthUser>('/auth/claim-ticket', payload)
   return data
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post('/auth/password/forgot', { email })
+}
+
+export async function resetPassword(token: string, new_password: string): Promise<void> {
+  await api.post('/auth/password/reset', { token, new_password })
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post('/auth/email/verify', { token })
+}
+
+export async function resendVerification(): Promise<{ already_verified?: boolean; email_queued?: boolean }> {
+  const { data } = await api.post('/auth/email/verify/resend')
+  return data
+}
+
+export async function listSessions(): Promise<SessionInfo[]> {
+  const { data } = await api.get<SessionInfo[]>('/auth/sessions')
+  return data
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await api.delete(`/auth/sessions/${encodeURIComponent(id)}`)
+}
+
+export async function logoutAllDevices(): Promise<void> {
+  await api.post('/auth/logout-all')
 }
 
 export async function submitFeedback(itineraryId: string, rating: number, review_text: string) {
@@ -244,9 +286,27 @@ export async function getItinerary(id: string): Promise<Itinerary> {
   const { data } = await api.get<Itinerary>(`/itineraries/${id}`)
   return data
 }
+/** The server states password-policy failures in English; show them in the visitor's language. */
+const PASSWORD_REASONS: Array<[RegExp, string]> = [
+  [/at least \d+ characters/, 'password.reason.short'],
+  [/at most \d+ characters/, 'password.reason.long'],
+  [/commonly used/, 'password.reason.common'],
+  [/too repetitive/, 'password.reason.repetitive'],
+  [/email name/, 'password.reason.email'],
+]
+/** Error codes whose text is translated on the client (the server's messages are English). */
+const ERROR_CODES = new Set(['TOKEN_INVALID', 'INVALID_CREDENTIALS', 'EMAIL_IN_USE', 'EMAIL_RESERVED', 'VERIFICATION_RECENTLY_SENT', 'SESSION_NOT_FOUND', 'AUTH_REQUIRED', 'INVALID_SESSION', 'ACCOUNT_DISABLED'])
+function weakPasswordMessage(serverMessage: string): string {
+  const reasons = PASSWORD_REASONS.filter(([pattern]) => pattern.test(serverMessage)).map(([, key]) => t(key))
+  return reasons.length ? `${t('password.weak')}: ${reasons.join('; ')}.` : t('password.weak')
+}
+
 export function apiErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: { message?: string }; detail?: string | { message?: string } } } }).response
+    const response = (error as { response?: { data?: { error?: { code?: string; message?: string }; detail?: string | { message?: string } } } }).response
+    if (response?.data?.error?.code === 'WEAK_PASSWORD') return weakPasswordMessage(response.data.error.message ?? '')
+    const code = response?.data?.error?.code
+    if (code && ERROR_CODES.has(code)) return t(`error.${code}`)
     const detail = response?.data?.detail
     return response?.data?.error?.message ?? (typeof detail === 'string' ? detail : detail?.message) ?? 'Đang hiển thị chế độ mô phỏng trực tuyến.'
   }

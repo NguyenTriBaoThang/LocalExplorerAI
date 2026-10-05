@@ -16,7 +16,7 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 | Nơi lưu quyền | Danh mục trong code, gán role → quyền trong DB |
 | Token | Access JWT **RS256** 15 phút, refresh opaque 7 ngày (admin 1 ngày), giới hạn phiên tuyệt đối 30 ngày |
 | Thu hồi tức thời | `users.token_version` + cache Redis |
-| Tự làm mới | Middleware BE xoay vòng và đặt lại cookie khi access còn dưới 3 phút |
+| Tự làm mới | Trong dependency xác thực (không phải middleware): xoay vòng và đặt lại cookie khi access hết hạn hoặc còn dưới 3 phút |
 | Cookie refresh | `Path=/api` |
 | Provider | Claim `provider_id` trong token; thao tác ghi quan trọng (slot, booking) tra lại DB |
 | `X-Admin-Key` | Thay bằng service account: chỉ quyền đọc ops/health, mỗi script một khóa, audit `system:<tên>` |
@@ -143,12 +143,13 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 |---|---|
 | 0 Baseline | Xong: 81 passed |
 | 1 Gói `app/auth/` + migration + test | **Xong**: 139 passed (81 cũ + 58 mới). Chưa nối vào route nào |
-| 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong** (chưa commit): 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
-| 3 Danh mục quyền, ma trận trong DB, `require()`, service account, test duyệt route | **Xong** (chưa commit): 182 passed. `X-Admin-Key`, `require_roles`, `require_admin` đã gỡ |
-| 4 Quên mật khẩu, xác minh email, quản lý phiên, sửa `claim-ticket` | **Đang làm**: backend gần xong, chưa có test riêng, chưa làm frontend. Xem `docs/auth-phase4-handoff.md` |
-| 5–6 | Chưa bắt đầu |
+| 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong**: 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
+| 3 Danh mục quyền, ma trận trong DB, `require()`, service account, test duyệt route | **Xong**: 182 passed. `X-Admin-Key`, `require_roles`, `require_admin` đã gỡ |
+| 4 Quên mật khẩu, xác minh email, quản lý phiên, sửa `claim-ticket`, chính sách mật khẩu | **Xong, chưa commit**: 216 passed. Đã kiểm tra trên PostgreSQL thật (migration 0011–0013) và trình duyệt thật (32/32 kiểm tra E2E). Frontend đã làm (trang quên/đặt lại mật khẩu, xác minh email, thiết bị đăng nhập, banner, form nhận vé) |
+| 5 MFA TOTP (bắt buộc cho admin) | Chưa bắt đầu |
+| 6 Hardening: rate limit mặc định, header `Cache-Control`, gỡ lớp tương thích cũ (`le_session`, `create_session_token`, `X-Provider-Access-Key`) | Chưa bắt đầu |
 
-Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. **Chưa chạy migration trên PostgreSQL thật.**
+Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. Migration 0011–0013 đã được chạy trên PostgreSQL 16 thật ở Giai đoạn 4 (xem ghi chú bên dưới).
 
 ### Ghi chú Giai đoạn 2
 - Đã nối vào: `register`, `login`, `refresh` (mới), `logout`, đổi mật khẩu, callback Google, `claim-ticket`; `get_current_user`, `get_optional_user`, `require_admin`.
@@ -168,3 +169,16 @@ Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none
 - **Service account** (`Authorization: Bearer lek_...`) thay `X-Admin-Key`: chỉ giữ được `ops:read`, chỉ lưu băm của khóa, thấy khóa đúng một lần, ghi `last_used_at`, thu hồi được.
 - `require_user()` luôn trả về người dùng thật (khóa API bị từ chối); `require()` nhận cả hai.
 - Còn lại cho giai đoạn sau: `X-Provider-Access-Key` vẫn dùng được (tương thích, sẽ bỏ), `claim-ticket` còn công khai (Giai đoạn 4), chính sách mật khẩu 12 ký tự (Giai đoạn 4).
+
+### Ghi chú Giai đoạn 4
+- Backend do một phiên trước làm dở (xem `docs/auth-phase4-handoff.md`); phiên này **viết bộ test (33 ca), kiểm tra đột biến, chạy PostgreSQL thật, làm frontend và chạy E2E trên trình duyệt**.
+- **PostgreSQL thật (postgis 16, container tạm):** migration 0011 → 0013 nâng và hạ cấp sạch; seed 3 role / 44 quyền / 56 cấp quyền; backfill `email_verified_at` đúng; PostgreSQL tự từ chối `purpose` sai, trùng băm token và khóa ngoại sai; xóa user kéo theo xóa phiên; `sync_rbac` báo 0 quyền thiếu (seed khớp code). Chạy bằng cách dựng sẵn hai bảng nền (`users`, `itineraries`) vì chuỗi migration gốc không chạy được từ đầu (xem bên dưới).
+- **Hai lỗi có sẵn trên `main`, không do nhánh này gây ra, chưa sửa:**
+  1. Migration `0002_team_database_architecture` lỗi trên PostgreSQL sạch: `COALESCE could not convert type jsonb to json` (cột `constraints` được tạo là `json`, nhưng câu lệnh dùng `'{}'::jsonb`). Nghĩa là không dựng được database từ đầu bằng `alembic upgrade head`.
+  2. `Base.metadata.create_all` cũng lỗi trên PostgreSQL với `geoalchemy2` hiện tại (`PointGeometry.load_dialect_impl` nhận `dialect=None`). Chưa có đường nào dựng schema PostgreSQL từ đầu cho dự án này.
+- **E2E trên trình duyệt thật (Chrome tự động + backend + Vite, access token 20 giây để ép làm mới liên tục):** 32/32 kiểm tra qua, không có lỗi console. Gồm: cookie `HttpOnly`, refresh cookie `Path=/api`, JavaScript không đọc được token, 102 request song song trong 45 giây không mất phiên (token đổi 9 lần), thu hồi thiết bị từ xa có hiệu lực ngay, quên/đặt lại mật khẩu không lộ tài khoản, liên kết dùng một lần, claim vé, và link chia sẻ trần không hiện form claim.
+- Sửa thêm trong phiên này: `make_user` của test cho phép ghi đè mọi cột; thông báo lỗi đăng nhập/token/mật khẩu yếu được dịch theo ngôn ngữ trên frontend; trang chia sẻ không còn báo "vé đã liên kết với tài khoản" cho mọi người đã đăng nhập; log cảnh báo Redis gọn một dòng thay vì traceback.
+- **Còn lại:**
+  - Đặt lại mật khẩu của tài khoản admin hiện không đòi MFA; Giai đoạn 5 phải chặn việc này.
+  - `/api/auth/password/forgot` chỉ giới hạn 1 email/phút mỗi tài khoản; rate limit theo IP vẫn tắt mặc định (Giai đoạn 6).
+  - Chân trang và vài chỗ khác của ứng dụng đang hiện nguyên khóa dịch (`footer.colExplore`, `profile.savedTrips`): thiếu khóa i18n có từ trước, chưa xử lý.
