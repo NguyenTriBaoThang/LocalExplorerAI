@@ -5,17 +5,23 @@ from difflib import SequenceMatcher
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from geoalchemy2.elements import WKTElement
 
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from app.api.dependencies import get_db, get_llm_provider
 from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
+from app.api.routes.provider import provider_profile_payload
+from app.models.auth_entities import AuthSession
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
+from app.schemas.partner import ProviderDecisionRequest
+from app.services.notifications import enqueue_email
 from app.auth import hash_password
 from app.services.auth_runtime import invalidate_user_state
 from app.services.session_service import bump_token_version
@@ -78,6 +84,7 @@ def _audit(db: Session, actor: User, action: str, target_type: str, target_id: s
 def dashboard(user: User = Depends(require_user(P.ADMIN_DASHBOARD)), db: Session = Depends(get_db)):
     return {
         "users": db.scalar(select(func.count(User.id))) or 0,
+        "pending_partner_applications": db.scalar(select(func.count(Provider.id)).where(Provider.verification_status == "pending")) or 0,
         "providers": db.scalar(select(func.count(Provider.id))) or 0,
         "pending_experiences": db.scalar(select(func.count(Experience.id)).where(Experience.verification_status == "pending")) or 0,
         "pending_pois": db.scalar(select(func.count(POI.id)).where(POI.verification_status == "pending")) or 0,
@@ -87,18 +94,147 @@ def dashboard(user: User = Depends(require_user(P.ADMIN_DASHBOARD)), db: Session
     }
 
 
+def _like(term: str) -> str:
+    return "%" + term.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+def _user_row(item: User, provider_names: dict[str, str]) -> dict:
+    return {"id": item.id, "email": item.email, "display_name": item.display_name, "role": item.role,
+            "provider_id": item.provider_id, "provider_name": provider_names.get(item.provider_id or ""),
+            "phone": item.phone, "is_active": item.is_active, "email_verified_at": item.email_verified_at,
+            "mfa_enabled": item.mfa_enabled, "created_at": item.created_at}
+
+
 @router.get("/users")
-def list_users(user: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
-    records = db.scalars(select(User).order_by(User.created_at.desc()).limit(limit)).all()
-    return [{"id": item.id, "email": item.email, "display_name": item.display_name, "role": item.role,
-             "provider_id": item.provider_id, "is_active": item.is_active, "created_at": item.created_at} for item in records]
+def list_users(response: Response, user: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db),
+               q: str | None = Query(default=None, max_length=120), role: Literal["traveler", "provider", "admin"] | None = None,
+               active: bool | None = None, limit: int = Query(default=100, ge=1, le=500), offset: int = Query(default=0, ge=0)):
+    query = select(User)
+    if q and q.strip():
+        query = query.where(User.email.ilike(_like(q), escape="\\") | User.display_name.ilike(_like(q), escape="\\"))
+    if role:
+        query = query.where(User.role == role)
+    if active is not None:
+        query = query.where(User.is_active.is_(active))
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(query.subquery())) or 0)
+    records = db.scalars(query.order_by(User.created_at.desc()).limit(limit).offset(offset)).all()
+    provider_ids = {item.provider_id for item in records if item.provider_id}
+    names = dict(db.execute(select(Provider.id, Provider.name).where(Provider.id.in_(provider_ids))).all()) if provider_ids else {}
+    return [_user_row(item, names) for item in records]
+
+
+@router.get("/users/{user_id}")
+def get_user(user_id: str, actor: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db)):
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "User not found."})
+    names = {target.provider_id: provider.name} if target.provider_id and (provider := db.get(Provider, target.provider_id)) else {}
+    now = datetime.now(timezone.utc)
+    sessions = db.scalar(select(func.count(AuthSession.id)).where(
+        AuthSession.user_id == target.id, AuthSession.revoked_at.is_(None), AuthSession.expires_at > now)) or 0
+    audit = db.scalars(select(AuditLog).where((AuditLog.actor_id == target.id) | (AuditLog.target_id == target.id))
+                       .order_by(AuditLog.created_at.desc()).limit(30)).all()
+    return {**_user_row(target, names), "active_sessions": sessions,
+            "audit": [{"action": row.action, "target_type": row.target_type, "target_id": row.target_id,
+                       "actor_id": row.actor_id, "details": row.details, "created_at": row.created_at} for row in audit]}
+
+
+@router.post("/users/{user_id}/revoke-sessions", status_code=204)
+def revoke_user_sessions(user_id: str, actor: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db)):
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "User not found."})
+    if target.id == actor.id:
+        raise HTTPException(status_code=409, detail={"code": "SELF_LOCKOUT", "message": "Use sign out everywhere for your own account."})
+    bump_token_version(db, target, reason="admin_revoked_sessions")
+    _audit(db, actor, "user.sessions_revoked", "user", target.id)
+    db.commit()
+    invalidate_user_state(target.id)
+    return Response(status_code=204)
+
+
+def _provider_row(item: Provider, user_count: int = 0, experience_count: int = 0) -> dict:
+    return {"id": item.id, "name": item.name, "slug": item.slug, "verification_status": item.verification_status,
+            "is_active": item.is_active, "business_type": item.business_type, "contact_email": item.contact_email,
+            "contact_phone": item.contact_phone, "address": item.address, "applied_at": item.applied_at,
+            "reviewed_at": item.reviewed_at, "created_at": item.created_at,
+            "user_count": user_count, "experience_count": experience_count}
 
 
 @router.get("/providers")
-def list_providers(user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db), limit: int = Query(default=200, ge=1, le=500)):
-    rows = db.scalars(select(Provider).order_by(Provider.name).limit(limit)).all()
-    return [{"id": item.id, "name": item.name, "slug": item.slug, "verification_status": item.verification_status,
-             "is_active": item.is_active} for item in rows]
+def list_providers(response: Response, user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db),
+                   q: str | None = Query(default=None, max_length=120), status: str | None = Query(default=None, max_length=32),
+                   limit: int = Query(default=200, ge=1, le=500), offset: int = Query(default=0, ge=0)):
+    query = select(Provider)
+    if q and q.strip():
+        query = query.where(Provider.name.ilike(_like(q), escape="\\") | Provider.contact_email.ilike(_like(q), escape="\\"))
+    if status:
+        query = query.where(Provider.verification_status == status)
+    response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(query.subquery())) or 0)
+    # Applications waiting longest come first in the review queue; otherwise alphabetical.
+    order = (Provider.applied_at.asc(),) if status == "pending" else (Provider.name,)
+    rows = db.scalars(query.order_by(*order).limit(limit).offset(offset)).all()
+    ids = [item.id for item in rows]
+    users = dict(db.execute(select(User.provider_id, func.count(User.id)).where(User.provider_id.in_(ids)).group_by(User.provider_id)).all()) if ids else {}
+    experiences = dict(db.execute(select(Experience.provider_id, func.count(Experience.id)).where(Experience.provider_id.in_(ids)).group_by(Experience.provider_id)).all()) if ids else {}
+    return [_provider_row(item, users.get(item.id, 0), experiences.get(item.id, 0)) for item in rows]
+
+
+@router.get("/providers/{provider_id}")
+def get_provider(provider_id: str, user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db)):
+    provider = db.get(Provider, provider_id)
+    if provider is None:
+        raise HTTPException(status_code=404, detail={"code": "PROVIDER_NOT_FOUND", "message": "Provider not found."})
+    members = db.scalars(select(User).where(User.provider_id == provider.id).order_by(User.created_at)).all()
+    experiences = db.scalars(select(Experience).where(Experience.provider_id == provider.id).options(selectinload(Experience.slots))).all()
+    return {**provider_profile_payload(provider), "created_at": provider.created_at, "reviewed_by": provider.reviewed_by,
+            "users": [_user_row(item, {}) for item in members],
+            "experiences": [{"id": item.id, "title": item.title, "verification_status": item.verification_status,
+                             "price_vnd": item.price_vnd, "duration_min": item.duration_min,
+                             "slot_count": len(item.slots),
+                             "open_slot_count": sum(1 for slot in item.slots if slot.status in {"open", "available"})}
+                            for item in experiences]}
+
+
+# action -> (statuses it may start from, resulting status, resulting is_active)
+_PROVIDER_TRANSITIONS = {
+    "approve": ({"pending", "rejected"}, "verified", True),
+    "reject": ({"pending"}, "rejected", True),
+    "suspend": ({"verified", "mock", "simulated", "pending"}, "suspended", False),
+    "reactivate": ({"suspended"}, "verified", True),
+}
+_DECISION_EMAIL = {
+    "approve": ("Hồ sơ đối tác đã được duyệt", "Hồ sơ đối tác của bạn đã được duyệt. Bạn có thể đăng nhập cổng đối tác để tạo trải nghiệm và mở slot."),
+    "reject": ("Hồ sơ đối tác chưa được duyệt", "Hồ sơ đối tác của bạn chưa được duyệt. Bạn có thể cập nhật hồ sơ và gửi lại trên cổng đối tác."),
+    "suspend": ("Tài khoản đối tác bị tạm khóa", "Tài khoản đối tác của bạn đã bị tạm khóa; các trải nghiệm tạm thời không hiển thị với khách."),
+    "reactivate": ("Tài khoản đối tác đã được mở lại", "Tài khoản đối tác của bạn đã được mở lại."),
+}
+
+
+@router.post("/providers/{provider_id}/decision")
+def decide_provider(provider_id: str, payload: ProviderDecisionRequest, actor: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db)):
+    provider = db.scalar(select(Provider).where(Provider.id == provider_id).with_for_update())
+    if provider is None:
+        raise HTTPException(status_code=404, detail={"code": "PROVIDER_NOT_FOUND", "message": "Provider not found."})
+    allowed_from, new_status, new_active = _PROVIDER_TRANSITIONS[payload.action]
+    if provider.verification_status not in allowed_from:
+        raise HTTPException(status_code=409, detail={"code": "INVALID_PROVIDER_TRANSITION",
+                                                      "message": f"Cannot {payload.action} a provider that is {provider.verification_status}."})
+    if payload.action in {"reject", "suspend"} and not payload.note.strip():
+        raise HTTPException(status_code=422, detail={"code": "REASON_REQUIRED", "message": "Give the partner a reason."})
+    old_status = provider.verification_status
+    now = datetime.now(timezone.utc)
+    provider.verification_status, provider.is_active = new_status, new_active
+    provider.review_note, provider.reviewed_by, provider.reviewed_at = payload.note.strip(), actor.id, now
+    members = db.scalars(select(User).where(User.provider_id == provider.id)).all()
+    subject, body = _DECISION_EMAIL[payload.action]
+    for member in members:
+        note = f"\n\nGhi chú từ quản trị viên: {payload.note.strip()}" if payload.note.strip() else ""
+        enqueue_email(db, idempotency_key=f"provider-decision:{provider.id}:{payload.action}:{member.id}:{int(now.timestamp())}",
+                      recipient=member, subject=f"Local Explorer AI: {subject}", body=f"Xin chào {member.display_name or ''},\n\n{body}{note}")
+    _audit(db, actor, f"provider.{payload.action}", "provider", provider.id, {"old_status": old_status, "status": new_status, "note": payload.note.strip()})
+    db.commit()
+    return _provider_row(provider, len(members))
 
 
 @router.get("/ai/targets")
@@ -260,8 +396,10 @@ def create_provider(payload: ProviderCreateRequest, actor: User = Depends(requir
         raise HTTPException(status_code=409, detail={"code": "EMAIL_IN_USE", "message": "This email is already registered."})
     slug_base = re.sub(r"[^a-z0-9]+", "-", payload.name.strip().lower()).strip("-")[:160] or "provider"
     slug = f"{slug_base}-{uuid4().hex[:8]}"
+    # Created by an administrator, so it is vetted already; self-registered partners start as pending instead.
     provider = Provider(id=str(uuid4()), name=payload.name.strip(), slug=slug, address=payload.address,
-                        contact_phone=payload.contact_phone, contact_email=email, verification_status="pending")
+                        contact_phone=payload.contact_phone, contact_email=email, verification_status="verified",
+                        reviewed_by=actor.id, reviewed_at=datetime.now(timezone.utc))
     db.add(provider)
     db.flush()
     account = User(id=str(uuid4()), email=email, display_name=payload.name.strip(), password_hash=hash_password(payload.password),
@@ -374,9 +512,11 @@ def merge_duplicate_pois(payload: POIMergeRequest, actor: User = Depends(require
 
 @router.get("/audit")
 def audit_history(actor: User = Depends(require_user(P.ADMIN_AUDIT)), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
-    logs = db.scalars(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)).all()
-    return [{"id": item.id, "actor_id": item.actor_id, "action": item.action, "target_type": item.target_type,
-             "target_id": item.target_id, "details": item.details, "created_at": item.created_at} for item in logs]
+    rows = db.execute(select(AuditLog, User.display_name, User.email).outerjoin(User, User.id == AuditLog.actor_id)
+                      .order_by(AuditLog.created_at.desc()).limit(limit)).all()
+    return [{"id": item.id, "actor_id": item.actor_id, "actor_name": name, "actor_email": email, "action": item.action,
+             "target_type": item.target_type, "target_id": item.target_id, "details": item.details, "created_at": item.created_at}
+            for item, name, email in rows]
 
 
 @router.get("/integrations")

@@ -15,6 +15,8 @@ import { ComparePage } from './pages/ComparePage'
 import { ChatPage } from './pages/ChatPage'
 import { Map3DPage } from './pages/Map3DPage'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/RecoveryPages'
+import { GuidePage, GuidesPage } from './pages/GuidesPage'
+import { PlacePage } from './pages/PlacePage'
 import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
 
 export const router = createBrowserRouter([{
@@ -29,6 +31,9 @@ export const router = createBrowserRouter([{
       { path: '/itinerary/:id', element: <ItineraryPage /> },
       { path: '/provider', element: <ProviderPage /> },
       { path: '/about', element: <AboutPage /> },
+      { path: '/guides', element: <GuidesPage /> },
+      { path: '/guides/:slug', element: <GuidePage /> },
+      { path: '/places/:placeId', element: <PlacePage /> },
     ] },
     { path: '/shared/:token', element: <SharedItineraryPage /> },
     { path: '/forgot-password', element: <ForgotPasswordPage /> },

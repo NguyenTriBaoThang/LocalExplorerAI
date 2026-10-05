@@ -15,9 +15,12 @@ PUBLIC_ROUTES = {
     ("ai", "GET", "/api/ai/prompts"),
     ("auth", "GET", "/api/auth/google/callback"), ("auth", "GET", "/api/auth/google/start"), ("auth", "GET", "/api/auth/google/status"),
     ("auth", "POST", "/api/auth/claim-ticket"), ("auth", "POST", "/api/auth/login"), ("auth", "POST", "/api/auth/login/mfa"), ("auth", "POST", "/api/auth/logout"),
-    ("auth", "POST", "/api/auth/refresh"), ("auth", "POST", "/api/auth/register"),
+    ("auth", "POST", "/api/auth/refresh"), ("auth", "POST", "/api/auth/partner/register"), ("auth", "POST", "/api/auth/register"),
     # Phase 4: anonymous by nature; each is authenticated by a single-use emailed token or reveals nothing.
     ("auth", "POST", "/api/auth/password/forgot"), ("auth", "POST", "/api/auth/password/reset"), ("auth", "POST", "/api/auth/email/verify"),
+    # Portal platform: the traveler web reads published content and reviews, and sends anonymous page views.
+    ("analytics", "POST", "/api/analytics/pageview"), ("reviews", "GET", "/api/experiences/{experience_id}/reviews"),
+    ("site_content", "GET", "/api/content/home"), ("site_content", "GET", "/api/content/articles"), ("site_content", "GET", "/api/content/articles/{slug}"),
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
@@ -208,7 +211,10 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
     module = _load_migration("m0012", "migrations/versions/0012_rbac_seed.py")
-    later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py")]
+    m0016 = _load_migration("m0016", "migrations/versions/0016_portal_platform.py")
+    later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py"),
+             # 0016 also changes the schema; only its permission seed applies to this bare RBAC database.
+             type("PermissionsOnly", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)})]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE roles (name VARCHAR(40) PRIMARY KEY, description VARCHAR(255), is_system BOOLEAN, created_at DATETIME)"))

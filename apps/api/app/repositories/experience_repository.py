@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.config import settings
-from app.models.entities import Experience, ExperienceSlot, POI
+from app.models.entities import Experience, ExperienceSlot, POI, Provider
 from app.services.evidence_service import current_verified_evidence, entity_is_operationally_verified, evidence_summary, slot_is_operationally_verified
 
 
@@ -13,7 +13,8 @@ class ExperienceRepository:
         self.db = db
 
     def list_experiences(self, intent: str | None = None, max_price: int | None = None) -> list[Experience]:
-        query = select(Experience).join(POI).options(joinedload(Experience.poi), selectinload(Experience.slots))
+        # A suspended partner's experiences disappear from the public catalog until it is reactivated.
+        query = select(Experience).join(POI).join(Provider, Experience.provider_id == Provider.id).where(Provider.is_active.is_(True)).options(joinedload(Experience.poi), selectinload(Experience.slots))
         allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]
         query = query.where(Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
         if max_price is not None:
@@ -29,7 +30,8 @@ class ExperienceRepository:
         item = self.db.scalar(
             select(Experience)
             .join(POI)
-            .where(Experience.id == experience_id, Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
+            .join(Provider, Experience.provider_id == Provider.id)
+            .where(Provider.is_active.is_(True), Experience.id == experience_id, Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
             .options(joinedload(Experience.poi), selectinload(Experience.slots))
         )
         return item if item and self._is_public(item) else None

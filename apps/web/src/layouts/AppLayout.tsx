@@ -20,6 +20,7 @@ import { logout } from '../api/client'
 import { setTheme, useTheme } from '../theme'
 import { useTranslation } from '../i18n'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
+import { usePageViewTracking } from '../analytics'
 
 export function AppLayout() {
   const [open, setOpen] = useState(false)
@@ -29,6 +30,7 @@ export function AppLayout() {
   const theme = useTheme()
   const { t } = useTranslation()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  usePageViewTracking()
 
   const links = loading ? [] : user?.role === 'admin'
     ? [{ to: '/admin', label: t('nav.admin') }, { to: '/map-3d', label: t('nav.map3d') }]
@@ -39,6 +41,7 @@ export function AppLayout() {
           { to: '/explore', label: t('nav.explore') },
           { to: '/planner', label: t('nav.planner') },
           { to: '/map-3d', label: t('nav.map3d') },
+          { to: '/guides', label: t('nav.guides') },
           { to: '/provider', label: t('nav.provider') },
           { to: '/about', label: t('nav.about') },
         ]

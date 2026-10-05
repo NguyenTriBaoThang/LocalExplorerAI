@@ -70,6 +70,10 @@ class POIRead(ORMModel):
     address: str
     district: str | None = None
     image_urls: list[str] = Field(default_factory=list)
+    opening_hours: str | None = None
+    ticket_info: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    is_landmark: bool = False
     verification_status: str
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"

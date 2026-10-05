@@ -93,6 +93,10 @@ export interface POI {
   source_evidence?: SourceEvidence[]
   district?: string | null
   image_urls?: string[]
+  opening_hours?: string | null
+  ticket_info?: string | null
+  tags?: string[]
+  is_landmark?: boolean
   data_mode?: DataMode
   data_status?: 'verified' | 'stale' | 'simulated' | 'unverified'
 }
@@ -260,4 +264,73 @@ export interface Booking {
   cancellation_reason: string | null
   created_at: string
   updated_at: string
+}
+
+/* ---------- Content managed in the partner/admin portal ---------- */
+
+export interface SiteBanner {
+  id: string
+  title: string
+  subtitle: string
+  image_url: string
+  link_url: string
+}
+
+export interface ArticleSummary {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  cover_url: string
+  category: string
+  published_at: string | null
+}
+
+export interface Article extends ArticleSummary {
+  body: string
+}
+
+export interface CollectionPlace {
+  id: string
+  name: string
+  district: string | null
+  category: string
+  image_url: string | null
+  is_landmark: boolean
+}
+
+export interface SiteCollection {
+  id: string
+  title: string
+  description: string
+  places: CollectionPlace[]
+}
+
+export interface HomeContent {
+  banners: SiteBanner[]
+  collections: SiteCollection[]
+  articles: ArticleSummary[]
+}
+
+export interface ExperienceReview {
+  id: string
+  rating: number
+  comment: string
+  author: string
+  reply: string | null
+  replied_at: string | null
+  created_at: string
+}
+
+export interface ReviewSummary {
+  count: number
+  average: number | null
+  items: ExperienceReview[]
+}
+
+export interface ReviewableBooking {
+  booking_id: string
+  experience_id: string
+  experience_title: string
+  slot_start_at: string
 }

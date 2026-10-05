@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, planner, provider, rbac, routing
+from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, places_admin, planner, provider, rbac, reviews, routing, site_content
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
 from app.api.guards import public
@@ -111,6 +111,8 @@ _UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 def _origin_allowed(request: Request, origin: str) -> bool:
     allowed = {item.rstrip("/") for item in settings.cors_origin_list} | {settings.web_app_url.rstrip("/")}
+    if settings.portal_app_url:
+        allowed.add(settings.portal_app_url.rstrip("/"))
     if origin.rstrip("/") in allowed:
         return True
     host = request.headers.get("host", "")
@@ -186,5 +188,9 @@ app.include_router(ai.router)
 app.include_router(ml.router)
 app.include_router(routing.router)
 app.include_router(admin_bot.router)
+app.include_router(places_admin.router)
+app.include_router(site_content.router)
+app.include_router(analytics.router)
+app.include_router(reviews.router)
 
 app.include_router(models_3d.router, prefix="/api")
