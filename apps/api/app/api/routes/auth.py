@@ -13,7 +13,11 @@ from app.api.dependencies import get_current_user, get_db
 from app.core.config import settings
 from app.models.entities import User, Itinerary
 from app.schemas.auth import ClaimTicketRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
-from app.services.auth_service import AuthNotConfigured, create_session_token, hash_password, verify_password
+from app.api.auth_cookies import REFRESH_NAMES, clear_auth_cookies, read_cookie, set_auth_cookies
+from app.auth import hash_password, verify_password as _verify_password
+from app.core.client_ip import client_ip
+from app.services.auth_runtime import invalidate_user_state
+from app.services.session_service import bump_token_version, record_event, revoke_by_refresh_token, rotate_session, start_session
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
@@ -22,15 +26,13 @@ GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo"
 
 
-def _session_cookie(response: Response, user: User, request: Request) -> None:
-    try:
-        token = create_session_token(user.id)
-    except AuthNotConfigured as error:
-        raise HTTPException(status_code=503, detail={"code": "AUTH_NOT_CONFIGURED", "message": str(error)}) from error
-    response.set_cookie(
-        "le_session", token, httponly=True, secure=request.url.scheme == "https" or settings.app_env.lower() not in {"development", "test"},
-        samesite="lax", max_age=settings.session_ttl_seconds, path="/",
-    )
+def verify_password(password: str, encoded: str | None) -> bool:
+    return _verify_password(password, encoded).valid
+
+
+def _start_session(response: Response, request: Request, db: Session, user: User, amr: tuple[str, ...] = ("pwd",)) -> None:
+    issued = start_session(db, user, ip=client_ip(request, settings.trusted_proxy_ips), user_agent=request.headers.get("user-agent"), amr=amr)
+    set_auth_cookies(response, request, issued)
 
 
 def _cookie_flags(request: Request) -> dict:
@@ -83,7 +85,7 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
     db.add(user)
     db.commit()
     db.refresh(user)
-    _session_cookie(response, user, request)
+    _start_session(response, request, db, user)
     return user
 
 
@@ -91,10 +93,27 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
 def login(payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     email = str(payload.email).strip().lower()
     user = db.scalar(select(User).where(User.email == email))
-    if user is None or not user.is_active or not verify_password(payload.password, user.password_hash):
+    check = _verify_password(payload.password, user.password_hash if user else None)  # hashes anyway when the user is unknown
+    if user is None or not user.is_active or not check.valid:
+        record_event(db, "login", outcome="failure", user_id=user.id if user else None, ip=client_ip(request, settings.trusted_proxy_ips),
+                     user_agent=request.headers.get("user-agent"))
+        db.commit()
         raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Email or password is incorrect."})
-    _session_cookie(response, user, request)
+    if check.needs_rehash:
+        user.password_hash = hash_password(payload.password)
+        db.commit()
+    _start_session(response, request, db, user)
     return user
+
+
+@router.post("/refresh", response_model=UserRead)
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    token = read_cookie(request, REFRESH_NAMES)
+    if not token:
+        raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "Sign in to continue."})
+    issued = rotate_session(db, token, ip=client_ip(request, settings.trusted_proxy_ips), user_agent=request.headers.get("user-agent"))
+    set_auth_cookies(response, request, issued)
+    return db.get(User, issued.user_id)
 
 
 @router.get("/me", response_model=UserRead)
@@ -112,17 +131,24 @@ def update_profile(payload: ProfileUpdateRequest, user: User = Depends(get_curre
 
 
 @router.post("/password")
-def change_password(payload: PasswordChangeRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(payload: PasswordChangeRequest, request: Request, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if user.password_hash and not verify_password(payload.current_password or "", user.password_hash):
         raise HTTPException(status_code=400, detail={"code": "CURRENT_PASSWORD_INVALID", "message": "Current password is incorrect."})
     user.password_hash = hash_password(payload.new_password)
+    bump_token_version(db, user, reason="password_changed")  # signs every other device out
+    record_event(db, "password_changed", user_id=user.id, ip=client_ip(request, settings.trusted_proxy_ips))
     db.commit()
+    invalidate_user_state(user.id)
+    _start_session(response, request, db, user)  # but keep the device that made the change signed in
     return {"updated": True}
 
 
 @router.post("/logout", status_code=204)
-def logout(response: Response):
-    response.delete_cookie("le_session", path="/", httponly=True, samesite="lax")
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    token = read_cookie(request, REFRESH_NAMES)
+    if token:
+        revoke_by_refresh_token(db, token)
+    clear_auth_cookies(response, request)
 
 
 @router.get("/google/start")
@@ -198,6 +224,9 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.google_sub == google_sub))
     if user is None:
         user = db.scalar(select(User).where(User.email == email))
+        if user is not None and user.role == "admin":
+            # Administrators sign in with a password and MFA only; never link a Google identity to them.
+            return RedirectResponse(f"{settings.web_app_url}/login?error=admin_requires_password", status_code=303)
         if user is not None and user.google_sub not in (None, google_sub):
             return RedirectResponse(f"{settings.web_app_url}/login?error=google_account_conflict", status_code=303)
         if user is None:
@@ -209,8 +238,10 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
         db.refresh(user)
     if not user.is_active:
         return RedirectResponse(f"{settings.web_app_url}/login?error=account_disabled", status_code=303)
+    if user.role == "admin":
+        return RedirectResponse(f"{settings.web_app_url}/login?error=admin_requires_password", status_code=303)
     response = RedirectResponse(settings.web_app_url, status_code=303)
-    _session_cookie(response, user, request)
+    _start_session(response, request, db, user, amr=("google",))
     flags = _cookie_flags(request)
     response.delete_cookie("le_google_state", path="/api/auth/google", **flags)
     response.delete_cookie("le_google_verifier", path="/api/auth/google", **flags)
@@ -232,7 +263,7 @@ def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Respon
         itinerary.user_id = existing_user.id
         db.commit()
         db.refresh(existing_user)
-        _session_cookie(response, existing_user, request)
+        _start_session(response, request, db, existing_user)
         return existing_user
 
     shadow_user = db.scalar(select(User).where(User.id == itinerary.user_id)) if itinerary.user_id else None
@@ -243,7 +274,7 @@ def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Respon
         shadow_user.password_hash = hash_password(payload.password)
         db.commit()
         db.refresh(shadow_user)
-        _session_cookie(response, shadow_user, request)
+        _start_session(response, request, db, shadow_user)
         return shadow_user
 
     new_user = User(
@@ -257,5 +288,5 @@ def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Respon
     itinerary.user_id = new_user.id
     db.commit()
     db.refresh(new_user)
-    _session_cookie(response, new_user, request)
+    _start_session(response, request, db, new_user)
     return new_user

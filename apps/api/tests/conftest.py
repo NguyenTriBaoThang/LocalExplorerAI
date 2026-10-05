@@ -10,6 +10,12 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
 os.environ.setdefault("ROUTING_PROVIDER", "mock")
+# Authentication needs an RS256 key in every environment, tests included: generate a throwaway pair per run.
+from app.auth import generate_rsa_keypair
+
+_test_private_key, _ = generate_rsa_keypair(bits=2048)
+os.environ.setdefault("AUTH_JWT_KEY_ID", "test-key")
+os.environ.setdefault("AUTH_JWT_PRIVATE_KEY_B64", _test_private_key)
 from geoalchemy2.elements import WKTElement
 
 from app.db.base import Base

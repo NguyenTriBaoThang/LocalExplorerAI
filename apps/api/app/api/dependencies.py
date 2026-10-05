@@ -1,14 +1,13 @@
 import secrets
 
-from fastapi import Depends, Header, HTTPException, Request
-from sqlalchemy import select
+from fastapi import Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.adapters.llm.provider import NotConfiguredLLMProvider, OpenAICompatibleLLMProvider, StructuredOutputProvider
 from app.core.config import settings
 from app.db.session import get_db
 from app.services.planner_service import PlannerService
-from app.services.auth_service import AuthNotConfigured, decode_session_token
+from app.api.authn import authenticate
 from app.models.entities import User
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 
@@ -46,63 +45,28 @@ def get_llm_provider(db: Session = Depends(get_db)) -> StructuredOutputProvider:
 
 def require_admin(
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
     x_admin_key: str | None = Header(default=None),
 ) -> None:
+    # Legacy shared key, to be replaced by service accounts (docs/auth-design.md, phase 3).
     if settings.admin_api_key and x_admin_key and secrets.compare_digest(x_admin_key, settings.admin_api_key):
         return
     if x_admin_key and settings.admin_api_key and not secrets.compare_digest(x_admin_key, settings.admin_api_key):
         raise HTTPException(status_code=401, detail={"code": "ADMIN_UNAUTHORIZED", "message": "The admin key is invalid."})
-    authorization = request.headers.get("Authorization", "")
-    token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else request.cookies.get("le_session")
-    if not token:
-        status = 503 if not settings.admin_api_key and not settings.auth_secret and settings.app_env.lower() not in {"development", "test"} else 401
-        code = "ADMIN_AUTH_NOT_CONFIGURED" if status == 503 else "ADMIN_UNAUTHORIZED"
-        message = "Configure AUTH_SECRET or ADMIN_API_KEY." if status == 503 else "Sign in with an administrator account."
-        raise HTTPException(status_code=status, detail={"code": code, "message": message})
-    try:
-        user_id = decode_session_token(token)
-    except AuthNotConfigured as error:
-        raise HTTPException(status_code=503, detail={"code": "AUTH_NOT_CONFIGURED", "message": str(error)}) from error
-    except ValueError as error:
-        raise HTTPException(status_code=401, detail={"code": "INVALID_SESSION", "message": "Your session is invalid or expired."}) from error
-    user = db.scalar(select(User).where(User.id == user_id))
-    if user is None or not user.is_active or user.role != "admin":
+    user = authenticate(request, response, db, required=False)
+    if user is None:
+        raise HTTPException(status_code=401, detail={"code": "ADMIN_UNAUTHORIZED", "message": "Sign in with an administrator account."})
+    if user.role != "admin":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Administrator access is required."})
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    authorization = request.headers.get("Authorization", "")
-    token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else request.cookies.get("le_session")
-    if not token:
-        raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "Sign in to continue."})
-    try:
-        user_id = decode_session_token(token)
-    except AuthNotConfigured as error:
-        raise HTTPException(status_code=503, detail={"code": "AUTH_NOT_CONFIGURED", "message": str(error)}) from error
-    except ValueError as error:
-        raise HTTPException(status_code=401, detail={"code": "INVALID_SESSION", "message": "Your session is invalid or expired."}) from error
-    user = db.scalar(select(User).where(User.id == user_id))
-    if user is None or not user.is_active:
-        raise HTTPException(status_code=401, detail={"code": "ACCOUNT_DISABLED", "message": "This account is unavailable."})
-    return user
+def get_current_user(request: Request, response: Response, db: Session = Depends(get_db)) -> User:
+    return authenticate(request, response, db, required=True)
 
 
-def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
-    authorization = request.headers.get("Authorization", "")
-    token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else request.cookies.get("le_session")
-    if not token:
-        return None
-    try:
-        user_id = decode_session_token(token)
-    except AuthNotConfigured as error:
-        raise HTTPException(status_code=503, detail={"code": "AUTH_NOT_CONFIGURED", "message": str(error)}) from error
-    except ValueError as error:
-        raise HTTPException(status_code=401, detail={"code": "INVALID_SESSION", "message": "Your session is invalid or expired."}) from error
-    user = db.scalar(select(User).where(User.id == user_id))
-    if user is None or not user.is_active:
-        raise HTTPException(status_code=401, detail={"code": "ACCOUNT_DISABLED", "message": "This account is unavailable."})
-    return user
+def get_optional_user(request: Request, response: Response, db: Session = Depends(get_db)) -> User | None:
+    return authenticate(request, response, db, required=False)
 
 
 def require_roles(*roles: str):

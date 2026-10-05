@@ -59,7 +59,7 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 ## 6. Các luồng
 **Đăng nhập:** chuẩn hóa email → giới hạn lần thử (theo tài khoản và IP) → xác minh mật khẩu (argon2id, tự băm lại nếu đang là scrypt) → nếu có MFA trả `mfa_required` kèm `mfa_ticket` dùng một lần (Redis, 5 phút) → xác minh TOTP → tạo `auth_session` → cấp access + refresh. Lỗi trả đồng nhất, không lộ tài khoản có tồn tại hay không.
 
-**Tự làm mới (middleware):** nếu access hợp lệ nhưng còn dưới 3 phút (hoặc đã hết hạn nhưng refresh còn hạn) → xoay vòng refresh → ghi cặp cookie mới vào chính response.
+**Tự làm mới (trong dependency xác thực, không phải middleware):** nếu access hợp lệ nhưng còn dưới 3 phút (hoặc đã hết hạn nhưng refresh còn hạn) → xoay vòng refresh → ghi cặp cookie mới vào chính response.
 - Xoay vòng: đánh dấu refresh cũ `rotated_at`/`replaced_by`, cấp refresh mới cùng `family_id`.
 - Cửa sổ khoan hồng 10 giây (khóa Redis theo `family_id`) để các request song song không bị đăng xuất oan.
 - Dùng lại refresh đã xoay **ngoài** cửa sổ → thu hồi cả họ, ghi `auth_events`, yêu cầu đăng nhập lại.
@@ -143,6 +143,17 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 |---|---|
 | 0 Baseline | Xong: 81 passed |
 | 1 Gói `app/auth/` + migration + test | **Xong**: 139 passed (81 cũ + 58 mới). Chưa nối vào route nào |
-| 2–6 | Chưa bắt đầu |
+| 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong** (chưa commit): 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
+| 3–6 | Chưa bắt đầu |
 
 Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. **Chưa chạy migration trên PostgreSQL thật.**
+
+### Ghi chú Giai đoạn 2
+- Đã nối vào: `register`, `login`, `refresh` (mới), `logout`, đổi mật khẩu, callback Google, `claim-ticket`; `get_current_user`, `get_optional_user`, `require_admin`.
+- Admin đổi role hoặc khóa tài khoản sẽ tăng `token_version` và thu hồi mọi phiên của người đó ngay.
+- Đổi mật khẩu đăng xuất các thiết bị khác nhưng giữ thiết bị đang đổi.
+- Google không còn đăng nhập hay liên kết được với tài khoản admin.
+- Chặn `Origin` lạ cho các request thay đổi dữ liệu có cookie xác thực (bỏ qua nếu dùng Bearer hoặc không có Origin).
+- API từ chối khởi động nếu thiếu khóa RS256; `docker-compose.yml` truyền `AUTH_JWT_*` (bản prod bắt buộc).
+- Vẫn còn dùng lớp tương thích: `X-Admin-Key`, `require_roles`, hàm `create_session_token` cũ (không còn được route nào gọi).
+- Chưa làm: phát hiện chính sách mật khẩu 12 ký tự (Giai đoạn 4), sửa `claim-ticket` (Giai đoạn 4), service account (Giai đoạn 3).

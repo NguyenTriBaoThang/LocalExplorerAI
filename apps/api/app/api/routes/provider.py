@@ -10,7 +10,7 @@ from app.api.dependencies import get_db, require_roles
 from app.core.request_context import current_request_id
 from app.models.entities import AuditLog, Booking, BookingEvent, Event, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PaymentTransaction, POI, Provider, User
 from app.schemas.management import EvidenceCreateRequest, ExperienceDraftRequest, POIDraftRequest, SlotCreateRequest, SlotUpdateRequest
-from app.services.auth_service import hash_password
+from app.auth import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, target_revision, utc_now
 from app.services.notifications import enqueue_email, queue_booking_status
 

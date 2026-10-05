@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.entities import User, Itinerary, ItineraryStop, POI, Experience, ExperienceSlot
-from app.services.auth_service import hash_password, create_session_token
+from app.auth import hash_password
 
 PROD_DOMAIN = "https://www.localexplorerai.site"
 LOCAL_DOMAIN = "http://localhost:8080"

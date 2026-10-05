@@ -1,5 +1,5 @@
 from app.models.entities import PlaceImportBatch, PlaceImportCandidate, User
-from app.services.auth_service import create_session_token
+from tests.helpers import sign_in
 from scripts.import_place_candidates import candidate_flags, make_quality_summary
 
 
@@ -24,7 +24,7 @@ def test_admin_can_review_staged_place_source_without_publishing(client, db_sess
     )
     db_session.add_all([admin, batch, candidate])
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
 
     batches = client.get("/api/admin/place-imports")
     rows = client.get(f"/api/admin/place-imports/{batch.id}/candidates")
@@ -41,7 +41,7 @@ def test_place_import_queue_is_admin_only(client, db_session):
     traveler = User(email="place-import-traveler@example.test", display_name="Traveler", role="traveler")
     db_session.add(traveler)
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(traveler.id))
+    sign_in(client, traveler)
 
     response = client.get("/api/admin/place-imports")
 
@@ -53,7 +53,7 @@ def test_ai_tool_target_list_is_admin_only_and_does_not_expose_account_data(clie
     admin = User(email="ai-tools-admin@example.test", display_name="Admin", role="admin")
     db_session.add(admin)
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
 
     response = client.get("/api/admin/ai/targets")
 

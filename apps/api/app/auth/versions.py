@@ -7,6 +7,7 @@ authoritative loader (the database) is used, so correctness never depends on Red
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
@@ -30,14 +31,24 @@ class StateStore(Protocol):
 
 
 class InMemoryStateStore:
-    def __init__(self) -> None:
-        self._data: dict[str, UserState] = {}
+    """Process-local store. ``ttl_seconds=0`` disables caching (every read falls through to the loader)."""
+
+    def __init__(self, ttl_seconds: float | None = None, clock: Callable[[], float] = time.monotonic) -> None:
+        self._data: dict[str, tuple[float, UserState]] = {}
+        self._ttl, self._clock = ttl_seconds, clock
 
     def get(self, user_id: str) -> UserState | None:
-        return self._data.get(user_id)
+        entry = self._data.get(user_id)
+        if entry is None:
+            return None
+        stored_at, state = entry
+        if self._ttl is not None and self._clock() - stored_at >= self._ttl:
+            self._data.pop(user_id, None)
+            return None
+        return state
 
     def set(self, user_id: str, state: UserState) -> None:
-        self._data[user_id] = state
+        self._data[user_id] = (self._clock(), state)
 
     def invalidate(self, user_id: str) -> None:
         self._data.pop(user_id, None)

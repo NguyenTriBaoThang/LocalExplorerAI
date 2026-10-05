@@ -16,7 +16,9 @@ from app.adapters.routing.provider import RoutingConfigurationError, RoutingProv
 from app.api.dependencies import get_db, get_llm_provider, require_roles
 from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
-from app.services.auth_service import hash_password
+from app.auth import hash_password
+from app.services.auth_runtime import invalidate_user_state
+from app.services.session_service import bump_token_version
 from app.services.evidence_service import REQUIRED_FIELDS, covered_fields, current_verified_evidence, get_target, is_current_and_unexpired, target_revision, utc_now
 from app.services.integration_config import (
     INTEGRATION_FIELDS,
@@ -241,8 +243,11 @@ def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Dep
         target.provider_id = None
     old_role, old_active = target.role, target.is_active
     target.role, target.is_active = payload.role, payload.is_active
+    if (old_role, old_active) != (target.role, target.is_active):
+        bump_token_version(db, target, reason="role_or_status_changed")  # old tokens stop working at once
     _audit(db, actor, "user.updated", "user", target.id, {"old_role": old_role, "role": target.role, "old_active": old_active, "is_active": target.is_active})
     db.commit()
+    invalidate_user_state(target.id)
     return {"id": target.id, "role": target.role, "provider_id": target.provider_id, "is_active": target.is_active}
 
 

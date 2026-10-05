@@ -102,3 +102,19 @@ def test_database_is_used_when_redis_is_down():
     with pytest.raises(TokenRevoked):
         checker.check(claims(ver=2))
     assert loader.calls == 2
+
+
+def test_in_memory_store_honours_its_ttl():
+    now = {"t": 0.0}
+    store = InMemoryStateStore(ttl_seconds=30, clock=lambda: now["t"])
+    store.set("u1", UserState(1, True))
+    now["t"] = 29
+    assert store.get("u1") == UserState(1, True)
+    now["t"] = 30
+    assert store.get("u1") is None
+
+
+def test_zero_ttl_disables_caching():
+    store = InMemoryStateStore(ttl_seconds=0)
+    store.set("u1", UserState(1, True))
+    assert store.get("u1") is None

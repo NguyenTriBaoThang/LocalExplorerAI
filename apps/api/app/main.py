@@ -3,6 +3,8 @@ import json
 import logging
 import re
 import time
+from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -13,13 +15,22 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, ml, models_3d, ops, planner, provider, routing
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
+from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
+from app.auth import AuthError
 from app.core.config import settings
 from app.core.request_context import current_request_id
 from app.core.client_ip import client_ip
 from app.services.prompt_service import InvalidStructuredOutput
+from app.services.auth_runtime import token_service
 from app.services.rate_limit import check_rate_limit
 
-app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore verified local experiences and build feasible itineraries.", openapi_url="/openapi.json")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    token_service()  # fail fast: the RS256 signing key is required in every environment
+    yield
+
+
+app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore verified local experiences and build feasible itineraries.", openapi_url="/openapi.json", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 _request_logger = logging.getLogger("local_explorer.request")
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,96}$")
@@ -76,8 +87,35 @@ async def request_id_middleware(request: Request, call_next):
         current_request_id.reset(request_context_token)
 
 
+_UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _origin_allowed(request: Request, origin: str) -> bool:
+    allowed = {item.rstrip("/") for item in settings.cors_origin_list} | {settings.web_app_url.rstrip("/")}
+    if origin.rstrip("/") in allowed:
+        return True
+    host = request.headers.get("host", "")
+    return bool(host) and urlsplit(origin).netloc == host  # same-origin request through the reverse proxy
+
+
+@app.middleware("http")
+async def origin_check_middleware(request: Request, call_next):
+    """CSRF defence in depth for cookie-authenticated, state-changing requests (SameSite=Lax is the first layer)."""
+    origin = request.headers.get("origin")
+    if (request.method in _UNSAFE_METHODS and origin and "authorization" not in request.headers
+            and any(request.cookies.get(name) for name in ACCESS_NAMES + REFRESH_NAMES)
+            and not _origin_allowed(request, origin)):
+        return error_response(request, "CSRF_ORIGIN_MISMATCH", "This request origin is not allowed.", status_code=403)
+    return await call_next(request)
+
+
 def error_response(request: Request, code: str, message: str, details: list | None = None, status_code: int = 400):
     return JSONResponse(status_code=status_code, content={"error": {"code": code, "message": message, "details": details or [], "request_id": getattr(request.state, "request_id", str(uuid4()))}})
+
+
+@app.exception_handler(AuthError)
+async def auth_error_handler(request: Request, exc: AuthError):
+    return error_response(request, exc.code, exc.message, status_code=exc.status_code)
 
 
 @app.exception_handler(StarletteHTTPException)
