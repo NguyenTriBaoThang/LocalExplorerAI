@@ -432,8 +432,14 @@ async def momo_ipn(request: Request, db: Session = Depends(get_db)):
     return Response(status_code=204)
 
 
+def _require_verified_email(user: User) -> None:
+    if user.email_verified_at is None:
+        raise HTTPException(status_code=403, detail={"code": "EMAIL_NOT_VERIFIED", "message": "Vui lòng xác minh email trước khi giữ chỗ hoặc thanh toán."})
+
+
 @router.post("/api/bookings", status_code=201)
 def request_booking(payload: BookingHoldRequest, user: User = Depends(require_user(P.BOOKING_CREATE)), db: Session = Depends(get_db)):
+    _require_verified_email(user)
     now = _now()
     itinerary = db.get(Itinerary, payload.itinerary_id)
     if itinerary is None:
@@ -544,6 +550,7 @@ def cancel_booking(booking_id: str, payload: BookingCancelRequest, user: User = 
 
 @router.post("/api/bookings/{booking_id}/checkout")
 def begin_checkout(booking_id: str, request: Request, user: User = Depends(require_user(P.BOOKING_CHECKOUT)), db: Session = Depends(get_db)):
+    _require_verified_email(user)
     booking = db.scalar(select(Booking).where(Booking.id == booking_id).with_for_update())
     if booking is None or booking.user_id != user.id:
         raise HTTPException(status_code=404, detail={"code": "BOOKING_NOT_FOUND", "message": "Không tìm thấy yêu cầu đặt chỗ."})

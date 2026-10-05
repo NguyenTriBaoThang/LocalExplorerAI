@@ -1,23 +1,35 @@
 import base64
 import hashlib
 import secrets
+from datetime import datetime, timezone
 from urllib.parse import urlencode, urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.core.config import settings
+from app.models.auth_entities import AuthSession
 from app.models.entities import User, Itinerary
-from app.schemas.auth import ClaimTicketRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
+from app.schemas.auth import (
+    ClaimTicketRequest, ForgotPasswordRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest,
+    ResetPasswordRequest, SessionRead, UserRead, VerifyEmailRequest,
+)
 from app.api.auth_cookies import REFRESH_NAMES, clear_auth_cookies, read_cookie, set_auth_cookies
-from app.auth import hash_password, verify_password as _verify_password
+from app.api.authn import current_session_id
+from app.auth import WeakPassword, hash_password, validate_password_policy, verify_password as _verify_password
 from app.core.client_ip import client_ip
+from app.services import account_tokens
+from app.services.account_tokens import InvalidAccountToken
 from app.services.auth_runtime import invalidate_user_state
-from app.services.session_service import bump_token_version, record_event, revoke_by_refresh_token, rotate_session, start_session
+from app.services.notifications import queue_account_link
+from app.services.session_service import (
+    bump_token_version, record_event, revoke_all_sessions, revoke_by_refresh_token, revoke_family, rotate_session, start_session,
+)
+from app.services.ticket_service import is_shadow_email
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.api.guards import public, require_user
 from app.api.permissions import P
@@ -30,6 +42,24 @@ GOOGLE_USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo"
 
 def verify_password(password: str, encoded: str | None) -> bool:
     return _verify_password(password, encoded).valid
+
+
+def _ip(request: Request) -> str | None:
+    return client_ip(request, settings.trusted_proxy_ips)
+
+
+def _reject_reserved_email(email: str) -> None:
+    if is_shadow_email(email):
+        raise HTTPException(status_code=422, detail={"code": "EMAIL_RESERVED", "message": "This email address cannot be used."})
+
+
+def _send_verification(db: Session, user: User) -> bool:
+    row, raw = account_tokens.issue(db, user, account_tokens.VERIFY_EMAIL)
+    return queue_account_link(db, user, purpose=account_tokens.VERIFY_EMAIL, token_id=row.id, raw_token=raw)
+
+
+def _invalid_token() -> HTTPException:
+    return HTTPException(status_code=400, detail={"code": "TOKEN_INVALID", "message": "This link is invalid, expired or has already been used."})
 
 
 def _start_session(response: Response, request: Request, db: Session, user: User, amr: tuple[str, ...] = ("pwd",)) -> None:
@@ -81,10 +111,14 @@ def _google_configuration_issue(db: Session) -> str | None:
 @router.post("/register", response_model=UserRead, status_code=201, dependencies=[Depends(public('account creation'))])
 def register(payload: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     email = str(payload.email).strip().lower()
+    _reject_reserved_email(email)
+    validate_password_policy(payload.password, email=email)
     if db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(status_code=409, detail={"code": "EMAIL_IN_USE", "message": "This email is already registered."})
     user = User(email=email, display_name=payload.display_name.strip(), password_hash=hash_password(payload.password), role="traveler")
     db.add(user)
+    db.flush()
+    _send_verification(db, user)  # browsing and planning work at once; booking waits for the verified email
     db.commit()
     db.refresh(user)
     _start_session(response, request, db, user)
@@ -136,6 +170,7 @@ def update_profile(payload: ProfileUpdateRequest, user: User = Depends(require_u
 def change_password(payload: PasswordChangeRequest, request: Request, response: Response, user: User = Depends(require_user(P.ACCOUNT_PASSWORD)), db: Session = Depends(get_db)):
     if user.password_hash and not verify_password(payload.current_password or "", user.password_hash):
         raise HTTPException(status_code=400, detail={"code": "CURRENT_PASSWORD_INVALID", "message": "Current password is incorrect."})
+    validate_password_policy(payload.new_password, email=user.email)
     user.password_hash = hash_password(payload.new_password)
     bump_token_version(db, user, reason="password_changed")  # signs every other device out
     record_event(db, "password_changed", user_id=user.id, ip=client_ip(request, settings.trusted_proxy_ips))
@@ -150,6 +185,110 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     token = read_cookie(request, REFRESH_NAMES)
     if token:
         revoke_by_refresh_token(db, token)
+    clear_auth_cookies(response, request)
+
+
+@router.post("/password/forgot", status_code=202, dependencies=[Depends(public('always answers 202 whether or not the account exists'))])
+def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.email == payload.email)) if payload.email else None
+    if user is not None and user.is_active and not is_shadow_email(user.email):
+        # At most one email a minute per account, so the endpoint cannot be used to flood someone's inbox.
+        if not account_tokens.issued_recently(db, user, account_tokens.RESET_PASSWORD):
+            row, raw = account_tokens.issue(db, user, account_tokens.RESET_PASSWORD)
+            queued = queue_account_link(db, user, purpose=account_tokens.RESET_PASSWORD, token_id=row.id, raw_token=raw)
+            record_event(db, "password_reset_requested", user_id=user.id, ip=_ip(request), user_agent=request.headers.get("user-agent"),
+                         detail={"email_queued": queued})
+            db.commit()
+    return {"accepted": True}
+
+
+@router.post("/password/reset", dependencies=[Depends(public('authenticated by the single-use emailed token'))])
+def reset_password(payload: ResetPasswordRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    try:
+        user = account_tokens.consume(db, payload.token, account_tokens.RESET_PASSWORD)
+    except InvalidAccountToken:
+        db.rollback()
+        raise _invalid_token()
+    try:
+        validate_password_policy(payload.new_password, email=user.email)
+    except WeakPassword:
+        db.rollback()  # undo the consumption so the user can retry the same link with a stronger password
+        raise
+    user.password_hash = hash_password(payload.new_password)
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)  # the link reached the inbox, which proves ownership
+    bump_token_version(db, user, reason="password_reset")  # every device signs in again with the new password
+    record_event(db, "password_reset", user_id=user.id, ip=_ip(request), user_agent=request.headers.get("user-agent"))
+    db.commit()
+    invalidate_user_state(user.id)
+    clear_auth_cookies(response, request)
+    return {"reset": True}
+
+
+@router.post("/email/verify", dependencies=[Depends(public('authenticated by the single-use emailed token'))])
+def verify_email(payload: VerifyEmailRequest, request: Request, db: Session = Depends(get_db)):
+    try:
+        user = account_tokens.consume(db, payload.token, account_tokens.VERIFY_EMAIL)
+    except InvalidAccountToken:
+        db.rollback()
+        raise _invalid_token()
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(timezone.utc)
+        record_event(db, "email_verified", user_id=user.id, ip=_ip(request))
+    db.commit()
+    return {"verified": True}
+
+
+@router.post("/email/verify/resend", status_code=202)
+def resend_verification(user: User = Depends(require_user(P.ACCOUNT_UPDATE)), db: Session = Depends(get_db)):
+    if user.email_verified_at is not None:
+        return {"already_verified": True}
+    if account_tokens.issued_recently(db, user, account_tokens.VERIFY_EMAIL):
+        raise HTTPException(status_code=429, detail={"code": "VERIFICATION_RECENTLY_SENT", "message": "A verification email was sent recently; try again in a minute."})
+    queued = _send_verification(db, user)
+    db.commit()
+    return {"email_queued": queued}
+
+
+def _current_family(db: Session, request: Request) -> str | None:
+    sid = current_session_id(request)
+    row = db.get(AuthSession, sid) if sid else None
+    return row.family_id if row else None
+
+
+@router.get("/sessions", response_model=list[SessionRead])
+def list_sessions(request: Request, user: User = Depends(require_user(P.ACCOUNT_SESSIONS)), db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    # Each family's head row (not rotated, not revoked, not expired) is one signed-in device.
+    heads = db.scalars(select(AuthSession).where(
+        AuthSession.user_id == user.id, AuthSession.revoked_at.is_(None), AuthSession.rotated_at.is_(None), AuthSession.expires_at > now,
+    ).order_by(AuthSession.last_used_at.desc())).all()
+    started = dict(db.execute(select(AuthSession.family_id, func.min(AuthSession.issued_at))
+                              .where(AuthSession.family_id.in_([h.family_id for h in heads])).group_by(AuthSession.family_id)).all())
+    current = _current_family(db, request)
+    return [SessionRead(id=h.family_id, created_at=started.get(h.family_id, h.issued_at), last_used_at=h.last_used_at,
+                        expires_at=h.expires_at, absolute_expires_at=h.absolute_expires_at, ip=h.ip, user_agent=h.user_agent,
+                        amr=list(h.amr or []), current=h.family_id == current) for h in heads]
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def revoke_session(session_id: str, request: Request, response: Response, user: User = Depends(require_user(P.ACCOUNT_SESSIONS)),
+                   db: Session = Depends(get_db)):
+    owned = db.scalar(select(AuthSession.id).where(AuthSession.family_id == session_id, AuthSession.user_id == user.id,
+                                                   AuthSession.revoked_at.is_(None)).limit(1))
+    if owned is None:  # unknown, already revoked, or someone else's: indistinguishable on purpose
+        raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "Session not found."})
+    is_current = session_id == _current_family(db, request)
+    revoke_family(db, session_id, "user_revoked")
+    record_event(db, "session_revoked", user_id=user.id, ip=_ip(request), detail={"family_id": session_id, "current": is_current})
+    db.commit()
+    if is_current:
+        clear_auth_cookies(response, request)
+
+
+@router.post("/logout-all", status_code=204)
+def logout_all(request: Request, response: Response, user: User = Depends(require_user(P.ACCOUNT_SESSIONS)), db: Session = Depends(get_db)):
+    revoke_all_sessions(db, user)  # bumps token_version: every access token of this user stops working at once
     clear_auth_cookies(response, request)
 
 
@@ -238,6 +377,9 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
             user.google_sub = google_sub
         db.commit()
         db.refresh(user)
+    if user.email_verified_at is None and user.email == email:
+        user.email_verified_at = datetime.now(timezone.utc)  # Google reported this exact address as verified
+        db.commit()
     if not user.is_active:
         return RedirectResponse(f"{settings.web_app_url}/login?error=account_disabled", status_code=303)
     if user.role == "admin":
@@ -250,45 +392,53 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     return response
 
 
-@router.post("/claim-ticket", response_model=UserRead, dependencies=[Depends(public('ticket link claim; to be tightened in phase 4'))])
+@router.post("/claim-ticket", response_model=UserRead, dependencies=[Depends(public('authenticated by the single-use claim token from the chat bot'))])
 def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Response, db: Session = Depends(get_db)):
-    itinerary = db.scalar(select(Itinerary).where(Itinerary.share_token == payload.share_token))
-    if itinerary is None:
-        raise HTTPException(status_code=404, detail={"code": "TICKET_NOT_FOUND", "message": "Không tìm thấy chuyến đi tương ứng với vé này."})
+    """Attach a chat-bot ticket itinerary to a real account, signing in to an existing one or creating a new one.
 
-    target_email = str(payload.email).strip().lower()
-    existing_user = db.scalar(select(User).where(User.email == target_email))
+    Only itineraries that nobody owns yet (or that still belong to the bot's placeholder account) can be claimed,
+    and an existing account is only ever *signed in to* with its password, never modified.
+    """
+    try:
+        claim = account_tokens.find_claim_token(db, payload.claim_token)
+    except InvalidAccountToken:
+        raise _invalid_token()
+    itinerary = db.scalar(select(Itinerary).where(Itinerary.id == claim.itinerary_id).with_for_update())
+    owner = db.get(User, itinerary.user_id) if itinerary is not None and itinerary.user_id else None
+    if itinerary is None or (owner is not None and not is_shadow_email(owner.email)):
+        raise HTTPException(status_code=409, detail={"code": "TICKET_ALREADY_CLAIMED", "message": "Vé này đã được liên kết với một tài khoản."})
 
-    if existing_user is not None:
-        if not verify_password(payload.password, existing_user.password_hash):
-            raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Mật khẩu tài khoản không chính xác."})
-        itinerary.user_id = existing_user.id
-        db.commit()
-        db.refresh(existing_user)
-        _start_session(response, request, db, existing_user)
-        return existing_user
+    email = payload.email
+    _reject_reserved_email(email)
+    account = db.scalar(select(User).where(User.email == email))
+    if account is not None:
+        check = _verify_password(payload.password, account.password_hash)
+        if not account.is_active or not check.valid:
+            record_event(db, "login", outcome="failure", user_id=account.id, ip=_ip(request), user_agent=request.headers.get("user-agent"),
+                         detail={"via": "claim_ticket"})
+            db.commit()
+            raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Email or password is incorrect."})
+        if account.role != "traveler":
+            # Staff accounts sign in through the normal login (admins with MFA) and do not own itineraries.
+            raise HTTPException(status_code=403, detail={"code": "CLAIM_ROLE_FORBIDDEN", "message": "Chỉ tài khoản du khách mới có thể nhận vé."})
+        if check.needs_rehash:
+            account.password_hash = hash_password(payload.password)
+    else:
+        validate_password_policy(payload.password, email=email)
+        display_name = (payload.display_name or "").strip() or email.split("@")[0]
+        account = User(email=email, display_name=display_name, password_hash=hash_password(payload.password), role="traveler")
+        db.add(account)
+        db.flush()
+        _send_verification(db, account)
 
-    shadow_user = db.scalar(select(User).where(User.id == itinerary.user_id)) if itinerary.user_id else None
-    if shadow_user is not None and shadow_user.email.startswith("zalo_"):
-        shadow_user.email = target_email
-        if payload.display_name:
-            shadow_user.display_name = payload.display_name.strip()
-        shadow_user.password_hash = hash_password(payload.password)
-        db.commit()
-        db.refresh(shadow_user)
-        _start_session(response, request, db, shadow_user)
-        return shadow_user
-
-    new_user = User(
-        email=target_email,
-        display_name=payload.display_name.strip() if payload.display_name else target_email.split("@")[0],
-        password_hash=hash_password(payload.password),
-        role="traveler"
-    )
-    db.add(new_user)
-    db.flush()
-    itinerary.user_id = new_user.id
+    try:
+        account_tokens.consume_claim_token(db, claim, account)
+    except InvalidAccountToken:
+        db.rollback()
+        raise _invalid_token()
+    itinerary.user_id = account.id
+    record_event(db, "itinerary_claimed", user_id=account.id, ip=_ip(request), detail={"itinerary_id": itinerary.id})
     db.commit()
-    db.refresh(new_user)
-    _start_session(response, request, db, new_user)
-    return new_user
+    db.refresh(account)
+    _start_session(response, request, db, account)
+    return account

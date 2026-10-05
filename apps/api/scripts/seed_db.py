@@ -37,7 +37,8 @@ def seed(session_factory=SessionLocal) -> None:
             ]
             for email, password, display_name, role in demo_accounts:
                 if password and not db.scalar(select(User.id).where(User.email == email)):
-                    db.add(User(email=email, display_name=display_name, password_hash=hash_password(password), role=role))
+                    db.add(User(email=email, display_name=display_name, password_hash=hash_password(password), role=role,
+                                email_verified_at=datetime.now(timezone.utc)))  # demo accounts skip the email step
             db.commit()
         if db.scalar(select(Provider.id).limit(1)):
             print("Seed data already exists; leaving existing records untouched.")

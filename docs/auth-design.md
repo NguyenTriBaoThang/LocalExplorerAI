@@ -145,7 +145,8 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 | 1 Gói `app/auth/` + migration + test | **Xong**: 139 passed (81 cũ + 58 mới). Chưa nối vào route nào |
 | 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong** (chưa commit): 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
 | 3 Danh mục quyền, ma trận trong DB, `require()`, service account, test duyệt route | **Xong** (chưa commit): 182 passed. `X-Admin-Key`, `require_roles`, `require_admin` đã gỡ |
-| 4–6 | Chưa bắt đầu |
+| 4 Quên mật khẩu, xác minh email, quản lý phiên, sửa `claim-ticket` | **Đang làm**: backend gần xong, chưa có test riêng, chưa làm frontend. Xem `docs/auth-phase4-handoff.md` |
+| 5–6 | Chưa bắt đầu |
 
 Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. **Chưa chạy migration trên PostgreSQL thật.**
 

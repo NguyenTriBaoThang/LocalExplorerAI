@@ -19,6 +19,7 @@ class P:
     ACCOUNT_READ = _p("account:read", "Read own profile")
     ACCOUNT_UPDATE = _p("account:update", "Update own profile")
     ACCOUNT_PASSWORD = _p("account:password", "Change own password")
+    ACCOUNT_SESSIONS = _p("account:sessions", "List and revoke own sign-in sessions")
     # Traveler
     ITINERARY_PLAN = _p("itinerary:plan", "Generate an itinerary")
     ITINERARY_READ = _p("itinerary:read", "Open an itinerary (ownership is enforced per object)")
@@ -64,7 +65,7 @@ class P:
     OPS_READ = _p("ops:read", "Read operational status (also grantable to service accounts)")
 
 
-_ACCOUNT = [P.ACCOUNT_READ, P.ACCOUNT_UPDATE, P.ACCOUNT_PASSWORD, P.BOOKING_READ, P.BOOKING_HISTORY]
+_ACCOUNT = [P.ACCOUNT_READ, P.ACCOUNT_UPDATE, P.ACCOUNT_PASSWORD, P.ACCOUNT_SESSIONS, P.BOOKING_READ, P.BOOKING_HISTORY]
 DEFAULT_GRANTS: dict[str, list[str]] = {
     "traveler": _ACCOUNT + [
         P.ITINERARY_PLAN, P.ITINERARY_READ, P.ITINERARY_LIST, P.ITINERARY_COMPARE, P.ITINERARY_VERSIONS, P.ITINERARY_SHARE,

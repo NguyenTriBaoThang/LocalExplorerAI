@@ -16,6 +16,8 @@ PUBLIC_ROUTES = {
     ("auth", "GET", "/api/auth/google/callback"), ("auth", "GET", "/api/auth/google/start"), ("auth", "GET", "/api/auth/google/status"),
     ("auth", "POST", "/api/auth/claim-ticket"), ("auth", "POST", "/api/auth/login"), ("auth", "POST", "/api/auth/logout"),
     ("auth", "POST", "/api/auth/refresh"), ("auth", "POST", "/api/auth/register"),
+    # Phase 4: anonymous by nature; each is authenticated by a single-use emailed token or reveals nothing.
+    ("auth", "POST", "/api/auth/password/forgot"), ("auth", "POST", "/api/auth/password/reset"), ("auth", "POST", "/api/auth/email/verify"),
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
@@ -192,14 +194,21 @@ def test_seed_migration_matches_the_catalogue_it_froze():
     assert module.PERMISSIONS == {name: registry.description(name) for name in module.PERMISSIONS}
 
 
-def test_seed_migration_runs_and_loads_the_expected_matrix():
+def _load_migration(name: str, path: str):
     import importlib.util
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_seed_migration_runs_and_loads_the_expected_matrix():
+    """0012 seeds the matrix and later revisions add their permissions; together they equal the code defaults."""
     import sqlalchemy as sa
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
-    spec = importlib.util.spec_from_file_location("m0012", "migrations/versions/0012_rbac_seed.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _load_migration("m0012", "migrations/versions/0012_rbac_seed.py")
+    later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py")]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE roles (name VARCHAR(40) PRIMARY KEY, description VARCHAR(255), is_system BOOLEAN, created_at DATETIME)"))
@@ -207,11 +216,16 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
         conn.execute(sa.text("CREATE TABLE role_permissions (role_name VARCHAR(40), permission_name VARCHAR(80))"))
         with Operations.context(MigrationContext.configure(conn)):
             module.upgrade()
+            for revision in later:
+                revision.upgrade()
         grants = {}
         for role, perm in conn.execute(sa.text("SELECT role_name, permission_name FROM role_permissions")):
             grants.setdefault(role, set()).add(perm)
         assert {r: sorted(p) for r, p in grants.items()} == {r: sorted(set(p)) for r, p in DEFAULT_GRANTS.items()}
         with Operations.context(MigrationContext.configure(conn)):
+            for revision in reversed(later):
+                revision.downgrade()
+            assert conn.execute(sa.text("SELECT COUNT(*) FROM permissions WHERE name = 'account:sessions'")).scalar() == 0
             module.downgrade()
         assert conn.execute(sa.text("SELECT COUNT(*) FROM roles")).scalar() == 0
 

@@ -578,5 +578,23 @@ class IntegrationSecret(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class ItineraryClaimToken(Base):
+    """Single-use link that lets a chat-bot traveller attach a ticket itinerary to a real account.
+
+    Kept apart from ``itineraries.share_token``: the share token only grants read access and may be passed around,
+    while this token transfers ownership. Only its SHA-256 hash is stored.
+    """
+
+    __tablename__ = "itinerary_claim_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    itinerary_id: Mapped[str] = mapped_column(ForeignKey("itineraries.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 # Register the auth tables on Base (they live in their own module to keep the auth package independent).
 from app.models import auth_entities  # noqa: E402,F401

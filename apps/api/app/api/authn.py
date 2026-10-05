@@ -8,9 +8,10 @@ from fastapi import Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES, read_cookie, set_auth_cookies
-from app.auth import AccountDisabled, AuthError, AuthRequired, Principal, PrincipalKind, TokenExpired, TokenInvalid, needs_refresh
+from app.auth import AccountDisabled, AuthError, AuthRequired, Principal, PrincipalKind, TokenExpired, TokenInvalid, TokenRevoked, needs_refresh
 from app.core.client_ip import client_ip
 from app.core.config import settings
+from app.models.auth_entities import AuthSession
 from app.models.entities import User
 from app.services.auth_runtime import auth_config, token_service, version_checker
 from app.services.session_service import rotate_session
@@ -66,6 +67,11 @@ def authenticate(request: Request, response: Response, db: Session, *, required:
         return None
 
     version_checker(db).check(claims)
+    # Revoking one session (sign-out, "remove this device") must end its access token now, not when it expires.
+    # Only a revoked row denies: tokens minted without a stored session (tests) have nothing to look up.
+    session = db.get(AuthSession, claims.sid) if claims.sid else None
+    if session is not None and session.revoked_at is not None:
+        raise TokenRevoked()
     user = db.get(User, claims.sub)
     if user is None or not user.is_active:
         raise AccountDisabled()
@@ -92,3 +98,9 @@ def authenticate_principal(request: Request, response: Response, db: Session, *,
     principal = Principal(id=user.id, kind=PrincipalKind.USER, role=user.role, provider_id=user.provider_id,
                           session_id=claims.sid if claims else None, amr=claims.amr if claims else ("pwd",))
     return principal, user
+
+
+def current_session_id(request: Request) -> str | None:
+    """``sid`` of the access token that authenticated this request (after any transparent refresh)."""
+    claims = getattr(request.state, _CLAIMS_ATTR, None)
+    return claims.sid if claims else None

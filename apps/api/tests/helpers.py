@@ -23,8 +23,10 @@ def bearer_for(user, *, amr=("pwd",)) -> dict:
 
 
 def make_user(db, role: str, **kw):
+    from datetime import datetime, timezone
     from uuid import uuid4
     from app.models.entities import User
+    kw.setdefault("email_verified_at", datetime.now(timezone.utc))  # most tests are about other rules; booking needs it
     user = User(id=str(uuid4()), email=f"{role}-{uuid4().hex[:8]}@example.test", display_name=role.title(), role=role, **kw)
     db.add(user)
     db.commit()

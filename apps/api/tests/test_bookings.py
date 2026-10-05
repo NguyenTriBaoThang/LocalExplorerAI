@@ -40,7 +40,8 @@ def _booking_fixture(db_session, quantity_capacity=2, price=100_000):
     expiry = now + timedelta(days=2)
     provider = Provider(id=str(uuid4()), name="Verified provider", slug=f"verified-{uuid4().hex[:8]}", is_active=True, verification_status="verified")
     provider_user = User(id=str(uuid4()), email=f"provider-{uuid4().hex[:8]}@example.org", display_name="Provider", role="provider", provider_id=provider.id)
-    traveler = User(id=str(uuid4()), email=f"traveler-{uuid4().hex[:8]}@example.org", display_name="Traveler", role="traveler")
+    traveler = User(id=str(uuid4()), email=f"traveler-{uuid4().hex[:8]}@example.org", display_name="Traveler", role="traveler",
+                    email_verified_at=datetime.now(timezone.utc))
     poi = POI(name="Verified POI", description="Workshop", latitude=10.77, longitude=106.7,
               geom=WKTElement("POINT(106.7 10.77)", srid=4326), category="craft", address="Verified address",
               verification_status="verified", data_revision=1)
@@ -81,7 +82,8 @@ def test_booking_hold_capacity_provider_confirmation_and_payment_fail_closed(cli
     assert response.json()["amount_vnd"] == 250_000
 
     # The reservation is counted against available seats before another traveler can request them.
-    second_traveler = User(id=str(uuid4()), email=f"second-{uuid4().hex[:8]}@example.org", display_name="Second", role="traveler")
+    second_traveler = User(id=str(uuid4()), email=f"second-{uuid4().hex[:8]}@example.org", display_name="Second", role="traveler",
+                           email_verified_at=datetime.now(timezone.utc))
     second_itinerary = Itinerary(user_id=second_traveler.id, group_size=1, budget_vnd=200_000,
                                  start_at=itinerary.start_at, end_at=itinerary.end_at, status="feasible",
                                  constraints={}, estimated_cost_vnd=125_000)
