@@ -20,7 +20,7 @@
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"/>
   </a>
-  <a href="./SECURITY.md">
+  <a href="./.github/SECURITY.md">
     <img src="https://img.shields.io/badge/Security-Policy-red?logo=shield" alt="Security Policy"/>
   </a>
   <img src="https://img.shields.io/badge/PRD-3.0_Production_Ready-blueviolet" alt="PRD 3.0 Ready"/>
@@ -996,7 +996,11 @@ LoaclExplorerAI/
 ├── .github/
 │   ├── workflows/               # CI/CD Workflows (ci.yml, release.yml)
 │   ├── ISSUE_TEMPLATE/          # Mẫu tạo issue báo lỗi và đề xuất tính năng
-│   └── PULL_REQUEST_TEMPLATE.md # Mẫu gửi Pull Request chuẩn
+│   ├── PULL_REQUEST_TEMPLATE.md # Mẫu gửi Pull Request chuẩn
+│   ├── CONTRIBUTING.md          # Quy chuẩn đóng góp mã nguồn
+│   ├── CODE_OF_CONDUCT.md       # Quy tắc ứng xử
+│   ├── SECURITY.md              # Chính sách bảo mật & báo cáo lỗ hổng
+│   └── SUPPORT.md               # Kênh hỗ trợ
 ├── apps/
 │   ├── api/                     # Backend FastAPI, SQLAlchemy, PostGIS & ML
 │   │   ├── app/
@@ -1049,8 +1053,6 @@ LoaclExplorerAI/
 ├── ARCHITECTURE.md              # Đặc tả kiến trúc kỹ thuật chi tiết
 ├── DEMO_SCRIPT.md               # Kịch bản thuyết trình demo 5-7 phút
 ├── COMPETITION_SUBMISSION.md    # Tài liệu nộp bài hội thi hoàn chỉnh
-├── CONTRIBUTING.md              # Quy chuẩn đóng góp mã nguồn
-├── SECURITY.md                  # Chính sách bảo mật & báo cáo lỗ hổng
 └── README.md                    # Tài liệu tổng quan toàn bộ dự án
 ```
 
@@ -1076,7 +1078,7 @@ LoaclExplorerAI/
 
 ## 🤝 Đóng góp & Giấy phép
 
-Dự án được phân phối theo giấy phép mã nguồn mở **MIT License**. Mọi đóng góp, báo cáo lỗi và đề xuất tính năng mới xin vui lòng gửi thông qua **Pull Request** hoặc **Issues**. Xem thêm tại [CONTRIBUTING.md](CONTRIBUTING.md).
+Dự án được phân phối theo giấy phép mã nguồn mở **MIT License**. Mọi đóng góp, báo cáo lỗi và đề xuất tính năng mới xin vui lòng gửi thông qua **Pull Request** hoặc **Issues**. Xem thêm tại [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ---
 
