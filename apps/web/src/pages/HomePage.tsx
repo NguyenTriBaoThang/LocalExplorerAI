@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom'
 import { CityHero3D } from '../components/3d/CityHero3D'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { useTranslation } from '../i18n'
+import { HomeContentSections } from '../components/content/HomeContentSections'
 
 export function HomePage() {
   const { t, locale } = useTranslation()
@@ -164,6 +165,9 @@ export function HomePage() {
           <CityHero3D />
         </div>
       </section>
+
+      {/* Banners, collections and guides published from the admin portal */}
+      <HomeContentSections />
 
       {/* Quick Vibe Categories */}
       <section className="vibe-section-3d">

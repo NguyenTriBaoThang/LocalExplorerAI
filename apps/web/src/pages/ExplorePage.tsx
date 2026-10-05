@@ -19,6 +19,8 @@ import { MapAdapter } from '../components/map/MapAdapter'
 import { SimulatedBadge, VerificationBadge } from '../components/common/StatusBadge'
 import type { Experience } from '../types'
 import { useTranslation } from '../i18n'
+import { trackPageView } from '../analytics'
+import { ReviewsPanel } from '../components/content/ReviewsPanel'
 
 const topicSuggestions = [
   'cà phê',
@@ -66,7 +68,12 @@ export function ExplorePage() {
   const [radiusKm, setRadiusKm] = useState(15)
   const [slotId, setSlotId] = useState('')
   const [semantic, setSemantic] = useState(false)
-  const [selectedId, setSelectedId] = useState('')
+  const [selectedId, setSelectedId] = useState(searchParams.get('focus') || '')
+  // A deliberate pick counts as a view of that experience (partner statistics); the automatic first pick does not.
+  const selectExperience = (id: string) => {
+    setSelectedId(id)
+    trackPageView('/explore', { entity_type: 'experience', entity_id: id })
+  }
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   useEffect(() => {
@@ -439,7 +446,7 @@ export function ExplorePage() {
                   key={experience.id}
                   experience={experience}
                   selected={selectedId === experience.id}
-                  onSelect={() => setSelectedId(experience.id)}
+                  onSelect={() => selectExperience(experience.id)}
                 />
               ))
             ) : (
@@ -472,9 +479,11 @@ export function ExplorePage() {
           <MapAdapter
             points={points}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={selectExperience}
             className="explore-map-container"
           />
+
+          {selectedId && <ReviewsPanel experienceId={selectedId} />}
 
           <div className="map-footer-caption">
             <span className="live-dot-glow" />
