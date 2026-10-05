@@ -1,8 +1,10 @@
 import base64
 import hashlib
+import re
 import secrets
 from datetime import datetime, timezone
 from urllib.parse import urlencode, urlsplit
+from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -13,7 +15,8 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_db
 from app.core.config import settings
 from app.models.auth_entities import AuthSession
-from app.models.entities import User, Itinerary
+from app.models.entities import AuditLog, Itinerary, Provider, User
+from app.schemas.partner import PartnerApplicationUpdate, PartnerRegisterRequest, apply_application_fields
 from app.schemas.auth import (
     ClaimTicketRequest, ForgotPasswordRequest, LoginRequest, MfaChallenge, MfaLoginRequest, PasswordChangeRequest, ProfileUpdateRequest,
     RegisterRequest, ResetPasswordRequest, SessionRead, UserRead, VerifyEmailRequest,
@@ -477,3 +480,50 @@ def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Respon
     db.refresh(account)
     _start_session(response, request, db, account)
     return account
+
+
+def _open_partner_application(db: Session, user: User, application: PartnerApplicationUpdate) -> Provider:
+    """Create the pending provider profile for ``user`` and link the account to it as a provider."""
+    slug_base = re.sub(r"[^a-z0-9]+", "-", application.business_name.strip().lower()).strip("-")[:160] or "partner"
+    provider = Provider(id=str(uuid4()), slug=f"{slug_base}-{uuid4().hex[:8]}", contact_email=user.email,
+                        verification_status="pending", is_active=True, applied_at=datetime.now(timezone.utc))
+    apply_application_fields(provider, application)
+    db.add(provider)
+    db.flush()
+    user.role, user.provider_id = "provider", provider.id
+    db.add(AuditLog(id=str(uuid4()), actor_id=user.id, action="partner.application_submitted", target_type="provider",
+                    target_id=provider.id, details={}, created_at=datetime.now(timezone.utc)))
+    return provider
+
+
+@router.post("/partner/register", response_model=UserRead, status_code=201, dependencies=[Depends(public('partner account creation; the profile stays pending until an administrator approves it'))])
+def register_partner(payload: PartnerRegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    email = str(payload.email).strip().lower()
+    _reject_reserved_email(email)
+    validate_password_policy(payload.password, email=email)
+    if db.scalar(select(User.id).where(User.email == email)):
+        raise HTTPException(status_code=409, detail={"code": "EMAIL_IN_USE", "message": "This email is already registered."})
+    user = User(email=email, display_name=payload.display_name.strip(), password_hash=hash_password(payload.password), role="traveler")
+    db.add(user)
+    db.flush()
+    _open_partner_application(db, user, payload.application)
+    _send_verification(db, user)
+    db.commit()
+    db.refresh(user)
+    _start_session(response, request, db, user)
+    return user
+
+
+@router.post("/partner/apply", response_model=UserRead, status_code=201)
+def apply_as_partner(payload: PartnerApplicationUpdate, request: Request, response: Response,
+                     user: User = Depends(require_user(P.ACCOUNT_UPDATE)), db: Session = Depends(get_db)):
+    """An existing traveler account applies to become a partner. The role change ends its old sessions, so a new one starts."""
+    if user.role != "traveler" or user.provider_id:
+        raise HTTPException(status_code=409, detail={"code": "ALREADY_STAFF", "message": "Only traveler accounts can apply to become a partner."})
+    _open_partner_application(db, user, payload)
+    bump_token_version(db, user, reason="role_or_status_changed")
+    db.commit()
+    invalidate_user_state(user.id)
+    db.refresh(user)
+    _start_session(response, request, db, user)
+    return user

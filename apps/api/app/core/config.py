@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
     web_app_url: str = "http://localhost:5173"
+    # Partner/admin portal. Account emails for provider and admin users link here; empty falls back to web_app_url.
+    portal_app_url: str = ""
     vnpay_environment: Literal["sandbox", "production"] = "sandbox"
     vnpay_tmn_code: str | None = None
     vnpay_hash_secret: str | None = None

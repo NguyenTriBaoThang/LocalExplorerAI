@@ -38,6 +38,7 @@ class P:
     BOOKING_CANCEL = _p("booking:cancel", "Cancel own unpaid booking")
     BOOKING_CHECKOUT = _p("booking:checkout", "Start payment for own booking")
     BOOKING_HISTORY = _p("booking:history", "Read a booking's status history (participants only)")
+    REVIEW_WRITE = _p("review:write", "Review an experience after attending it")
     # Provider
     PROVIDER_PROFILE = _p("provider:profile", "Read own provider profile")
     PROVIDER_EXPERIENCE = _p("provider:experience", "Manage own experiences")
@@ -48,6 +49,8 @@ class P:
     PROVIDER_BOOKING_READ = _p("provider:booking_read", "Read booking requests addressed to the provider")
     PROVIDER_BOOKING_DECIDE = _p("provider:booking_decide", "Accept or reject bookings and cancellations")
     PROVIDER_SLOT_ASSIST = _p("provider:slot_assist", "Use the slot assistant")
+    PROVIDER_REVIEWS = _p("provider:reviews", "Read and reply to reviews of own experiences")
+    PROVIDER_ANALYTICS = _p("provider:analytics", "Read views and conversion of own experiences")
     # Administration
     ADMIN_DASHBOARD = _p("admin:dashboard", "Read the admin dashboard")
     ADMIN_USERS = _p("admin:users", "List and update users")
@@ -63,6 +66,9 @@ class P:
     ADMIN_MODELS_3D = _p("admin:models_3d", "Save 3D model calibration")
     ADMIN_RBAC = _p("admin:rbac", "View and edit the role-permission matrix")
     ADMIN_SERVICE_ACCOUNTS = _p("admin:service_accounts", "Manage service accounts")
+    ADMIN_PLACES = _p("admin:places", "Create, edit, publish and hide places and landmarks")
+    ADMIN_CONTENT = _p("admin:content", "Manage banners, articles and collections on the traveler web")
+    ADMIN_ANALYTICS = _p("admin:analytics", "Read traffic analytics")
     OPS_READ = _p("ops:read", "Read operational status (also grantable to service accounts)")
 
 
@@ -71,11 +77,11 @@ DEFAULT_GRANTS: dict[str, list[str]] = {
     "traveler": _ACCOUNT + [
         P.ITINERARY_PLAN, P.ITINERARY_READ, P.ITINERARY_LIST, P.ITINERARY_COMPARE, P.ITINERARY_VERSIONS, P.ITINERARY_SHARE,
         P.ITINERARY_FEEDBACK, P.NOTIFICATION_READ, P.CHAT_USE, P.REPLAN_ADVISE, P.REPLAN_ACCEPT, P.BOOKING_CREATE,
-        P.BOOKING_CANCEL, P.BOOKING_CHECKOUT,
+        P.BOOKING_CANCEL, P.BOOKING_CHECKOUT, P.REVIEW_WRITE,
     ],
     "provider": _ACCOUNT + [
         P.PROVIDER_PROFILE, P.PROVIDER_EXPERIENCE, P.PROVIDER_POI, P.PROVIDER_EVIDENCE, P.PROVIDER_SLOT, P.PROVIDER_AUDIT,
-        P.PROVIDER_BOOKING_READ, P.PROVIDER_BOOKING_DECIDE, P.PROVIDER_SLOT_ASSIST,
+        P.PROVIDER_BOOKING_READ, P.PROVIDER_BOOKING_DECIDE, P.PROVIDER_SLOT_ASSIST, P.PROVIDER_REVIEWS, P.PROVIDER_ANALYTICS,
     ],
     "admin": _ACCOUNT + [name for name in registry.names() if name.startswith("admin:")] + [P.OPS_READ],
 }
