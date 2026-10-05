@@ -57,7 +57,7 @@ The versioned prompt catalog lives under `apps/api/app/prompts/`; the active ver
 
 `GET /api/ai/prompts` returns the active manifest/version and the eight prompt IDs.
 
-Legacy AI admin routes accept a valid `X-Admin-Key: $ADMIN_API_KEY` or an authenticated admin session:
+Administrator AI tools require an authenticated admin session with the `admin:ai_tools` permission (the old shared `X-Admin-Key` was removed):
 
 - `POST /api/experiences/{id}/ai-tag` — run EXPERIENCE_TAGGER, persist tags, hands-on, indoor, primary intent, weather sensitivity, and prompt version.
 - `POST /api/ai/intent-similarity` — run INTENT_SIMILARITY for two experience IDs and upsert the canonical pair into `intent_similarities`.
@@ -73,7 +73,7 @@ Traveler and provider workflows:
 - `POST /api/providers/{provider_id}/slot-assistant/preview` — send `X-Provider-Access-Key`, a short message, and exact selected `slot_ids`. Runs PROVIDER_ASSISTANT and returns a five-minute signed confirmation token; it does not mutate availability. `PAUSE_DAY` is accepted only when the selection covers every not-yet-cancelled slot for that provider today.
 - `POST /api/providers/{provider_id}/slot-assistant/confirm` — send the preview token and provider key to apply the scoped change. The provider's access key is provisioned out of band in `providers.portal_access_key`. Cancellation changes slots and emits `SLOT_CANCELLED` events for re-planning.
 
-Provider confirmation uses `APP_SIGNING_SECRET`; production must set both `APP_SIGNING_SECRET` and `ADMIN_API_KEY`. Never expose the model key, signing secret, admin key, provider access key, or confirmation tokens in browser logs or public responses.
+Provider confirmation uses `APP_SIGNING_SECRET`; production must set `APP_SIGNING_SECRET`. Never expose the model key, signing secret, service-account keys, provider access key, or confirmation tokens in browser logs or public responses.
 
 ## Booking and payment boundary
 

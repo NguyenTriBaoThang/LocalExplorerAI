@@ -8,7 +8,7 @@ from fastapi import Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES, read_cookie, set_auth_cookies
-from app.auth import AccountDisabled, AuthError, AuthRequired, TokenExpired, TokenInvalid, needs_refresh
+from app.auth import AccountDisabled, AuthError, AuthRequired, Principal, PrincipalKind, TokenExpired, TokenInvalid, needs_refresh
 from app.core.client_ip import client_ip
 from app.core.config import settings
 from app.models.entities import User
@@ -16,6 +16,7 @@ from app.services.auth_runtime import auth_config, token_service, version_checke
 from app.services.session_service import rotate_session
 
 _CACHE_ATTR = "_auth_result"
+_CLAIMS_ATTR = "_auth_claims"
 
 
 def _bearer(request: Request) -> str | None:
@@ -71,4 +72,23 @@ def authenticate(request: Request, response: Response, db: Session, *, required:
     if issued is not None:
         set_auth_cookies(response, request, issued)
     setattr(request.state, _CACHE_ATTR, user)
+    setattr(request.state, _CLAIMS_ATTR, claims)
     return user
+
+
+def authenticate_principal(request: Request, response: Response, db: Session, *, required: bool = True) -> tuple[Principal | None, User | None]:
+    """Like ``authenticate`` but also accepts service-account API keys (``Authorization: Bearer lek_...``).
+
+    Returns ``(principal, user)``; ``user`` is the ORM row for people and ``None`` for service accounts.
+    """
+    bearer = _bearer(request)
+    if bearer and bearer.startswith("lek_"):
+        from app.services.rbac_service import authenticate_service_key
+        return authenticate_service_key(db, bearer), None
+    user = authenticate(request, response, db, required=required)
+    if user is None:
+        return None, None
+    claims = getattr(request.state, _CLAIMS_ATTR, None)
+    principal = Principal(id=user.id, kind=PrincipalKind.USER, role=user.role, provider_id=user.provider_id,
+                          session_id=claims.sid if claims else None, amr=claims.amr if claims else ("pwd",))
+    return principal, user

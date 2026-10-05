@@ -52,7 +52,6 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
     llm_fallback_enabled: bool = False
-    admin_api_key: str | None = None
     app_signing_secret: str | None = None
     auth_secret: str | None = None
     session_ttl_seconds: int = 7200

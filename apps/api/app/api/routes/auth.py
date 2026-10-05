@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db
+from app.api.dependencies import get_db
 from app.core.config import settings
 from app.models.entities import User, Itinerary
 from app.schemas.auth import ClaimTicketRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
@@ -19,6 +19,8 @@ from app.core.client_ip import client_ip
 from app.services.auth_runtime import invalidate_user_state
 from app.services.session_service import bump_token_version, record_event, revoke_by_refresh_token, rotate_session, start_session
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
+from app.api.guards import public, require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -76,7 +78,7 @@ def _google_configuration_issue(db: Session) -> str | None:
     return None
 
 
-@router.post("/register", response_model=UserRead, status_code=201)
+@router.post("/register", response_model=UserRead, status_code=201, dependencies=[Depends(public('account creation'))])
 def register(payload: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     email = str(payload.email).strip().lower()
     if db.scalar(select(User.id).where(User.email == email)):
@@ -89,7 +91,7 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
     return user
 
 
-@router.post("/login", response_model=UserRead)
+@router.post("/login", response_model=UserRead, dependencies=[Depends(public('credentials are checked in the handler'))])
 def login(payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     email = str(payload.email).strip().lower()
     user = db.scalar(select(User).where(User.email == email))
@@ -106,7 +108,7 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
     return user
 
 
-@router.post("/refresh", response_model=UserRead)
+@router.post("/refresh", response_model=UserRead, dependencies=[Depends(public('authenticated by the refresh cookie'))])
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     token = read_cookie(request, REFRESH_NAMES)
     if not token:
@@ -117,12 +119,12 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
 
 @router.get("/me", response_model=UserRead)
-def get_profile(user: User = Depends(get_current_user)):
+def get_profile(user: User = Depends(require_user(P.ACCOUNT_READ))):
     return user
 
 
 @router.patch("/me", response_model=UserRead)
-def update_profile(payload: ProfileUpdateRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_profile(payload: ProfileUpdateRequest, user: User = Depends(require_user(P.ACCOUNT_UPDATE)), db: Session = Depends(get_db)):
     user.display_name = payload.display_name.strip()
     user.phone = payload.phone.strip() if payload.phone else None
     db.commit()
@@ -131,7 +133,7 @@ def update_profile(payload: ProfileUpdateRequest, user: User = Depends(get_curre
 
 
 @router.post("/password")
-def change_password(payload: PasswordChangeRequest, request: Request, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(payload: PasswordChangeRequest, request: Request, response: Response, user: User = Depends(require_user(P.ACCOUNT_PASSWORD)), db: Session = Depends(get_db)):
     if user.password_hash and not verify_password(payload.current_password or "", user.password_hash):
         raise HTTPException(status_code=400, detail={"code": "CURRENT_PASSWORD_INVALID", "message": "Current password is incorrect."})
     user.password_hash = hash_password(payload.new_password)
@@ -143,7 +145,7 @@ def change_password(payload: PasswordChangeRequest, request: Request, response: 
     return {"updated": True}
 
 
-@router.post("/logout", status_code=204)
+@router.post("/logout", status_code=204, dependencies=[Depends(public('idempotent; revokes the refresh token it is given'))])
 def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     token = read_cookie(request, REFRESH_NAMES)
     if token:
@@ -151,7 +153,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     clear_auth_cookies(response, request)
 
 
-@router.get("/google/start")
+@router.get("/google/start", dependencies=[Depends(public('starts the OAuth flow'))])
 def google_start(request: Request, db: Session = Depends(get_db)):
     config = _google_config(db)
     issue = _google_configuration_issue(db)
@@ -177,7 +179,7 @@ def google_start(request: Request, db: Session = Depends(get_db)):
     return response
 
 
-@router.get("/google/status")
+@router.get("/google/status", dependencies=[Depends(public('reports whether Google sign-in is configured'))])
 def google_status(db: Session = Depends(get_db)):
     config = _google_config(db)
     issue = _google_configuration_issue(db)
@@ -188,7 +190,7 @@ def google_status(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/google/callback")
+@router.get("/google/callback", dependencies=[Depends(public('OAuth callback; validated by state and PKCE'))])
 def google_callback(request: Request, db: Session = Depends(get_db)):
     config = _google_config(db)
     if _google_configuration_issue(db):
@@ -248,7 +250,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     return response
 
 
-@router.post("/claim-ticket", response_model=UserRead)
+@router.post("/claim-ticket", response_model=UserRead, dependencies=[Depends(public('ticket link claim; to be tightened in phase 4'))])
 def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     itinerary = db.scalar(select(Itinerary).where(Itinerary.share_token == payload.share_token))
     if itinerary is None:

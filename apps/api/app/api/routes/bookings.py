@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db, require_roles
+from app.api.dependencies import get_db
 from app.core.client_ip import client_ip as request_client_ip
 from app.core.config import settings
 from app.core.request_context import current_request_id
@@ -34,6 +34,8 @@ from app.services.notifications import queue_booking_status
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.services.momo import MomoProviderError, MomoRejectedError, build_create_payload, create_payment_url, get_momo_config, verify_ipn_signature
 from app.services.vnpay import build_payment_url, get_vnpay_config, verify_params
+from app.api.guards import public, require_user
+from app.api.permissions import P
 
 router = APIRouter(tags=["bookings and payments"])
 _LIVE_STATUSES = ("pending_provider", "awaiting_payment", "confirmed", "cancellation_requested")
@@ -122,7 +124,7 @@ def _payload(db: Session, booking: Booking) -> dict:
     }
 
 
-@router.get("/api/payments/status")
+@router.get("/api/payments/status", dependencies=[Depends(public('gateway readiness; no sensitive data'))])
 def payment_status(db: Session = Depends(get_db)):
     try:
         selected = (resolve_integration_value(db, "payments", "provider") or "vnpay").strip().lower()
@@ -168,7 +170,7 @@ def _payment_return_redirect(*, payment: str, booking: Booking | None = None) ->
     return RedirectResponse(f"{target}?{urlencode(query)}", status_code=303)
 
 
-@router.get("/api/payments/vnpay/return", include_in_schema=False)
+@router.get("/api/payments/vnpay/return", include_in_schema=False, dependencies=[Depends(public('browser redirect from the gateway; result verified by signature'))])
 def vnpay_return(request: Request, db: Session = Depends(get_db)):
     """Display-only return; settlement is exclusively performed by the signed IPN."""
     try:
@@ -191,7 +193,7 @@ def vnpay_return(request: Request, db: Session = Depends(get_db)):
     return _payment_return_redirect(payment="returned", booking=booking)
 
 
-@router.get("/api/payments/vnpay/ipn", include_in_schema=False)
+@router.get("/api/payments/vnpay/ipn", include_in_schema=False, dependencies=[Depends(public('server-to-server webhook verified by HMAC signature'))])
 def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     """Idempotent VNPay server callback. Never trust browser return parameters for settlement."""
     try:
@@ -302,7 +304,7 @@ def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     return _vnpay_reply("00", "Confirm Success")
 
 
-@router.get("/api/payments/momo/return", include_in_schema=False)
+@router.get("/api/payments/momo/return", include_in_schema=False, dependencies=[Depends(public('browser redirect from the gateway; result verified by signature'))])
 def momo_return(request: Request, db: Session = Depends(get_db)):
     """MoMo browser redirect is display-only; signed IPN alone settles the ledger."""
     order_id = request.query_params.get("orderId", "")
@@ -316,7 +318,7 @@ def momo_return(request: Request, db: Session = Depends(get_db)):
     return _payment_return_redirect(payment="returned", booking=booking)
 
 
-@router.post("/api/payments/momo/ipn", include_in_schema=False)
+@router.post("/api/payments/momo/ipn", include_in_schema=False, dependencies=[Depends(public('server-to-server webhook verified by HMAC signature'))])
 async def momo_ipn(request: Request, db: Session = Depends(get_db)):
     """Validate MoMo's HMAC notification and acknowledge it with the documented 204."""
     try:
@@ -431,7 +433,7 @@ async def momo_ipn(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/api/bookings", status_code=201)
-def request_booking(payload: BookingHoldRequest, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def request_booking(payload: BookingHoldRequest, user: User = Depends(require_user(P.BOOKING_CREATE)), db: Session = Depends(get_db)):
     now = _now()
     itinerary = db.get(Itinerary, payload.itinerary_id)
     if itinerary is None:
@@ -497,7 +499,7 @@ def request_booking(payload: BookingHoldRequest, user: User = Depends(require_ro
 
 
 @router.get("/api/bookings")
-def my_bookings(itinerary_id: str | None = Query(default=None, max_length=36), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def my_bookings(itinerary_id: str | None = Query(default=None, max_length=36), user: User = Depends(require_user(P.BOOKING_READ)), db: Session = Depends(get_db)):
     now = _now()
     for booking in db.scalars(select(Booking).where(
         Booking.user_id == user.id, Booking.status.in_(_HOLD_STATUSES),
@@ -516,7 +518,7 @@ def my_bookings(itinerary_id: str | None = Query(default=None, max_length=36), u
 
 
 @router.post("/api/bookings/{booking_id}/cancel")
-def cancel_booking(booking_id: str, payload: BookingCancelRequest, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def cancel_booking(booking_id: str, payload: BookingCancelRequest, user: User = Depends(require_user(P.BOOKING_CANCEL)), db: Session = Depends(get_db)):
     booking = db.scalar(select(Booking).where(Booking.id == booking_id).with_for_update())
     if booking is None or booking.user_id != user.id:
         raise HTTPException(status_code=404, detail={"code": "BOOKING_NOT_FOUND", "message": "Không tìm thấy yêu cầu đặt chỗ."})
@@ -541,7 +543,7 @@ def cancel_booking(booking_id: str, payload: BookingCancelRequest, user: User = 
 
 
 @router.post("/api/bookings/{booking_id}/checkout")
-def begin_checkout(booking_id: str, request: Request, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def begin_checkout(booking_id: str, request: Request, user: User = Depends(require_user(P.BOOKING_CHECKOUT)), db: Session = Depends(get_db)):
     booking = db.scalar(select(Booking).where(Booking.id == booking_id).with_for_update())
     if booking is None or booking.user_id != user.id:
         raise HTTPException(status_code=404, detail={"code": "BOOKING_NOT_FOUND", "message": "Không tìm thấy yêu cầu đặt chỗ."})
@@ -672,7 +674,7 @@ def begin_checkout(booking_id: str, request: Request, user: User = Depends(requi
 
 
 @router.get("/api/provider/me/bookings")
-def provider_bookings(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def provider_bookings(user: User = Depends(require_user(P.PROVIDER_BOOKING_READ)), db: Session = Depends(get_db)):
     provider = db.get(Provider, user.provider_id) if user.provider_id else None
     if provider is None or not provider.is_active:
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_PROFILE_REQUIRED", "message": "Tài khoản chưa có hồ sơ cơ sở hoạt động."})
@@ -691,7 +693,7 @@ def provider_bookings(user: User = Depends(require_roles("provider")), db: Sessi
 
 
 @router.post("/api/provider/me/bookings/{booking_id}/decision")
-def decide_booking(booking_id: str, payload: BookingDecisionRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def decide_booking(booking_id: str, payload: BookingDecisionRequest, user: User = Depends(require_user(P.PROVIDER_BOOKING_DECIDE)), db: Session = Depends(get_db)):
     provider = db.get(Provider, user.provider_id) if user.provider_id else None
     if provider is None or not provider.is_active:
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_PROFILE_REQUIRED", "message": "Tài khoản chưa có hồ sơ cơ sở hoạt động."})
@@ -732,7 +734,7 @@ def decide_booking(booking_id: str, payload: BookingDecisionRequest, user: User 
 
 
 @router.post("/api/provider/me/bookings/{booking_id}/cancellation-decision")
-def decide_cancellation(booking_id: str, payload: BookingCancellationDecisionRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def decide_cancellation(booking_id: str, payload: BookingCancellationDecisionRequest, user: User = Depends(require_user(P.PROVIDER_BOOKING_DECIDE)), db: Session = Depends(get_db)):
     provider = db.get(Provider, user.provider_id) if user.provider_id else None
     if provider is None or not provider.is_active:
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_PROFILE_REQUIRED", "message": "Tài khoản chưa có hồ sơ cơ sở hoạt động."})
@@ -773,7 +775,7 @@ def decide_cancellation(booking_id: str, payload: BookingCancellationDecisionReq
 
 
 @router.get("/api/bookings/{booking_id}/history")
-def booking_history(booking_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def booking_history(booking_id: str, user: User = Depends(require_user(P.BOOKING_HISTORY)), db: Session = Depends(get_db)):
     booking = db.get(Booking, booking_id)
     if booking is None:
         raise HTTPException(status_code=404, detail={"code": "BOOKING_NOT_FOUND", "message": "Không tìm thấy yêu cầu đặt chỗ."})

@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.schemas.ml import FloodRiskRequest, RankExperiencesRequest
 from app.services.flood_model_service import FloodModelUnavailable, flood_model_service
 from app.services.ml_ranker_service import MLRankerUnavailable, ranker_service
+from app.api.guards import public
 
 
 router = APIRouter(prefix="/api/ml", tags=["local ML models"])
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(public('local model inference; nothing is persisted'))])
 def model_status():
     return {
         "experience_ranker": ranker_service.status(),
@@ -16,7 +17,7 @@ def model_status():
     }
 
 
-@router.post("/rank-experiences")
+@router.post("/rank-experiences", dependencies=[Depends(public('local model inference; nothing is persisted'))])
 def rank_experiences(payload: RankExperiencesRequest):
     query = payload.query.model_dump()
     candidates = [candidate.model_dump() for candidate in payload.candidates]
@@ -33,7 +34,7 @@ def rank_experiences(payload: RankExperiencesRequest):
     }
 
 
-@router.post("/flood-risk")
+@router.post("/flood-risk", dependencies=[Depends(public('local model inference; nothing is persisted'))])
 def predict_flood_risk(payload: FloodRiskRequest):
     samples = [sample.model_dump(mode="json", exclude_none=True) for sample in payload.samples]
     try:

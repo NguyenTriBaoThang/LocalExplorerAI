@@ -1,4 +1,4 @@
-from app.api.dependencies import get_current_user
+from tests.helpers import sign_in
 from app.core.config import settings
 from app.models.entities import AuditLog, Evidence, IntegrationSecret, PlaceImportBatch, PlaceImportCandidate, POI, User
 from cryptography.fernet import Fernet
@@ -15,7 +15,7 @@ def _admin_session(client, db_session):
     admin = User(id=str(uuid4()), email=f"admin-{uuid4().hex[:8]}@example.org", display_name="Admin", role="admin")
     db_session.add(admin)
     db_session.commit()
-    client.app.dependency_overrides[get_current_user] = lambda: admin
+    sign_in(client, admin)
     return admin
 
 

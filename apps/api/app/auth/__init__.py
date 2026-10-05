@@ -1,3 +1,4 @@
+# ruff: noqa: F401  (this module only re-exports the package API)
 """Authentication and authorization toolkit.
 
 The core modules here do not import FastAPI or the application's models; the FastAPI adapter and the database

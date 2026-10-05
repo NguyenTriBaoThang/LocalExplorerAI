@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import func, select
 
-from app.api.dependencies import get_current_user
+from tests.helpers import sign_in
 from app.api.routes import bookings as booking_routes
 from app.core.config import settings
 from app.models.entities import (
@@ -72,8 +72,7 @@ def _booking_fixture(db_session, quantity_capacity=2, price=100_000):
 
 def test_booking_hold_capacity_provider_confirmation_and_payment_fail_closed(client, db_session):
     traveler, provider_user, itinerary, stop, slot = _booking_fixture(db_session, quantity_capacity=2, price=125_000)
-    current_user = [traveler]
-    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    sign_in(client, traveler)
 
     response = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 2})
     assert response.status_code == 201, response.text
@@ -91,16 +90,16 @@ def test_booking_hold_capacity_provider_confirmation_and_payment_fail_closed(cli
                                 start_at=stop.start_at, end_at=stop.end_at, activity_duration_min=60, cost_vnd=125_000)
     db_session.add_all([second_traveler, second_itinerary, second_stop])
     db_session.commit()
-    current_user[0] = second_traveler
+    sign_in(client, second_traveler)
     rejected = client.post("/api/bookings", json={"itinerary_id": second_itinerary.id, "itinerary_stop_id": second_stop.id, "quantity": 1})
     assert rejected.status_code == 409
     assert rejected.json()["error"]["code"] == "INSUFFICIENT_CAPACITY"
 
-    current_user[0] = provider_user
+    sign_in(client, provider_user)
     accepted = client.post(f"/api/provider/me/bookings/{booking_id}/decision", json={"action": "accept", "note": "Seats checked"})
     assert accepted.status_code == 200, accepted.text
     assert accepted.json()["status"] == "awaiting_payment"
-    current_user[0] = traveler
+    sign_in(client, traveler)
     checkout = client.post(f"/api/bookings/{booking_id}/checkout")
     assert checkout.status_code == 503
     assert checkout.json()["error"]["code"] == "PAYMENT_GATEWAY_NOT_CONFIGURED"
@@ -116,11 +115,10 @@ def test_booking_hold_capacity_provider_confirmation_and_payment_fail_closed(cli
 
 def test_free_reservation_becomes_confirmed_after_provider_capacity_acceptance(client, db_session):
     traveler, provider_user, itinerary, stop, _slot = _booking_fixture(db_session, quantity_capacity=1, price=0)
-    current_user = [traveler]
-    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    sign_in(client, traveler)
     hold = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 1})
     assert hold.status_code == 201, hold.text
-    current_user[0] = provider_user
+    sign_in(client, provider_user)
     confirmation = client.post(f"/api/provider/me/bookings/{hold.json()['id']}/decision", json={"action": "accept"})
     assert confirmation.status_code == 200, confirmation.text
     assert confirmation.json()["status"] == "confirmed"
@@ -136,15 +134,14 @@ def _prepare_vnpay_booking(client, db_session, monkeypatch):
     monkeypatch.setattr(settings, "vnpay_ipn_url", "https://payments.example.org/api/payments/vnpay/ipn")
 
     traveler, provider_user, itinerary, stop, _slot = _booking_fixture(db_session, quantity_capacity=2, price=125_000)
-    current_user = [traveler]
-    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    sign_in(client, traveler)
     hold = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 2})
     assert hold.status_code == 201, hold.text
     booking_id = hold.json()["id"]
-    current_user[0] = provider_user
+    sign_in(client, provider_user)
     accepted = client.post(f"/api/provider/me/bookings/{booking_id}/decision", json={"action": "accept", "note": "Capacity checked"})
     assert accepted.status_code == 200, accepted.text
-    current_user[0] = traveler
+    sign_in(client, traveler)
     checkout = client.post(f"/api/bookings/{booking_id}/checkout")
     assert checkout.status_code == 200, checkout.text
     payment = db_session.scalar(select(PaymentTransaction).where(PaymentTransaction.booking_id == booking_id))
@@ -258,15 +255,14 @@ def _prepare_momo_booking(client, db_session, monkeypatch):
     monkeypatch.setattr(booking_routes, "create_payment_url", lambda _config, _payload: "https://test-payment.momo.vn/v2/gateway/pay?test=1")
 
     traveler, provider_user, itinerary, stop, _slot = _booking_fixture(db_session, quantity_capacity=2, price=125_000)
-    current_user = [traveler]
-    client.app.dependency_overrides[get_current_user] = lambda: current_user[0]
+    sign_in(client, traveler)
     hold = client.post("/api/bookings", json={"itinerary_id": itinerary.id, "itinerary_stop_id": stop.id, "quantity": 2})
     assert hold.status_code == 201, hold.text
     booking_id = hold.json()["id"]
-    current_user[0] = provider_user
+    sign_in(client, provider_user)
     accepted = client.post(f"/api/provider/me/bookings/{booking_id}/decision", json={"action": "accept", "note": "Capacity checked"})
     assert accepted.status_code == 200, accepted.text
-    current_user[0] = traveler
+    sign_in(client, traveler)
     checkout = client.post(f"/api/bookings/{booking_id}/checkout")
     assert checkout.status_code == 200, checkout.text
     payment = db_session.scalar(select(PaymentTransaction).where(PaymentTransaction.booking_id == booking_id))

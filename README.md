@@ -915,7 +915,7 @@ Tạo file `.env` tại thư mục gốc từ mẫu `.env.example`:
 | `AUTH_SECRET` | *(chuỗi ngẫu nhiên >= 32 ký tự)* | Khóa bí mật ký mã hóa session cookie HTTP-only |
 | `APP_SIGNING_SECRET` | *(chuỗi ngẫu nhiên)* | Khóa ký token xác nhận 2 bước cho Provider Slot Assistant |
 | `INTEGRATION_SECRETS_KEY` | *(khóa Fernet base64)* | Master key mã hóa AES-128-CBC cho các cổng tích hợp động |
-| `ADMIN_API_KEY` | *(tùy chọn)* | Khóa bảo mật gọi các endpoint AI và Ops quản trị viên |
+| *(đã bỏ)* `ADMIN_API_KEY` | — | Thay bằng service account: tạo khóa `lek_...` qua `POST /api/admin/service-accounts` (chỉ quyền `ops:read`) |
 | `OPENAI_API_KEY` | *(tùy chọn)* | API key cho các prompt LLM (Hỗ trợ OpenAI hoặc Gemini API compatible) |
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | URL endpoint của nhà cung cấp LLM |
 | `ROUTING_PROVIDER` | `goong` | Nhà cung cấp tuyến đường (`goong` hoặc `mock` cho test/demo) |

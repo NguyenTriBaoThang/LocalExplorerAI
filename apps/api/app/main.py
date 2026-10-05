@@ -7,15 +7,16 @@ from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, ml, models_3d, ops, planner, provider, routing
+from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, ml, models_3d, ops, planner, provider, rbac, routing
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
+from app.api.guards import public
 from app.auth import AuthError
 from app.core.config import settings
 from app.core.request_context import current_request_id
@@ -145,7 +146,7 @@ async def invalid_output_handler(request: Request, exc: InvalidStructuredOutput)
     return error_response(request, "INVALID_MODEL_OUTPUT", str(exc), status_code=502)
 
 
-@app.get("/")
+@app.get("/", dependencies=[Depends(public("API information"))])
 def root():
     return {"name": "Local Explorer AI API", "docs": "/docs", "data_mode": "real" if settings.real_data_only else "mixed"}
 
@@ -156,6 +157,7 @@ app.include_router(auth.router)
 app.include_router(provider.router)
 app.include_router(bookings.router)
 app.include_router(admin.router)
+app.include_router(rbac.router)
 app.include_router(catalog.router)
 app.include_router(planner.router)
 app.include_router(chat.router)

@@ -92,3 +92,31 @@ def reset_auth_runtime() -> None:
     auth_config.cache_clear()
     token_service.cache_clear()
     state_store.cache_clear()
+
+
+# --- role-permission matrix version, shared between workers through Redis -------------------------------------
+_PERM_VERSION_KEY = "auth:perm_ver"
+_perm_redis_skip_until = 0.0
+
+
+def matrix_version() -> int | None:
+    """Shared counter bumped whenever the matrix is edited; ``None`` when Redis is unavailable (or in tests)."""
+    global _perm_redis_skip_until
+    if settings.app_env.lower() == "test" or time.monotonic() < _perm_redis_skip_until:
+        return None
+    try:
+        from app.services.rate_limit import _redis
+        return int(_redis().get(_PERM_VERSION_KEY) or 0)
+    except Exception:
+        _perm_redis_skip_until = time.monotonic() + _REDIS_RETRY_SECONDS
+        return None
+
+
+def bump_matrix_version() -> None:
+    if settings.app_env.lower() == "test":
+        return
+    try:
+        from app.services.rate_limit import _redis
+        _redis().incr(_PERM_VERSION_KEY)
+    except Exception:
+        log.warning("could not publish the permission matrix version; other workers refresh on their TTL", exc_info=True)

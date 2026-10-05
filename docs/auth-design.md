@@ -144,7 +144,8 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 | 0 Baseline | Xong: 81 passed |
 | 1 Gói `app/auth/` + migration + test | **Xong**: 139 passed (81 cũ + 58 mới). Chưa nối vào route nào |
 | 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong** (chưa commit): 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
-| 3–6 | Chưa bắt đầu |
+| 3 Danh mục quyền, ma trận trong DB, `require()`, service account, test duyệt route | **Xong** (chưa commit): 182 passed. `X-Admin-Key`, `require_roles`, `require_admin` đã gỡ |
+| 4–6 | Chưa bắt đầu |
 
 Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. **Chưa chạy migration trên PostgreSQL thật.**
 
@@ -157,3 +158,12 @@ Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none
 - API từ chối khởi động nếu thiếu khóa RS256; `docker-compose.yml` truyền `AUTH_JWT_*` (bản prod bắt buộc).
 - Vẫn còn dùng lớp tương thích: `X-Admin-Key`, `require_roles`, hàm `create_session_token` cũ (không còn được route nào gọi).
 - Chưa làm: phát hiện chính sách mật khẩu 12 ký tự (Giai đoạn 4), sửa `claim-ticket` (Giai đoạn 4), service account (Giai đoạn 3).
+
+### Ghi chú Giai đoạn 3
+- **116 route**, mỗi route khai báo đúng một chính sách (`public(lý do)` hoặc `require(quyền)`); 34 route công khai nằm trong danh sách duyệt `PUBLIC_ROUTES` của `tests/test_rbac.py`. Thêm route công khai mà không sửa danh sách này làm test fail.
+- **43 quyền** khai báo trong `app/api/permissions.py`; ma trận role → quyền nằm trong DB (migration `0011` tạo bảng, `0012_rbac_seed` nạp dữ liệu), cache 60 giây hoặc làm mới khi worker khác sửa (Redis `auth:perm_ver`). Sửa ma trận có hiệu lực ngay, không cần đăng nhập lại.
+- Quyền mới thêm vào code được đưa vào DB bằng `python -m scripts.sync_rbac` (chỉ cấp mặc định cho quyền **mới**, không khôi phục quyền admin đã chủ động gỡ).
+- Endpoint mới: `GET /api/admin/rbac`, `PUT /api/admin/rbac/roles/{role}/permissions`, `GET/POST/DELETE /api/admin/service-accounts`. Role `admin` không thể bị gỡ `admin:rbac`, `admin:users`, `admin:service_accounts`.
+- **Service account** (`Authorization: Bearer lek_...`) thay `X-Admin-Key`: chỉ giữ được `ops:read`, chỉ lưu băm của khóa, thấy khóa đúng một lần, ghi `last_used_at`, thu hồi được.
+- `require_user()` luôn trả về người dùng thật (khóa API bị từ chối); `require()` nhận cả hai.
+- Còn lại cho giai đoạn sau: `X-Provider-Access-Key` vẫn dùng được (tương thích, sẽ bỏ), `claim-ticket` còn công khai (Giai đoạn 4), chính sách mật khẩu 12 ký tự (Giai đoạn 4).
