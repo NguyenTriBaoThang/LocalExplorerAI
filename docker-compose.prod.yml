@@ -24,6 +24,7 @@ services:
       RATE_LIMIT_GENERAL_PER_MINUTE: ${RATE_LIMIT_GENERAL_PER_MINUTE:-120}
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
       RATE_LIMIT_CHAT_PER_MINUTE: ${RATE_LIMIT_CHAT_PER_MINUTE:-20}
+      RATE_LIMIT_COSTLY_PER_MINUTE: ${RATE_LIMIT_COSTLY_PER_MINUTE:-30}
       TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -72,8 +73,12 @@ services:
       MOMO_IPN_URL: ${MOMO_IPN_URL:-}
       INTEGRATION_SECRETS_KEY: ${INTEGRATION_SECRETS_KEY:?Set INTEGRATION_SECRETS_KEY to encrypt admin-managed integration credentials}
       E5_MODEL_PATH: ${E5_MODEL_PATH:-/models/e5}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:?Set ADMIN_API_KEY for protected AI routes}
       APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:?Set APP_SIGNING_SECRET for provider confirmation}
+      AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:?Set AUTH_JWT_KEY_ID (python -m scripts.generate_auth_keys)}
+      AUTH_JWT_PRIVATE_KEY_B64: ${AUTH_JWT_PRIVATE_KEY_B64:?Set AUTH_JWT_PRIVATE_KEY_B64 (RS256 signing key, base64 PEM)}
+      AUTH_JWT_PUBLIC_KEYS_B64: ${AUTH_JWT_PUBLIC_KEYS_B64:-}
+      AUTH_ISSUER: ${AUTH_ISSUER:-local-explorer-ai}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-local-explorer-api}
     restart: always
     volumes:
       - ./models:/models:ro

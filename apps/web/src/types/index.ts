@@ -45,7 +45,40 @@ export interface AuthUser {
   provider_id: string | null
   phone: string | null
   is_active: boolean
+  email_verified_at?: string | null
+  mfa_enabled?: boolean
   created_at: string
+}
+
+export interface MfaChallenge {
+  mfa_required: true
+  mfa_ticket: string
+  expires_in: number
+}
+
+export interface MfaStatus {
+  enabled: boolean
+  required: boolean
+  setup_pending: boolean
+  recovery_codes_remaining: number
+}
+
+export interface MfaSetup {
+  secret: string
+  otpauth_uri: string
+  qr: string
+}
+
+export interface SessionInfo {
+  id: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string
+  absolute_expires_at: string
+  ip: string | null
+  user_agent: string | null
+  amr: string[]
+  current: boolean
 }
 
 export interface POI {

@@ -5,19 +5,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_optional_user, require_roles
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError, UnsupportedTravelMode
 from app.db.session import get_db
 from app.models.entities import Event, Experience, ExperienceSlot, Feedback, Itinerary, ItineraryStop, ItineraryVersion, User
 from app.schemas.ai import FeedbackLabelRequest
 from app.schemas.planner import PlanRequest, PlanResponse
 from app.services.planner_service import NoFeasiblePlan, PlannerService
+from app.api.guards import public, require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api", tags=["planner"])
 
 
 @router.post("/itineraries/plan", response_model=PlanResponse)
-def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
+def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True))):
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Only traveler accounts can create itineraries."})
     try:
@@ -33,7 +34,7 @@ def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: Us
 
 
 @router.get("/itineraries/{itinerary_id}", response_model=PlanResponse)
-def get_itinerary(itinerary_id: str, db: Session = Depends(get_db), user: User | None = Depends(get_optional_user)):
+def get_itinerary(itinerary_id: str, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_READ, optional=True))):
     record = db.get(Itinerary, itinerary_id)
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "This itinerary view is for travelers."})
@@ -51,7 +52,7 @@ def get_itinerary(itinerary_id: str, db: Session = Depends(get_db), user: User |
 
 
 @router.get("/me/itineraries")
-def list_my_itineraries(user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def list_my_itineraries(user: User = Depends(require_user(P.ITINERARY_LIST)), db: Session = Depends(get_db)):
     records = db.scalars(select(Itinerary).where(Itinerary.user_id == user.id).order_by(Itinerary.created_at.desc())).all()
     return [{"id": item.id, "planned_date": item.planned_date, "start_time": item.start_time,
              "return_deadline": item.return_deadline, "status": item.status, "estimated_cost_vnd": item.estimated_cost_vnd,
@@ -59,7 +60,7 @@ def list_my_itineraries(user: User = Depends(require_roles("traveler")), db: Ses
 
 
 @router.get("/itinerary-comparisons")
-def compare_itineraries(first_id: str, second_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def compare_itineraries(first_id: str, second_id: str, user: User = Depends(require_user(P.ITINERARY_COMPARE)), db: Session = Depends(get_db)):
     if first_id == second_id:
         raise HTTPException(status_code=422, detail={"code": "SAME_ITINERARY", "message": "Choose two different itineraries."})
     records = {item.id: item for item in db.scalars(select(Itinerary).where(Itinerary.id.in_([first_id, second_id]))).all()}
@@ -86,7 +87,7 @@ def compare_itineraries(first_id: str, second_id: str, user: User = Depends(requ
 
 
 @router.get("/itineraries/{itinerary_id}/versions")
-def itinerary_versions(itinerary_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def itinerary_versions(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_VERSIONS)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
@@ -106,7 +107,7 @@ def _owner_only(itinerary: Itinerary, user: User) -> None:
 
 
 @router.post("/itineraries/{itinerary_id}/share")
-def create_share_link(itinerary_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def create_share_link(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_SHARE)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
@@ -118,7 +119,7 @@ def create_share_link(itinerary_id: str, user: User = Depends(require_roles("tra
 
 
 @router.delete("/itineraries/{itinerary_id}/share", status_code=204)
-def revoke_share_link(itinerary_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def revoke_share_link(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_SHARE)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
@@ -127,7 +128,7 @@ def revoke_share_link(itinerary_id: str, user: User = Depends(require_roles("tra
     db.commit()
 
 
-@router.get("/shared/itineraries/{share_token}", response_model=PlanResponse)
+@router.get("/shared/itineraries/{share_token}", response_model=PlanResponse, dependencies=[Depends(public('the unguessable share token is the credential'))])
 def read_shared_itinerary(share_token: str, db: Session = Depends(get_db)):
     itinerary = db.scalar(select(Itinerary).where(Itinerary.share_token == share_token))
     if itinerary is None:
@@ -136,7 +137,7 @@ def read_shared_itinerary(share_token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/itineraries/{itinerary_id}/feedback", status_code=201)
-def submit_feedback(itinerary_id: str, payload: FeedbackLabelRequest, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def submit_feedback(itinerary_id: str, payload: FeedbackLabelRequest, user: User = Depends(require_user(P.ITINERARY_FEEDBACK)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
@@ -152,7 +153,7 @@ def submit_feedback(itinerary_id: str, payload: FeedbackLabelRequest, user: User
 
 
 @router.get("/itineraries/{itinerary_id}/feedback")
-def list_feedback(itinerary_id: str, user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def list_feedback(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_FEEDBACK)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
@@ -163,7 +164,7 @@ def list_feedback(itinerary_id: str, user: User = Depends(require_roles("travele
 
 
 @router.get("/notifications")
-def my_notifications(user: User = Depends(require_roles("traveler")), db: Session = Depends(get_db)):
+def my_notifications(user: User = Depends(require_user(P.NOTIFICATION_READ)), db: Session = Depends(get_db)):
     rows = db.execute(
         select(Event, Itinerary, ItineraryStop, ExperienceSlot)
         .join(ExperienceSlot, Event.target_id == ExperienceSlot.id)

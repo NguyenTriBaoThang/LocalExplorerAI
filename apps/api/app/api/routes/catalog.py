@@ -8,17 +8,18 @@ from app.schemas.common import ExperienceRead, POIRead, SlotRead
 from app.services.experience_service import ExperienceService
 from app.db.session import get_db
 from app.services.e5_search_service import E5NotConfigured, E5ProviderError, E5SearchService
+from app.api.guards import public
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 
 
-@router.get("/pois", response_model=list[POIRead])
+@router.get("/pois", response_model=list[POIRead], dependencies=[Depends(public('public catalogue'))])
 def list_pois(db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     return [read_poi(repository, item) for item in repository.list_pois()]
 
 
-@router.get("/pois/{poi_id}", response_model=POIRead)
+@router.get("/pois/{poi_id}", response_model=POIRead, dependencies=[Depends(public('public catalogue'))])
 def get_poi(poi_id: str, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     poi = repository.get_poi(poi_id)
@@ -37,7 +38,7 @@ def read_poi(repository: ExperienceRepository, poi) -> POIRead:
     })
 
 
-@router.get("/experiences", response_model=list[ExperienceRead])
+@router.get("/experiences", response_model=list[ExperienceRead], dependencies=[Depends(public('public catalogue'))])
 def list_experiences(
     intent: str | None = None,
     start_at: datetime | None = None,
@@ -63,7 +64,7 @@ def list_experiences(
     )
 
 
-@router.get("/experiences/{experience_id}", response_model=ExperienceRead)
+@router.get("/experiences/{experience_id}", response_model=ExperienceRead, dependencies=[Depends(public('public catalogue'))])
 def get_experience(experience_id: str, db: Session = Depends(get_db)):
     experience = next((item for item in ExperienceService(ExperienceRepository(db)).list() if item.id == experience_id), None)
     if not experience:
@@ -71,7 +72,7 @@ def get_experience(experience_id: str, db: Session = Depends(get_db)):
     return experience
 
 
-@router.get("/experience-search")
+@router.get("/experience-search", dependencies=[Depends(public('public catalogue'))])
 def search_experiences(
     q: str = Query(min_length=2, max_length=200),
     semantic: bool = False,
@@ -111,7 +112,7 @@ def search_experiences(
     return {"mode": "semantic_e5", "items": [{**item.model_dump(mode="json"), "relevance_score": round(score, 5)} for item, score in ranked]}
 
 
-@router.get("/experiences/{experience_id}/slots", response_model=list[SlotRead])
+@router.get("/experiences/{experience_id}/slots", response_model=list[SlotRead], dependencies=[Depends(public('public catalogue'))])
 def get_slots(experience_id: str, start_at: datetime | None = None, end_at: datetime | None = None, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     experience = repository.get_experience(experience_id)

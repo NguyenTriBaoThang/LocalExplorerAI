@@ -243,3 +243,12 @@ def update_integration_settings(
             db.delete(row)
         removed.append(key)
     return updated, removed
+
+
+def encrypt_text(value: str) -> str:
+    """Encrypt a short secret (for example a TOTP seed) with the same master key as the integration credentials."""
+    return _fernet().encrypt(value.encode("utf-8")).decode("ascii")
+
+
+def decrypt_text(token: str) -> str:
+    return _fernet().decrypt(token.encode("ascii")).decode("utf-8")

@@ -4,7 +4,7 @@
 
 The API stores password hashes, issues an HTTP-only session cookie, and assigns one of three roles: `traveler`, `provider`, or `admin`. Public registration always creates a traveler. An admin can create provider profiles/accounts, change roles, deactivate accounts, review POIs/experiences/evidence, inspect likely duplicate POIs, merge a confirmed duplicate, and review audit history.
 
-In development, `scripts.seed_db` creates the configured demo admin and traveler only when their password variables are set and the account does not already exist. The local `.env` is ignored by Git; keep account passwords and all signing keys there, not in source control. Production requires a random `AUTH_SECRET` of at least 32 characters. Google sign-in also requires an OAuth client ID and secret from the application's Google Cloud project, with the callback URL registered exactly as `GOOGLE_REDIRECT_URI`.
+In development, `scripts.seed_db` creates the configured demo admin and traveler only when their password variables are set and the account does not already exist. The local `.env` is ignored by Git; keep account passwords and all signing keys there, not in source control. Every environment needs the RS256 signing keys (`python -m scripts.generate_auth_keys`); production also defaults `ADMIN_MFA_REQUIRED` on. Google sign-in also requires an OAuth client ID and secret from the application's Google Cloud project, with the callback URL registered exactly as `GOOGLE_REDIRECT_URI`.
 
 ## Google sign-in
 

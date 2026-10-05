@@ -1,7 +1,7 @@
 import pytest
 
 from app.models.entities import User
-from app.services.auth_service import create_session_token
+from tests.helpers import sign_in
 
 
 @pytest.mark.parametrize("role", ["admin", "provider"])
@@ -14,7 +14,7 @@ def test_non_traveler_cannot_use_customer_planner_or_chat(client, db_session, sa
     )
     db_session.add(account)
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(account.id))
+    sign_in(client, account)
 
     plan = client.post("/api/itineraries/plan", json={
         "start_at": "2030-10-01T09:00:00+07:00",

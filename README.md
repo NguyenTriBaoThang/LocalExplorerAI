@@ -492,7 +492,7 @@ classDiagram
 ### 17. Xác Thực Người Dùng & Quản Lý Hồ Sơ
 - Đăng ký và đăng nhập bằng Email/Mật khẩu với cơ chế băm mật khẩu an toàn.
 - Đăng nhập một chạm bằng **Google OAuth 2.0 PKCE** với kiểm tra trạng thái kích hoạt tự động.
-- Phiên đăng nhập được quản lý bằng **HTTP-only Cookie** (`le_session`), bảo vệ chống tấn công XSS và đánh cắp token.
+- Phiên đăng nhập được quản lý bằng **HTTP-only Cookie** (`le_at` access token 15 phút, `le_rt` refresh token xoay vòng), bảo vệ chống tấn công XSS và đánh cắp token.
 - Trang hồ sơ cá nhân (`/profile`): Đổi tên hiển thị, số điện thoại, đổi mật khẩu và xem danh sách lịch trình đã lưu.
 
 ### 18. Khảo Sát Đánh Giá & Vòng Lặp Huấn Luyện AI (Feedback Loop)
@@ -918,10 +918,11 @@ Tạo file `.env` tại thư mục gốc từ mẫu `.env.example`:
 |---|---|---|
 | `DATABASE_URL` | `postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer` | Chuỗi kết nối PostGIS |
 | `REDIS_URL` | `redis://localhost:6379/0` | Chuỗi kết nối Redis phục vụ cache và rate limit |
-| `AUTH_SECRET` | *(chuỗi ngẫu nhiên >= 32 ký tự)* | Khóa bí mật ký mã hóa session cookie HTTP-only |
+| `AUTH_JWT_KEY_ID`, `AUTH_JWT_PRIVATE_KEY_B64` | *(sinh bằng `python -m scripts.generate_auth_keys`)* | Khóa RS256 ký access token (base64 PEM) |
+| `ADMIN_MFA_REQUIRED` | *(mặc định: bật ở production)* | Bắt buộc admin dùng MFA TOTP |
 | `APP_SIGNING_SECRET` | *(chuỗi ngẫu nhiên)* | Khóa ký token xác nhận 2 bước cho Provider Slot Assistant |
 | `INTEGRATION_SECRETS_KEY` | *(khóa Fernet base64)* | Master key mã hóa AES-128-CBC cho các cổng tích hợp động |
-| `ADMIN_API_KEY` | *(tùy chọn)* | Khóa bảo mật gọi các endpoint AI và Ops quản trị viên |
+| *(đã bỏ)* `ADMIN_API_KEY` | — | Thay bằng service account: tạo khóa `lek_...` qua `POST /api/admin/service-accounts` (chỉ quyền `ops:read`) |
 | `OPENAI_API_KEY` | *(tùy chọn)* | API key cho các prompt LLM (Hỗ trợ OpenAI hoặc Gemini API compatible) |
 | `OPENAI_BASE_URL` | `https://api.openai.com/v1` | URL endpoint của nhà cung cấp LLM |
 | `ROUTING_PROVIDER` | `goong` | Nhà cung cấp tuyến đường (`goong` hoặc `mock` cho test/demo) |

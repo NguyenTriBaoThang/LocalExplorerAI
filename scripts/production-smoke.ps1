@@ -17,11 +17,12 @@ if ($guestResponse.StatusCode -notin @(401, 403)) {
 }
 Write-Output "Operations endpoint rejects unauthenticated access"
 
-if (-not [string]::IsNullOrWhiteSpace($env:LOCAL_EXPLORER_ADMIN_KEY)) {
-    $headers = @{ "X-Admin-Key" = $env:LOCAL_EXPLORER_ADMIN_KEY }
+if (-not [string]::IsNullOrWhiteSpace($env:LOCAL_EXPLORER_SERVICE_KEY)) {
+    # A service-account key (lek_...) holding only ops:read; create one with POST /api/admin/service-accounts.
+    $headers = @{ "Authorization" = "Bearer $env:LOCAL_EXPLORER_SERVICE_KEY" }
     $ops = Invoke-RestMethod -Uri "$base/api/ops/status" -Headers $headers -TimeoutSec 15
     if ($null -eq $ops.notifications -or $null -eq $ops.worker) { throw "Operations status response is missing health fields." }
     Write-Output "Authenticated operations status OK"
 } else {
-    Write-Output "Set LOCAL_EXPLORER_ADMIN_KEY to verify the authenticated operations view."
+    Write-Output "Set LOCAL_EXPLORER_SERVICE_KEY to verify the authenticated operations view."
 }

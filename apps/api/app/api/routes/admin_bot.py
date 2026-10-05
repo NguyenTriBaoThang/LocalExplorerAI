@@ -5,9 +5,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_db, require_admin
+from app.api.dependencies import get_db
 from app.models.entities import AuditLog, Experience, Itinerary, POI, Provider, User
 from app.services.bot_service import bot_service
+from app.api.guards import public, require
+from app.api.permissions import P
 
 router = APIRouter(tags=['Admin Bot & Systems'])
 
@@ -62,7 +64,7 @@ class TestMapsRequest(BaseModel):
 
 # --- Bot Management Endpoints ---
 
-@router.get('/api/admin/bot/config', dependencies=[Depends(require_admin)])
+@router.get('/api/admin/bot/config', dependencies=[Depends(require(P.ADMIN_BOT))])
 def get_bot_config():
     cfg = bot_service.get_config()
     token = cfg.get('bot_token', '')
@@ -74,7 +76,7 @@ def get_bot_config():
     }
 
 
-@router.post('/api/admin/bot/config', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/bot/config', dependencies=[Depends(require(P.ADMIN_BOT))])
 def update_bot_config(payload: BotConfigPatch):
     patch = payload.model_dump(exclude_unset=True)
     sensitive_fields = {'bot_token', 'secret_token', 'webhook_url', 'forward_n8n_url'}
@@ -85,14 +87,14 @@ def update_bot_config(payload: BotConfigPatch):
     return {'status': 'success', 'config': safe_config, 'bot_configured': bool(updated.get('bot_token'))}
 
 
-@router.post('/api/admin/bot/test-connection', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/bot/test-connection', dependencies=[Depends(require(P.ADMIN_BOT))])
 async def test_bot_connection(payload: Optional[TestConnectionRequest] = None):
     token = payload.bot_token if payload else None
     result = await bot_service.test_zalo_connection(token)
     return result
 
 
-@router.post('/api/admin/bot/sync-webhook', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/bot/sync-webhook', dependencies=[Depends(require(P.ADMIN_BOT))])
 async def sync_bot_webhook(payload: Optional[SyncWebhookRequest] = None):
     url = payload.webhook_url if payload else None
     secret = payload.secret_token if payload else None
@@ -100,25 +102,25 @@ async def sync_bot_webhook(payload: Optional[SyncWebhookRequest] = None):
     return result
 
 
-@router.post('/api/admin/bot/delete-webhook', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/bot/delete-webhook', dependencies=[Depends(require(P.ADMIN_BOT))])
 async def delete_bot_webhook():
     result = await bot_service.delete_zalo_webhook()
     return result
 
 
-@router.get('/api/admin/bot/sessions', dependencies=[Depends(require_admin)])
+@router.get('/api/admin/bot/sessions', dependencies=[Depends(require(P.ADMIN_BOT))])
 def list_bot_sessions():
     sessions = bot_service.get_sessions()
     return sessions
 
 
-@router.get('/api/admin/bot/sessions/{chat_id}/messages', dependencies=[Depends(require_admin)])
+@router.get('/api/admin/bot/sessions/{chat_id}/messages', dependencies=[Depends(require(P.ADMIN_BOT))])
 def get_bot_session_messages(chat_id: str):
     messages = bot_service.get_messages(chat_id)
     return messages
 
 
-@router.post('/api/admin/bot/send-message', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/bot/send-message', dependencies=[Depends(require(P.ADMIN_BOT))])
 async def send_bot_message(payload: SendMessageRequest):
     if not payload.text.strip():
         raise HTTPException(status_code=422, detail='Nội dung tin nhắn không được để trống.')
@@ -128,7 +130,7 @@ async def send_bot_message(payload: SendMessageRequest):
 
 # --- Website System Parameters Endpoints ---
 
-@router.get('/api/admin/system/settings', dependencies=[Depends(require_admin)])
+@router.get('/api/admin/system/settings', dependencies=[Depends(require(P.ADMIN_SYSTEM))])
 def get_system_settings():
     current = bot_service.get_system_settings()
     secret_keys = {'goong_api_key', 'goong_maptiles_key', 'gemini_api_key'}
@@ -137,7 +139,7 @@ def get_system_settings():
     return safe
 
 
-@router.post('/api/admin/system/settings', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/system/settings', dependencies=[Depends(require(P.ADMIN_SYSTEM))])
 def update_system_settings(payload: SystemSettingsPatch):
     patch = payload.model_dump(exclude_unset=True)
     secret_keys = {'goong_api_key', 'goong_maptiles_key', 'gemini_api_key'}
@@ -147,14 +149,14 @@ def update_system_settings(payload: SystemSettingsPatch):
     return {'status': 'success', 'settings': updated}
 
 
-@router.post('/api/admin/system/test-maps', dependencies=[Depends(require_admin)])
+@router.post('/api/admin/system/test-maps', dependencies=[Depends(require(P.ADMIN_SYSTEM))])
 async def test_maps_connection(payload: Optional[TestMapsRequest] = None):
     key = payload.goong_api_key if payload else None
     result = await bot_service.test_goong_maps(key)
     return result
 
 
-@router.get('/api/admin/system/metrics', dependencies=[Depends(require_admin)])
+@router.get('/api/admin/system/metrics', dependencies=[Depends(require(P.ADMIN_SYSTEM))])
 def get_system_metrics(db: Session = Depends(get_db)):
     user_count = db.scalar(select(func.count(User.id))) or 0
     provider_count = db.scalar(select(func.count(Provider.id))) or 0
@@ -184,12 +186,12 @@ def get_system_metrics(db: Session = Depends(get_db)):
 
 # --- Direct Zalo Bot Webhook Receiver ---
 
-@router.get('/api/bot/webhook')
+@router.get('/api/bot/webhook', dependencies=[Depends(public('Zalo webhook liveness check; returns a fixed payload'))])
 def verify_zalo_webhook():
     return {'status': 'ok', 'service': 'Local Explorer AI - Zalo Bot Webhook'}
 
 
-@router.post('/api/bot/webhook')
+@router.post('/api/bot/webhook', dependencies=[Depends(public('Zalo webhook; authenticated by the secret-token header, not a session'))])
 async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional[str] = Header(default=None)):
     body = await request.json()
     cfg = bot_service.get_config()

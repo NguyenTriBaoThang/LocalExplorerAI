@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { getCurrentUser } from './api/client'
+import { AUTH_EXPIRED_EVENT, getCurrentUser } from './api/client'
 import type { AuthUser } from './types'
 
 type AuthContextValue = {
@@ -25,6 +25,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   useEffect(() => { void refresh() }, [])
+  // The server ended the session (sign-out elsewhere, revoked device, password reset): drop the stale user so guards redirect.
+  useEffect(() => {
+    const expired = () => setUser(null)
+    window.addEventListener(AUTH_EXPIRED_EVENT, expired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, expired)
+  }, [])
   const value = useMemo(() => ({ user, loading, refresh, setUser }), [user, loading])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

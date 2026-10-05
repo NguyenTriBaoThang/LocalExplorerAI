@@ -13,10 +13,12 @@ from geoalchemy2.elements import WKTElement
 
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
-from app.api.dependencies import get_db, get_llm_provider, require_roles
+from app.api.dependencies import get_db, get_llm_provider
 from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
-from app.services.auth_service import hash_password
+from app.auth import hash_password
+from app.services.auth_runtime import invalidate_user_state
+from app.services.session_service import bump_token_version
 from app.services.evidence_service import REQUIRED_FIELDS, covered_fields, current_verified_evidence, get_target, is_current_and_unexpired, target_revision, utc_now
 from app.services.integration_config import (
     INTEGRATION_FIELDS,
@@ -26,6 +28,8 @@ from app.services.integration_config import (
     update_integration_settings,
 )
 from app.services.routing_service import make_geocoding_provider, make_routing_provider
+from app.api.guards import require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
 
@@ -71,7 +75,7 @@ def _audit(db: Session, actor: User, action: str, target_type: str, target_id: s
 
 
 @router.get("/dashboard")
-def dashboard(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def dashboard(user: User = Depends(require_user(P.ADMIN_DASHBOARD)), db: Session = Depends(get_db)):
     return {
         "users": db.scalar(select(func.count(User.id))) or 0,
         "providers": db.scalar(select(func.count(Provider.id))) or 0,
@@ -84,21 +88,21 @@ def dashboard(user: User = Depends(require_roles("admin")), db: Session = Depend
 
 
 @router.get("/users")
-def list_users(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
+def list_users(user: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
     records = db.scalars(select(User).order_by(User.created_at.desc()).limit(limit)).all()
     return [{"id": item.id, "email": item.email, "display_name": item.display_name, "role": item.role,
              "provider_id": item.provider_id, "is_active": item.is_active, "created_at": item.created_at} for item in records]
 
 
 @router.get("/providers")
-def list_providers(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db), limit: int = Query(default=200, ge=1, le=500)):
+def list_providers(user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db), limit: int = Query(default=200, ge=1, le=500)):
     rows = db.scalars(select(Provider).order_by(Provider.name).limit(limit)).all()
     return [{"id": item.id, "name": item.name, "slug": item.slug, "verification_status": item.verification_status,
              "is_active": item.is_active} for item in rows]
 
 
 @router.get("/ai/targets")
-def ai_tool_targets(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def ai_tool_targets(user: User = Depends(require_user(P.ADMIN_AI_TOOLS)), db: Session = Depends(get_db)):
     """Return minimal identifiers for admin AI tools without exposing traveler data."""
     experiences = db.execute(
         select(Experience.id, Experience.title, Experience.name)
@@ -116,7 +120,7 @@ def ai_tool_targets(user: User = Depends(require_roles("admin")), db: Session = 
 
 
 @router.get("/place-imports")
-def list_place_imports(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def list_place_imports(user: User = Depends(require_user(P.ADMIN_PLACE_IMPORT)), db: Session = Depends(get_db)):
     batches = db.scalars(select(PlaceImportBatch).order_by(PlaceImportBatch.created_at.desc()).limit(100)).all()
     return [{"id": item.id, "source_name": item.source_name, "source_sha256": item.source_sha256,
              "worksheet_name": item.worksheet_name, "record_count": item.record_count,
@@ -127,7 +131,7 @@ def list_place_imports(user: User = Depends(require_roles("admin")), db: Session
 @router.get("/place-imports/{batch_id}/candidates")
 def list_place_import_candidates(
     batch_id: str,
-    user: User = Depends(require_roles("admin")),
+    user: User = Depends(require_user(P.ADMIN_PLACE_IMPORT)),
     db: Session = Depends(get_db),
     limit: int = Query(default=250, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -153,7 +157,7 @@ def promote_place_candidate(
     batch_id: str,
     candidate_id: str,
     payload: PlaceCandidatePromotion,
-    actor: User = Depends(require_roles("admin")),
+    actor: User = Depends(require_user(P.ADMIN_PLACE_IMPORT)),
     db: Session = Depends(get_db),
 ):
     """Submit one imported POI with current source evidence; moderation publishes it later."""
@@ -227,7 +231,7 @@ def promote_place_candidate(
 
 
 @router.patch("/users/{user_id}")
-def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db)):
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "User not found."})
@@ -241,13 +245,16 @@ def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Dep
         target.provider_id = None
     old_role, old_active = target.role, target.is_active
     target.role, target.is_active = payload.role, payload.is_active
+    if (old_role, old_active) != (target.role, target.is_active):
+        bump_token_version(db, target, reason="role_or_status_changed")  # old tokens stop working at once
     _audit(db, actor, "user.updated", "user", target.id, {"old_role": old_role, "role": target.role, "old_active": old_active, "is_active": target.is_active})
     db.commit()
+    invalidate_user_state(target.id)
     return {"id": target.id, "role": target.role, "provider_id": target.provider_id, "is_active": target.is_active}
 
 
 @router.post("/providers", status_code=201)
-def create_provider(payload: ProviderCreateRequest, actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def create_provider(payload: ProviderCreateRequest, actor: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db)):
     email = payload.email.strip().lower()
     if db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(status_code=409, detail={"code": "EMAIL_IN_USE", "message": "This email is already registered."})
@@ -266,7 +273,7 @@ def create_provider(payload: ProviderCreateRequest, actor: User = Depends(requir
 
 
 @router.get("/moderation")
-def moderation_queue(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db), status: str = Query(default="pending", pattern="^(pending|simulated|verified|rejected|hidden)$")):
+def moderation_queue(user: User = Depends(require_user(P.ADMIN_MODERATION)), db: Session = Depends(get_db), status: str = Query(default="pending", pattern="^(pending|simulated|verified|rejected|hidden)$")):
     pois = db.scalars(select(POI).where(POI.verification_status == status).order_by(POI.created_at.desc()).limit(250)).all()
     experiences = db.scalars(select(Experience).where(Experience.verification_status == status).order_by(Experience.created_at.desc()).limit(250)).all()
     evidence = db.scalars(select(Evidence).where(Evidence.verification_status == status).order_by(Evidence.created_at.desc()).limit(250)).all()
@@ -283,7 +290,7 @@ def moderation_queue(user: User = Depends(require_roles("admin")), db: Session =
 
 
 @router.patch("/moderation/{entity_type}/{entity_id}")
-def review_entity(entity_type: str, entity_id: str, payload: ModerationRequest, actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def review_entity(entity_type: str, entity_id: str, payload: ModerationRequest, actor: User = Depends(require_user(P.ADMIN_MODERATION)), db: Session = Depends(get_db)):
     models = {"poi": POI, "experience": Experience, "evidence": Evidence}
     model = models.get(entity_type)
     if model is None:
@@ -335,7 +342,7 @@ def entity_is_verified_poi(db: Session, poi_id: str) -> bool:
 
 
 @router.get("/duplicates/pois")
-def duplicate_pois(actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def duplicate_pois(actor: User = Depends(require_user(P.ADMIN_DUPLICATES)), db: Session = Depends(get_db)):
     pois = db.scalars(select(POI).order_by(POI.name)).all()
     pairs = []
     for index, left in enumerate(pois):
@@ -349,7 +356,7 @@ def duplicate_pois(actor: User = Depends(require_roles("admin")), db: Session = 
 
 
 @router.post("/duplicates/pois/merge")
-def merge_duplicate_pois(payload: POIMergeRequest, actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def merge_duplicate_pois(payload: POIMergeRequest, actor: User = Depends(require_user(P.ADMIN_DUPLICATES)), db: Session = Depends(get_db)):
     if payload.keep_id == payload.duplicate_id:
         raise HTTPException(status_code=422, detail={"code": "SAME_POI", "message": "The retained and duplicate POIs must differ."})
     keep, duplicate = db.get(POI, payload.keep_id), db.get(POI, payload.duplicate_id)
@@ -366,14 +373,14 @@ def merge_duplicate_pois(payload: POIMergeRequest, actor: User = Depends(require
 
 
 @router.get("/audit")
-def audit_history(actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
+def audit_history(actor: User = Depends(require_user(P.ADMIN_AUDIT)), db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)):
     logs = db.scalars(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)).all()
     return [{"id": item.id, "actor_id": item.actor_id, "action": item.action, "target_type": item.target_type,
              "target_id": item.target_id, "details": item.details, "created_at": item.created_at} for item in logs]
 
 
 @router.get("/integrations")
-def integrations(actor: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
+def integrations(actor: User = Depends(require_user(P.ADMIN_INTEGRATIONS)), db: Session = Depends(get_db)):
     try:
         return list_integration_settings(db)
     except IntegrationSecretConfigurationError as error:
@@ -387,7 +394,7 @@ def integrations(actor: User = Depends(require_roles("admin")), db: Session = De
 def update_integrations(
     service: str,
     payload: IntegrationSettingsUpdate,
-    actor: User = Depends(require_roles("admin")),
+    actor: User = Depends(require_user(P.ADMIN_INTEGRATIONS)),
     db: Session = Depends(get_db),
 ):
     if service not in INTEGRATION_FIELDS:
@@ -412,7 +419,7 @@ def update_integrations(
 @router.post("/integrations/{service}/test")
 def test_integration_connection(
     service: str,
-    actor: User = Depends(require_roles("admin")),
+    actor: User = Depends(require_user(P.ADMIN_INTEGRATIONS)),
     db: Session = Depends(get_db),
 ):
     """Run a small, non-customer-data health check and never return provider payloads or secrets."""

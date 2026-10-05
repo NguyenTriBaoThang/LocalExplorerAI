@@ -6,13 +6,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from geoalchemy2.elements import WKTElement
 
-from app.api.dependencies import get_db, require_roles
+from app.api.dependencies import get_db
 from app.core.request_context import current_request_id
 from app.models.entities import AuditLog, Booking, BookingEvent, Event, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PaymentTransaction, POI, Provider, User
 from app.schemas.management import EvidenceCreateRequest, ExperienceDraftRequest, POIDraftRequest, SlotCreateRequest, SlotUpdateRequest
-from app.services.auth_service import hash_password
+from app.auth import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, target_revision, utc_now
 from app.services.notifications import enqueue_email, queue_booking_status
+from app.api.guards import require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api/provider", tags=["provider portal"])
 
@@ -32,7 +34,7 @@ def _audit(db: Session, actor: User, action: str, target_type: str, target_id: s
 
 
 @router.get("/me")
-def provider_profile(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def provider_profile(user: User = Depends(require_user(P.PROVIDER_PROFILE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     return {"id": provider.id, "name": provider.name, "slug": provider.slug, "description": provider.description,
             "contact_phone": provider.contact_phone, "contact_email": provider.contact_email, "address": provider.address,
@@ -40,7 +42,7 @@ def provider_profile(user: User = Depends(require_roles("provider")), db: Sessio
 
 
 @router.get("/experiences")
-def list_provider_experiences(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def list_provider_experiences(user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     items = db.scalars(select(Experience).where(Experience.provider_id == provider.id).options(joinedload(Experience.poi))).unique().all()
     return [{"id": item.id, "poi_id": item.poi_id, "title": item.title, "description": item.description,
@@ -56,7 +58,7 @@ def list_provider_experiences(user: User = Depends(require_roles("provider")), d
 
 
 @router.get("/pois")
-def list_provider_pois(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def list_provider_pois(user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     experience_poi_ids = select(Experience.poi_id).where(Experience.provider_id == provider.id)
     items = db.scalars(select(POI).where(
@@ -69,7 +71,7 @@ def list_provider_pois(user: User = Depends(require_roles("provider")), db: Sess
 
 
 @router.post("/pois", status_code=201)
-def create_poi(payload: POIDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_poi(payload: POIDraftRequest, user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = POI(
         id=str(uuid4()), name=payload.name.strip(), description=payload.description.strip(),
@@ -85,7 +87,7 @@ def create_poi(payload: POIDraftRequest, user: User = Depends(require_roles("pro
 
 
 @router.patch("/pois/{poi_id}")
-def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = db.get(POI, poi_id)
     if poi is None:
@@ -107,7 +109,7 @@ def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(requi
 
 
 @router.post("/evidence", status_code=201)
-def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require_user(P.PROVIDER_EVIDENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     target = db.get(POI if payload.target_type == "poi" else Experience, payload.target_id)
     if target is None:
@@ -147,7 +149,7 @@ def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require
 
 
 @router.post("/experiences", status_code=201)
-def create_experience(payload: ExperienceDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_experience(payload: ExperienceDraftRequest, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = db.get(POI, payload.poi_id)
     if poi is None:
@@ -165,7 +167,7 @@ def create_experience(payload: ExperienceDraftRequest, user: User = Depends(requ
 
 
 @router.patch("/experiences/{experience_id}")
-def update_experience(experience_id: str, payload: ExperienceDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_experience(experience_id: str, payload: ExperienceDraftRequest, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -194,7 +196,7 @@ def update_experience(experience_id: str, payload: ExperienceDraftRequest, user:
 
 
 @router.delete("/experiences/{experience_id}")
-def hide_experience(experience_id: str, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def hide_experience(experience_id: str, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -206,7 +208,7 @@ def hide_experience(experience_id: str, user: User = Depends(require_roles("prov
 
 
 @router.post("/experiences/{experience_id}/slots", status_code=201)
-def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Depends(require_user(P.PROVIDER_SLOT)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -240,7 +242,7 @@ def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Dep
 
 
 @router.patch("/slots/{slot_id}")
-def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(require_user(P.PROVIDER_SLOT)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     slot = db.scalar(select(ExperienceSlot).join(Experience).where(ExperienceSlot.id == slot_id, Experience.provider_id == provider.id).with_for_update())
     if slot is None:
@@ -362,7 +364,7 @@ def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(r
 
 
 @router.get("/audit")
-def provider_audit(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def provider_audit(user: User = Depends(require_user(P.PROVIDER_AUDIT)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     experience_ids = db.scalars(select(Experience.id).where(Experience.provider_id == provider.id)).all()
     slot_ids = db.scalars(select(ExperienceSlot.id).join(Experience).where(Experience.provider_id == provider.id)).all()
@@ -381,7 +383,7 @@ def provider_audit(user: User = Depends(require_roles("provider")), db: Session 
 
 
 @router.get("/evidence")
-def provider_evidence(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def provider_evidence(user: User = Depends(require_user(P.PROVIDER_EVIDENCE)), db: Session = Depends(get_db)):
     _provider(db, user)
     items = db.scalars(select(Evidence).where(Evidence.submitted_by == user.id).order_by(Evidence.created_at.desc()).limit(500)).all()
     return [{"id": item.id, "target_type": item.target_type, "target_id": item.target_id,
