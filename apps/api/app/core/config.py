@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     app_signing_secret: str | None = None
     auth_secret: str | None = None
     session_ttl_seconds: int = 7200
+    # New auth (see docs/auth-design.md). RS256 keys are base64-encoded PEM in the environment, in every
+    # environment: generate them with `python -m scripts.generate_auth_keys`.
+    auth_issuer: str = "local-explorer-ai"
+    auth_audience: str = "local-explorer-api"
+    auth_jwt_key_id: str | None = None
+    auth_jwt_private_key_b64: str | None = None
+    auth_jwt_public_keys_b64: str | None = None  # JSON {"kid": "<base64 pem>"} for retired keys still honoured
+    auth_access_ttl_seconds: int = 900
+    auth_refresh_ttl_seconds: int = 7 * 24 * 3600
+    auth_admin_refresh_ttl_seconds: int = 24 * 3600
+    auth_absolute_ttl_seconds: int = 30 * 24 * 3600
+    auth_admin_absolute_ttl_seconds: int = 7 * 24 * 3600
+    auth_refresh_grace_seconds: int = 10
+    auth_refresh_threshold_seconds: int = 180
     google_client_id: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
