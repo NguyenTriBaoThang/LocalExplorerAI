@@ -11,6 +11,12 @@
 </p>
 
 <p align="center">
+  <a href="https://nguyentribaothang.github.io/LocalExplorerAI/">
+    <img src="./assets/images/btn-technical-document.svg" alt="Technical Documentation: architecture, AI and ML, planning, API, demo" width="440"/>
+  </a>
+</p>
+
+<p align="center">
   <a href="https://github.com/NguyenTriBaoThang/LoaclExplorerAI/actions/workflows/ci.yml">
     <img src="https://img.shields.io/badge/CI-Passing-brightgreen?logo=github" alt="CI Status"/>
   </a>
