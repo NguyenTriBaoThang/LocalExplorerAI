@@ -10,6 +10,8 @@ Cổng dùng chung cho **đối tác** và **quản trị viên** (React + Vite 
    - `admin` → `/admin`
    - `traveler` bấm Portal Đối tác → được mời gửi hồ sơ đối tác (`POST /api/auth/partner/apply`).
 3. Đối tác `pending` / `rejected` / `suspended` xem được portal nhưng **không ghi được** (API trả `PROVIDER_NOT_APPROVED`).
+4. Tài khoản bật xác thực hai lớp nhập thêm mã TOTP (hoặc mã khôi phục) khi đăng nhập. Khi `ADMIN_MFA_REQUIRED` bật
+   (mặc định ở production), quản trị viên chưa có MFA chỉ thấy màn hình bật MFA cho tới khi hoàn tất.
 
 | Khu vực | Trang |
 |---|---|

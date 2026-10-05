@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { AuthLayout } from '../../components/AuthLayout'
 import { Alert, Button, Field, Input } from '../../components/ui'
 import { authApi, errorMessage } from '../../lib/api'
+import type { AuthUser } from '../../lib/types'
 
 export function LoginPage() {
   const { setUser } = useAuth()
@@ -15,19 +16,62 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [mfaTicket, setMfaTicket] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+
+  const finish = (user: AuthUser) => {
+    setUser(user)
+    navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setBusy(true)
     setError('')
     try {
-      setUser(await authApi.login(email, password))
-      navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
+      const result = await authApi.login(email, password)
+      if ('mfa_ticket' in result) {
+        setMfaTicket(result.mfa_ticket)  // password accepted; the session starts after the second factor
+        setPassword('')
+      } else {
+        finish(result)
+      }
     } catch (err) {
       setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
+  }
+
+  const submitCode = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!mfaTicket) return
+    setBusy(true)
+    setError('')
+    try {
+      finish(await authApi.loginMfa(mfaTicket, code.trim()))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (mfaTicket) {
+    return (
+      <AuthLayout title="Xác thực hai lớp" subtitle="Nhập mã 6 số từ ứng dụng xác thực, hoặc một mã khôi phục.">
+        <form onSubmit={submitCode} className="space-y-5">
+          {error && <Alert tone="red">{error}</Alert>}
+          <Field label="Mã xác thực">
+            <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="123456" required minLength={6} autoFocus className="text-center font-mono text-lg tracking-[0.4em]" />
+          </Field>
+          <Button type="submit" size="lg" icon={ShieldCheck} loading={busy} className="w-full">Xác nhận</Button>
+          <button type="button" onClick={() => { setMfaTicket(null); setCode(''); setError('') }} className="mx-auto flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700">
+            <ArrowLeft className="h-4 w-4" /> Đăng nhập bằng tài khoản khác
+          </button>
+        </form>
+      </AuthLayout>
+    )
   }
 
   return (

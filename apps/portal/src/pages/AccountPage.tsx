@@ -3,6 +3,7 @@ import { KeyRound, LogOut, Monitor, Save, Smartphone } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { Alert, Avatar, Badge, Button, Card, CardHeader, Field, Input, PageHeader, Spinner, useToast } from '../components/ui'
 import { authApi, errorMessage } from '../lib/api'
+import { MfaCard } from '../components/MfaCard'
 import { formatDateTime, ROLES, timeAgo } from '../lib/format'
 import type { SessionInfo } from '../lib/types'
 
@@ -93,6 +94,8 @@ export function AccountPage() {
               <div className="sm:col-span-3 flex justify-end"><Button type="submit" icon={KeyRound} loading={busy === 'password'}>Đổi mật khẩu</Button></div>
             </form>
           </Card>
+
+          <div id="security"><MfaCard /></div>
 
           <Card>
             <CardHeader title="Thiết bị đang đăng nhập"

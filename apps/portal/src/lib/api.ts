@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios'
 import type {
   AdminDashboard, AdminProvider, AdminProviderDetail, AdminUser, AdminUserDetail, AuthUser, Booking, Experience,
   AdminAnalytics, AdminPlace, Article, AuditLog, Banner, Collection, ExperienceDraft, ModerationQueue, PartnerAnalytics, PlaceDraft, Review, Page, PartnerApplication, Poi, PoiDraft, ProviderProfile, RbacMatrix, Role,
-  ServiceAccount, SessionInfo,
+  MfaChallenge, MfaSetup, MfaStatus, ServiceAccount, SessionInfo,
 } from './types'
 
 export const http = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
@@ -24,6 +24,12 @@ const MESSAGES: Record<string, string> = {
   ALREADY_STAFF: 'Tài khoản này đã là đối tác hoặc quản trị viên.',
   SLOT_VERSION_CHANGED: 'Slot vừa được cập nhật ở nơi khác. Hãy tải lại rồi thử lại.',
   TOKEN_INVALID: 'Liên kết không hợp lệ, đã hết hạn hoặc đã được dùng.',
+  MFA_REQUIRED: 'Quản trị viên cần bật xác thực hai lớp trước khi tiếp tục.',
+  MFA_CODE_INVALID: 'Mã xác thực không đúng.',
+  MFA_LOCKED: 'Nhập sai mã quá nhiều lần. Vui lòng thử lại sau 15 phút.',
+  MFA_NOT_CONFIGURED: 'Máy chủ chưa cấu hình xác thực hai lớp (INTEGRATION_SECRETS_KEY).',
+  MFA_REQUIRED_FOR_ROLE: 'Quản trị viên bắt buộc giữ xác thực hai lớp.',
+  LOGIN_THROTTLED: 'Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút.',
   RATE_LIMITED: 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.',
 }
 
@@ -52,7 +58,14 @@ function paged<T>(data: T[], headers: Record<string, unknown>): Page<T> {
 
 export const authApi = {
   me: async () => (await http.get<AuthUser>('/auth/me')).data,
-  login: async (email: string, password: string) => (await http.post<AuthUser>('/auth/login', { email, password })).data,
+  /** The user, or a challenge when the account has two-factor authentication (finish with `loginMfa`). */
+  login: async (email: string, password: string) => (await http.post<AuthUser | MfaChallenge>('/auth/login', { email, password })).data,
+  loginMfa: async (mfa_ticket: string, code: string) => (await http.post<AuthUser>('/auth/login/mfa', { mfa_ticket, code })).data,
+  mfaStatus: async () => (await http.get<MfaStatus>('/auth/mfa')).data,
+  mfaSetup: async () => (await http.post<MfaSetup>('/auth/mfa/setup')).data,
+  mfaEnable: async (code: string) => (await http.post<{ recovery_codes: string[] }>('/auth/mfa/enable', { code })).data.recovery_codes,
+  mfaRegenerate: async (code: string) => (await http.post<{ recovery_codes: string[] }>('/auth/mfa/recovery-codes', { code })).data.recovery_codes,
+  mfaDisable: async (code: string, password: string | null) => { await http.post('/auth/mfa/disable', { code, password }) },
   logout: async () => { await http.post('/auth/logout') },
   registerPartner: async (payload: { email: string; display_name: string; password: string; application: PartnerApplication }) =>
     (await http.post<AuthUser>('/auth/partner/register', payload)).data,
