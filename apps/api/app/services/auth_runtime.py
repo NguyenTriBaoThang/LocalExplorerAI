@@ -45,6 +45,9 @@ class _ResilientStore:
 
     def __init__(self, inner) -> None:
         self._inner, self._skip_until = inner, 0.0
+        # Users whose cache entry could not be deleted. Until that entry has certainly expired their state is read from
+        # the database, so a revoked token is never accepted from a stale entry once Redis is reachable again.
+        self._unconfirmed: dict[str, float] = {}
 
     def _call(self, name: str, *args):
         if time.monotonic() < self._skip_until:
@@ -57,13 +60,29 @@ class _ResilientStore:
             return None
 
     def get(self, user_id):
+        deadline = self._unconfirmed.get(user_id)
+        if deadline is not None:
+            if time.monotonic() < deadline:
+                return None
+            del self._unconfirmed[user_id]
         return self._call("get", user_id)
 
     def set(self, user_id, state):
         self._call("set", user_id, state)
 
     def invalidate(self, user_id):
-        self._call("invalidate", user_id)
+        if time.monotonic() < self._skip_until:
+            deleted = False
+        else:
+            try:
+                self._inner.invalidate(user_id)
+                deleted = True
+            except Exception as error:
+                self._skip_until = time.monotonic() + _REDIS_RETRY_SECONDS
+                log.warning("auth state cache unavailable (%s); using the database for %.0fs", error, _REDIS_RETRY_SECONDS)
+                deleted = False
+        if not deleted:
+            self._unconfirmed[user_id] = time.monotonic() + _STATE_CACHE_SECONDS + 5
 
 
 @lru_cache(maxsize=1)

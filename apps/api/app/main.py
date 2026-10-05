@@ -20,7 +20,7 @@ from app.api.guards import public
 from app.auth import AuthError
 from app.core.config import settings
 from app.core.request_context import current_request_id
-from app.core.client_ip import client_ip
+from app.core.client_ip import client_ip, request_scheme
 from app.services.prompt_service import InvalidStructuredOutput
 from app.services.auth_runtime import token_service
 from app.services.rate_limit import check_rate_limit
@@ -114,7 +114,9 @@ def _origin_allowed(request: Request, origin: str) -> bool:
     if origin.rstrip("/") in allowed:
         return True
     host = request.headers.get("host", "")
-    return bool(host) and urlsplit(origin).netloc == host  # same-origin request through the reverse proxy
+    parts = urlsplit(origin)
+    # Same origin means same scheme as well as host: http://api.example.com is not https://api.example.com.
+    return bool(host) and parts.netloc == host and parts.scheme == request_scheme(request, settings.trusted_proxy_ips)
 
 
 @app.middleware("http")

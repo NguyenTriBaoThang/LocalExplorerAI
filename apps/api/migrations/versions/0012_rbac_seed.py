@@ -134,6 +134,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DELETE FROM role_permissions")
-    op.execute("DELETE FROM permissions")
-    op.execute("DELETE FROM roles")
+    """Remove only what this revision seeded. The matrix is operator-editable, so grants, permissions and roles added
+    later are left alone; a seeded permission or role that is still referenced by such rows stays too."""
+    bind = op.get_bind()
+    for role, names in GRANTS.items():
+        for name in names:
+            bind.execute(sa.text("DELETE FROM role_permissions WHERE role_name = :r AND permission_name = :p"), {"r": role, "p": name})
+    for name in PERMISSIONS:
+        bind.execute(sa.text("DELETE FROM permissions WHERE name = :n AND NOT EXISTS "
+                             "(SELECT 1 FROM role_permissions WHERE permission_name = :n)"), {"n": name})
+    for name in ROLES:
+        bind.execute(sa.text("DELETE FROM roles WHERE name = :n AND NOT EXISTS "
+                             "(SELECT 1 FROM role_permissions WHERE role_name = :n)"), {"n": name})

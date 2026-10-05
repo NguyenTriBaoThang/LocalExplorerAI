@@ -27,11 +27,9 @@ def _names(secure: bool) -> tuple[str, str]:
 
 
 def read_cookie(request: Request, names: tuple[str, ...]) -> str | None:
-    for name in names:
-        value = request.cookies.get(name)
-        if value:
-            return value
-    return None
+    """Read the cookie for this transport only. Where the prefixed name is in force the bare name is ignored, otherwise a
+    cookie planted by a sibling subdomain or over plain HTTP could stand in for the protected one."""
+    return request.cookies.get(names[0] if is_secure(request) else names[1]) or None
 
 
 def set_auth_cookies(response: Response, request: Request, issued) -> None:
