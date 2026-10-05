@@ -146,8 +146,8 @@ Baseline trước khi thay đổi: `pytest` backend = **81 passed** (nhánh `mai
 | 2 Phiên, refresh xoay vòng, cookie, tự làm mới, login/refresh/logout | **Xong**: 164 passed (81 gốc + 58 lõi + 23 phiên + 2 cache). Token cũ `le_session` không còn được chấp nhận |
 | 3 Danh mục quyền, ma trận trong DB, `require()`, service account, test duyệt route | **Xong**: 182 passed. `X-Admin-Key`, `require_roles`, `require_admin` đã gỡ |
 | 4 Quên mật khẩu, xác minh email, quản lý phiên, sửa `claim-ticket`, chính sách mật khẩu | **Xong, chưa commit**: 216 passed. Đã kiểm tra trên PostgreSQL thật (migration 0011–0013) và trình duyệt thật (32/32 kiểm tra E2E). Frontend đã làm (trang quên/đặt lại mật khẩu, xác minh email, thiết bị đăng nhập, banner, form nhận vé) |
-| 5 MFA TOTP (bắt buộc cho admin) | Chưa bắt đầu |
-| 6 Hardening: rate limit mặc định, header `Cache-Control`, gỡ lớp tương thích cũ (`le_session`, `create_session_token`, `X-Provider-Access-Key`) | Chưa bắt đầu |
+| 5 MFA TOTP (bắt buộc cho admin, có công tắc `ADMIN_MFA_REQUIRED`) | **Xong**: backend (31 ca test), frontend, E2E trình duyệt 13/13, migration 0014 chạy được trên PostgreSQL thật (bảng nền dựng sẵn) |
+| 6 Hardening: rate limit mặc định (production), nhóm `costly`, chặn đoán mật khẩu theo email/IP (429 `LOGIN_THROTTLED`), header bảo mật + `no-store` cho `/api/auth/*`, HSTS ở production, gỡ `AUTH_SECRET`/`create_session_token`, `ALLOW_PROVIDER_ACCESS_KEY` (tắt ở production) | **Xong phần backend** (269 passed) |
 
 Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none`, nhầm thuật toán HS256 bằng khóa công khai, kid lạ, token bị sửa), kiểm tra đột biến (bỏ kiểm tra `iss`/`aud`/`exp` thì test fail), migration nâng và hạ cấp trên SQLite, so khớp cột/index với model, và xuất SQL PostgreSQL ở chế độ offline. Migration 0011–0013 đã được chạy trên PostgreSQL 16 thật ở Giai đoạn 4 (xem ghi chú bên dưới).
 
@@ -182,3 +182,9 @@ Giai đoạn 1 đã kiểm tra: test lõi (kể cả các tấn công `alg: none
   - Đặt lại mật khẩu của tài khoản admin hiện không đòi MFA; Giai đoạn 5 phải chặn việc này.
   - `/api/auth/password/forgot` chỉ giới hạn 1 email/phút mỗi tài khoản; rate limit theo IP vẫn tắt mặc định (Giai đoạn 6).
   - Chân trang và vài chỗ khác của ứng dụng đang hiện nguyên khóa dịch (`footer.colExplore`, `profile.savedTrips`): thiếu khóa i18n có từ trước, chưa xử lý.
+
+### Ghi chú Giai đoạn 5-6
+- **MFA:** TOTP RFC 6238 (±1 bước, chống dùng lại mã bằng `user_mfa.last_used_step`), 10 mã khôi phục dùng một lần (băm SHA-256), seed mã hóa Fernet bằng `INTEGRATION_SECRETS_KEY`, đăng nhập hai bước (`/login` trả `mfa_ticket`, `/login/mfa` hoàn tất), khóa sau 5 lần sai trong 15 phút. Admin chưa có MFA chỉ gọi được `account:read`/`account:mfa` (403 `MFA_REQUIRED`), không tắt được MFA và không đặt lại mật khẩu qua email được. Công tắc `ADMIN_MFA_REQUIRED` mặc định bật ở production, tắt ở dev/demo; tắt thì mọi hành vi trên không áp dụng.
+- **Hardening:** rate limit mặc định bật ở production, thêm nhóm `costly` (`/api/geocoding`, `/api/ml`); chặn đoán mật khẩu theo (email, IP)=5, email=20, IP=50 trong 15 phút từ `auth_events` (email lạ đếm giống email thật); header `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `no-store` cho `/api/auth/*`, HSTS ở production; gỡ `AUTH_SECRET`, `SESSION_TTL_SECONDS`, `create_session_token`, cookie `le_session`; `X-Provider-Access-Key` tắt mặc định ở production (`ALLOW_PROVIDER_ACCESS_KEY`).
+- **Kiểm chứng:** 269 test backend; E2E Chrome thật 13/13 cho MFA; migration 0014 lên/xuống trên PostgreSQL 16 thật. **Chưa kiểm chứng:** Redis thật (chỉ chạy fallback DB), chuỗi migration từ đầu trên PostgreSQL (lỗi `0002` có sẵn).
+- Việc `/api/auth/password/forgot` chưa có rate limit riêng theo IP ngoài nhóm `auth` chung.

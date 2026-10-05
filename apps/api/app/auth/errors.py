@@ -54,6 +54,13 @@ class Forbidden(AuthError):
     default_message = "This account does not have permission for this action."
 
 
+class MfaRequired(Forbidden):
+    """An administrator session that has not passed a second factor may only enrol one."""
+
+    code = "MFA_REQUIRED"
+    default_message = "Two-factor authentication is required for administrators."
+
+
 class PolicyMissing(Forbidden):
     """A resource-level check was requested but no policy is registered: fail closed."""
 

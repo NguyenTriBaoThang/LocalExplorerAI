@@ -15,7 +15,6 @@ from app.core.config import settings
 
 ACCESS_NAMES = ("__Host-le_at", "le_at")
 REFRESH_NAMES = ("__Secure-le_rt", "le_rt")
-LEGACY_NAME = "le_session"
 REFRESH_PATH = "/api"
 
 
@@ -51,4 +50,3 @@ def clear_auth_cookies(response: Response, request: Request) -> None:
     access_name, refresh_name = _names(secure)
     response.delete_cookie(access_name, path="/", **common)
     response.delete_cookie(refresh_name, path=REFRESH_PATH, **common)
-    response.delete_cookie(LEGACY_NAME, path="/", httponly=True, samesite="lax")

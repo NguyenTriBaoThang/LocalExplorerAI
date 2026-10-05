@@ -80,6 +80,8 @@ def _provider_auth(db: Session, provider_id: str, access_key: str | None, user: 
         if user.role == "provider" and user.provider_id == provider.id:
             return provider
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_FORBIDDEN", "message": "This account cannot manage the selected provider."})
+    if not settings.allow_provider_access_key:
+        raise HTTPException(status_code=401, detail={"code": "PROVIDER_KEY_DISABLED", "message": "Provider access keys are disabled. Sign in as a provider user."})
     if not access_key or not provider.portal_access_key or not secrets.compare_digest(access_key, provider.portal_access_key):
         raise HTTPException(status_code=401, detail={"code": "PROVIDER_UNAUTHORIZED", "message": "A valid provider access key is required."})
     # Deprecated: providers should sign in. Kept for compatibility; every use is logged so callers can be found and migrated.

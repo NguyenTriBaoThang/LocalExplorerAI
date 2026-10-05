@@ -15,14 +15,14 @@ from app.core.config import settings
 from app.models.auth_entities import AuthSession
 from app.models.entities import User, Itinerary
 from app.schemas.auth import (
-    ClaimTicketRequest, ForgotPasswordRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest,
-    ResetPasswordRequest, SessionRead, UserRead, VerifyEmailRequest,
+    ClaimTicketRequest, ForgotPasswordRequest, LoginRequest, MfaChallenge, MfaLoginRequest, PasswordChangeRequest, ProfileUpdateRequest,
+    RegisterRequest, ResetPasswordRequest, SessionRead, UserRead, VerifyEmailRequest,
 )
 from app.api.auth_cookies import REFRESH_NAMES, clear_auth_cookies, read_cookie, set_auth_cookies
 from app.api.authn import current_session_id
 from app.auth import WeakPassword, hash_password, validate_password_policy, verify_password as _verify_password
 from app.core.client_ip import client_ip
-from app.services import account_tokens
+from app.services import account_tokens, login_throttle, mfa_service
 from app.services.account_tokens import InvalidAccountToken
 from app.services.auth_runtime import invalidate_user_state
 from app.services.notifications import queue_account_link
@@ -63,7 +63,7 @@ def _invalid_token() -> HTTPException:
 
 
 def _start_session(response: Response, request: Request, db: Session, user: User, amr: tuple[str, ...] = ("pwd",)) -> None:
-    issued = start_session(db, user, ip=client_ip(request, settings.trusted_proxy_ips), user_agent=request.headers.get("user-agent"), amr=amr)
+    issued = start_session(db, user, ip=_ip(request), user_agent=request.headers.get("user-agent"), amr=amr)
     set_auth_cookies(response, request, issued)
 
 
@@ -125,20 +125,49 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
     return user
 
 
-@router.post("/login", response_model=UserRead, dependencies=[Depends(public('credentials are checked in the handler'))])
+@router.post("/login", response_model=UserRead | MfaChallenge, dependencies=[Depends(public('credentials are checked in the handler'))])
 def login(payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     email = str(payload.email).strip().lower()
+    login_throttle.check(db, email, _ip(request))  # before any password work
     user = db.scalar(select(User).where(User.email == email))
     check = _verify_password(payload.password, user.password_hash if user else None)  # hashes anyway when the user is unknown
     if user is None or not user.is_active or not check.valid:
-        record_event(db, "login", outcome="failure", user_id=user.id if user else None, ip=client_ip(request, settings.trusted_proxy_ips),
-                     user_agent=request.headers.get("user-agent"))
+        record_event(db, "login", outcome="failure", user_id=user.id if user else None, ip=_ip(request),
+                     user_agent=request.headers.get("user-agent"), detail=login_throttle.failure_detail(email))
         db.commit()
         raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Email or password is incorrect."})
     if check.needs_rehash:
         user.password_hash = hash_password(payload.password)
         db.commit()
+    if user.mfa_enabled:
+        # Password is right but no session yet: hand out a short-lived, single-use ticket for the code step.
+        row, ticket = account_tokens.issue(db, user, account_tokens.MFA_LOGIN)
+        record_event(db, "mfa_challenge", user_id=user.id, ip=_ip(request), user_agent=request.headers.get("user-agent"))
+        db.commit()
+        return MfaChallenge(mfa_ticket=ticket, expires_in=account_tokens.TTL_SECONDS[account_tokens.MFA_LOGIN])
     _start_session(response, request, db, user)
+    return user
+
+
+@router.post("/login/mfa", response_model=UserRead, dependencies=[Depends(public('authenticated by the single-use MFA ticket plus a one-time code'))])
+def login_mfa(payload: MfaLoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    try:
+        ticket, user = account_tokens.peek(db, payload.mfa_ticket, account_tokens.MFA_LOGIN)
+    except InvalidAccountToken:
+        raise _invalid_token()
+    try:
+        method = mfa_service.check_code(db, user, payload.code, ip=_ip(request), user_agent=request.headers.get("user-agent"))
+    except mfa_service.MfaError as error:
+        raise HTTPException(status_code=error.status_code, detail={"code": error.code, "message": error.message})
+    if method is None:
+        raise HTTPException(status_code=401, detail={"code": "MFA_CODE_INVALID", "message": "That code is not correct."})
+    try:
+        account_tokens.spend(db, ticket)  # a ticket opens exactly one session
+    except InvalidAccountToken:
+        db.rollback()
+        raise _invalid_token()
+    db.commit()
+    _start_session(response, request, db, user, amr=("pwd", "otp"))
     return user
 
 
@@ -147,7 +176,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     token = read_cookie(request, REFRESH_NAMES)
     if not token:
         raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "Sign in to continue."})
-    issued = rotate_session(db, token, ip=client_ip(request, settings.trusted_proxy_ips), user_agent=request.headers.get("user-agent"))
+    issued = rotate_session(db, token, ip=_ip(request), user_agent=request.headers.get("user-agent"))
     set_auth_cookies(response, request, issued)
     return db.get(User, issued.user_id)
 
@@ -173,7 +202,7 @@ def change_password(payload: PasswordChangeRequest, request: Request, response: 
     validate_password_policy(payload.new_password, email=user.email)
     user.password_hash = hash_password(payload.new_password)
     bump_token_version(db, user, reason="password_changed")  # signs every other device out
-    record_event(db, "password_changed", user_id=user.id, ip=client_ip(request, settings.trusted_proxy_ips))
+    record_event(db, "password_changed", user_id=user.id, ip=_ip(request))
     db.commit()
     invalidate_user_state(user.id)
     _start_session(response, request, db, user)  # but keep the device that made the change signed in
@@ -191,7 +220,9 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
 @router.post("/password/forgot", status_code=202, dependencies=[Depends(public('always answers 202 whether or not the account exists'))])
 def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == payload.email)) if payload.email else None
-    if user is not None and user.is_active and not is_shadow_email(user.email):
+    if user is not None and user.is_active and not is_shadow_email(user.email) and not (settings.admin_mfa_required and user.role == "admin" and not user.mfa_enabled):
+        # (An administrator without two-factor authentication gets no link: whoever controlled the inbox could enrol their own
+        # authenticator and take the account. Such accounts are recovered by an operator, see scripts/admin_recovery.py.)
         # At most one email a minute per account, so the endpoint cannot be used to flood someone's inbox.
         if not account_tokens.issued_recently(db, user, account_tokens.RESET_PASSWORD):
             row, raw = account_tokens.issue(db, user, account_tokens.RESET_PASSWORD)
@@ -209,6 +240,9 @@ def reset_password(payload: ResetPasswordRequest, request: Request, response: Re
     except InvalidAccountToken:
         db.rollback()
         raise _invalid_token()
+    if settings.admin_mfa_required and user.role == "admin" and not user.mfa_enabled:
+        db.rollback()
+        raise HTTPException(status_code=403, detail={"code": "ADMIN_RESET_FORBIDDEN", "message": "Administrator passwords cannot be reset by email without two-factor authentication."})
     try:
         validate_password_policy(payload.new_password, email=user.email)
     except WeakPassword:
@@ -410,12 +444,13 @@ def claim_ticket(payload: ClaimTicketRequest, request: Request, response: Respon
 
     email = payload.email
     _reject_reserved_email(email)
+    login_throttle.check(db, email, _ip(request))  # a claim with an existing address is a password guess too
     account = db.scalar(select(User).where(User.email == email))
     if account is not None:
         check = _verify_password(payload.password, account.password_hash)
         if not account.is_active or not check.valid:
             record_event(db, "login", outcome="failure", user_id=account.id, ip=_ip(request), user_agent=request.headers.get("user-agent"),
-                         detail={"via": "claim_ticket"})
+                         detail=login_throttle.failure_detail(email, via="claim_ticket"))
             db.commit()
             raise HTTPException(status_code=401, detail={"code": "INVALID_CREDENTIALS", "message": "Email or password is incorrect."})
         if account.role != "traveler":

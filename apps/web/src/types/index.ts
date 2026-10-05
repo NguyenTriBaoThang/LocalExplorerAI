@@ -50,6 +50,25 @@ export interface AuthUser {
   created_at: string
 }
 
+export interface MfaChallenge {
+  mfa_required: true
+  mfa_ticket: string
+  expires_in: number
+}
+
+export interface MfaStatus {
+  enabled: boolean
+  required: boolean
+  setup_pending: boolean
+  recovery_codes_remaining: number
+}
+
+export interface MfaSetup {
+  secret: string
+  otpauth_uri: string
+  qr: string
+}
+
 export interface SessionInfo {
   id: string
   created_at: string

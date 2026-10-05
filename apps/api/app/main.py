@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, ml, models_3d, ops, planner, provider, rbac, routing
+from app.api.routes import admin, admin_bot, ai, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, planner, provider, rbac, routing
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
 from app.api.guards import public
@@ -57,6 +57,8 @@ async def request_id_middleware(request: Request, call_next):
                 category, limit = "auth", settings.rate_limit_auth_per_minute
             elif request.url.path.startswith(("/api/chat", "/api/ai")):
                 category, limit = "chat", settings.rate_limit_chat_per_minute
+            elif request.url.path.startswith(("/api/geocoding", "/api/ml")):
+                category, limit = "costly", settings.rate_limit_costly_per_minute  # spends the Goong quota or CPU
             else:
                 category, limit = "general", settings.rate_limit_general_per_minute
             try:
@@ -88,6 +90,22 @@ async def request_id_middleware(request: Request, call_next):
         current_request_id.reset(request_context_token)
 
 
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Baseline response hardening. Responses under /api/auth carry credentials or recovery codes: never cache them."""
+    response = await call_next(request)
+    headers = response.headers
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    headers.setdefault("X-Frame-Options", "DENY")
+    headers.setdefault("Referrer-Policy", "no-referrer")
+    if request.url.path.startswith("/api/auth"):
+        headers["Cache-Control"] = "no-store"
+        headers["Pragma"] = "no-cache"
+    if settings.app_env.lower() == "production" and (request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"):
+        headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
 _UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -110,19 +128,19 @@ async def origin_check_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-def error_response(request: Request, code: str, message: str, details: list | None = None, status_code: int = 400):
-    return JSONResponse(status_code=status_code, content={"error": {"code": code, "message": message, "details": details or [], "request_id": getattr(request.state, "request_id", str(uuid4()))}})
+def error_response(request: Request, code: str, message: str, details: list | None = None, status_code: int = 400, headers: dict | None = None):
+    return JSONResponse(status_code=status_code, headers=headers, content={"error": {"code": code, "message": message, "details": details or [], "request_id": getattr(request.state, "request_id", str(uuid4()))}})
 
 
 @app.exception_handler(AuthError)
 async def auth_error_handler(request: Request, exc: AuthError):
-    return error_response(request, exc.code, exc.message, status_code=exc.status_code)
+    return error_response(request, exc.code, exc.message, status_code=exc.status_code, headers=getattr(exc, "headers", None))
 
 
 @app.exception_handler(StarletteHTTPException)
 async def http_error_handler(request: Request, exc: StarletteHTTPException):
     detail = exc.detail if isinstance(exc.detail, dict) else {}
-    return error_response(request, detail.get("code", "HTTP_ERROR"), detail.get("message", str(exc.detail)), status_code=exc.status_code)
+    return error_response(request, detail.get("code", "HTTP_ERROR"), detail.get("message", str(exc.detail)), status_code=exc.status_code, headers=exc.headers)
 
 
 @app.exception_handler(RequestValidationError)
@@ -154,6 +172,7 @@ def root():
 app.include_router(health.router)
 app.include_router(ops.router)
 app.include_router(auth.router)
+app.include_router(mfa.router)
 app.include_router(provider.router)
 app.include_router(bookings.router)
 app.include_router(admin.router)

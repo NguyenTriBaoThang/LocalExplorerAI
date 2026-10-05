@@ -3,8 +3,14 @@
 from app.services.auth_runtime import token_service
 
 
-def sign_in(client, user, *, amr=("pwd",)) -> str:
+def default_amr(user) -> tuple[str, ...]:
+    """Administrators must have passed a second factor, so test sessions for them carry it unless a test says otherwise."""
+    return ("pwd", "otp") if user.role == "admin" else ("pwd",)
+
+
+def sign_in(client, user, *, amr=None) -> str:
     """Authenticate ``client`` as ``user`` by setting a valid access-token cookie (no refresh cookie)."""
+    amr = amr if amr is not None else default_amr(user)
     token, _ = token_service().issue_access(
         user_id=user.id, session_id="test-session", role=user.role, provider_id=user.provider_id,
         token_version=user.token_version or 0, amr=amr,
@@ -13,8 +19,9 @@ def sign_in(client, user, *, amr=("pwd",)) -> str:
     return token
 
 
-def bearer_for(user, *, amr=("pwd",)) -> dict:
+def bearer_for(user, *, amr=None) -> dict:
     """Authorization header for one request, leaving the client's cookies untouched."""
+    amr = amr if amr is not None else default_amr(user)
     token, _ = token_service().issue_access(
         user_id=user.id, session_id="test-session", role=user.role, provider_id=user.provider_id,
         token_version=user.token_version or 0, amr=amr,

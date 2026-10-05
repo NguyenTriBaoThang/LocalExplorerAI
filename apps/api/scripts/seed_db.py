@@ -9,7 +9,7 @@ from app.db.session import SessionLocal
 from app.models.entities import Experience, ExperienceSlot, POI, Provider
 from app.models.entities import User
 from app.core.config import settings
-from app.services.auth_service import hash_password
+from app.auth import hash_password
 
 HCMC = ZoneInfo("Asia/Ho_Chi_Minh")
 DEMO_EXPERIENCES = [

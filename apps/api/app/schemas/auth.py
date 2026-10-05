@@ -104,3 +104,25 @@ class SessionRead(BaseModel):
     user_agent: str | None
     amr: list[str]
     current: bool
+
+
+class MfaChallenge(BaseModel):
+    """Returned by login when the account has two-factor authentication: no session exists yet."""
+
+    mfa_required: bool = True
+    mfa_ticket: str
+    expires_in: int
+
+
+class MfaLoginRequest(BaseModel):
+    mfa_ticket: str = Field(min_length=20, max_length=128)
+    code: str = Field(min_length=6, max_length=32)
+
+
+class MfaCodeRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=32)
+
+
+class MfaDisableRequest(BaseModel):
+    password: str | None = Field(default=None, max_length=128)
+    code: str = Field(min_length=6, max_length=32)

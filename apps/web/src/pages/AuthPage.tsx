@@ -9,7 +9,7 @@ import {
   EyeOff,
   AlertCircle,
 } from 'lucide-react'
-import { api, apiErrorMessage, getGoogleOAuthStatus, login, registerAccount } from '../api/client'
+import { api, apiErrorMessage, getGoogleOAuthStatus, isMfaChallenge, login, loginMfa, registerAccount } from '../api/client'
 import { useAuth } from '../auth'
 import { useTranslation } from '../i18n'
 import type { GoogleOAuthStatus } from '../types'
@@ -22,6 +22,9 @@ export function AuthPage({ register = false }: { register?: boolean }) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ticket, setTicket] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [useRecovery, setUseRecovery] = useState(false)
   const [googleOAuth, setGoogleOAuth] = useState<GoogleOAuthStatus | null>(null)
   const { setUser } = useAuth()
   const navigate = useNavigate()
@@ -42,11 +45,18 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     setBusy(true)
     setError('')
     try {
-      setUser(
-        register
-          ? await registerAccount(email, name, password)
-          : await login(email, password)
-      )
+      if (ticket) {
+        setUser(await loginMfa(ticket, code.trim()))
+        navigate(destination, { replace: true })
+        return
+      }
+      const result = register ? await registerAccount(email, name, password) : await login(email, password)
+      if (isMfaChallenge(result)) {
+        setTicket(result.mfa_ticket)
+        setPassword('')
+        return
+      }
+      setUser(result)
       navigate(destination, { replace: true })
     } catch (reason) {
       setError(apiErrorMessage(reason))
@@ -107,6 +117,36 @@ export function AuthPage({ register = false }: { register?: boolean }) {
           </div>
         )}
 
+        {ticket ? (
+          <form onSubmit={submit} className="auth-form-body">
+            <h2 className="auth-heading" style={{ fontSize: '1.1rem' }}>{t('mfa.stepTitle')}</h2>
+            <p className="auth-subtext">{t('mfa.stepLead')}</p>
+            <div className="auth-field-group">
+              <label htmlFor="auth-mfa-code">{useRecovery ? t('mfa.recoveryCode') : t('mfa.code')}</label>
+              <div className="auth-input-shell">
+                <Lock size={16} className="auth-input-icon" />
+                <input
+                  id="auth-mfa-code"
+                  required
+                  autoFocus
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  inputMode={useRecovery ? 'text' : 'numeric'}
+                  autoComplete="one-time-code"
+                  placeholder={useRecovery ? 'xxxxx-xxxxx' : '123456'}
+                />
+              </div>
+            </div>
+            <button className="btn-auth-submit" type="submit" disabled={busy}>
+              <span>{busy ? t('auth.verifying') : t('mfa.verify')}</span>
+              <ArrowRight size={17} />
+            </button>
+            <button type="button" className="auth-hint-text" onClick={() => { setUseRecovery(!useRecovery); setCode('') }}>
+              {useRecovery ? t('mfa.useApp') : t('mfa.useRecovery')}
+            </button>
+            <button type="button" className="auth-hint-text" onClick={() => { setTicket(null); setCode(''); setError('') }}>{t('mfa.back')}</button>
+          </form>
+        ) : (
         <form onSubmit={submit} className="auth-form-body">
           {register && (
             <div className="auth-field-group">
@@ -180,6 +220,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
             <ArrowRight size={17} />
           </button>
         </form>
+        )}
 
         {/* Divider */}
         <div className="auth-divider-line">

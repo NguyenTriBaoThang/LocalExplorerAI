@@ -7,7 +7,7 @@ registered on the shared ``Base`` by being imported from ``entities``.
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -48,7 +48,7 @@ class AuthToken(Base):
     """Single-use tokens emailed to the user (password reset, email verification). Only a hash is stored."""
 
     __tablename__ = "auth_tokens"
-    __table_args__ = (CheckConstraint("purpose IN ('reset_password', 'verify_email')", name="ck_auth_tokens_purpose"),)
+    __table_args__ = (CheckConstraint("purpose IN ('reset_password', 'verify_email', 'mfa_login')", name="ck_auth_tokens_purpose"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -65,6 +65,8 @@ class UserMFA(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     secret_encrypted: Mapped[str] = mapped_column(Text)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Highest TOTP time step already accepted: a code can be used once, even inside its 30-second window.
+    last_used_step: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

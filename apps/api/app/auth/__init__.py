@@ -8,7 +8,7 @@ repositories are added in later phases (see docs/auth-design.md).
 from .authorizer import Authorizer, PolicyRegistry
 from .config import AuthConfig, parse_public_keys
 from .errors import (
-    AccountDisabled, AuthError, AuthNotConfigured, AuthRequired, Forbidden, PolicyMissing,
+    AccountDisabled, AuthError, AuthNotConfigured, AuthRequired, Forbidden, MfaRequired, PolicyMissing,
     TokenExpired, TokenInvalid, TokenRevoked, WeakPassword,
 )
 from .keys import KeyRing, generate_rsa_keypair
@@ -21,6 +21,7 @@ from .refresh import (
 )
 from .service_accounts import GeneratedKey, generate_service_key, parse_service_key, verify_secret
 from .tokens import AccessClaims, TokenService
+from . import totp
 from .versions import InMemoryStateStore, RedisStateStore, TokenVersionChecker, UserState
 
 __all__ = [name for name in dir() if not name.startswith("_")]

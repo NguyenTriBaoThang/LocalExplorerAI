@@ -15,6 +15,7 @@ import { apiErrorMessage, changePassword, getMyItineraries, updateProfile } from
 import { useAuth } from '../auth'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { SessionsCard } from '../components/account/SessionsCard'
+import { MfaCard } from '../components/account/MfaCard'
 import { useTranslation } from '../i18n'
 
 export function ProfilePage() {
@@ -212,6 +213,7 @@ export function ProfilePage() {
             </form>
           </section>
 
+          <MfaCard />
           <SessionsCard />
         </div>
 

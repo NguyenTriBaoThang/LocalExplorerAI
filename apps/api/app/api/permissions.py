@@ -19,6 +19,7 @@ class P:
     ACCOUNT_READ = _p("account:read", "Read own profile")
     ACCOUNT_UPDATE = _p("account:update", "Update own profile")
     ACCOUNT_PASSWORD = _p("account:password", "Change own password")
+    ACCOUNT_MFA = _p("account:mfa", "Manage own two-factor authentication")
     ACCOUNT_SESSIONS = _p("account:sessions", "List and revoke own sign-in sessions")
     # Traveler
     ITINERARY_PLAN = _p("itinerary:plan", "Generate an itinerary")
@@ -65,7 +66,7 @@ class P:
     OPS_READ = _p("ops:read", "Read operational status (also grantable to service accounts)")
 
 
-_ACCOUNT = [P.ACCOUNT_READ, P.ACCOUNT_UPDATE, P.ACCOUNT_PASSWORD, P.ACCOUNT_SESSIONS, P.BOOKING_READ, P.BOOKING_HISTORY]
+_ACCOUNT = [P.ACCOUNT_READ, P.ACCOUNT_UPDATE, P.ACCOUNT_PASSWORD, P.ACCOUNT_MFA, P.ACCOUNT_SESSIONS, P.BOOKING_READ, P.BOOKING_HISTORY]
 DEFAULT_GRANTS: dict[str, list[str]] = {
     "traveler": _ACCOUNT + [
         P.ITINERARY_PLAN, P.ITINERARY_READ, P.ITINERARY_LIST, P.ITINERARY_COMPARE, P.ITINERARY_VERSIONS, P.ITINERARY_SHARE,
@@ -79,6 +80,9 @@ DEFAULT_GRANTS: dict[str, list[str]] = {
     "admin": _ACCOUNT + [name for name in registry.names() if name.startswith("admin:")] + [P.OPS_READ],
 }
 SYSTEM_ROLES = {"traveler": "Signed-in visitor", "provider": "Experience provider", "admin": "Platform administrator"}
+
+# An administrator whose session did not pass a second factor may use only these (so they can enrol one).
+MFA_ENROLMENT_PERMISSIONS: frozenset[str] = frozenset({P.ACCOUNT_READ, P.ACCOUNT_MFA})
 
 # Permissions an API key (service account) may ever hold. Everything else is for people.
 SERVICE_GRANTABLE: frozenset[str] = frozenset({P.OPS_READ})

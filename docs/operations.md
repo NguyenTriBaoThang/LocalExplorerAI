@@ -47,3 +47,12 @@ Linux/container operators can use `bash scripts/backup-postgres.sh <existing-out
 An earlier review run printed 19 dots and `[100%]` but did not terminate and had no successful exit code; that run was not evidence of a pass. The latest complete API suite run for payment and integration settings changes: 56 tests passed, pytest terminated normally with exit code 0. Continue to require a normal exit code of zero on each release run.
 
 GitHub Actions now runs the backend suite with `pytest -q` and a 10-minute job timeout, so a hung test job fails instead of staying indefinitely green/pending.
+
+## Two-factor authentication and recovery
+
+- `ADMIN_MFA_REQUIRED` (default: on in production, off elsewhere) makes administrators enrol a TOTP app before using admin features. Everyone else may enrol voluntarily. The seed is encrypted with `INTEGRATION_SECRETS_KEY`; losing that key makes every enrolled authenticator unreadable, so back it up with the database.
+- `ALLOW_PROVIDER_ACCESS_KEY` (default: off in production) controls the deprecated `X-Provider-Access-Key` header; providers should sign in.
+- Break-glass when an administrator loses the phone and the recovery codes (run on the server, every use is written to `auth_events`):
+  - `python -m scripts.admin_recovery set-password --email <address>`
+  - `python -m scripts.admin_recovery reset-mfa --email <address>` (removes the second factor and signs the account out everywhere; the admin must enrol again at next sign-in).
+- Throttling counts failures from `auth_events`, so it works across workers without Redis. To release a locked account early, delete its recent `login`/`mfa_verify` failure rows for that e-mail hash or user.

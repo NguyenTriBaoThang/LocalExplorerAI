@@ -16,8 +16,9 @@ from fastapi import Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.authn import authenticate_principal
-from app.api.permissions import registry
-from app.auth import Authorizer, Forbidden, Principal
+from app.api.permissions import MFA_ENROLMENT_PERMISSIONS, registry
+from app.core.config import settings
+from app.auth import Authorizer, Forbidden, MfaRequired, Principal, PrincipalKind
 from app.db.session import get_db
 from app.models.entities import User
 from app.services.rbac_service import DbRoleMatrix
@@ -47,6 +48,13 @@ def _check(permission: str) -> None:
         raise ValueError(f"Unknown permission {permission!r}; declare it in app/api/permissions.py.")
 
 
+def _enforce_mfa(principal: Principal, permission: str) -> None:
+    """When ADMIN_MFA_REQUIRED is on, administrators must have passed a second factor; until then they may only enrol one."""
+    if (settings.admin_mfa_required and principal.kind is PrincipalKind.USER and principal.role == "admin" and not principal.has_mfa
+            and permission not in MFA_ENROLMENT_PERMISSIONS):
+        raise MfaRequired()
+
+
 def require(permission: str, *, optional: bool = False):
     """Principal (person or service account) holding ``permission``; ``None`` for anonymous when ``optional``."""
     _check(permission)
@@ -55,6 +63,7 @@ def require(permission: str, *, optional: bool = False):
         principal, _ = authenticate_principal(request, response, db, required=not optional)
         if principal is None:
             return None
+        _enforce_mfa(principal, permission)
         if not Authorizer(DbRoleMatrix(db)).can(principal, permission):
             raise Forbidden()
         return principal
@@ -71,6 +80,7 @@ def require_user(permission: str, *, optional: bool = False):
         principal, user = authenticate_principal(request, response, db, required=not optional)
         if principal is None:
             return None
+        _enforce_mfa(principal, permission)
         if user is None or not Authorizer(DbRoleMatrix(db)).can(principal, permission):
             raise Forbidden()
         return user

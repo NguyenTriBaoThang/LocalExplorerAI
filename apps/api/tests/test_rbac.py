@@ -14,7 +14,7 @@ PUBLIC_ROUTES = {
     ("admin_bot", "GET", "/api/bot/webhook"), ("admin_bot", "POST", "/api/bot/webhook"),
     ("ai", "GET", "/api/ai/prompts"),
     ("auth", "GET", "/api/auth/google/callback"), ("auth", "GET", "/api/auth/google/start"), ("auth", "GET", "/api/auth/google/status"),
-    ("auth", "POST", "/api/auth/claim-ticket"), ("auth", "POST", "/api/auth/login"), ("auth", "POST", "/api/auth/logout"),
+    ("auth", "POST", "/api/auth/claim-ticket"), ("auth", "POST", "/api/auth/login"), ("auth", "POST", "/api/auth/login/mfa"), ("auth", "POST", "/api/auth/logout"),
     ("auth", "POST", "/api/auth/refresh"), ("auth", "POST", "/api/auth/register"),
     # Phase 4: anonymous by nature; each is authenticated by a single-use emailed token or reveals nothing.
     ("auth", "POST", "/api/auth/password/forgot"), ("auth", "POST", "/api/auth/password/reset"), ("auth", "POST", "/api/auth/email/verify"),
@@ -208,12 +208,16 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
     module = _load_migration("m0012", "migrations/versions/0012_rbac_seed.py")
-    later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py")]
+    later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py")]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE roles (name VARCHAR(40) PRIMARY KEY, description VARCHAR(255), is_system BOOLEAN, created_at DATETIME)"))
         conn.execute(sa.text("CREATE TABLE permissions (name VARCHAR(80) PRIMARY KEY, description VARCHAR(255), created_at DATETIME)"))
         conn.execute(sa.text("CREATE TABLE role_permissions (role_name VARCHAR(40), permission_name VARCHAR(80))"))
+        # stand-ins for tables created by 0011 that revision 0014 alters
+        conn.execute(sa.text("CREATE TABLE user_mfa (user_id VARCHAR(36) PRIMARY KEY, secret_encrypted TEXT)"))
+        conn.execute(sa.text("CREATE TABLE auth_tokens (id VARCHAR(36) PRIMARY KEY, purpose VARCHAR(32) NOT NULL, "
+                             "CONSTRAINT ck_auth_tokens_purpose CHECK (purpose IN ('reset_password', 'verify_email')))"))
         with Operations.context(MigrationContext.configure(conn)):
             module.upgrade()
             for revision in later:

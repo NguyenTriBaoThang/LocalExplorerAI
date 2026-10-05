@@ -18,7 +18,8 @@ from app.models.entities import ItineraryClaimToken, User
 
 RESET_PASSWORD = "reset_password"
 VERIFY_EMAIL = "verify_email"
-TTL_SECONDS = {RESET_PASSWORD: 30 * 60, VERIFY_EMAIL: 24 * 3600}
+MFA_LOGIN = "mfa_login"   # handed out after the password step, spent after the code step
+TTL_SECONDS = {RESET_PASSWORD: 30 * 60, VERIFY_EMAIL: 24 * 3600, MFA_LOGIN: 5 * 60}
 RESEND_INTERVAL_SECONDS = 60
 CLAIM_TTL_SECONDS = 7 * 24 * 3600
 
@@ -71,6 +72,24 @@ def consume(db: Session, raw: str, purpose: str) -> User:
     if claimed.rowcount != 1 or user is None or not user.is_active:
         raise InvalidAccountToken()
     return user
+
+
+def peek(db: Session, raw: str, purpose: str) -> tuple[AuthToken, User]:
+    """Validate a token *without* spending it (the MFA ticket survives a wrong code, within the attempt limit)."""
+    row = db.scalar(select(AuthToken).where(AuthToken.token_hash == hash_token(raw or "")))
+    if row is None or row.purpose != purpose or row.used_at is not None or _aware(row.expires_at) <= _now():
+        raise InvalidAccountToken()
+    user = db.get(User, row.user_id)
+    if user is None or not user.is_active:
+        raise InvalidAccountToken()
+    return row, user
+
+
+def spend(db: Session, row: AuthToken) -> None:
+    """Atomically mark a peeked token used; raises if another request got there first."""
+    claimed = db.execute(update(AuthToken).where(AuthToken.id == row.id, AuthToken.used_at.is_(None)).values(used_at=_now()))
+    if claimed.rowcount != 1:
+        raise InvalidAccountToken()
 
 
 def issue_claim_token(db: Session, itinerary_id: str) -> str:

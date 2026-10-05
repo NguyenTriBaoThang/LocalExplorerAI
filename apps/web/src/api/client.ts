@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { t } from '../i18n'
-import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities, SessionInfo } from '../types'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -8,16 +8,50 @@ export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentia
 export const AUTH_EXPIRED_EVENT = 'auth:expired'
 api.interceptors.response.use(
   (response) => response,
-  (error: { response?: { status?: number }; config?: { url?: string } }) => {
+  (error: { response?: { status?: number; data?: { error?: { code?: string } } }; config?: { url?: string } }) => {
     const url = error.config?.url ?? ''
     if (error.response?.status === 401 && !url.startsWith('/auth/')) window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+    // An administrator without a second factor is sent to the page where one is set up.
+    if (error.response?.status === 403 && error.response.data?.error?.code === 'MFA_REQUIRED' && !window.location.pathname.startsWith('/profile')) {
+      window.location.assign('/profile')
+    }
     return Promise.reject(error)
   },
 )
 
-export async function login(email: string, password: string): Promise<AuthUser> {
-  const { data } = await api.post<AuthUser>('/auth/login', { email, password })
+export function isMfaChallenge(value: AuthUser | MfaChallenge): value is MfaChallenge {
+  return (value as MfaChallenge).mfa_required === true
+}
+
+/** Resolves to the user, or to a challenge when the account has two-factor authentication (finish with `loginMfa`). */
+export async function login(email: string, password: string): Promise<AuthUser | MfaChallenge> {
+  const { data } = await api.post<AuthUser | MfaChallenge>('/auth/login', { email, password })
   return data
+}
+
+export async function loginMfa(mfa_ticket: string, code: string): Promise<AuthUser> {
+  const { data } = await api.post<AuthUser>('/auth/login/mfa', { mfa_ticket, code })
+  return data
+}
+
+export async function getMfaStatus(): Promise<MfaStatus> {
+  return (await api.get<MfaStatus>('/auth/mfa')).data
+}
+
+export async function beginMfaSetup(): Promise<MfaSetup> {
+  return (await api.post<MfaSetup>('/auth/mfa/setup')).data
+}
+
+export async function enableMfa(code: string): Promise<string[]> {
+  return (await api.post<{ recovery_codes: string[] }>('/auth/mfa/enable', { code })).data.recovery_codes
+}
+
+export async function regenerateRecoveryCodes(code: string): Promise<string[]> {
+  return (await api.post<{ recovery_codes: string[] }>('/auth/mfa/recovery-codes', { code })).data.recovery_codes
+}
+
+export async function disableMfa(code: string, password: string | null): Promise<void> {
+  await api.post('/auth/mfa/disable', { code, password })
 }
 
 export async function registerAccount(email: string, display_name: string, password: string): Promise<AuthUser> {
@@ -295,7 +329,7 @@ const PASSWORD_REASONS: Array<[RegExp, string]> = [
   [/email name/, 'password.reason.email'],
 ]
 /** Error codes whose text is translated on the client (the server's messages are English). */
-const ERROR_CODES = new Set(['TOKEN_INVALID', 'INVALID_CREDENTIALS', 'EMAIL_IN_USE', 'EMAIL_RESERVED', 'VERIFICATION_RECENTLY_SENT', 'SESSION_NOT_FOUND', 'AUTH_REQUIRED', 'INVALID_SESSION', 'ACCOUNT_DISABLED'])
+const ERROR_CODES = new Set(['TOKEN_INVALID', 'INVALID_CREDENTIALS', 'EMAIL_IN_USE', 'EMAIL_RESERVED', 'VERIFICATION_RECENTLY_SENT', 'SESSION_NOT_FOUND', 'AUTH_REQUIRED', 'INVALID_SESSION', 'ACCOUNT_DISABLED', 'LOGIN_THROTTLED', 'MFA_CODE_INVALID', 'MFA_LOCKED', 'MFA_NOT_CONFIGURED', 'MFA_REQUIRED_FOR_ROLE', 'MFA_ALREADY_ENABLED', 'MFA_NOT_ENABLED', 'MFA_SETUP_REQUIRED', 'ADMIN_RESET_FORBIDDEN'])
 function weakPasswordMessage(serverMessage: string): string {
   const reasons = PASSWORD_REASONS.filter(([pattern]) => pattern.test(serverMessage)).map(([, key]) => t(key))
   return reasons.length ? `${t('password.weak')}: ${reasons.join('; ')}.` : t('password.weak')

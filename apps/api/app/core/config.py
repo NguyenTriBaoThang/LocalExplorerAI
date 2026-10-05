@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     rate_limit_general_per_minute: int = Field(default=120, ge=1, le=10000)
     rate_limit_auth_per_minute: int = Field(default=10, ge=1, le=10000)
     rate_limit_chat_per_minute: int = Field(default=20, ge=1, le=10000)
+    rate_limit_costly_per_minute: int = Field(default=30, ge=1, le=10000)  # geocoding and local ML inference
     rate_limit_prefix: str = "local-explorer:rl"
     trusted_proxy_ips: str = ""
     smtp_host: str | None = None
@@ -53,8 +54,6 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = 30.0
     llm_fallback_enabled: bool = False
     app_signing_secret: str | None = None
-    auth_secret: str | None = None
-    session_ttl_seconds: int = 7200
     # New auth (see docs/auth-design.md). RS256 keys are base64-encoded PEM in the environment, in every
     # environment: generate them with `python -m scripts.generate_auth_keys`.
     auth_issuer: str = "local-explorer-ai"
@@ -69,6 +68,15 @@ class Settings(BaseSettings):
     auth_admin_absolute_ttl_seconds: int = 7 * 24 * 3600
     auth_refresh_grace_seconds: int = 10
     auth_refresh_threshold_seconds: int = 180
+    # Wrong-password throttling, counted from auth_events (works across workers, no Redis needed).
+    auth_login_window_seconds: int = 900
+    auth_login_max_failures_per_account_ip: int = Field(default=5, ge=1)   # one e-mail from one address
+    auth_login_max_failures_per_account: int = Field(default=20, ge=1)     # one e-mail from anywhere
+    auth_login_max_failures_per_ip: int = Field(default=50, ge=1)          # one address against any e-mail
+    # The old X-Provider-Access-Key is deprecated. None means "off in production, on elsewhere".
+    allow_provider_access_key: bool | None = None
+    # Administrators must pass a second factor. None means "on in production, off elsewhere" (handy for demos and local work).
+    admin_mfa_required: bool | None = None
     google_client_id: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
@@ -98,6 +106,18 @@ class Settings(BaseSettings):
     allow_unverified_ranker: bool = False
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
+
+    @model_validator(mode="after")
+    def production_defaults(self):
+        """Safer defaults in production unless the operator chose explicitly (an explicit value, either way, always wins)."""
+        production = self.app_env.lower() == "production"
+        if "rate_limit_enabled" not in self.model_fields_set and production:
+            self.rate_limit_enabled = True
+        if self.allow_provider_access_key is None:
+            self.allow_provider_access_key = not production
+        if self.admin_mfa_required is None:
+            self.admin_mfa_required = production
+        return self
 
     @model_validator(mode="after")
     def validate_smtp_transport(self):

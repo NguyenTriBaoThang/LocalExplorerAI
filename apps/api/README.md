@@ -8,7 +8,7 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 
 - **Framework Web**: [FastAPI 0.142+](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) (Asynchronous ASGI)
 - **Cơ sở Dữ liệu & ORM**: PostgreSQL 16 + PostGIS 3.4, [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [GeoAlchemy2](https://geoalchemy-2.readthedocs.io/), [Alembic](https://alembic.sqlalchemy.org/)
-- **Xác thực & Bảo mật**: HTTP-only Session Cookie (`le_session`), Google OAuth 2.0 PKCE, Argon2/PBKDF2 Password Hashing, Fernet AES-128-CBC encryption cho khóa tích hợp động
+- **Xác thực & Bảo mật**: JWT RS256 trong cookie HTTP-only (`le_at`/`le_rt`), refresh xoay vòng, MFA TOTP cho admin, Google OAuth 2.0 PKCE, Argon2/PBKDF2 Password Hashing, Fernet AES-128-CBC encryption cho khóa tích hợp động
 - **Học máy Cục bộ (Local ML)**:
   - `xgboost` (XGBRanker 13 features, NDCG@5 = 0.9516)
   - `sentence-transformers` + `multilingual-e5-small` (Vector Search chạy trên CPU)
@@ -94,7 +94,9 @@ pip install -r requirements-e5.txt
 Tạo file `.env` tại thư mục gốc repository (`g:\GITHUB\LoaclExplorerAI\.env`) theo mẫu `.env.example`. Đảm bảo các biến quan trọng sau đã được khai báo:
 ```env
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer
-AUTH_SECRET=your-secure-random-auth-secret-key-at-least-32-chars
+# Sinh khóa: python -m scripts.generate_auth_keys
+AUTH_JWT_KEY_ID=
+AUTH_JWT_PRIVATE_KEY_B64=
 APP_SIGNING_SECRET=your-secure-app-signing-secret
 INTEGRATION_SECRETS_KEY=your-fernet-master-key-base64
 ROUTING_PROVIDER=goong
