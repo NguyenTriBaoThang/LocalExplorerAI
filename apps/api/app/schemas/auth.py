@@ -53,6 +53,7 @@ class UserRead(BaseModel):
     email_verified_at: datetime | None = None
     mfa_enabled: bool = False
     created_at: datetime
+    permissions: list[str] = []   # filled by GET /auth/me so a client can hide what the role may not do
 
 
 def _normalize_email(value: str) -> str:

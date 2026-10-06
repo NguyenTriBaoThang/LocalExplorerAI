@@ -135,7 +135,8 @@ def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(requi
         poi.verification_status = "pending"
     _audit(db, user, "poi.updated", "poi", poi.id, {"data_revision": poi.data_revision, "previous_evidence_invalidated": True})
     db.commit()
-    return {"id": poi.id, "verification_status": poi.verification_status, "data_revision": poi.data_revision}
+    # Editing always voids the previous evidence, so the place stops being public until new evidence is accepted.
+    return {"id": poi.id, "verification_status": poi.verification_status, "data_revision": poi.data_revision, "evidence_invalidated": True}
 
 
 @router.post("/evidence", status_code=201)
@@ -222,7 +223,7 @@ def update_experience(experience_id: str, payload: ExperienceDraftRequest, user:
         "previous_evidence_invalidated": True,
     })
     db.commit()
-    return {"id": item.id, "verification_status": item.verification_status}
+    return {"id": item.id, "verification_status": item.verification_status, "evidence_invalidated": True}
 
 
 @router.delete("/experiences/{experience_id}")

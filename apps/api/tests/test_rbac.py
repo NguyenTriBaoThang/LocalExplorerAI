@@ -24,7 +24,7 @@ PUBLIC_ROUTES = {
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
-    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"),
+    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"),
     ("chat", "GET", "/api/chat/status"),
     ("health", "GET", "/health"), ("health", "GET", "/ready"),
     ("main", "GET", "/"),
