@@ -16,8 +16,8 @@ Trạng thái: ✅ đã làm trên web · 🟡 làm một phần · ⬜ chưa l�
 | `description` | Mô tả dài | như trên | ✅ `/places/:id` |
 | `image_urls[]` | Ảnh, ảnh đầu là ảnh bìa | như trên | ✅ ảnh bìa + thư viện ảnh ở `/places/:id`, thẻ địa điểm trong bộ sưu tập |
 | `opening_hours`, `ticket_info` | Giờ mở cửa, giá vé (văn bản tự do) | như trên | ✅ chip thông tin ở `/places/:id` |
-| `tags[]` | Thẻ chủ đề | như trên | ✅ `/places/:id` · ⬜ lọc theo thẻ ở Khám phá |
-| `is_landmark` | Danh thắng nổi bật | như trên | ✅ nhãn "Danh thắng" · ⬜ lớp "Danh thắng" trên bản đồ 3D |
+| `tags[]` | Thẻ chủ đề | như trên | ✅ `/places/:id` · ✅ lọc theo thẻ ở Khám phá (Lọc thêm → Địa điểm) |
+| `is_landmark` | Danh thắng nổi bật | như trên | ✅ nhãn "Danh thắng" · ✅ bộ lọc "Chỉ danh lam thắng cảnh" ở Khám phá, dải "Danh thắng" trên bản đồ 3D (liên kết `/places/:id`, nút 3D khi có mô hình) |
 | `source_url` | Nguồn xác minh (chỉ admin) | không công khai; web nhận `source_evidence` | ✅ (đã có sẵn huy hiệu xác minh) |
 | trạng thái `draft / verified / hidden` | Chỉ `verified` (và dữ liệu demo `simulated`) hiển thị với khách | lọc phía server | ✅ |
 
@@ -38,10 +38,10 @@ Markdown hỗ trợ: `#`/`##`/`###`, đoạn văn, `- ` danh sách, `> ` trích 
 
 | Dữ liệu | Nơi nhập | API công khai | Web |
 |---|---|---|---|
-| Trải nghiệm (tên, mô tả, chủ đề, thời lượng, giá, trong nhà, tự tay làm) | Đối tác; admin kiểm duyệt ở `Nội dung website → Kiểm duyệt` | `GET /api/experiences`, `/experiences/{id}` | ✅ Khám phá, Lập lịch |
+| Trải nghiệm (tên, mô tả, chủ đề, thời lượng, giá, trong nhà, tự tay làm) | Đối tác; admin kiểm duyệt ở `Nội dung website → Kiểm duyệt` | `GET /api/experiences`, `/experiences/{id}` (kèm `rating_*`, `provider_name`, `provider_slug`) | ✅ Khám phá, Lập lịch, `/experiences/:id` |
 | Slot (giờ, sức chứa, chỗ trống, hạn xác nhận) | Đối tác | `GET /api/experiences/{id}/slots` | ✅ Khám phá, Lập lịch, đặt chỗ |
 | Địa điểm của đối tác | Đối tác; admin duyệt | như 1.1 | ✅ |
-| Hồ sơ đối tác (tên cơ sở, giới thiệu, liên hệ, website) | Đối tác; admin duyệt | chưa có API công khai | ⬜ trang công khai `/partners/:slug` (giới thiệu cơ sở + danh sách trải nghiệm) |
+| Hồ sơ đối tác (tên cơ sở, giới thiệu, liên hệ, website) | Đối tác; admin duyệt | `GET /api/partners?q=` (danh bạ: chỉ đối tác đã duyệt, đang hoạt động và có trải nghiệm đang mở); `GET /api/partners/{slug}` (hồ sơ, web chưa dùng). Không lộ mã số thuế, giấy phép, tài liệu, ghi chú duyệt | ✅ `/provider`: chỉ xem thẻ đối tác đang hợp tác + nút "Đăng ký trở thành đối tác" dẫn sang trang đăng ký của portal. Duyệt/khóa đối tác làm ở portal (Quản trị → Đối tác) |
 
 ### 1.4 Đánh giá (du khách viết trên web → đối tác trả lời trong portal)
 
@@ -50,7 +50,7 @@ Markdown hỗ trợ: `#`/`##`/`###`, đoạn văn, `- ` danh sách, `> ` trích 
 | Du khách thấy booking đã tham gia chưa đánh giá | `GET /api/me/reviewable-bookings` | ✅ thẻ "Đánh giá trải nghiệm đã tham gia" ở `/profile` |
 | Du khách gửi đánh giá (1–5 sao + nhận xét) | `POST /api/bookings/{id}/review` (booking `confirmed`, slot đã bắt đầu, mỗi booking 1 lần) | ✅ `/profile` |
 | Đối tác xem & trả lời | `GET /api/provider/me/reviews`, `POST /api/provider/me/reviews/{id}/reply` | ✅ portal `Đánh giá` |
-| Mọi người xem đánh giá + phản hồi | `GET /api/experiences/{id}/reviews` (tên tác giả rút gọn, VD "Anh N.") | ✅ panel dưới bản đồ ở Khám phá · ⬜ điểm sao trên thẻ trải nghiệm |
+| Mọi người xem đánh giá + phản hồi | `GET /api/experiences/{id}/reviews` (tên tác giả rút gọn, VD "Anh N.") | ✅ panel dưới bản đồ ở Khám phá, `/experiences/:id` · ✅ điểm sao trên thẻ trải nghiệm (`rating_average`, `rating_count` trong `ExperienceRead`) |
 
 ### 1.5 Lượt truy cập (web gửi → portal thống kê)
 
@@ -66,14 +66,16 @@ localStorage/sessionStorage và chỉ được lưu dưới dạng HMAC; tôn tr
 không theo dõi `/admin`, `/provider-portal`. Nếu web thêm trang chi tiết mới (VD `/experiences/:id`), gọi `useEntityView`
 và thêm đường dẫn vào `ENTITY_PAGES` trong `src/analytics.ts` để không đếm trùng.
 
-## 2. Việc web khách nên làm tiếp (đề xuất)
+## 2. Việc web khách nên làm tiếp
 
-1. ⬜ Trang chi tiết trải nghiệm `/experiences/:id` (mô tả, slot, đánh giá, địa điểm) — hiện chỉ xem trong Khám phá.
-2. ⬜ Trang công khai của đối tác `/partners/:slug` (cần API `GET /api/partners/{slug}`).
-3. ⬜ Hiển thị điểm sao trung bình trên thẻ trải nghiệm (cần thêm `rating_average`, `rating_count` vào `ExperienceRead`).
-4. ⬜ Lọc theo `tags`/`is_landmark` ở Khám phá và lớp "Danh thắng" trên bản đồ 3D.
-5. ⬜ Gỡ `/admin` và `/provider-portal` khỏi web khách (đã chuyển sang `apps/portal`).
-6. ⬜ Sửa key i18n `footer.*` đang thiếu trong `src/i18n.ts` (footer hiện key thô — lỗi có từ trước).
+1. ✅ Trang chi tiết trải nghiệm `/experiences/:id` (mô tả, khung giờ, đánh giá, địa điểm, liên kết đối tác).
+2. ✅ Danh bạ đối tác `/provider` (thẻ + nút đăng ký). Không có trang hồ sơ riêng trên web khách.
+3. ✅ Điểm sao trung bình trên thẻ trải nghiệm.
+4. ✅ Lọc theo `tags`/`is_landmark` ở Khám phá và dải "Danh thắng" trên bản đồ 3D.
+5. ✅ `/admin` và `/provider-portal` đã gỡ khỏi web khách: hai đường dẫn này chuyển người dùng sang portal
+   (`/admin`, `/partner`) theo `VITE_PORTAL_URL` (mặc định `http://localhost:5174`). Các màn hình Rủi ro ngập, Công cụ AI, Vận hành,
+   Tích hợp, Nhập địa điểm & Trùng lặp, Trợ lý cập nhật ca, Nguồn xác minh đã có ở portal.
+6. ✅ Các key i18n `footer.*`, `profile.savedTrips`, `profile.updateSuccess`, `provider.subtitle` đã được bổ sung.
 
 ## 3. Lưu ý vận hành
 
@@ -81,4 +83,5 @@ và thêm đường dẫn vào `ENTITY_PAGES` trong `src/analytics.ts` để kh�
   mới nên dùng URL HTTPS. (Chưa có chức năng tải ảnh lên — đề xuất thêm kho ảnh/S3.)
 - Quyền mới (migration `0016`): `admin:places`, `admin:content`, `admin:analytics`, `provider:reviews`,
   `provider:analytics`, `review:write` — chỉnh được ở portal `Phân quyền`.
+- Web khách cần `VITE_PORTAL_URL` trỏ tới portal để nhân viên đăng nhập ở web được chuyển đúng nơi.
 - `PORTAL_APP_URL` phải được đặt để link email của đối tác/admin trỏ về portal và để origin của portal qua kiểm tra CSRF.
