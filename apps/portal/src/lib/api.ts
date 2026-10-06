@@ -86,11 +86,11 @@ export const partnerApi = {
   updateApplication: async (application: PartnerApplication) => (await http.put<ProviderProfile>('/provider/me/application', application)).data,
   experiences: async () => (await http.get<Experience[]>('/provider/experiences')).data,
   createExperience: async (draft: ExperienceDraft) => (await http.post<{ id: string }>('/provider/experiences', draft)).data,
-  updateExperience: async (id: string, draft: ExperienceDraft) => (await http.patch(`/provider/experiences/${id}`, draft)).data,
+  updateExperience: async (id: string, draft: ExperienceDraft) => (await http.patch<{ id: string; evidence_invalidated?: boolean }>(`/provider/experiences/${id}`, draft)).data,
   hideExperience: async (id: string) => (await http.delete(`/provider/experiences/${id}`)).data,
   pois: async () => (await http.get<Poi[]>('/provider/pois')).data,
   createPoi: async (draft: PoiDraft) => (await http.post<{ id: string }>('/provider/pois', draft)).data,
-  updatePoi: async (id: string, draft: PoiDraft) => (await http.patch<{ id: string }>(`/provider/pois/${id}`, draft)).data,
+  updatePoi: async (id: string, draft: PoiDraft) => (await http.patch<{ id: string; evidence_invalidated?: boolean }>(`/provider/pois/${id}`, draft)).data,
   audit: async () => (await http.get<AuditLog[]>('/provider/audit')).data,
   analytics: async (days: number) => (await http.get<PartnerAnalytics>('/provider/me/analytics', { params: { days } })).data,
   reviews: async () => (await http.get<Review[]>('/provider/me/reviews')).data,
@@ -117,6 +117,7 @@ export const adminApi = {
   updateUser: async (id: string, payload: { role: Role; is_active: boolean; provider_id?: string | null }) =>
     (await http.patch(`/admin/users/${id}`, payload)).data,
   revokeSessions: async (id: string) => { await http.post(`/admin/users/${id}/revoke-sessions`) },
+  providerCounts: async () => (await http.get<Record<'pending' | 'verified' | 'rejected' | 'suspended' | 'all', number>>('/admin/providers/counts')).data,
   providers: async (params: { q?: string; status?: string; limit: number; offset: number }) => {
     const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== '' && value !== undefined))
     const response = await http.get<AdminProvider[]>('/admin/providers', { params: clean })

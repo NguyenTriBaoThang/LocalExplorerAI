@@ -4,6 +4,10 @@ import { Alert, Button, Card, EmptyState, Field, IconButton, Input, Modal, PageH
 import { errorMessage, partnerApi } from '../../lib/api'
 import type { Poi, PoiDraft } from '../../lib/types'
 import { usePartner } from './PartnerLayout'
+import { EvidenceNotice, InlineEvidenceBlock } from './PartnerEvidencePage'
+import {
+  blankInlineEvidence, hasInlineEvidence, submitInlineEvidence, validateInlineEvidence, type EvidenceOutcome, type InlineEvidence,
+} from '../../lib/partnerTools'
 
 const EMPTY: PoiDraft = { name: '', description: '', district: '', latitude: 10.7769, longitude: 106.7009, category: '', address: '' }
 
@@ -14,6 +18,8 @@ export function PartnerPlacesPage() {
   const [editing, setEditing] = useState<{ id?: string; draft: PoiDraft } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [evidence, setEvidence] = useState<InlineEvidence>(blankInlineEvidence)
+  const [notice, setNotice] = useState<EvidenceOutcome | null>(null)
 
   const load = useCallback(() => { partnerApi.pois().then(setPois).catch(() => setPois([])) }, [])
   useEffect(load, [load])
@@ -21,13 +27,32 @@ export function PartnerPlacesPage() {
   const save = async (event: FormEvent) => {
     event.preventDefault()
     if (!editing) return
+    const withEvidence = hasInlineEvidence(evidence)
+    if (withEvidence) {
+      const problem = validateInlineEvidence(evidence)
+      if (problem) { setError(problem); return }
+    }
     setBusy(true)
     setError('')
     try {
       const payload = { ...editing.draft, district: editing.draft.district || null }
-      if (editing.id) await partnerApi.updatePoi(editing.id, payload)
-      else await partnerApi.createPoi(payload)
-      toast.success(editing.id ? 'Đã cập nhật địa điểm. Địa điểm sẽ được kiểm duyệt lại.' : 'Đã thêm địa điểm, đang chờ kiểm duyệt.')
+      const saved = editing.id ? await partnerApi.updatePoi(editing.id, payload) : await partnerApi.createPoi(payload)
+      const id = saved?.id ?? editing.id ?? ''
+      const message = editing.id ? 'Đã cập nhật địa điểm. Địa điểm sẽ được kiểm duyệt lại.' : 'Đã thêm địa điểm, đang chờ kiểm duyệt.'
+      if (!withEvidence) {
+        toast.success(message)
+        // Updates report whether earlier evidence was voided; a new place simply has none yet.
+        setNotice(!editing.id || (saved as { evidence_invalidated?: boolean } | undefined)?.evidence_invalidated === true ? { state: 'missing', targetType: 'poi', targetId: id } : null)
+      } else {
+        try {
+          await submitInlineEvidence('poi', id, evidence)
+          toast.success(`${message} Nguồn xác minh đã được gửi.`)
+          setNotice(null)
+        } catch (evErr) {
+          toast.error(`Đã lưu địa điểm nhưng chưa gửi được nguồn xác minh: ${errorMessage(evErr)}. Vào Nguồn xác minh để gửi lại.`)
+          setNotice({ state: 'failed', targetType: 'poi', targetId: id })
+        }
+      }
       setEditing(null)
       load()
     } catch (err) {
@@ -44,7 +69,8 @@ export function PartnerPlacesPage() {
   return (
     <>
       <PageHeader title="Địa điểm của tôi" description="Nơi diễn ra các trải nghiệm của bạn. Địa điểm mới được kiểm duyệt trước khi hiển thị trên bản đồ."
-        actions={<Button icon={Plus} disabled={!profile.can_publish} onClick={() => { setError(''); setEditing({ draft: { ...EMPTY } }) }}>Thêm địa điểm</Button>} />
+        actions={<Button icon={Plus} disabled={!profile.can_publish} onClick={() => { setError(''); setEvidence(blankInlineEvidence()); setEditing({ draft: { ...EMPTY } }) }}>Thêm địa điểm</Button>} />
+      {notice && <EvidenceNotice outcome={notice} onDismiss={() => setNotice(null)} />}
       {!pois ? <Spinner /> : pois.length === 0 ? (
         <Card><EmptyState icon={MapPin} title="Chưa có địa điểm" description="Thêm địa điểm cơ sở của bạn để gắn trải nghiệm." /></Card>
       ) : (
@@ -59,7 +85,7 @@ export function PartnerPlacesPage() {
                     <p className="truncate font-semibold text-slate-900">{poi.name}</p>
                     <p className="truncate text-sm text-slate-500">{poi.address}</p>
                   </div>
-                  <IconButton icon={Pencil} label="Sửa" disabled={!profile.can_publish} onClick={() => { setError(''); setEditing({ id: poi.id, draft: { name: poi.name, description: poi.description, district: poi.district ?? '', latitude: poi.latitude, longitude: poi.longitude, category: poi.category, address: poi.address } }) }} />
+                  <IconButton icon={Pencil} label="Sửa" disabled={!profile.can_publish} onClick={() => { setError(''); setEvidence(blankInlineEvidence()); setEditing({ id: poi.id, draft: { name: poi.name, description: poi.description, district: poi.district ?? '', latitude: poi.latitude, longitude: poi.longitude, category: poi.category, address: poi.address } }) }} />
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>{poi.category}{poi.district && ` · ${poi.district}`}</span><StatusBadge status={poi.verification_status} /></div>
               </div>
@@ -81,6 +107,7 @@ export function PartnerPlacesPage() {
               <Field label="Kinh độ"><Input type="number" step="any" value={draft.longitude} onChange={(e) => set('longitude', Number(e.target.value))} /></Field>
             </div>
             <Field label="Mô tả" className="sm:col-span-2"><Textarea value={draft.description} onChange={(e) => set('description', e.target.value)} /></Field>
+            <InlineEvidenceBlock targetType="poi" value={evidence} onChange={setEvidence} />
             {mapSrc && <iframe title="Bản đồ" src={mapSrc} className="h-52 w-full rounded-lg border border-slate-200 sm:col-span-2" loading="lazy" />}
           </form>
         )}

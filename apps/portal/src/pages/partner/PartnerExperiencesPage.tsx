@@ -7,6 +7,10 @@ import { errorMessage, partnerApi } from '../../lib/api'
 import { formatDateTime, formatMoney, INTENTS, isoToLocalInput, localInputToIso } from '../../lib/format'
 import type { Experience, ExperienceDraft, Intent, Poi, PoiDraft, Slot } from '../../lib/types'
 import { usePartner } from './PartnerLayout'
+import { EvidenceNotice, InlineEvidenceBlock } from './PartnerEvidencePage'
+import {
+  blankInlineEvidence, hasInlineEvidence, splitEvidenceFields, submitInlineEvidence, validateInlineEvidence, type EvidenceOutcome,
+} from '../../lib/partnerTools'
 
 type SlotFilter = 'upcoming' | 'past' | 'all'
 
@@ -21,6 +25,7 @@ export function PartnerExperiencesPage() {
   const [slotFor, setSlotFor] = useState<Experience | null>(null)
   const [slotEdit, setSlotEdit] = useState<Slot | null>(null)
   const [hiding, setHiding] = useState<Experience | null>(null)
+  const [notice, setNotice] = useState<EvidenceOutcome | null>(null)
 
   const load = useCallback(async () => {
     const [items, places] = await Promise.all([partnerApi.experiences(), partnerApi.pois()])
@@ -51,6 +56,8 @@ export function PartnerExperiencesPage() {
       <PageHeader title="Trải nghiệm & Slot" description="Tạo trải nghiệm và mở các khung giờ (slot) để du khách đặt chỗ."
         actions={<Button icon={Plus} disabled={!profile.can_publish} onClick={() => setEditing('new')}>Tạo trải nghiệm</Button>} />
 
+      {notice && <EvidenceNotice outcome={notice} onDismiss={() => setNotice(null)} />}
+
       {experiences.length > 0 && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="relative w-full max-w-xs">
@@ -78,7 +85,13 @@ export function PartnerExperiencesPage() {
       )}
 
       {editing && <ExperienceModal experience={editing === 'new' ? null : editing} pois={pois} onClose={() => setEditing(null)}
-        onSaved={async (message) => { setEditing(null); toast.success(message); await load() }} />}
+        onSaved={async (message, outcome, evidenceError) => {
+          setEditing(null)
+          setNotice(outcome)
+          if (evidenceError) toast.error(`Đã lưu trải nghiệm nhưng chưa gửi được nguồn xác minh: ${evidenceError}. Vào Nguồn xác minh để gửi lại.`)
+          else toast.success(message)
+          await load()
+        }} />}
       {slotFor && <CreateSlotModal experience={slotFor} onClose={() => setSlotFor(null)}
         onSaved={async (message) => { setSlotFor(null); toast.success(message); await load() }} />}
       {slotEdit && <UpdateSlotModal slot={slotEdit} onClose={() => setSlotEdit(null)}
@@ -181,7 +194,8 @@ const EMPTY_EXPERIENCE: ExperienceDraft = {
 }
 const EMPTY_POI: PoiDraft = { name: '', description: '', district: '', latitude: 10.7769, longitude: 106.7009, category: '', address: '' }
 
-function ExperienceModal({ experience, pois, onClose, onSaved }: { experience: Experience | null; pois: Poi[]; onClose: () => void; onSaved: (message: string) => void }) {
+function ExperienceModal({ experience, pois, onClose, onSaved }: { experience: Experience | null; pois: Poi[]; onClose: () => void; onSaved: (message: string, outcome: EvidenceOutcome | null, evidenceError?: string) => void }) {
+  const [evidence, setEvidence] = useState(blankInlineEvidence)
   const [draft, setDraft] = useState<ExperienceDraft>(() => experience ? {
     poi_id: experience.poi_id, title: experience.title, description: experience.description, primary_intent: experience.primary_intent ?? 'văn_hóa',
     intent_tags: experience.intent_tags, is_hands_on: experience.is_hands_on, is_indoor: experience.is_indoor,
@@ -195,15 +209,55 @@ function ExperienceModal({ experience, pois, onClose, onSaved }: { experience: E
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    const withEvidence = hasInlineEvidence(evidence)
+    if (withEvidence) {
+      const problem = validateInlineEvidence(evidence)
+      if (problem) { setError(problem); return }
+    }
     setBusy(true)
     setError('')
     try {
       let poiId = draft.poi_id
       if (newPoi) poiId = (await partnerApi.createPoi({ ...newPoi, district: newPoi.district || null })).id
       const payload = { ...draft, poi_id: poiId, intent_tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean) }
-      if (experience) await partnerApi.updateExperience(experience.id, payload)
-      else await partnerApi.createExperience(payload)
-      onSaved(experience ? 'Đã cập nhật trải nghiệm. Nội dung sẽ được kiểm duyệt lại.' : 'Đã tạo trải nghiệm. Giờ bạn có thể mở slot.')
+      let id = experience?.id ?? ''
+      let invalidated = false
+      if (experience) invalidated = (await partnerApi.updateExperience(experience.id, payload)).evidence_invalidated === true
+      else id = (await partnerApi.createExperience(payload)).id
+      const message = experience ? 'Đã cập nhật trải nghiệm. Nội dung sẽ được kiểm duyệt lại.' : 'Đã tạo trải nghiệm. Giờ bạn có thể mở slot.'
+      if (!withEvidence) {
+        // A new place never has evidence yet; an updated experience only needs the notice when its evidence was voided.
+        const poiMissing: EvidenceOutcome | null = newPoi ? { state: 'missing', targetType: 'poi', targetId: poiId } : null
+        onSaved(message, poiMissing ?? (!experience || invalidated ? { state: 'missing', targetType: 'experience', targetId: id } : null))
+        return
+      }
+      if (!newPoi) {
+        try {
+          await submitInlineEvidence('experience', id, evidence)
+          onSaved(`${message} Nguồn xác minh đã được gửi.`, null)
+        } catch (evErr) {
+          onSaved(message, { state: 'failed', targetType: 'experience', targetId: id }, errorMessage(evErr))
+        }
+        return
+      }
+      // A new place and the experience are separate records with separate field sets: send the source for each one
+      // the partner picked fields for, and say what is still missing.
+      const fields = splitEvidenceFields(evidence.fields)
+      const sent: string[] = []
+      const failures: string[] = []
+      let remaining: EvidenceOutcome | null = null
+      if (fields.poi.length) {
+        try { await submitInlineEvidence('poi', poiId, { ...evidence, fields: fields.poi }); sent.push('địa điểm mới') }
+        catch (evErr) { failures.push(`địa điểm mới (${errorMessage(evErr)})`); remaining = { state: 'failed', targetType: 'poi', targetId: poiId } }
+      } else remaining = { state: 'missing', targetType: 'poi', targetId: poiId }
+      if (fields.experience.length) {
+        try { await submitInlineEvidence('experience', id, { ...evidence, fields: fields.experience }); sent.push('trải nghiệm') }
+        catch (evErr) { failures.push(`trải nghiệm (${errorMessage(evErr)})`); remaining ??= { state: 'failed', targetType: 'experience', targetId: id } }
+      } else remaining ??= { state: 'missing', targetType: 'experience', targetId: id }
+      const missing = [!fields.poi.length && 'địa điểm mới', !fields.experience.length && 'trải nghiệm'].filter(Boolean).join(' và ')
+      if (failures.length) onSaved(message, remaining, failures.join('; '))
+      else if (missing) onSaved(`${message} Đã gửi nguồn xác minh cho ${sent.join(' và ')}; ${missing} vẫn chưa có nguồn xác minh vì bạn chưa chọn trường nào cho bản ghi đó.`, remaining)
+      else onSaved(`${message} Nguồn xác minh đã được gửi cho cả địa điểm mới và trải nghiệm.`, null)
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -276,6 +330,7 @@ function ExperienceModal({ experience, pois, onClose, onSaved }: { experience: E
           <Toggle checked={draft.is_hands_on} onChange={(value) => set('is_hands_on', value)} label="Khách được tự tay làm" />
           <Toggle checked={draft.is_indoor} onChange={(value) => set('is_indoor', value)} label="Trong nhà" />
         </div>
+        <InlineEvidenceBlock targetType={newPoi ? 'both' : 'experience'} value={evidence} onChange={setEvidence} />
       </form>
     </Modal>
   )

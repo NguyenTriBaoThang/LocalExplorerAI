@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Ban, Building2, Check, ExternalLink, Plus, RotateCcw, Search, X } from 'lucide-react'
 import {
@@ -23,7 +23,11 @@ export function AdminPartnersPage() {
   const toast = useToast()
   const { refreshPending } = usePendingPartners()
   const [params, setParams] = useSearchParams()
-  const status = (params.get('status') ?? 'pending') as StatusFilter
+  const [counts, setCounts] = useState<Record<string, number> | null>(null)
+  const [countsSettled, setCountsSettled] = useState(false)   // wait for the counts before the first list request, so the default tab is known
+  useEffect(() => { adminApi.providerCounts().then(setCounts).catch(() => setCounts(null)).finally(() => setCountsSettled(true)) }, [])
+  // Open on the review queue when something is waiting; otherwise show everyone.
+  const status = (params.get('status') ?? (counts && counts.pending === 0 ? '' : 'pending')) as StatusFilter
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [offset, setOffset] = useState(0)
@@ -37,13 +41,17 @@ export function AdminPartnersPage() {
   useEffect(() => { const id = window.setTimeout(() => setDebounced(query), 300); return () => window.clearTimeout(id) }, [query])
   useEffect(() => setOffset(0), [status, debounced])
 
+  const latest = useRef(0)
   const load = useCallback(async () => {
+    if (!countsSettled) return
+    const request = ++latest.current
     try {
-      setPage(await adminApi.providers({ status, q: debounced, limit: LIMIT, offset }))
+      const result = await adminApi.providers({ status, q: debounced, limit: LIMIT, offset })
+      if (request === latest.current) setPage(result)   // a slower answer for an earlier filter must not overwrite this one
     } catch (err) {
-      toast.error(errorMessage(err))
+      if (request === latest.current) toast.error(errorMessage(err))
     }
-  }, [status, debounced, offset]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [status, debounced, offset, countsSettled]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load() }, [load])
 
   const openDetail = useCallback(async (id: string) => {
@@ -69,6 +77,7 @@ export function AdminPartnersPage() {
       toast.success(`Đã ${ACTION_COPY[action].button.toLowerCase()} “${detail.name}”.`)
       setAction(null)
       await Promise.all([load(), openDetail(detail.id)])
+      adminApi.providerCounts().then(setCounts).catch(() => undefined)
       refreshPending()
     } catch (err) {
       toast.error(errorMessage(err))
@@ -87,8 +96,9 @@ export function AdminPartnersPage() {
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Tabs value={status} onChange={setStatus} items={[
-          { value: 'pending', label: 'Chờ duyệt' }, { value: 'verified', label: 'Đã duyệt' }, { value: 'rejected', label: 'Từ chối' },
-          { value: 'suspended', label: 'Tạm khóa' }, { value: '', label: 'Tất cả' },
+          { value: '', label: 'Tất cả', count: counts?.all }, { value: 'pending', label: 'Chờ duyệt', count: counts?.pending },
+          { value: 'verified', label: 'Đã duyệt', count: counts?.verified }, { value: 'rejected', label: 'Từ chối', count: counts?.rejected },
+          { value: 'suspended', label: 'Tạm khóa', count: counts?.suspended },
         ]} />
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

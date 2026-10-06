@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { BarChart3, CalendarCheck, CalendarDays, Compass, History, LayoutDashboard, MapPin, Star, UserCog, UserRound } from 'lucide-react'
+import { BarChart3, CalendarCheck, CalendarDays, Compass, FileCheck2, History, LayoutDashboard, MapPin, Sparkles, Star, UserCog, UserRound } from 'lucide-react'
 import { PortalShell } from '../../components/PortalShell'
+import { useAuth } from '../../auth/AuthContext'
 import { Alert, Button, Spinner, StatusBadge } from '../../components/ui'
 import { errorMessage, partnerApi } from '../../lib/api'
+import type { NavGroup } from '../../components/PortalShell'
 import type { ProviderProfile } from '../../lib/types'
 
 type PartnerContextValue = { profile: ProviderProfile; reload: () => Promise<void> }
@@ -19,6 +21,7 @@ export function PartnerLayout() {
   const [profile, setProfile] = useState<ProviderProfile | null>(null)
   const [error, setError] = useState('')
   const location = useLocation()
+  const { can } = useAuth()
 
   const reload = useCallback(async () => {
     try {
@@ -36,24 +39,26 @@ export function PartnerLayout() {
     <PartnerContext.Provider value={{ profile, reload }}>
       <PortalShell
         area="Portal Đối tác"
-        nav={[
+        nav={visibleNav(can, [
           { items: [
             { to: '/partner', label: 'Tổng quan', icon: LayoutDashboard, end: true },
-            { to: '/partner/analytics', label: 'Thống kê', icon: BarChart3 },
+            { to: '/partner/analytics', label: 'Thống kê', icon: BarChart3, perm: 'provider:analytics' },
           ] },
           { title: 'Kinh doanh', items: [
-            { to: '/partner/experiences', label: 'Trải nghiệm & Slot', icon: Compass },
-            { to: '/partner/calendar', label: 'Lịch slot', icon: CalendarDays },
-            { to: '/partner/bookings', label: 'Đặt chỗ', icon: CalendarCheck },
-            { to: '/partner/places', label: 'Địa điểm của tôi', icon: MapPin },
-            { to: '/partner/reviews', label: 'Đánh giá', icon: Star },
+            { to: '/partner/experiences', label: 'Trải nghiệm & Slot', icon: Compass, perm: 'provider:experience' },
+            { to: '/partner/calendar', label: 'Lịch slot', icon: CalendarDays, perm: 'provider:experience' },
+            { to: '/partner/bookings', label: 'Đặt chỗ', icon: CalendarCheck, perm: 'provider:booking_read' },
+            { to: '/partner/places', label: 'Địa điểm của tôi', icon: MapPin, perm: 'provider:poi' },
+            { to: '/partner/reviews', label: 'Đánh giá', icon: Star, perm: 'provider:reviews' },
+            { to: '/partner/evidence', label: 'Nguồn xác minh', icon: FileCheck2, perm: 'provider:evidence' },
+            { to: '/partner/slot-assistant', label: 'Trợ lý cập nhật ca', icon: Sparkles, perm: 'provider:slot_assist' },
           ] },
           { title: 'Tài khoản', items: [
-            { to: '/partner/profile', label: 'Hồ sơ đối tác', icon: UserRound },
-            { to: '/partner/activity', label: 'Nhật ký hoạt động', icon: History },
+            { to: '/partner/profile', label: 'Hồ sơ đối tác', icon: UserRound, perm: 'provider:profile' },
+            { to: '/partner/activity', label: 'Nhật ký hoạt động', icon: History, perm: 'provider:audit' },
             { to: '/partner/account', label: 'Tài khoản', icon: UserCog },
           ] },
-        ]}
+        ])}
         banner={!profile.can_publish && location.pathname !== '/partner/profile' ? <StatusBanner profile={profile} /> : undefined}
         sidebarFooter={
           <div className="rounded-lg bg-slate-50 p-3">
@@ -79,4 +84,17 @@ function StatusBanner({ profile }: { profile: ProviderProfile }) {
       {content.text}
     </Alert>
   )
+}
+
+type GatedItem = NavGroup['items'][number] & { perm?: string }
+type GatedGroup = { title?: string; items: GatedItem[] }
+
+/** Drops nav entries the signed-in role may not use, and groups left empty. */
+function visibleNav(can: (permission: string) => boolean, groups: GatedGroup[]): NavGroup[] {
+  return groups
+    .map((group) => ({
+      title: group.title,
+      items: group.items.filter((item) => !item.perm || can(item.perm)).map(({ perm: _perm, ...item }) => item),
+    }))
+    .filter((group) => group.items.length > 0)
 }

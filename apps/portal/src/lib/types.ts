@@ -11,6 +11,8 @@ export type AuthUser = {
   email_verified_at: string | null
   mfa_enabled: boolean
   created_at: string
+  /** Permissions of the signed-in role; only present on /auth/me. */
+  permissions: string[]
 }
 
 export type ProviderStatus = 'pending' | 'verified' | 'rejected' | 'suspended' | 'mock' | 'simulated'
