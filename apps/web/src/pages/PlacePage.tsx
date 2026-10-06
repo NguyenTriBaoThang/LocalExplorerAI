@@ -56,7 +56,7 @@ export function PlacePage() {
               <h2 className="section-title-3d" style={{ fontSize: 22 }}>{vi ? 'Trải nghiệm tại đây' : 'Experiences here'}</h2>
               <div className="content-grid" style={{ marginTop: 16 }}>
                 {experiences.map((item) => (
-                  <Link key={item.id} to={`/explore?focus=${item.id}`} className="place-card">
+                  <Link key={item.id} to={`/experiences/${item.id}`} className="place-card">
                     <div className="place-card-body">
                       <h4>{item.name}</h4>
                       <p>{item.duration_min} {vi ? 'phút' : 'min'} · {item.price_vnd.toLocaleString('vi-VN')}₫</p>

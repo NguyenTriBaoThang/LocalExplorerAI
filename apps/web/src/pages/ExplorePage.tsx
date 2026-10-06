@@ -41,7 +41,7 @@ const localTomorrow = () => {
 }
 
 export function ExplorePage() {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [searchParams] = useSearchParams()
   const initialIntent = searchParams.get('intent') || ''
 
@@ -68,6 +68,9 @@ export function ExplorePage() {
   const [radiusKm, setRadiusKm] = useState(15)
   const [slotId, setSlotId] = useState('')
   const [semantic, setSemantic] = useState(false)
+  // Place filters from the portal's place data; applied in the browser to the experiences already returned.
+  const [landmarkOnly, setLandmarkOnly] = useState(false)
+  const [placeTag, setPlaceTag] = useState('')
   const [selectedId, setSelectedId] = useState(searchParams.get('focus') || '')
   // A deliberate pick counts as a view of that experience (partner statistics); the automatic first pick does not.
   const selectExperience = (id: string) => {
@@ -125,14 +128,23 @@ export function ExplorePage() {
     () =>
       items.filter(
         (item) =>
-          semantic ||
-          !search.trim() ||
-          `${item.name} ${item.description} ${item.poi.name}`
-            .toLowerCase()
-            .includes(search.toLowerCase())
+          (!landmarkOnly || item.poi.is_landmark) &&
+          (!placeTag || (item.poi.tags ?? []).includes(placeTag)) &&
+          (semantic ||
+            !search.trim() ||
+            `${item.name} ${item.description} ${item.poi.name}`
+              .toLowerCase()
+              .includes(search.toLowerCase()))
       ),
-    [items, search, semantic]
+    [items, search, semantic, landmarkOnly, placeTag]
   )
+
+  // The most common place tags among the current results (a tag nobody has would only lead to an empty list).
+  const placeTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    items.forEach((item) => (item.poi.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)))
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag)
+  }, [items])
 
   const points = visible.map((item, index) => ({
     id: item.id,
@@ -158,6 +170,8 @@ export function ExplorePage() {
     setRadiusKm(15)
     setSlotId('')
     setSemantic(false)
+    setLandmarkOnly(false)
+    setPlaceTag('')
   }
 
   const activeAdvancedCount =
@@ -165,7 +179,9 @@ export function ExplorePage() {
     (topic ? 1 : 0) +
     (radiusKm !== 15 ? 1 : 0) +
     (slotId ? 1 : 0) +
-    (semantic ? 1 : 0)
+    (semantic ? 1 : 0) +
+    (landmarkOnly ? 1 : 0) +
+    (placeTag ? 1 : 0)
 
   return (
     <div className="explore-page-3d page-wrap">
@@ -385,6 +401,27 @@ export function ExplorePage() {
                     className="adv-range-slider"
                   />
                 </label>
+              </div>
+
+              {/* Place filters: landmarks and tags */}
+              <div className="advanced-field-col">
+                <label className="adv-label">
+                  <span>{locale === 'vi' ? 'Địa điểm' : 'Place'}</span>
+                </label>
+                <label className="toggle-switch-card">
+                  <input type="checkbox" checked={landmarkOnly} onChange={(e) => setLandmarkOnly(e.target.checked)} className="toggle-checkbox" />
+                  <div className="toggle-slider" />
+                  <span className="toggle-label">{locale === 'vi' ? 'Chỉ danh lam thắng cảnh' : 'Landmarks only'}</span>
+                </label>
+                {placeTags.length > 0 && (
+                  <div className="topic-quick-pills">
+                    {placeTags.map((tag) => (
+                      <button key={tag} type="button" className={`topic-pill ${placeTag === tag ? 'topic-pill-active' : ''}`} onClick={() => setPlaceTag(placeTag === tag ? '' : tag)}>
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Semantic E5 Toggle */}
