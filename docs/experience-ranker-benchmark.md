@@ -22,6 +22,16 @@ The supplied `benchmark_metadata.json` records dataset SHA-256 `0b52faae9729326b
 
 The report's `existing_model_reference` is null, so this run did not compare the old ignored XGBoost artifact on the same split/data. Its historical score from a different, unverified dataset must not be compared directly.
 
+## Review of bootstrap artifacts (2026-10-10)
+
+The supplied `experience_ranker_verified.csv` is **not verified human feedback**, despite its filename. The CSV has 960 rows across 120 generated query contexts, 26 experiences, and 11 POIs. All rows use `label_status=bootstrap_weak_labeled` and `label_method=bootstrap_rule_v1`; `training_eligible=false`, planner feasibility is `NOT_VERIFIED`, slots are `simulated_open`, and estimated operational fields are present. The accompanying audit reports zero human labels, real queries, or real bookings. Its SHA-256 is `a8a0c766db580b64d00ce9923f25481dacfb4aca54362217f184346a86731fb6`.
+
+The benchmark's validation NDCG@5 for XGBoost is approximately 1.0, but the rule baseline scores the same; on test, XGBoost scores 0.9903 while the rule baseline scores 1.0. These scores show imitation of the bootstrap label generator, not predicted traveler satisfaction. The candidate also uses `bootstrap_features_v1` (23 features), which does not match the API's `ranker-features-v2` contract (15 features). The verified trainer correctly rejects this CSV because it does not declare `label_status=verified_human_labeled`.
+
+**Deployment decision: do not install this XGBoost artifact.** Keep `rule-baseline-v1` for cold start and collect reviewed trip outcomes over time. The API remains responsible for hard feasibility checks before ranking. The source CSV and supplied ZIP/notebook remain in the user's Desktop folder; they were not copied into the production model directory or relabeled. Only benchmark facts are recorded here.
+
+For cleanup, the obsolete unverified bundle under `models/ai-ranker/` and the unreferenced root `models/xgb_ranker_v3.json` were removed. `models/ai-ranker/.gitkeep` remains. The separate flood-report experiment was left untouched because it is a distinct research task.
+
 ## Runtime and next data needed
 
 `GET /api/ml/status` identifies the active ranker. `POST /api/ml/rank-experiences`, itinerary planning, and re-planning all use the same rule baseline when there is no deployment-eligible ML bundle. Weak-label artifacts remain blocked. Planner checks time, budget, slot/capacity, locked stops, and return routing before ranking; the ranker cannot make an infeasible option eligible.

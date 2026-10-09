@@ -187,3 +187,87 @@ def test_ranker_status_rejects_corrupt_model_checksum():
     assert status["deployment_allowed"] is False
     assert "SHA-256 does not match" in status["artifact_integrity_error"]
     assert hashlib.sha256(model_bytes).hexdigest() != metadata["model_sha256"]
+
+
+def test_bootstrap_ranker_requires_explicit_opt_in_and_never_becomes_production(monkeypatch):
+    from app.core.config import settings
+
+    model_bytes = b"bootstrap pilot model fixture"
+    metadata = {
+        "model_version": "bootstrap-test-v1",
+        "model_family": "xgboost",
+        "model_file": "xgboost_ranker.json",
+        "model_sha256": hashlib.sha256(model_bytes).hexdigest(),
+        "feature_version": "ranker-features-v2",
+        "feature_names": [
+            "tag_jaccard", "intent_match", "is_hands_on", "is_indoor", "duration_ratio",
+            "eta_ratio", "total_time_ratio", "group_cost_ratio", "rain_mm", "outdoor_rain_mm",
+            "temperature_c", "pm2_5", "european_aqi", "is_hands_on_known", "is_indoor_known",
+        ],
+        "dataset_status": "bootstrap_weak_labeled",
+        "model_mode": "bootstrap_pilot",
+        "pilot_runtime_eligible": True,
+        "deployment_eligible": False,
+        "production_eligible": False,
+        "warning": "weak bootstrap labels",
+    }
+
+    class FakeArtifact:
+        def is_file(self):
+            return True
+
+        def resolve(self):
+            return self
+
+        def __str__(self):
+            return "xgboost_ranker.json"
+
+        def stat(self):
+            return SimpleNamespace(st_mtime_ns=1, st_size=len(model_bytes))
+
+        def open(self, _mode):
+            return io.BytesIO(model_bytes)
+
+    class FakeBootstrapService(MLRankerService):
+        def __init__(self):
+            super().__init__(artifact_dir=None)
+
+        @property
+        def configured(self):
+            return True
+
+        def _read_metadata(self):
+            return metadata
+
+        def _artifact_path(self, _metadata):
+            return FakeArtifact()
+
+    service = FakeBootstrapService()
+
+    monkeypatch.setattr(settings, "enable_bootstrap_ranker", False)
+    disabled = service.status()
+    assert disabled["active_ranker"] == "rule_baseline"
+    assert disabled["pilot_runtime_eligible"] is True
+    assert disabled["pilot_runtime_enabled"] is False
+    assert disabled["deployment_allowed"] is False
+    assert disabled["production_eligible"] is False
+
+    monkeypatch.setattr(settings, "enable_bootstrap_ranker", True)
+    enabled = service.status()
+    assert enabled["active_ranker"] == "bootstrap_ml_ranker"
+    assert enabled["model_runtime_active"] is True
+    assert enabled["pilot_runtime_enabled"] is True
+    assert enabled["deployment_allowed"] is False
+    assert enabled["production_eligible"] is False
+    assert enabled["warning"] == "weak bootstrap labels"
+
+
+def test_generic_weak_label_metadata_is_not_bootstrap_pilot_eligible():
+    metadata = {
+        "dataset_status": "weak_label_experiment",
+        "deployment_eligible": False,
+        "pilot_runtime_eligible": True,
+        "model_mode": "bootstrap_pilot",
+        "production_eligible": False,
+    }
+    assert MLRankerService._metadata_is_bootstrap_pilot(metadata) is False

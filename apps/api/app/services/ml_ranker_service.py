@@ -23,6 +23,11 @@ RULE_BASELINE_WARNING = (
     "Deterministic intent/category rules are active. This is not a trained model or "
     "human-preference validation; current weak-label metrics only measure rule imitation."
 )
+BOOTSTRAP_PILOT_WARNING = (
+    "Bootstrap pilot model đang chạy trên nhãn quy tắc yếu và dữ liệu bối cảnh/ETA/slot/sức chứa mô phỏng. "
+    "Đây không phải sở thích thật của du khách hay dữ liệu vận hành đã xác minh. Chỉ dùng thử nghiệm; "
+    "planner vẫn phải kiểm tra mọi ràng buộc cứng. Không đủ điều kiện production."
+)
 
 
 class MLRankerUnavailable(RuntimeError):
@@ -124,30 +129,55 @@ class MLRankerService:
             and metadata.get("deployment_eligible") is True
         )
 
+    @staticmethod
+    def _metadata_is_bootstrap_pilot(metadata: dict[str, Any]) -> bool:
+        """Only accept the explicitly versioned bootstrap format; never generic weak bundles."""
+        return (
+            metadata.get("model_mode") == "bootstrap_pilot"
+            and metadata.get("dataset_status") == "bootstrap_weak_labeled"
+            and metadata.get("pilot_runtime_eligible") is True
+            and metadata.get("deployment_eligible") is False
+            and metadata.get("production_eligible") is False
+        )
+
     def status(self) -> dict[str, Any]:
         metadata = self._read_metadata()
         artifact_dataset_status = metadata.get("dataset_status", "unknown")
         production_eligible = self._metadata_is_deployable(metadata)
+        bootstrap_pilot_eligible = self._metadata_is_bootstrap_pilot(metadata)
         configured = self.configured
+        pilot_runtime_enabled = bool(settings.enable_bootstrap_ranker and bootstrap_pilot_eligible)
         ml_allowed = configured and production_eligible and not self._load_failed
+        model_runtime_active = configured and (production_eligible or pilot_runtime_enabled) and not self._load_failed
         integrity_error = self._integrity_error(metadata)
-        if artifact_dataset_status == "weak_label_experiment":
-            block_reason = "Weak-label experiment artifacts are never deployable."
-        elif metadata.get("deployment_eligible") is False:
-            block_reason = "Ranker metadata explicitly marks this artifact non-deployable."
-        elif integrity_error:
+        if integrity_error:
             block_reason = integrity_error
         elif not configured:
             block_reason = "No complete ML bundle is installed; the built-in rule baseline is active."
+        elif bootstrap_pilot_eligible and not settings.enable_bootstrap_ranker:
+            block_reason = "Bootstrap pilot is disabled. Set ENABLE_BOOTSTRAP_RANKER=true only for an explicit experimental pilot."
+        elif artifact_dataset_status == "weak_label_experiment":
+            block_reason = "Weak-label experiment artifacts are never deployable."
+        elif metadata.get("deployment_eligible") is False:
+            block_reason = "Ranker metadata explicitly marks this artifact non-deployable."
         elif not production_eligible:
             block_reason = "ML requires dataset_status=verified_human_labeled and deployment_eligible=true."
         elif self._load_failed:
             block_reason = self._error or "The ML bundle failed to load; the built-in rule baseline is active."
         else:
             block_reason = None
-        active_ranker = "ml_ranker" if ml_allowed else "rule_baseline"
-        active_version = metadata.get("model_version") if ml_allowed else RULE_BASELINE_VERSION
-        active_family = metadata.get("model_family", "xgboost") if ml_allowed else "rule_baseline"
+        active_ranker = (
+            "ml_ranker" if ml_allowed else
+            "bootstrap_ml_ranker" if model_runtime_active and pilot_runtime_enabled else
+            "rule_baseline"
+        )
+        active_version = metadata.get("model_version") if model_runtime_active else RULE_BASELINE_VERSION
+        active_family = metadata.get("model_family", "xgboost") if model_runtime_active else "rule_baseline"
+        active_warning = (
+            metadata.get("warning") or BOOTSTRAP_PILOT_WARNING
+            if model_runtime_active and pilot_runtime_enabled else
+            metadata.get("warning") if ml_allowed else RULE_BASELINE_WARNING
+        )
         return {
             "configured": configured,
             "loaded": self._model is not None,
@@ -158,14 +188,17 @@ class MLRankerService:
             "model_family": active_family,
             "fallback_active": active_ranker == "rule_baseline",
             "fallback_version": RULE_BASELINE_VERSION,
-            "feature_version": metadata.get("feature_version", LEGACY_FEATURE_VERSION) if ml_allowed else None,
-            "dataset_status": artifact_dataset_status if ml_allowed else "rule_based_no_training_labels",
+            "feature_version": metadata.get("feature_version", LEGACY_FEATURE_VERSION) if model_runtime_active else None,
+            "dataset_status": artifact_dataset_status if model_runtime_active else "rule_based_no_training_labels",
             "artifact_dataset_status": artifact_dataset_status,
             "production_eligible": production_eligible,
             "deployment_allowed": ml_allowed,
+            "pilot_runtime_eligible": bootstrap_pilot_eligible,
+            "pilot_runtime_enabled": pilot_runtime_enabled,
+            "model_runtime_active": model_runtime_active,
             "artifact_integrity_error": integrity_error,
             "block_reason": block_reason,
-            "warning": metadata.get("warning") if ml_allowed else RULE_BASELINE_WARNING,
+            "warning": active_warning,
             "error": self._error,
         }
 
@@ -186,11 +219,13 @@ class MLRankerService:
             schema_version = schema.get("feature_version")
             if schema_version and schema_version != self._feature_version:
                 raise ValueError("Ranker feature version metadata is inconsistent.")
-            if not self._metadata_is_deployable(self._metadata):
-                raise ValueError(
-                    "ML requires dataset_status=verified_human_labeled and deployment_eligible=true; "
-                    "weak-label artifacts are never loaded."
-                )
+            production_eligible = self._metadata_is_deployable(self._metadata)
+            bootstrap_pilot_enabled = (
+                self._metadata_is_bootstrap_pilot(self._metadata)
+                and settings.enable_bootstrap_ranker
+            )
+            if not (production_eligible or bootstrap_pilot_enabled):
+                raise ValueError("Artifact is not eligible for this runtime; verified models need explicit promotion, bootstrap pilots require ENABLE_BOOTSTRAP_RANKER=true.")
             artifact = self._artifact_path(self._metadata)
             if artifact is None or not artifact.is_file():
                 raise ValueError("Ranker model_file is missing or invalid.")
@@ -225,7 +260,7 @@ class MLRankerService:
             return [], rejected_ids, {**self.status(), "ranking_source": "none"}
 
         status = self.status()
-        if status["deployment_allowed"]:
+        if status["model_runtime_active"]:
             try:
                 model = self._load()
                 import pandas as pd
@@ -239,7 +274,9 @@ class MLRankerService:
                     for candidate, score in zip(feasible, scores, strict=True)
                 ]
                 ranked.sort(key=lambda item: item["rank_score"], reverse=True)
-                return ranked, rejected_ids, {**self.status(), "ranking_source": "ml_model"}
+                current_status = self.status()
+                source = "bootstrap_ml_model" if current_status.get("pilot_runtime_enabled") else "ml_model"
+                return ranked, rejected_ids, {**current_status, "ranking_source": source}
             except Exception as error:
                 self._error = f"{type(error).__name__}: {error}"
                 self._load_failed = True

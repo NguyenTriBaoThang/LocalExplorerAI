@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     demo_traveler_password: str | None = None
     e5_model_path: str | None = None
     ranker_model_dir: str | None = None
+    enable_bootstrap_ranker: bool = False
     flood_model_dir: str | None = None
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")

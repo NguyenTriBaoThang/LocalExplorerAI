@@ -31,7 +31,7 @@ def rank_experiences(payload: RankExperiencesRequest):
         "dataset_status": status.get("dataset_status"),
         "score_type": "relative_ranking_score_not_probability",
         "warning": status.get("warning"),
-        "experimental_warning": status.get("warning") if status.get("ranking_source") == "rule_baseline" else None,
+        "experimental_warning": status.get("warning") if status.get("ranking_source") in {"rule_baseline", "bootstrap_ml_model"} else None,
         "ranked_candidates": ranked,
         "filtered_out_candidate_ids": filtered_ids,
     }
