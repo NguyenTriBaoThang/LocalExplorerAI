@@ -8,11 +8,11 @@ Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601
 
 ## Local ML inference
 
-Local ranker inference is separate from prompt-backed LLM workflows and the E5 semantic-search model. The active ranker is the versioned `rule-baseline-v1` unless a human-labeled, explicitly deployment-eligible ML bundle is installed. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
+Local ranker inference is separate from prompt-backed LLM workflows and the E5 semantic-search model. The active ranker defaults to `rule-baseline-v1`. The explicitly marked bootstrap bundle can run only as an opt-in pilot; it is not production-eligible. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
 
 - `GET /api/ml/status` reports active ranker, ML bundle eligibility, and whether the rule baseline is serving as fallback.
-- Experience-ranker bundles with a model SHA-256 are integrity-checked before loading. The verified trainer emits that checksum and explicit human-label/deployment metadata; weak-label artifacts remain blocked.
-- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same ranker breaks ties among earliest feasible candidates in `POST /api/itineraries/plan` and orders re-plan replacements. Planning hard constraints remain authoritative. Planner explanations expose `ranking_source` and `ranking_model_version` when a ranker was used.
+- Experience-ranker bundles with a model SHA-256 are integrity-checked before loading. The verified trainer emits that checksum and explicit human-label/deployment metadata. Generic weak-label bundles remain blocked; only the exact `bootstrap_pilot` artifact can be enabled with `ENABLE_BOOTSTRAP_RANKER=true` for a controlled experiment.
+- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same ranker breaks ties among earliest feasible candidates in `POST /api/itineraries/plan` and orders re-plan replacements. Planning hard constraints remain authoritative. Planner explanations expose `ranking_source` and `ranking_model_version`; bootstrap plans also display an experimental weak-label warning.
 - `POST /api/ml/flood-risk` returns advisory flood-risk probabilities; it does not confirm a closure and does not alter routing. It returns 503 until a real-label flood bundle is installed; demo-mode bundles are rejected.
 
 ## Catalog

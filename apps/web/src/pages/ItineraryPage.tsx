@@ -58,6 +58,7 @@ const getReasonCopy = (code: string, locale: string): string => {
     LOCKED_ACTIVITY: 'Trải nghiệm đã được bạn ghim cố định trong hành trình.',
     RULE_BASELINE_RANKER: 'Xếp hạng dùng quy tắc nhóm mục đích; chưa được kiểm chứng bằng lựa chọn thật của du khách.',
     ML_RANKER: 'Mô hình học máy chỉ sắp xếp các phương án đã vượt qua kiểm tra khả thi.',
+    BOOTSTRAP_PILOT_RANKER: 'Ranker pilot học từ nhãn quy tắc yếu; đây là thử nghiệm, chưa chứng minh chất lượng với lựa chọn thật của du khách.',
   }
   const en: Record<string, string> = {
     INTENT_MATCH: 'Prioritized experience perfectly matching your chosen preferences.',
@@ -73,6 +74,7 @@ const getReasonCopy = (code: string, locale: string): string => {
     LOCKED_ACTIVITY: 'Experience pinned and locked by your request.',
     RULE_BASELINE_RANKER: 'Ranking uses intent/category rules; it has not been validated against real traveler choices.',
     ML_RANKER: 'The machine-learning model only orders candidates that already passed feasibility checks.',
+    BOOTSTRAP_PILOT_RANKER: 'This pilot ranker learned from weak rule-generated labels; it is experimental and not validated against real traveler choices.',
   }
   const dict = locale === 'en' ? en : vi
   return dict[code] ?? code.replaceAll('_', ' ')
@@ -1104,8 +1106,21 @@ export function ItineraryPage() {
           <div className="item-sub-meta">
             <span>
               {locale === 'en' ? 'Ranking source:' : 'Nguồn xếp hạng:'}{' '}
-              {itinerary.explanation.ranking_source === 'rule_baseline' ? 'rule-baseline-v1' : itinerary.explanation.ranking_model_version || 'ML ranker'}
+              {itinerary.explanation.ranking_source === 'rule_baseline'
+                ? 'rule-baseline-v1'
+                : itinerary.explanation.ranking_source === 'bootstrap_ml_model'
+                  ? `${itinerary.explanation.ranking_model_version || 'bootstrap ranker'} · ${locale === 'en' ? 'experimental' : 'thử nghiệm'}`
+                  : itinerary.explanation.ranking_model_version || 'ML ranker'}
             </span>
+          </div>
+        )}
+
+        {itinerary.explanation.ranking_source === 'bootstrap_ml_model' && (
+          <div className="lost-intents-notice" role="note">
+            <AlertCircle size={15} />
+            <span>{locale === 'en'
+              ? 'Experimental ranking only: labels are weak/rule-generated and operational data is not verified. Feasibility checks remain authoritative.'
+              : 'Chỉ là xếp hạng thử nghiệm: nhãn được tạo yếu theo quy tắc và dữ liệu vận hành chưa được xác minh. Các kiểm tra khả thi vẫn là căn cứ quyết định.'}</span>
           </div>
         )}
 

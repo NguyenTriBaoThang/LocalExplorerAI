@@ -17,6 +17,13 @@ type LocalModelStatus = {
   fallback_active?: boolean
   block_reason: string | null
   dataset_status?: string
+  artifact_dataset_status?: string
+  pilot_runtime_eligible?: boolean
+  pilot_runtime_enabled?: boolean
+  model_runtime_active?: boolean
+  production_eligible?: boolean
+  warning?: string | null
+  error?: string | null
 }
 type ToolKey = 'tag' | 'similarity' | 'weather'
 
@@ -119,15 +126,24 @@ export function AdminAiToolsPanel() {
 
       {modelStatus && (
         <section className="admin-section-card" style={{ marginBottom: 18 }}>
-          <div className="admin-section-header"><h3>Trạng thái model local</h3><p>Baseline quy tắc sẽ xếp hạng khi chưa có ML đủ điều kiện; model nhãn yếu không được triển khai.</p></div>
+          <div className="admin-section-header"><h3>Trạng thái model local</h3><p>Baseline quy tắc là mặc định. Bootstrap chỉ chạy khi bật pilot rõ ràng; không được xem là model production.</p></div>
           <div className="admin-metrics-grid">
             {([['Ranker trải nghiệm', modelStatus.experience_ranker], ['Dự đoán ngập', modelStatus.flood_risk_model]] as const).map(([name, model]) => (
               <div className="admin-kpi-card" key={name}>
                 <small>{name}</small>
-                <strong>{model.active_ranker === 'rule_baseline' ? 'Baseline quy tắc đang hoạt động' : model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}</strong>
+                <strong>{model.active_ranker === 'bootstrap_ml_ranker'
+                  ? 'Bootstrap pilot đang hoạt động'
+                  : model.active_ranker === 'rule_baseline'
+                    ? 'Baseline quy tắc đang hoạt động'
+                    : model.deployment_allowed
+                      ? 'Sẵn sàng'
+                      : 'Chưa sẵn sàng'}</strong>
                 <span>{model.active_version || model.model_version || model.block_reason || 'Chưa có artifact'}</span>
                 {model.active_ranker === 'rule_baseline' && model.block_reason && <small>{model.block_reason}</small>}
-                {model.dataset_status && <small>Dataset: {model.dataset_status}</small>}
+                {model.pilot_runtime_eligible && !model.pilot_runtime_enabled && <small>Artifact bootstrap đã nhận diện nhưng pilot đang tắt. Đặt ENABLE_BOOTSTRAP_RANKER=true và khởi động lại API để chạy thử có kiểm soát.</small>}
+                {model.active_ranker === 'bootstrap_ml_ranker' && <small role="note">CẢNH BÁO: nhãn yếu do quy tắc tạo, chưa xác nhận chất lượng với du khách thật; không đủ điều kiện production.</small>}
+                {model.error && <small role="alert">Không tải được model: {model.error}</small>}
+                {(model.dataset_status || model.artifact_dataset_status) && <small>Dataset: {model.dataset_status || model.artifact_dataset_status}</small>}
               </div>
             ))}
           </div>

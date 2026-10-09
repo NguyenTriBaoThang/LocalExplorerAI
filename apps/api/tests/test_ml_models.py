@@ -271,3 +271,23 @@ def test_generic_weak_label_metadata_is_not_bootstrap_pilot_eligible():
         "production_eligible": False,
     }
     assert MLRankerService._metadata_is_bootstrap_pilot(metadata) is False
+
+
+def test_bootstrap_ranker_source_is_valid_in_planner_explanation():
+    from app.schemas.planner import Explanation
+
+    explanation = Explanation.model_validate({
+        "ranking_model_version": "bootstrap-ranker-test-v1",
+        "ranking_source": "bootstrap_ml_model",
+        "reason_codes": ["BOOTSTRAP_PILOT_RANKER"],
+    })
+    assert explanation.ranking_source == "bootstrap_ml_model"
+    assert "BOOTSTRAP_PILOT_RANKER" in explanation.reason_codes
+
+
+def test_default_ranker_artifact_path_points_to_project_bundle():
+    from pathlib import Path
+
+    from app.core.config import _PROJECT_ROOT, _default_ranker_model_dir
+
+    assert Path(_default_ranker_model_dir()).resolve() == (_PROJECT_ROOT / "models" / "ai-ranker").resolve()

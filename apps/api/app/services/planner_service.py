@@ -195,9 +195,10 @@ class PlannerService:
             )
             if ranker_result:
                 ranking_model_version, ranking_source = ranker_result
-                reason_codes.add(
-                    "RULE_BASELINE_RANKER" if ranking_source == "rule_baseline" else "ML_RANKER"
-                )
+                reason_codes.add({
+                    "rule_baseline": "RULE_BASELINE_RANKER",
+                    "bootstrap_ml_model": "BOOTSTRAP_PILOT_RANKER",
+                }.get(ranking_source, "ML_RANKER"))
             next_item = self.engine.plan(candidates)
             if not next_item:
                 break

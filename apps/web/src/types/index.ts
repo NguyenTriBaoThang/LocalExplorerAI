@@ -202,7 +202,7 @@ export interface Itinerary {
     evidence_refs: string[]
     uncertainty: string[]
     ranking_model_version?: string | null
-    ranking_source?: 'rule_baseline' | 'ml_model' | null
+    ranking_source?: 'rule_baseline' | 'ml_model' | 'bootstrap_ml_model' | null
   }
 }
 

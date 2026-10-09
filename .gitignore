@@ -451,6 +451,14 @@ models/e5/*
 !models/e5/.gitkeep
 models/ai-ranker/*
 !models/ai-ranker/.gitkeep
+!models/ai-ranker/xgboost_ranker.json
+!models/ai-ranker/model_metadata.json
+!models/ai-ranker/feature_schema.json
+!models/ai-ranker/preprocessing.json
+!models/ai-ranker/metrics.json
+!models/ai-ranker/model_card.md
+!models/ai-ranker/validation_comparison.csv
+!models/ai-ranker/test_predictions.csv
 models/flood-report-experiment/*
 !models/flood-report-experiment/.gitkeep
 models/flood-risk/*
