@@ -52,13 +52,16 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: 'apps/api/requirements.txt'
+          cache-dependency-path: |
+            apps/api/requirements.txt
+            apps/api/requirements-ranking-training.txt
 
       - name: Install dependencies
         working-directory: apps/api
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-ranking-training.txt
           pip install pytest ruff
 
       - name: Lint Python code (Syntax, runtime & critical errors)

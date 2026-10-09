@@ -3,9 +3,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
+
+np = pytest.importorskip("numpy")
+pd = pytest.importorskip("pandas")
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
