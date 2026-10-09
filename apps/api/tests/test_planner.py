@@ -114,14 +114,24 @@ def test_insufficient_capacity_is_rejected(client, db_session, sample_experience
     add_slot(db_session, sample_experience, available=2)
     response = client.post("/api/itineraries/plan", json=PLAN)
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "NO_FEASIBLE_PLAN"
+    assert response.json()["error"]["code"] == "NO_BOOKABLE_SLOTS"
 
 
 def test_team_full_slot_status_is_rejected(client, db_session, sample_experience):
     add_slot(db_session, sample_experience, available=8, status="full")
     response = client.post("/api/itineraries/plan", json=PLAN)
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "NO_FEASIBLE_PLAN"
+    assert response.json()["error"]["code"] == "NO_BOOKABLE_SLOTS"
+
+
+def test_cancelled_slots_return_date_specific_availability_error(client, db_session, sample_experience):
+    add_slot(db_session, sample_experience, status="cancelled")
+
+    response = client.post("/api/itineraries/plan", json=PLAN)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "NO_BOOKABLE_SLOTS"
+    assert "2030-10-01" in response.json()["error"]["message"]
 
 
 def test_slot_outside_trip_window_is_rejected(client, db_session, sample_experience):

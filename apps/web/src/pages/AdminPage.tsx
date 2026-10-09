@@ -84,10 +84,36 @@ type PlaceImportCandidate = {
   name: string
   kind: string
   raw_payload: Record<string, unknown>
+  suggested_labels?: {
+    ruleset_version: string
+    label_status: string
+    poi_type: string
+    poi_type_label_vi: string
+    activity_mode: string
+    primary_intent: string | null
+    intent_tags: string[]
+    source_topic_tags: string[]
+    hands_on: boolean | null
+    hands_on_status: string
+    indoor_outdoor: string
+    weather_sensitivity: string
+    basis_fields: string[]
+    warning: string
+  } | null
   quality_flags: string[]
   review_status: string
   target_poi_id?: string | null
   target_poi_status?: string | null
+}
+
+const PLACE_ACTIVITY_MODE_LABELS: Record<string, string> = {
+  passive_visit: 'Tham quan / quan sát',
+  food_service: 'Ăn uống',
+  coffee_service: 'Cà phê',
+  entertainment: 'Giải trí',
+  lodging: 'Lưu trú',
+  participatory_activity: 'Có dấu hiệu tham gia trực tiếp',
+  unknown: 'Chưa phân loại',
 }
 
 type TabKey =
@@ -956,9 +982,20 @@ export function AdminPage() {
                   <div className="moderation-items-list">
                     {placeImportCandidates.map((candidate) => {
                       const raw = candidate.raw_payload
+                      const suggested = candidate.suggested_labels
                       const tags = Array.isArray(raw.tags)
                         ? raw.tags.map(String).join(', ')
                         : String(raw.tags || '')
+                      const intentLabels: Record<string, string> = {
+                        handicraft: 'Thủ công',
+                        food: 'Ẩm thực',
+                        culture: 'Văn hóa',
+                        relaxation: 'Thư giãn',
+                        shopping: 'Mua sắm',
+                        entertainment: 'Giải trí',
+                        accommodation: 'Lưu trú',
+                        sightseeing: 'Tham quan',
+                      }
                       return (
                         <details key={candidate.id} className="moderation-item-card">
                           <summary className="item-meta-info" style={{ cursor: 'pointer' }}>
@@ -980,7 +1017,58 @@ export function AdminPage() {
                                 <span key={flag}>{importFlagLabels[flag] || flag}</span>
                               ))}
                             </div>
+                            <div className="item-sub-meta place-label-tags">
+                              {suggested ? (
+                                <>
+                                  <span>Nhãn gợi ý: {suggested.poi_type_label_vi}</span>
+                                  {(suggested.intent_tags || []).map((tag) => (
+                                    <span key={tag}>{intentLabels[tag] || tag}</span>
+                                  ))}
+                                </>
+                              ) : (
+                                <span>Nhãn chưa được API trả về — khởi động lại API để tải bộ nhãn mới.</span>
+                              )}
+                            </div>
                           </summary>
+                          {suggested ? (
+                          <div className="place-label-suggestion-panel">
+                            <strong>Nhãn phân loại gợi ý · {suggested.ruleset_version}</strong>
+                            <div className="item-sub-meta">
+                              <span>Loại POI: {suggested.poi_type_label_vi}</span>
+                              <span>Loại hoạt động: {PLACE_ACTIVITY_MODE_LABELS[suggested.activity_mode] || suggested.activity_mode}</span>
+                              <span>
+                                Mục đích chính: {suggested.primary_intent
+                                  ? intentLabels[suggested.primary_intent] || suggested.primary_intent
+                                  : 'Chưa khớp 4 mục đích cốt lõi'}
+                              </span>
+                              <span>
+                                Hands-on: {suggested.hands_on === true
+                                  ? 'Có dấu hiệu tham gia trực tiếp trong mô tả'
+                                  : 'Chưa xác định ở cấp địa điểm'}
+                              </span>
+                              <span>
+                                Không gian: {suggested.indoor_outdoor === 'outdoor'
+                                  ? 'Ngoài trời theo cột nguồn'
+                                  : suggested.indoor_outdoor === 'indoor'
+                                  ? 'Trong nhà theo cột nguồn'
+                                  : 'Chưa rõ'}
+                              </span>
+                            </div>
+                            <div className="item-sub-meta place-label-tags">
+                              {(suggested.intent_tags || []).map((tag) => (
+                                <span key={tag}>{intentLabels[tag] || tag}</span>
+                              ))}
+                            </div>
+                            <small>{suggested.warning}</small>
+                          </div>
+                          ) : (
+                            <div className="place-label-suggestion-panel">
+                              <strong>Chưa có nhãn gợi ý từ API</strong>
+                              <small>
+                                Bản ghi này dùng phản hồi API cũ hoặc thiếu trường nhãn. Khởi động lại API rồi tải lại trang để nhận nhãn phân loại.
+                              </small>
+                            </div>
+                          )}
                           {candidate.review_status === 'needs_enrichment' && (
                             <form
                               className="form-fields-grid-2"

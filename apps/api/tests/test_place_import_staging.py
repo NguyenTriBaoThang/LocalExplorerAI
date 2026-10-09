@@ -35,6 +35,9 @@ def test_admin_can_review_staged_place_source_without_publishing(client, db_sess
     assert rows.json()[0]["quality_flags"] == ["address_missing", "coordinates_reused"]
     assert rows.json()[0]["review_status"] == "needs_enrichment"
     assert rows.json()[0]["target_poi_id"] is None
+    assert rows.json()[0]["suggested_labels"]["label_status"] == "suggested_from_source"
+    assert rows.json()[0]["suggested_labels"]["poi_type"] == "sightseeing"
+    assert rows.json()[0]["suggested_labels"]["hands_on"] is None
 
 
 def test_place_import_queue_is_admin_only(client, db_session):

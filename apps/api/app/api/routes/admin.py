@@ -25,6 +25,7 @@ from app.services.integration_config import (
     resolve_integration_value,
     update_integration_settings,
 )
+from app.services.place_label_suggestion_service import suggest_place_labels
 from app.services.routing_service import make_geocoding_provider, make_routing_provider
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
@@ -142,6 +143,7 @@ def list_place_import_candidates(
     ).all()
     return [{"id": item.id, "external_id": item.external_id, "source_row": item.source_row,
              "name": item.name, "kind": item.kind, "raw_payload": item.raw_payload,
+             "suggested_labels": suggest_place_labels(item.raw_payload, item.kind),
              "quality_flags": item.quality_flags, "review_status": item.review_status,
              "target_poi_id": item.target_poi_id, "target_poi_status": poi_status,
              "created_at": item.created_at}

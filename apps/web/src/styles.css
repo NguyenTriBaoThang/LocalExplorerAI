@@ -4226,6 +4226,34 @@ a {
   text-underline-offset: 2px;
 }
 
+.place-label-suggestion-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  border-radius: 12px;
+  background: rgba(13, 148, 136, 0.08);
+}
+
+.place-label-suggestion-panel > strong {
+  color: var(--tx-mint);
+  font-size: 12px;
+}
+
+.place-label-suggestion-panel small {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.place-label-tags span {
+  padding: 3px 8px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 999px;
+  color: var(--tx-mint);
+}
+
 .travel-leg-indicator {
   display: flex;
   align-items: center;

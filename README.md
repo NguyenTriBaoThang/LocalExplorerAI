@@ -45,11 +45,11 @@
 </p>
 
 <p align="center">
-  <a href="http://localhost:5173/"><strong>Khám phá Dashboard 3D</strong></a>
+  <a href="http://localhost:8080/"><strong>Khám phá Dashboard 3D</strong></a>
   &nbsp;|&nbsp;
-  <a href="http://localhost:5173/map-3d"><strong>Trình xem 3D Landmark</strong></a>
+  <a href="http://localhost:8080/map-3d"><strong>Trình xem 3D Landmark</strong></a>
   &nbsp;|&nbsp;
-  <a href="http://localhost:5173/chat"><strong>Trợ lý AI Concierge</strong></a>
+  <a href="http://localhost:8080/chat"><strong>Trợ lý AI Concierge</strong></a>
   &nbsp;|&nbsp;
   <a href="./DEMO_SCRIPT.md">Kịch bản Demo</a>
   &nbsp;|&nbsp;
@@ -117,9 +117,9 @@ Local Explorer AI chuyển đổi phương thức tiếp cận từ các chấm 
 - ⏱️ **Mô hình Dữ liệu 3 Cấp & Minh chứng Nguồn (POI → Experience → Slot + Evidence)**: Định danh rõ ràng giữa địa điểm vật lý, quyền sở hữu của đối tác (`provider_poi_ownership`), hoạt động diễn ra tại điểm, khung giờ có sức chứa cụ thể và hồ sơ minh chứng đã kiểm duyệt (`Evidence`).
 - 🧮 **Heuristic Planner Không Ảo Tưởng (Hallucination-free)**: Lập lịch dựa trên thuật toán tối ưu hóa đa mục tiêu toán học xác định, loại trừ hoàn toàn rủi ro địa điểm "ảo" của các chatbot LLM tự do.
 - 🗺️ **Tuyến đường Thực tế & Geocoding (Goong API Integration)**: Tích hợp Goong Directions và Forward Geocoding để tính toán cự ly, thời gian ETA và vẽ hình học tuyến đường thực tế (geometry polyline) tại Việt Nam, có bộ nhớ đệm cache và phân định nguồn gốc xuất xứ dữ liệu (provenance).
-- 🤖 **Mô hình Học máy Cục bộ (Local XGBoost Ranker & E5 Semantic Search)**:
-  - **XGBoost Ranker** (13 đặc trưng, đạt **NDCG@5 = 0.9516**) dùng để xếp hạng ưu tiên các hoạt động tối ưu nhất và phá vỡ thế cân bằng (tie-break).
-  - **Multilingual E5 Embeddings** chạy trực tiếp trên CPU cục bộ, hỗ trợ tìm kiếm trải nghiệm theo ngữ nghĩa câu chữ (`/api/experience-search?semantic=true`) mà không lo rò rỉ dữ liệu ra bên ngoài.
+- 🤖 **Mô hình Học máy Cục bộ (Local XGBoost/LightGBM Ranker & E5 Semantic Search)**:
+  - **Learning-to-Rank Model** (Bộ 15 đặc trưng `ranker-features-v2`, hỗ trợ XGBoost `rank:ndcg` và LightGBM `lambdarank`) dùng để xếp hạng ưu tiên các hoạt động tối ưu nhất, giải quyết hòa điểm (tie-break). Tích hợp kiểm tra chữ ký toàn vẹn SHA-256, cổng kiểm soát dữ liệu nghiêm ngặt và cơ chế tự động Fallback về Rule Baseline mà không làm gián đoạn API.
+  - **Multilingual E5 Embeddings** (`intfloat/multilingual-e5-base`) chạy trực tiếp trên CPU cục bộ, hỗ trợ tìm kiếm trải nghiệm theo ngữ nghĩa câu chữ (`/api/experience-search?semantic=true`) mà không lo rò rỉ dữ liệu ra bên ngoài.
 - 💳 **Đặt chỗ An toàn & Cổng Thanh toán Quốc gia (Seat Holds & VNPay / MoMo Gateways)**:
   - Cơ chế giữ chỗ tạm thời 15 phút với khóa mức hàng PostgreSQL (`SELECT ... FOR UPDATE`), bảo vệ không vượt quá sức chứa.
   - Quy trình duyệt đặt chỗ 2 chiều: Du khách gửi yêu cầu → Đối tác nhận và chấp nhận (`accept`) hoặc từ chối (`reject`).
@@ -873,12 +873,17 @@ python -m venv .venv
 # Cài đặt thư viện cốt lõi:
 pip install -r requirements.txt
 
+# Cài đặt thư viện Huấn luyện Ranker & kiểm thử 93 test cases:
+pip install -r requirements-ranking-training.txt
+
 # (Khuyên dùng) Cài đặt thư viện Học máy và Tìm kiếm Ngữ nghĩa:
 pip install -r requirements-ml.txt
 pip install -r requirements-e5.txt
 
 # Thiết lập chuỗi kết nối và chạy Migration:
-$env:DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer"
+# (Dùng CSDL SQLite có sẵn dữ liệu demo hoặc PostgreSQL production):
+$env:DATABASE_URL = "sqlite:///G:/GITHUB/LoaclExplorerAI/apps/api/local_explorer.sqlite3"
+# Hoặc: $env:DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer"
 alembic upgrade head
 
 # Nạp dữ liệu mô phỏng demo và tài khoản phát triển:
@@ -906,7 +911,7 @@ npm install
 # Khởi chạy Vite dev server:
 npm run dev
 ```
-*Frontend chạy tại cổng `http://localhost:5173`.*
+*Frontend chạy tại cổng `http://localhost:8080` (hoặc `http://localhost:5173`).*
 
 ---
 
@@ -1021,7 +1026,7 @@ LoaclExplorerAI/
 │   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, BotService...)
 │   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0010_place_import_staging)
 │   │   ├── scripts/             # Scripts tiện ích: seed_db.py, worker.py, download_e5_model.py
-│   │   ├── tests/               # Bộ test tự động với pytest (56+ test cases)
+│   │   ├── tests/               # Bộ test tự động với pytest (93 test cases)
 │   │   └── README.md            # Tài liệu chi tiết hướng dẫn Backend API
 │   ├── models_3d/               # Dữ liệu mô hình 3D landmarks
 │   └── web/                     # Frontend React 18 + TypeScript + Three.js + Leaflet
@@ -1073,7 +1078,7 @@ LoaclExplorerAI/
 - [x] **Phase 3**: Tìm kiếm ngữ nghĩa đa ngôn ngữ cục bộ bằng **Multilingual E5 Embeddings** (`semantic=true`).
 - [x] **Phase 4**: Tái lập lịch trình tự động khi có sự cố hủy ca/thời tiết (**Proactive Dynamic Replanning**) & Quản lý phiên bản lịch trình (Versioning & Rollback).
 - [x] **Phase 5**: Cổng thông tin đối tác (**Provider Portal**) & Trợ lý AI quản lý ca có token chữ ký bảo mật 2 bước HMAC-SHA256.
-- [x] **Phase 6**: Tích hợp thuật toán Học máy **XGBoost Ranker** (13 đặc trưng, NDCG@5 = 0.9516) phục vụ xếp hạng và giải quyết hòa điểm (tie-break).
+- [x] **Phase 6**: Tích hợp thuật toán Học máy **XGBoost & LightGBM Ranker** (Bộ 15 đặc trưng `ranker-features-v2`, kiểm soát toàn vẹn SHA-256, phân định nghiêm ngặt verified vs weak-label, và fallback an toàn về Rule Baseline).
 - [x] **Phase 7**: Tích hợp mô hình dự báo **Rủi ro Ngập lụt Đô thị TP.HCM** và tư vấn điều chỉnh điểm ngoài trời khi mưa lớn/AQI cao.
 - [x] **Phase 8**: Cổng quản trị hệ thống (**Admin Portal**), hàng đợi kiểm duyệt (Moderation Queue), công cụ phát hiện & hợp nhất POI trùng lặp (Fuzzy duplicate merge) và nhật ký kiểm toán (Audit Logs).
 - [x] **Phase 9**: **Trợ lý AI Concierge Chatbot (`/chat`)** trích xuất ràng buộc tự nhiên, thanh tra Live Constraints Inspector và công cụ **So sánh lịch trình đa phương án (`/compare`)**.

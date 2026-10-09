@@ -107,9 +107,9 @@ npm install
 npm run dev
 ```
 Sau khi khởi chạy thành công, mở trình duyệt tại:
-👉 **[http://localhost:5173](http://localhost:5173)**
+👉 **[http://localhost:8080](http://localhost:8080)** *(hoặc [http://localhost:5173](http://localhost:5173) tùy theo cấu hình cổng)*
 
-*Lưu ý: Mặc định Vite được cấu hình proxy tự động chuyển tiếp các yêu cầu `/api` sang backend chạy tại cổng `http://localhost:8000`.*
+*Lưu ý: Mặc định Vite trong `vite.config.ts` được cấu hình proxy tự động chuyển tiếp các yêu cầu `/api` và `/health` sang backend chạy tại `http://127.0.0.1:8000`.*
 
 ### Bước 3: Kiểm tra lỗi kiểu dữ liệu (Lint / Typecheck)
 ```powershell

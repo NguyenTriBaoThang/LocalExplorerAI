@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -19,11 +20,16 @@ from app.services.routing_service import RoutingService
 
 
 class NoFeasiblePlan(Exception):
-    pass
+    def __init__(self, message: str, code: str = "NO_FEASIBLE_PLAN"):
+        super().__init__(message)
+        self.code = code
 
 
 def as_aware(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+LOCAL_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 class PlannerService:
@@ -237,6 +243,29 @@ class PlannerService:
             if not next_item["capacity_known"]:
                 unknown_capacity = True
                 reason_codes.add("CAPACITY_UNKNOWN")
+
+        if not chosen:
+            requested_local_date = start_at.astimezone(LOCAL_TIMEZONE).date()
+            slots_on_requested_date = [
+                (experience, slot)
+                for experience in experiences
+                for slot in experience.slots
+                if as_aware(slot.start_at).astimezone(LOCAL_TIMEZONE).date() == requested_local_date
+            ]
+            has_bookable_slot = any(
+                self.availability.can_fit(slot, request.group_size)
+                and (
+                    experience.verification_status != "verified"
+                    or self.repository.is_fresh_slot(slot)
+                )
+                for experience, slot in slots_on_requested_date
+            )
+            if slots_on_requested_date and not has_bookable_slot:
+                raise NoFeasiblePlan(
+                    "No bookable slots are currently available on "
+                    f"{requested_local_date.isoformat()}. Choose another date or ask the provider to update availability.",
+                    code="NO_BOOKABLE_SLOTS",
+                )
 
         if not chosen or any(item not in chosen_experience_ids for item in request.locked_experience_ids) or not set(request.locked_poi_ids).issubset(chosen_poi_ids):
             raise NoFeasiblePlan("No itinerary satisfies time, capacity, and budget constraints")
