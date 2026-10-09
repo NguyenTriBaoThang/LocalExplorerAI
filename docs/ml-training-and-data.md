@@ -6,8 +6,25 @@ Local Explorer AI has two distinct supervised-learning tasks. Do not combine the
 
 | Task | Input labels/data | Output | Colab notebook |
 |---|---|---|---|
-| Replacement-experience ranker | `query_id`, feasible candidates, human relevance grades 0–3 | Relative candidate order (`rank_score`) | `notebooks/LocalExplorerAI_Ranking_Training_Colab.ipynb` |
+| Replacement-experience ranker (human labels) | `query_id`, planner-feasible candidates, human relevance grades 0–3 | Relative candidate order (`rank_score`) | `notebooks/LocalExplorerAI_Ranking_Training_Colab.ipynb` |
+| Ranking weak-label benchmark (experiment only) | Six assumed intents and category-rule grades on OSM POIs | Baseline/LightGBM/XGBoost comparison; never production-ready | `notebooks/LocalExplorerAI_Ranking_Benchmark_Colab.ipynb` |
 | Flood-risk classifier | Road-edge/time samples with verified flood and verified no-flood labels | Calibrated probability estimate for a road segment/time/horizon | `notebooks/LocalExplorerAI_Flood_Training_Colab.ipynb` |
+
+## Experience ranker benchmark and current model
+
+The repository's current ranker is an optional `XGBRanker(objective="rank:ndcg")` bundle. Its metadata identifies `local-explorer-ranker-v1-20261003T014631Z`, trained from the older `data/dataset_ranking_tphcm.csv` with `dataset_status=unverified_user_dataset`. Its stored NDCG@5 of 0.9516 was measured on 34 held-out queries from that older source. Do not compare that number directly to the new POI-held-out experiment: source, labels, candidate coverage, and split unit differ.
+
+The supplied `LocalExplorerAI_Weak_Ranking_Model.zip` contains a `RandomForestRegressor` weak-label prototype, not an XGBoost/LightGBM learning-to-rank model. Its NDCG@10=1.0 and MAE≈0.0036 are agreement with the category-rule labels only. Its `joblib` file is not loaded by this project; deserializing untrusted joblib/pickle files can execute code.
+
+The new dataset is stored under `data/experimental/ranking/`. It has 638 OSM POIs crossed with six analyst-assumed intents, not real queries. The category-rule labels are weak. Price, duration, ETA, and some indoor values are estimates; hands-on status is unknown, and activity/slot/planner verification is absent. See the folder README for license and field-level provenance. Only the explicit `--mode weak_label` run accepts it, and the output metadata always says `deployment_eligible=false`.
+
+`scripts/train_experience_ranker.py` compares the tag/category rule baseline, LightGBM LambdaRank, and XGBoost NDCG ranking with the same shared v2 API feature function, four configurations per algorithm, and a deterministic POI-disjoint 70/15/15 split. It selects by validation NDCG@5. NDCG@10, latency, model size, and three-seed validation stability are supporting checks. It reads the test split only after selection. A weak-data model is exported only if it exceeds baseline validation NDCG@5 by at least 0.01; otherwise the rule baseline is selected and no new ML artifact is created. The test output is therefore not a real-world quality claim.
+
+Run the complete comparison in Google Colab using `notebooks/LocalExplorerAI_Ranking_Benchmark_Colab.ipynb`, or install `apps/api/requirements-ranking-training.txt` and run the script locally. The full run requires both LightGBM and XGBoost. CatBoost is not included because the present shared feature matrix is numeric, the dataset has only six assumed contexts, and its target is a deterministic category rule; another learner cannot supply missing human labels.
+
+The ranker adapter accepts native XGBoost JSON or LightGBM text bundles and preserves the v1 feature contract for the existing XGBoost artifact. The new v2 builder represents unknown hands-on/indoor facts as missing with explicit known flags. Production remains fail-closed for every dataset status other than verified human labels; `weak_label_experiment` is non-deployable even when an unverified-model override is set. The itinerary planner and replanner continue to check route/time/budget/capacity/locked-stop rules first; the model only scores the remaining candidates. If no artifact loads, deterministic ranking remains in effect.
+
+See [the initial benchmark report](experience-ranker-benchmark.md) for local results and the missing LightGBM run.
 
 The supplied `dataset_ranking_tphcm.csv` has 877 rows and 170 query groups. It includes 639 rows marked `hard_feasible=1` and 238 rows marked infeasible; all 238 infeasible rows have grade 0. Among feasible rows, grades are 0: 69, 1: 170, 2: 199, 3: 201. The file has no source URL, collection timestamp, reviewer ID, label-method, or provenance field. Its origin/label process therefore cannot be verified from the file alone. The new notebook marks the resulting bundle `unverified_user_dataset`; it does not create synthetic rows. Treat its metric as a pipeline check, not evidence of real-world ranking quality.
 
@@ -24,7 +41,7 @@ The strongest local candidate for richer, real event data is HCMC's Flood Data E
 ## FastAPI endpoints
 
 - `GET /api/ml/status` — reports which local model bundles are present and their version/provenance state.
-- `POST /api/ml/rank-experiences` — ranks replacement candidates with the local XGBoost ranker. It filters `hard_feasible=false`, over-budget candidates, and candidates where `eta_min + duration_min > remaining_time_min`. Pass the exact group price, time budget, and current weather only when known. The score is not a probability.
+- `POST /api/ml/rank-experiences` — ranks replacement candidates with a compatible local XGBoost or LightGBM ranker. It filters `hard_feasible=false`, over-budget candidates, and candidates where `eta_min + duration_min > remaining_time_min`. Pass the exact group price, time budget, and current weather only when known. The score is not a probability.
 - `POST /api/ml/flood-risk` — batch flood-risk inference using the flood bundle. A predicted risk is not a verified flood report or road closure and must never override a hard block. Unknown observations remain unknown.
 
 Flood inference returns `risk_state=unknown` when `coverage_ratio` is absent; a low model probability alone is not evidence that a road is clear. The caller must supply a meaningful coverage measurement from the data pipeline.

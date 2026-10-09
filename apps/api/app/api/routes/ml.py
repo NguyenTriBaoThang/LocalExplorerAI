@@ -28,6 +28,7 @@ def rank_experiences(payload: RankExperiencesRequest):
         "model_version": status.get("model_version"),
         "dataset_status": status.get("dataset_status"),
         "score_type": "relative_ranking_score_not_probability",
+        "experimental_warning": status.get("warning") if status.get("dataset_status") == "weak_label_experiment" else None,
         "ranked_candidates": ranked,
         "filtered_out_candidate_ids": filtered_ids,
     }

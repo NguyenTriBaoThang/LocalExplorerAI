@@ -296,7 +296,8 @@ class ReplanningService:
                 for row in ranked:
                     candidate = by_slot[(row["candidate_experience_id"], row["candidate_slot_id"])]
                     candidate.ranking_score = row["rank_score"]
-                    candidate.similarity_source = f"xgb-ranker@{status.get('model_version') or 'unknown'}"
+                    family = status.get("model_family") or "ranker"
+                    candidate.similarity_source = f"{family}-ranker@{status.get('model_version') or 'unknown'}"
             except MLRankerUnavailable:
                 # Preserve the deterministic tag-similarity order when the optional artifact
                 # is incomplete; /api/ml/status exposes the artifact/dependency failure.

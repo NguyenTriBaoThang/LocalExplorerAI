@@ -1,4 +1,4 @@
-"""Optional local XGBoost ranker; absence never fabricates ML predictions."""
+"""Optional local XGBoost/LightGBM ranker; missing artifacts fall back safely."""
 
 from __future__ import annotations
 
@@ -7,7 +7,14 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import settings
-from app.services.ranker_features import FEATURE_NAMES, build_feature_row, is_hard_feasible
+from app.services.ranker_features import (
+    FEATURE_VERSION,
+    LEGACY_FEATURE_VERSION,
+    build_feature_row,
+    build_feature_row_v1,
+    feature_names_for_version,
+    is_hard_feasible,
+)
 
 
 class MLRankerUnavailable(RuntimeError):
@@ -20,40 +27,74 @@ class MLRankerService:
         self.artifact_dir = Path(configured).expanduser() if configured else None
         self._model = None
         self._metadata: dict[str, Any] = {}
+        self._feature_version = LEGACY_FEATURE_VERSION
         self._error: str | None = None
+
+    def _read_metadata(self) -> dict[str, Any]:
+        if not self.artifact_dir:
+            return {}
+        path = self.artifact_dir / "model_metadata.json"
+        try:
+            return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _artifact_path(self, metadata: dict[str, Any]) -> Path | None:
+        if not self.artifact_dir:
+            return None
+        filename = metadata.get("model_file", "local_explorer_ranker.json")
+        if not isinstance(filename, str) or Path(filename).name != filename:
+            return None
+        return self.artifact_dir / filename
 
     @property
     def configured(self) -> bool:
-        return bool(self.artifact_dir and all(
-            (self.artifact_dir / filename).is_file()
-            for filename in ("local_explorer_ranker.json", "model_metadata.json", "feature_schema.json")
-        ))
+        metadata = self._read_metadata()
+        artifact = self._artifact_path(metadata)
+        return bool(
+            self.artifact_dir
+            and artifact
+            and artifact.is_file()
+            and (self.artifact_dir / "model_metadata.json").is_file()
+            and (self.artifact_dir / "feature_schema.json").is_file()
+        )
 
     def status(self) -> dict[str, Any]:
-        metadata: dict[str, Any] = {}
-        path = self.artifact_dir / "model_metadata.json" if self.artifact_dir else None
-        if path and path.is_file():
-            try:
-                metadata = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                pass
+        metadata = self._read_metadata()
         dataset_status = metadata.get("dataset_status", "unknown")
+        explicitly_non_deployable = (
+            dataset_status == "weak_label_experiment"
+            or metadata.get("deployment_eligible") is False
+        )
+        production_eligible = (
+            dataset_status == "verified_human_labeled"
+            and not explicitly_non_deployable
+        )
         blocked_for_provenance = (
-            dataset_status != "verified_human_labeled"
-            and settings.app_env.lower() not in {"development", "test"}
-            and not settings.allow_unverified_ranker
+            explicitly_non_deployable
+            or (
+                not production_eligible
+                and settings.app_env.lower() not in {"development", "test"}
+                and not settings.allow_unverified_ranker
+            )
         )
         return {
             "configured": self.configured,
             "loaded": self._model is not None,
             "model_version": metadata.get("model_version"),
+            "model_family": metadata.get("model_family", "xgboost"),
+            "feature_version": metadata.get("feature_version", LEGACY_FEATURE_VERSION),
             "dataset_status": dataset_status,
+            "production_eligible": production_eligible,
             "deployment_allowed": self.configured and not blocked_for_provenance,
             "block_reason": (
                 "Ranker artifact files are missing or incomplete." if not self.configured
+                else "Weak-label experiment artifacts are never deployable." if dataset_status == "weak_label_experiment"
+                else "Ranker metadata marks this artifact non-deployable." if metadata.get("deployment_eligible") is False
                 else "Unverified ranking labels are disabled in production." if blocked_for_provenance
                 else None
             ),
+            "warning": metadata.get("warning"),
             "error": self._error,
         }
 
@@ -63,18 +104,44 @@ class MLRankerService:
         if not self.configured or self.artifact_dir is None:
             raise MLRankerUnavailable("Ranker artifact is not configured. Put the trained bundle in RANKER_MODEL_DIR.")
         try:
-            import xgboost as xgb
-
             self._metadata = json.loads((self.artifact_dir / "model_metadata.json").read_text(encoding="utf-8"))
-            if self._metadata.get("feature_names") != FEATURE_NAMES:
+            schema = json.loads((self.artifact_dir / "feature_schema.json").read_text(encoding="utf-8"))
+            self._feature_version = self._metadata.get("feature_version", LEGACY_FEATURE_VERSION)
+            expected_features = feature_names_for_version(self._feature_version)
+            if self._metadata.get("feature_names") != expected_features:
                 raise ValueError("Ranker feature schema does not match this API version.")
+            if schema.get("feature_names") != expected_features:
+                raise ValueError("Ranker feature schema file does not match this API version.")
+            schema_version = schema.get("feature_version")
+            if schema_version and schema_version != self._feature_version:
+                raise ValueError("Ranker feature version metadata is inconsistent.")
             dataset_status = self._metadata.get("dataset_status", "unknown")
-            if (dataset_status != "verified_human_labeled"
+            explicitly_non_deployable = (
+                dataset_status == "weak_label_experiment"
+                or self._metadata.get("deployment_eligible") is False
+            )
+            production_eligible = dataset_status == "verified_human_labeled" and not explicitly_non_deployable
+            if explicitly_non_deployable:
+                raise ValueError("Weak-label or explicitly non-deployable ranker artifacts are never loaded by the API.")
+            if (not production_eligible
                     and settings.app_env.lower() not in {"development", "test"}
                     and not settings.allow_unverified_ranker):
                 raise ValueError("Production requires dataset_status=verified_human_labeled or ALLOW_UNVERIFIED_RANKER=true.")
-            model = xgb.XGBRanker()
-            model.load_model(str(self.artifact_dir / "local_explorer_ranker.json"))
+            artifact = self._artifact_path(self._metadata)
+            if artifact is None or not artifact.is_file():
+                raise ValueError("Ranker model_file is missing or invalid.")
+            family = self._metadata.get("model_family", "xgboost")
+            if family == "xgboost":
+                import xgboost as xgb
+
+                model = xgb.XGBRanker()
+                model.load_model(str(artifact))
+            elif family == "lightgbm":
+                import lightgbm as lgb
+
+                model = lgb.Booster(model_file=str(artifact))
+            else:
+                raise ValueError(f"Unsupported ranker model_family: {family}")
             self._model = model
             return model
         except Exception as error:
@@ -95,10 +162,9 @@ class MLRankerService:
 
         import pandas as pd
 
-        matrix = pd.DataFrame(
-            [build_feature_row(query, candidate) for candidate in feasible],
-            columns=FEATURE_NAMES,
-        )
+        row_builder = build_feature_row if self._feature_version == FEATURE_VERSION else build_feature_row_v1
+        feature_names = feature_names_for_version(self._feature_version)
+        matrix = pd.DataFrame([row_builder(query, candidate) for candidate in feasible], columns=feature_names)
         try:
             scores = model.predict(matrix)
         except Exception as error:

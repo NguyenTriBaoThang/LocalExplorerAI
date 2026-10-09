@@ -1,0 +1,15 @@
+{
+  "ranking_rows": 3828,
+  "real_unique_pois": 638,
+  "assumed_intent_profiles": 6,
+  "flood_reports": 425,
+  "flood_depth_midpoints": 90,
+  "verified_flood_forecast_labels": 0,
+  "observed_dry_windows": 0,
+  "human_ranking_labels": 0,
+  "ready_for_existing_supervised_notebooks": false,
+  "inputs_sha256": {
+    "pois.csv": "0b1293768407323df80ed2a2f64cd723886a2c3ec34cf01a22f395ec6c97e7cb",
+    "historical_flood.csv": "69ccba93b45fff95c124b235d6e2718ac6dc55d139a8df06815392bbae1cb836"
+  }
+}
