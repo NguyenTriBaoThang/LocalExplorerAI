@@ -26,9 +26,12 @@ def rank_experiences(payload: RankExperiencesRequest):
         raise HTTPException(status_code=503, detail={"code": "RANKER_NOT_READY", "message": str(error)}) from error
     return {
         "model_version": status.get("model_version"),
+        "model_family": status.get("model_family"),
+        "ranking_source": status.get("ranking_source"),
         "dataset_status": status.get("dataset_status"),
         "score_type": "relative_ranking_score_not_probability",
-        "experimental_warning": status.get("warning") if status.get("dataset_status") == "weak_label_experiment" else None,
+        "warning": status.get("warning"),
+        "experimental_warning": status.get("warning") if status.get("ranking_source") == "rule_baseline" else None,
         "ranked_candidates": ranked,
         "filtered_out_candidate_ids": filtered_ids,
     }

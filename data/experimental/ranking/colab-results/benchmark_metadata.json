@@ -1,0 +1,28 @@
+{
+  "benchmark_version": "ranking-benchmark-v1",
+  "dataset_status": "weak_label_experiment",
+  "training_mode": "weak_label",
+  "deployment_eligible": false,
+  "dataset_sha256": "0b52faae9729326ba96b7c1438a137c959770d30b277a56db358155c7358260d",
+  "rows": 3828,
+  "unique_pois": 638,
+  "query_contexts": 6,
+  "split_key": "poi_id",
+  "selected_model": "rule_baseline",
+  "selected_model_bundle": null,
+  "feature_version": "ranker-features-v2",
+  "estimated_columns": [
+    "duration_min",
+    "eta_min",
+    "is_indoor",
+    "price_vnd_per_person",
+    "relevance_grade"
+  ],
+  "limitations": [
+    "The 0/2/3 grades are rule-generated, not human preference labels.",
+    "The six query contexts are analyst assumptions; results do not generalize to new intents.",
+    "POIs are real OSM records but operational status is unverified; experience and slot IDs are absent.",
+    "Duration, ETA, price, indoor state, and relevance grade are estimated or rule-derived as listed in estimated_columns.",
+    "Metrics measure imitation of the category rule only and are not real recommendation quality."
+  ]
+}

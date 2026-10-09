@@ -7,7 +7,17 @@ type TargetSet = {
   itineraries: Array<{ id: string; planned_date: string | null; created_at: string }>
 }
 type PromptManifest = { suite: string; version: string; prd_version: string; effective_date: string; prompt_ids: string[] }
-type LocalModelStatus = { configured: boolean; loaded: boolean; deployment_allowed: boolean; model_version: string | null; block_reason: string | null; dataset_status?: string }
+type LocalModelStatus = {
+  configured: boolean
+  loaded: boolean
+  deployment_allowed: boolean
+  model_version: string | null
+  active_version?: string | null
+  active_ranker?: string
+  fallback_active?: boolean
+  block_reason: string | null
+  dataset_status?: string
+}
 type ToolKey = 'tag' | 'similarity' | 'weather'
 
 export function AdminAiToolsPanel() {
@@ -109,13 +119,14 @@ export function AdminAiToolsPanel() {
 
       {modelStatus && (
         <section className="admin-section-card" style={{ marginBottom: 18 }}>
-          <div className="admin-section-header"><h3>Trạng thái model local</h3><p>Model chưa được triển khai sẽ không sinh điểm dự đoán.</p></div>
+          <div className="admin-section-header"><h3>Trạng thái model local</h3><p>Baseline quy tắc sẽ xếp hạng khi chưa có ML đủ điều kiện; model nhãn yếu không được triển khai.</p></div>
           <div className="admin-metrics-grid">
             {([['Ranker trải nghiệm', modelStatus.experience_ranker], ['Dự đoán ngập', modelStatus.flood_risk_model]] as const).map(([name, model]) => (
               <div className="admin-kpi-card" key={name}>
                 <small>{name}</small>
-                <strong>{model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}</strong>
-                <span>{model.model_version || model.block_reason || 'Chưa có artifact'}</span>
+                <strong>{model.active_ranker === 'rule_baseline' ? 'Baseline quy tắc đang hoạt động' : model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}</strong>
+                <span>{model.active_version || model.model_version || model.block_reason || 'Chưa có artifact'}</span>
+                {model.active_ranker === 'rule_baseline' && model.block_reason && <small>{model.block_reason}</small>}
                 {model.dataset_status && <small>Dataset: {model.dataset_status}</small>}
               </div>
             ))}

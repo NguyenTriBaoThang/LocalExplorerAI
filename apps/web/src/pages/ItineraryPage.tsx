@@ -56,6 +56,8 @@ const getReasonCopy = (code: string, locale: string): string => {
     STALE_DATA: 'Một phần bằng chứng đã cũ hoặc hết hạn; cần xác minh lại trước khi đi.',
     UNVERIFIED_DATA: 'Một phần dữ liệu chưa được xác minh nguồn.',
     LOCKED_ACTIVITY: 'Trải nghiệm đã được bạn ghim cố định trong hành trình.',
+    RULE_BASELINE_RANKER: 'Xếp hạng dùng quy tắc nhóm mục đích; chưa được kiểm chứng bằng lựa chọn thật của du khách.',
+    ML_RANKER: 'Mô hình học máy chỉ sắp xếp các phương án đã vượt qua kiểm tra khả thi.',
   }
   const en: Record<string, string> = {
     INTENT_MATCH: 'Prioritized experience perfectly matching your chosen preferences.',
@@ -69,6 +71,8 @@ const getReasonCopy = (code: string, locale: string): string => {
     STALE_DATA: 'Some evidence is outdated or expired; reconfirm before the trip.',
     UNVERIFIED_DATA: 'Some catalog data has not been source-verified.',
     LOCKED_ACTIVITY: 'Experience pinned and locked by your request.',
+    RULE_BASELINE_RANKER: 'Ranking uses intent/category rules; it has not been validated against real traveler choices.',
+    ML_RANKER: 'The machine-learning model only orders candidates that already passed feasibility checks.',
   }
   const dict = locale === 'en' ? en : vi
   return dict[code] ?? code.replaceAll('_', ' ')
@@ -1095,6 +1099,15 @@ export function ItineraryPage() {
             </div>
           ))}
         </div>
+
+        {itinerary.explanation.ranking_source && (
+          <div className="item-sub-meta">
+            <span>
+              {locale === 'en' ? 'Ranking source:' : 'Nguồn xếp hạng:'}{' '}
+              {itinerary.explanation.ranking_source === 'rule_baseline' ? 'rule-baseline-v1' : itinerary.explanation.ranking_model_version || 'ML ranker'}
+            </span>
+          </div>
+        )}
 
         {itinerary.explanation.lost_intents.length > 0 && (
           <div className="lost-intents-notice">

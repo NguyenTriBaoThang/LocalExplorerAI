@@ -525,7 +525,7 @@ Hệ thống triển khai 2 bài toán Học máy có giám sát (Supervised Lea
 ```text
 models/
 ├── ai-ranker/                       # Mô hình Xếp hạng Trải nghiệm (XGBoost)
-│   ├── local_explorer_ranker.json   # Trọng số mô hình XGBRanker đã huấn luyện
+│   ├── xgboost_ranker.json / lightgbm_ranker.txt   # Model native; model_file nằm trong metadata
 │   ├── model_metadata.json          # Metadata phiên bản, NDCG metrics & feature schema
 │   └── feature_schema.json          # Định nghĩa 13 đặc trưng đầu vào
 ├── flood-risk/                      # Mô hình Phân tích Rủi ro Ngập lụt Đô thị TP.HCM

@@ -458,7 +458,10 @@ models/flood-risk/*
 
 # Notebooks / Google Colab training files
 notebooks/
+!notebooks/
+notebooks/*
 *.ipynb
+!notebooks/LocalExplorerAI_Train_Verified_Ranker_Colab.ipynb
 .ipynb_checkpoints/
 
 # Bot runtime store

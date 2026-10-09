@@ -2,6 +2,7 @@ from tests.conftest import add_slot
 from app.models.entities import DecisionLog, Experience, ItineraryVersion
 from app.schemas.planner import PlanRequest
 from app.services.planner_service import PlannerService
+from app.services.ml_ranker_service import MLRankerService
 
 PLAN = {
     "start_at": "2030-10-01T09:00:00+07:00",
@@ -70,6 +71,36 @@ def test_planner_uses_ranker_only_to_break_feasible_same_time_ties(db_session, s
     decision = db_session.query(DecisionLog).filter_by(itinerary_id=response["itinerary_id"]).one()
     assert decision.model_version == "test-ranker-v1"
     assert "ML_RANKER" in decision.reason_codes
+
+
+def test_planner_uses_versioned_rule_baseline_when_no_deployable_ml_model(db_session, sample_experience):
+    add_slot(db_session, sample_experience)
+    alternative = Experience(
+        poi=sample_experience.poi,
+        provider=sample_experience.provider,
+        name="Museum visit",
+        description="A passive cultural visit",
+        intent_tags=["culture"],
+        duration_min=60,
+        is_hands_on=False,
+        is_indoor=True,
+        indoor=True,
+        price_basis="per_person",
+        price_vnd=50_000,
+        verification_status="simulated",
+    )
+    db_session.add(alternative)
+    db_session.flush()
+    add_slot(db_session, alternative)
+
+    service = PlannerService(db_session, ranker=MLRankerService(__file__))
+    response = service.plan(PlanRequest.model_validate(PLAN))
+
+    assert response["stops"][0]["experience_id"] == sample_experience.id
+    assert response["explanation"]["ranking_source"] == "rule_baseline"
+    assert response["explanation"]["ranking_model_version"] == "rule-baseline-v1"
+    decision = db_session.query(DecisionLog).filter_by(itinerary_id=response["itinerary_id"]).one()
+    assert "RULE_BASELINE_RANKER" in decision.reason_codes
 
 
 def test_budget_too_low_returns_no_feasible_plan(client, db_session, sample_experience):

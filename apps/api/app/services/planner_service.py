@@ -40,10 +40,11 @@ class PlannerService:
 
     def _rank_feasible_candidates(self, candidates: list[dict], request: PlanRequest,
                                   cursor: datetime, end_at: datetime,
-                                  budget_remaining_vnd: int) -> str | None:
-        """Use the optional ranker as a tie-break only; feasibility stays solver-owned."""
+                                  budget_remaining_vnd: int) -> tuple[str, str] | None:
+        """Rank only the planner-approved candidates; feasibility stays planner-owned."""
         if (len(candidates) < 2 or any(item["locked"] for item in candidates)
-                or not isinstance(self.engine, HeuristicPlanner) or not self.ranker.configured):
+                or not isinstance(self.engine, HeuristicPlanner)
+                or getattr(self.ranker, "available", True) is False):
             return None
 
         intent_tags = [tag for tag, weight in request.intent_weights.items() if weight > 0]
@@ -92,7 +93,10 @@ class PlannerService:
             return None
         for key, item in candidates_by_key.items():
             item["score"] = float(scores[key])
-        return status.get("model_version") or "local-ranker"
+        return (
+            status.get("model_version") or "local-ranker",
+            status.get("ranking_source") or "ml_model",
+        )
 
     def plan(self, request: PlanRequest, user_id: str | None = None) -> dict:
         start_at, end_at = as_aware(request.start_at), as_aware(request.end_at)
@@ -121,6 +125,7 @@ class PlannerService:
         reason_codes: set[str] = set()
         unknown_capacity = False
         ranking_model_version = "heuristic-v1"
+        ranking_source: str | None = None
 
         # Locked experiences are scheduled first in the caller's requested order.
         ordered_ids = list(dict.fromkeys(request.locked_experience_ids))
@@ -185,12 +190,14 @@ class PlannerService:
                         "return_leg": return_leg,
                         "return_travel": return_travel,
                     })
-            used_ranker_version = self._rank_feasible_candidates(
+            ranker_result = self._rank_feasible_candidates(
                 candidates, request, cursor, end_at, request.budget_vnd - total_cost,
             )
-            if used_ranker_version:
-                ranking_model_version = used_ranker_version
-                reason_codes.add("ML_RANKER")
+            if ranker_result:
+                ranking_model_version, ranking_source = ranker_result
+                reason_codes.add(
+                    "RULE_BASELINE_RANKER" if ranking_source == "rule_baseline" else "ML_RANKER"
+                )
             next_item = self.engine.plan(candidates)
             if not next_item:
                 break
@@ -309,7 +316,8 @@ class PlannerService:
             preserved_intents_ratio=(len(preserved) / sum(weight > 0 for weight in request.intent_weights.values())) if any(weight > 0 for weight in request.intent_weights.values()) else 1.0,
         ))
         explanation = self.explainer.explain(sorted(reason_codes), preserved, lost)
-        explanation["ranking_model_version"] = ranking_model_version if "ML_RANKER" in reason_codes else None
+        explanation["ranking_model_version"] = ranking_model_version if ranking_source else None
+        explanation["ranking_source"] = ranking_source
         explanation["evidence_refs"] = sorted({
             evidence["id"]
             for item in response_stops

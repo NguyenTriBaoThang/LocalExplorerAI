@@ -82,7 +82,6 @@ class Settings(BaseSettings):
     e5_model_path: str | None = None
     ranker_model_dir: str | None = None
     flood_model_dir: str | None = None
-    allow_unverified_ranker: bool = False
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
 
