@@ -161,6 +161,21 @@ def _provider_row(item: Provider, user_count: int = 0, experience_count: int = 0
             "user_count": user_count, "experience_count": experience_count}
 
 
+_APPROVED_PARTNER_STATUSES = ("verified", "mock", "simulated")
+
+
+@router.get("/providers/counts")
+def provider_counts(user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db)):
+    """How many partners are in each review state (legacy demo values count as approved), for the tab badges."""
+    rows = db.execute(select(Provider.verification_status, func.count(Provider.id)).group_by(Provider.verification_status)).all()
+    counts = {"pending": 0, "verified": 0, "rejected": 0, "suspended": 0}
+    for status, count in rows:
+        key = "verified" if status in _APPROVED_PARTNER_STATUSES else status
+        counts[key] = counts.get(key, 0) + count
+    counts["all"] = sum(count for _, count in rows)
+    return counts
+
+
 @router.get("/providers")
 def list_providers(response: Response, user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: Session = Depends(get_db),
                    q: str | None = Query(default=None, max_length=120), status: str | None = Query(default=None, max_length=32),
@@ -169,7 +184,8 @@ def list_providers(response: Response, user: User = Depends(require_user(P.ADMIN
     if q and q.strip():
         query = query.where(Provider.name.ilike(_like(q), escape="\\") | Provider.contact_email.ilike(_like(q), escape="\\"))
     if status:
-        query = query.where(Provider.verification_status == status)
+        # "verified" also covers the legacy demo values, which the public site already treats as approved.
+        query = query.where(Provider.verification_status.in_(_APPROVED_PARTNER_STATUSES) if status == "verified" else Provider.verification_status == status)
     response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(query.subquery())) or 0)
     # Applications waiting longest come first in the review queue; otherwise alphabetical.
     order = (Provider.applied_at.asc(),) if status == "pending" else (Provider.name,)

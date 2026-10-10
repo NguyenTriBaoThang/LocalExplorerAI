@@ -190,3 +190,42 @@ def test_admin_can_promote_candidate_only_with_current_full_evidence(client, db_
     db_session.refresh(poi)
     assert poi.verification_status == "verified"
     assert entity_is_operationally_verified(db_session, "poi", poi)
+
+
+def test_catalogue_only_names_real_fields_and_lists_every_service():
+    from app.services.integration_config import INTEGRATION_CATALOG, INTEGRATION_FIELDS
+    assert set(INTEGRATION_CATALOG) == set(INTEGRATION_FIELDS)
+    for service, spec in INTEGRATION_CATALOG.items():
+        known = set(INTEGRATION_FIELDS[service])
+        named = set(spec.shared_fields) | set(spec.required) | ({spec.provider_key} if spec.provider_key else set())
+        for provider in (spec.providers or {}).values():
+            named |= set(provider.fields) | set(provider.required)
+            assert set(provider.required) <= set(provider.fields)
+        assert named <= known, (service, named - known)
+
+
+def test_listing_reports_status_per_service_and_follows_the_selected_provider(client, db_session, monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "integration_secrets_key", __import__("cryptography.fernet", fromlist=["Fernet"]).Fernet.generate_key().decode())
+    for name in ("momo_partner_code", "momo_access_key", "momo_secret_key", "momo_return_url", "momo_ipn_url", "vnpay_tmn_code", "vnpay_hash_secret",
+                 "vnpay_return_url", "vnpay_ipn_url", "goong_api_key", "gemini_api_key", "openai_api_key", "google_client_id", "google_client_secret"):
+        monkeypatch.setattr(settings, name, None)
+    monkeypatch.setattr(settings, "payment_provider", "momo")
+    _admin_session(client, db_session)
+
+    def view():
+        return {item["service"]: item for item in client.get("/api/admin/integrations").json()}
+
+    payments = view()["payments"]
+    assert payments["title"] and payments["active_provider"] == "momo" and payments["status"] == "inactive"
+    assert {p["id"] for p in payments["providers"]} == {"momo", "vnpay"}
+
+    client.put("/api/admin/integrations/payments", json={"values": {"momo_partner_code": "ABC"}})
+    assert view()["payments"]["status"] == "incomplete" and "momo_secret_key" in view()["payments"]["missing"]
+
+    client.put("/api/admin/integrations/payments", json={"values": {"provider": "vnpay"}})
+    switched = view()["payments"]
+    assert switched["active_provider"] == "vnpay" and switched["status"] == "inactive"   # MoMo values do not count for VNPay
+    assert view()["routing"]["simulated"] == (view()["routing"]["active_provider"] == "mock") and set(view()["payments"]["relevant_fields"]) == {"vnpay_environment", "vnpay_tmn_code", "vnpay_hash_secret", "vnpay_payment_url", "vnpay_return_url", "vnpay_ipn_url"}
+    google = view()["google_oauth"]
+    assert google["status"] == "incomplete" and google["missing"] == ["client_id", "client_secret"]   # the redirect URI has a default

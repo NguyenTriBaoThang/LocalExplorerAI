@@ -13,7 +13,7 @@ const SESSION_IDLE_MS = 30 * 60 * 1000
 const UNTRACKED = ['/admin', '/provider-portal']
 // Detail pages report their own view together with the place/article id (see useEntityView), so the generic
 // route tracker skips them to avoid counting the same view twice.
-const ENTITY_PAGES = /^\/(places|guides)\/[^/]+$/
+const ENTITY_PAGES = /^\/(places|guides|experiences)\/[^/]+$/
 
 function randomId() {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`

@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.config import settings
-from app.models.entities import Experience, ExperienceSlot, POI, Provider
+from app.models.entities import Experience, ExperienceReview, ExperienceSlot, POI, Provider
 from app.services.evidence_service import current_verified_evidence, entity_is_operationally_verified, evidence_summary, slot_is_operationally_verified
 
 
@@ -24,6 +24,15 @@ class ExperienceRepository:
         if intent:
             items = [item for item in items if intent in (item.intent_tags or [])]
         return items
+
+    def review_stats(self, experience_ids: list[str]) -> dict[str, tuple[int, float]]:
+        """Published-review count and average rating per experience, in one query."""
+        if not experience_ids:
+            return {}
+        rows = self.db.execute(select(ExperienceReview.experience_id, func.count(ExperienceReview.id), func.avg(ExperienceReview.rating)).where(
+            ExperienceReview.experience_id.in_(experience_ids), ExperienceReview.status == "published",
+        ).group_by(ExperienceReview.experience_id)).all()
+        return {experience_id: (count, round(float(average), 1)) for experience_id, count, average in rows}
 
     def get_experience(self, experience_id: str) -> Experience | None:
         allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]

@@ -80,6 +80,39 @@ class POIRead(ORMModel):
     data_status: str = "simulated"
 
 
+class PartnerSummary(BaseModel):
+    """One row of the public partner directory."""
+
+    id: str
+    name: str
+    slug: str
+    description: str = ""
+    address: str = ""
+    website: str | None = None
+    cover_url: str | None = None
+    categories: list[str] = Field(default_factory=list)
+    experience_count: int = 0
+    min_price_vnd: int | None = None
+    rating_average: float | None = None
+    rating_count: int = 0
+
+
+class PartnerRead(BaseModel):
+    """Public profile of a verified partner. Review notes, tax code, licence and documents are never exposed."""
+
+    id: str
+    name: str
+    slug: str
+    description: str = ""
+    address: str = ""
+    website: str | None = None
+    contact_phone: str | None = None
+    contact_email: str | None = None
+    rating_average: float | None = None
+    rating_count: int = 0
+    experiences: list["ExperienceRead"] = Field(default_factory=list)
+
+
 class ExperienceRead(ORMModel):
     id: str
     name: str
@@ -101,3 +134,10 @@ class ExperienceRead(ORMModel):
     slots: list[SlotRead] = Field(default_factory=list)
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"
+    rating_average: float | None = None   # published reviews only; None until the first one
+    rating_count: int = 0
+    provider_name: str | None = None
+    provider_slug: str | None = None      # links to the public partner profile
+
+
+PartnerRead.model_rebuild()

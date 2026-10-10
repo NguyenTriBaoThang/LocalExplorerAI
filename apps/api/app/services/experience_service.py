@@ -72,6 +72,8 @@ class ExperienceService:
             experience = ExperienceRead.model_validate({
                 **ExperienceRead.model_validate(item).model_dump(),
                 "poi": poi.model_dump(),
+                "provider_name": item.provider.name if item.provider else None,
+                "provider_slug": item.provider.slug if item.provider else None,
                 "data_mode": "real" if is_real else "simulated",
                 "source_evidence": self.repository.source_evidence("experience", item.id, item.data_revision) if is_real else [],
             })
@@ -84,4 +86,5 @@ class ExperienceService:
                     "source_evidence": self.repository.source_evidence("slot", slot.id, slot.version) if is_real else [],
                 }))
             result.append(experience.model_copy(update={"slots": slot_reads}))
-        return result
+        stats = self.repository.review_stats([item.id for item in result])
+        return [item.model_copy(update={"rating_count": stats[item.id][0], "rating_average": stats[item.id][1]}) if item.id in stats else item for item in result]

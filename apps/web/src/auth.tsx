@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AUTH_EXPIRED_EVENT, getCurrentUser } from './api/client'
 import type { AuthUser } from './types'
 
@@ -50,10 +50,25 @@ export function RoleRoute({ roles }: { roles: AuthUser['role'][] }) {
   return <Outlet />
 }
 
+/** Traveler-only features (chat, planner, itineraries). Staff may browse the public site but get an explanation here. */
 export function CustomerRoute() {
   const { user, loading } = useAuth()
   if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
-  if (user?.role === 'admin' || user?.role === 'provider') return <Navigate to={roleHome(user.role)} replace />
+  if (user?.role === 'admin' || user?.role === 'provider') {
+    return (
+      <div className="page-wrap" style={{ maxWidth: 560, textAlign: 'center', paddingTop: 80 }}>
+        <h1 className="page-heading-3d" style={{ fontSize: 26 }}>Tính năng dành cho du khách</h1>
+        <p className="page-subtext-3d">
+          Bạn đang đăng nhập bằng tài khoản {user.role === 'admin' ? 'quản trị' : 'đối tác'}. Lập lịch trình và trò chuyện với trợ lý cần tài khoản du khách.
+          Bạn vẫn có thể xem trang công khai, hoặc quay lại portal để làm việc.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
+          <Link to="/" className="btn-secondary-3d">Về trang chủ</Link>
+          <Link to={roleHome(user.role)} className="btn-primary-3d">Vào Portal</Link>
+        </div>
+      </div>
+    )
+  }
   return <Outlet />
 }
 
@@ -64,10 +79,10 @@ export function GuestRoute() {
   return <Outlet />
 }
 
+/** The home page is public. Staff stay on it: only signing in (GuestRoute) sends them to the portal. */
 export function RoleHome({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
   if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
-  if (user?.role === 'admin' || user?.role === 'provider') return <Navigate to={roleHome(user.role)} replace />
   return <>{children}</>
 }
 

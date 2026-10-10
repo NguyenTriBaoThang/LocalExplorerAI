@@ -144,6 +144,25 @@ export interface Experience {
   slots: Slot[]
   source_evidence?: SourceEvidence[]
   data_mode?: DataMode
+  rating_average?: number | null
+  rating_count?: number
+  provider_name?: string | null
+  provider_slug?: string | null
+}
+
+export interface PartnerSummary {
+  id: string
+  name: string
+  slug: string
+  description: string
+  address: string
+  website: string | null
+  cover_url: string | null
+  categories: string[]
+  experience_count: number
+  min_price_vnd: number | null
+  rating_average: number | null
+  rating_count: number
 }
 
 export interface RouteLeg {

@@ -324,7 +324,7 @@ export function DescriptionList({ items }: { items: Array<[string, ReactNode]> }
 
 /* ---------- Toasts ---------- */
 
-type Toast = { id: number; tone: 'success' | 'error'; message: string }
+type Toast = { id: number; tone: 'success' | 'error' | 'info'; message: string }
 const ToastContext = createContext<(tone: Toast['tone'], message: string) => void>(() => undefined)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -342,7 +342,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div key={toast.id} className="animate-pop-in pointer-events-auto flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-pop">
             {toast.tone === 'success'
               ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-              : <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />}
+              : toast.tone === 'info'
+                ? <Info className="h-5 w-5 shrink-0 text-brand-600" />
+                : <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />}
             <p className="text-slate-700">{toast.message}</p>
           </div>
         ))}
@@ -353,7 +355,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function useToast() {
   const push = useContext(ToastContext)
-  return { success: (message: string) => push('success', message), error: (message: string) => push('error', message) }
+  return { success: (message: string) => push('success', message), error: (message: string) => push('error', message), info: (message: string) => push('info', message) }
 }
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {

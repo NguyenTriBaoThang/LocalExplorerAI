@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Map3DLandmarkViewer } from '../components/3d/Map3DLandmarkViewer'
 import {
   Compass,
@@ -6,6 +6,8 @@ import {
   Building2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { contentApi } from '../api/content'
+import type { POI } from '../types'
 
 const LANDMARKS = [
   {
@@ -49,6 +51,13 @@ const LANDMARKS = [
 
 export function Map3DPage() {
   const [selectedLandmark, setSelectedLandmark] = useState('nhathoducba')
+  // Landmarks published in the portal: each links to its place page; the ones with a 3D model also open it here.
+  const [landmarks, setLandmarks] = useState<POI[]>([])
+  useEffect(() => {
+    contentApi.places().then((places) => setLandmarks(places.filter((place) => place.is_landmark))).catch(() => setLandmarks([]))
+  }, [])
+  const normalise = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const modelFor = (place: POI) => LANDMARKS.find((model) => model.status === 'active' && normalise(place.name).includes(normalise(model.name)))
 
   return (
     <div className="w-full flex flex-col bg-slate-950 text-slate-100 min-h-[calc(100vh-64px)]">
@@ -112,6 +121,23 @@ export function Map3DPage() {
           })}
         </div>
       </div>
+
+      {landmarks.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-4 sm:px-8 py-2.5 bg-slate-900/60 border-b border-slate-800">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Danh thắng</span>
+          {landmarks.map((place) => {
+            const model = modelFor(place)
+            return (
+              <span key={place.id} className="inline-flex items-center overflow-hidden rounded-lg border border-slate-700/60 text-xs">
+                <Link to={`/places/${place.id}`} className="px-2.5 py-1 text-slate-200 hover:bg-slate-800">{place.name}</Link>
+                {model && (
+                  <button type="button" onClick={() => setSelectedLandmark(model.id)} className="border-l border-slate-700/60 px-2 py-1 text-emerald-400 hover:bg-slate-800" title="Xem mô hình 3D">3D</button>
+                )}
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">

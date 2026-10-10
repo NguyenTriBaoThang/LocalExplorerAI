@@ -36,6 +36,7 @@ from app.services.ticket_service import is_shadow_email
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.api.guards import public, require_user
 from app.api.permissions import P
+from app.services.rbac_service import DbRoleMatrix
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -185,8 +186,10 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
 
 @router.get("/me", response_model=UserRead)
-def get_profile(user: User = Depends(require_user(P.ACCOUNT_READ))):
-    return user
+def get_profile(user: User = Depends(require_user(P.ACCOUNT_READ)), db: Session = Depends(get_db)):
+    profile = UserRead.model_validate(user)
+    profile.permissions = sorted(DbRoleMatrix(db).permissions_for(user.role))
+    return profile
 
 
 @router.patch("/me", response_model=UserRead)

@@ -98,6 +98,83 @@ INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
 }
 
 
+@dataclass(frozen=True)
+class ProviderSpec:
+    label: str
+    fields: tuple[str, ...]            # keys shown when this provider is selected
+    required: tuple[str, ...] = ()     # keys that must be set for the provider to count as working
+
+
+@dataclass(frozen=True)
+class ServiceSpec:
+    title: str
+    description: str
+    provider_key: str | None = None    # the field that selects among ``providers``
+    providers: dict[str, ProviderSpec] | None = None
+    shared_fields: tuple[str, ...] = ()  # shown whatever the provider
+    required: tuple[str, ...] = ()       # for services without a provider choice
+    testable: bool = False
+
+
+INTEGRATION_CATALOG: dict[str, ServiceSpec] = {
+    "payments": ServiceSpec(
+        "Thanh toán", "Cổng thanh toán cho đặt chỗ. Chỉ một nhà cung cấp hoạt động tại một thời điểm.", provider_key="provider", testable=True,
+        providers={
+            "momo": ProviderSpec("MoMo", ("momo_environment", "momo_partner_code", "momo_access_key", "momo_secret_key", "momo_api_url", "momo_return_url", "momo_ipn_url"),
+                                 ("momo_partner_code", "momo_access_key", "momo_secret_key", "momo_return_url", "momo_ipn_url")),
+            "vnpay": ProviderSpec("VNPay", ("vnpay_environment", "vnpay_tmn_code", "vnpay_hash_secret", "vnpay_payment_url", "vnpay_return_url", "vnpay_ipn_url"),
+                                  ("vnpay_tmn_code", "vnpay_hash_secret", "vnpay_return_url", "vnpay_ipn_url")),
+        }),
+    "routing": ServiceSpec(
+        "Bản đồ & Tuyến đường", "Tính tuyến đường, tìm địa chỉ và bản đồ nền.", provider_key="provider", shared_fields=("geocoding_provider",), testable=True,
+        providers={
+            "goong": ProviderSpec("Goong", ("goong_api_key", "goong_maptiles_key", "goong_api_base_url"), ("goong_api_key",)),
+            "mock": ProviderSpec("Mô phỏng (chỉ để phát triển)", ()),
+        }),
+    "ai": ServiceSpec(
+        "Trợ lý AI", "Mô hình ngôn ngữ cho chat và các quy trình AI.", provider_key="provider", testable=True,
+        providers={
+            "gemini": ProviderSpec("Google Gemini", ("gemini_api_key", "gemini_base_url", "gemini_model"), ("gemini_api_key",)),
+            "openai": ProviderSpec("OpenAI hoặc tương thích", ("openai_api_key", "openai_base_url", "openai_model"), ("openai_api_key",)),
+        }),
+    "google_oauth": ServiceSpec(
+        "Đăng nhập Google", "Cho phép du khách đăng nhập bằng tài khoản Google.", testable=True,
+        required=("client_id", "client_secret", "redirect_uri")),
+}
+
+
+def _service_view(service: str, fields: list[dict[str, Any]], db: Session) -> dict[str, Any]:
+    """Catalogue data the admin UI renders generically: provider choices, which keys belong to which, and a status."""
+    spec = INTEGRATION_CATALOG[service]
+    configured = {item["key"]: item["configured"] for item in fields}
+    active = None
+    if spec.provider_key and spec.providers:
+        chosen = resolve_integration_value(db, service, spec.provider_key)
+        active = chosen if chosen in spec.providers else next(iter(spec.providers))
+        required = spec.providers[active].required
+    else:
+        required = spec.required
+    missing = [key for key in required if not configured.get(key)]
+    if not required:
+        status = "active"      # e.g. the mock provider: nothing to supply
+    elif not missing:
+        status = "active"
+    elif len(missing) == len(required):
+        status = "inactive"
+    else:
+        status = "incomplete"
+    updated = [item["updated_at"] for item in fields if item["updated_at"]]
+    return {
+        "title": spec.title, "description": spec.description, "testable": spec.testable, "status": status, "missing": missing,
+        "simulated": active == "mock",   # a stand-in provider: works, but not a real integration
+        "relevant_fields": [*spec.shared_fields, *(spec.providers[active].fields if spec.providers and active else ())] if spec.providers else [item["key"] for item in fields],
+        "provider_key": spec.provider_key, "active_provider": active, "shared_fields": list(spec.shared_fields),
+        "providers": [{"id": pid, "label": p.label, "fields": list(p.fields), "required": list(p.required)} for pid, p in (spec.providers or {}).items()],
+        "required": list(required), "updated_at": max(updated) if updated else None,
+        "admin_overrides": sum(1 for item in fields if item["source"] == "admin"),
+    }
+
+
 def _fernet():
     key = (settings.integration_secrets_key or "").strip()
     if not key and settings.app_env.lower() == "development":
@@ -163,7 +240,7 @@ def list_integration_settings(db: Session) -> list[dict[str, Any]]:
                 "value": None if field.secret else value,
                 "updated_at": row.updated_at if row else None,
             })
-        services.append({"service": service, "fields": listed_fields})
+        services.append({"service": service, "fields": listed_fields, **_service_view(service, listed_fields, db)})
     return services
 
 
