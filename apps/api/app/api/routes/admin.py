@@ -2,6 +2,7 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -46,6 +47,8 @@ class PlaceCandidatePromotion(BaseModel):
     longitude: float = Field(ge=-180, le=180)
     category: str = Field(min_length=2, max_length=40)
     description: str = Field(default="", max_length=4000)
+    image_urls: list[str] = Field(default_factory=list, max_length=12)
+    details: dict[str, Any] = Field(default_factory=dict)
     source_uri: str = Field(min_length=12, max_length=1000)
     source_type: str = Field(min_length=3, max_length=40)
     source_label: str = Field(min_length=2, max_length=180)
@@ -184,6 +187,21 @@ def promote_place_candidate(
     if payload.observed_at > now or payload.expires_at <= now or payload.expires_at <= payload.observed_at:
         raise HTTPException(status_code=422, detail={"code": "EVIDENCE_NOT_CURRENT", "message": "Evidence must have a past observation time and a future expiry time."})
 
+    details_value = payload.details or candidate.raw_payload.get("details")
+    raw_details = dict(details_value) if isinstance(details_value, dict) else {}
+    raw_photos = raw_details.get("images") or candidate.raw_payload.get("photos") or []
+    if not isinstance(raw_photos, list):
+        raw_photos = []
+    source_photos = []
+    for photo in raw_photos:
+        if not isinstance(photo, dict) or not photo.get("url") or not photo.get("source_url") or not photo.get("license"):
+            continue
+        photo_url, credit_url = urlparse(str(photo["url"])), urlparse(str(photo["source_url"]))
+        if photo_url.scheme != "https" or credit_url.scheme != "https":
+            continue
+        source_photos.append(photo)
+    raw_details = {**raw_details, "images": source_photos}
+
     poi_id = str(uuid4())
     poi = POI(
         id=poi_id,
@@ -195,6 +213,8 @@ def promote_place_candidate(
         category=payload.category.strip(),
         address=payload.address.strip(),
         source_attribution=payload.source_label.strip(),
+        image_urls=payload.image_urls or [str(image.get("local_url") or image["url"]) for image in source_photos],
+        details=raw_details,
         verification_status="pending",
         data_revision=1,
     )

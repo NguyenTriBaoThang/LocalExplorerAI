@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.config import settings
 from app.core.pilot_area import PILOT_DISTRICT
-from app.models.entities import Evidence, Experience, ExperienceSlot, POI
+from app.models.entities import POI, Evidence, Experience, ExperienceSlot
 from app.services.evidence_service import (
     current_verified_evidence,
     entity_is_operationally_verified,
@@ -14,7 +14,11 @@ from app.services.evidence_service import (
     slot_is_operationally_verified,
     target_revision,
 )
-from app.services.pilot_area import is_pilot_district, pilot_district_sql_filter
+from app.services.pilot_area import (
+    is_pilot_district,
+    is_pilot_location,
+    pilot_district_sql_filter,
+)
 
 
 class ExperienceRepository:
@@ -48,7 +52,7 @@ class ExperienceRepository:
             query = query.execution_options(populate_existing=True)
         items = list(self.db.scalars(query.order_by(Experience.name)).unique())
         self._prime_evidence_cache(experiences=items)
-        items = [item for item in items if (not district or is_pilot_district(item.poi.district)) and self._is_public(item)]
+        items = [item for item in items if self._matches_district(item.poi, district) and self._is_public(item)]
         if intent:
             items = [item for item in items if intent in (item.intent_tags or [])]
         return items
@@ -73,7 +77,16 @@ class ExperienceRepository:
             query = query.where(pilot_district_sql_filter() if district == PILOT_DISTRICT else self._district_filter(district))
         items = list(self.db.scalars(query.order_by(POI.name)))
         self._prime_evidence_cache(pois=items)
-        return [item for item in items if (not district or is_pilot_district(item.district)) and ((not settings.real_data_only and item.verification_status == "simulated") or self._is_verified("poi", item))]
+        return [item for item in items if self._matches_district(item, district) and ((not settings.real_data_only and item.verification_status == "simulated") or self._is_verified("poi", item))]
+
+    @staticmethod
+    def _matches_district(poi: POI, district: str | None) -> bool:
+        if not district:
+            return True
+        if district == PILOT_DISTRICT:
+            # Catalog-imported district labels are not trusted for pilot scoping.
+            return is_pilot_location(poi.latitude, poi.longitude)
+        return is_pilot_district(poi.district)
 
     def get_poi(self, poi_id: str) -> POI | None:
         allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]

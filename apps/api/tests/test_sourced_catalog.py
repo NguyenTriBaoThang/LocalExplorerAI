@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from app.adapters.routing.goong import GoongDirectionsProvider
 from app.core.config import settings
-from app.models.entities import ExperienceSlot, Provider, User
+from app.models.entities import ExperienceSlot, POI, Provider, User
 from app.services.auth_service import create_session_token, hash_password
 
 
@@ -34,6 +34,19 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     })
     assert poi_response.status_code == 201, poi_response.text
     poi_id = poi_response.json()["id"]
+    db_poi = db_session.get(POI, poi_id)
+    db_poi.details = {
+        "opening_hours": "Mo-Su 08:00-17:00",
+        "osm_url": "https://www.openstreetmap.org/node/123",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "osm_tags": {"tourism": "museum"},
+        "images": [{
+            "url": "https://upload.wikimedia.org/example.jpg",
+            "source_url": "https://commons.wikimedia.org/wiki/File:Example.jpg",
+            "license": "CC BY-SA 4.0",
+        }],
+    }
+    db_session.commit()
     assert any(item["id"] == poi_id for item in client.get("/api/provider/pois").json())
 
     poi_evidence = client.post("/api/provider/evidence", json={
@@ -109,6 +122,9 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert poi_detail.status_code == 200, poi_detail.text
     assert poi_detail.json()["data_mode"] == "real"
     assert poi_detail.json()["source_evidence"]
+    assert poi_detail.json()["details"]["opening_hours"] == "Mo-Su 08:00-17:00"
+    assert poi_detail.json()["details"]["images"][0]["license"] == "CC BY-SA 4.0"
+    assert [item["id"] for item in poi_detail.json()["experiences"]] == [experience_id]
 
     monkeypatch.setattr(settings, "routing_provider", "goong")
     monkeypatch.setattr(settings, "goong_api_key", "test-goong-key")

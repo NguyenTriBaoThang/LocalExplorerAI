@@ -130,17 +130,27 @@ export function ExplorePage() {
     [items, search, semantic]
   )
 
-  const points = visible.map((item, index) => ({
-    id: item.id,
-    latitude: item.poi.latitude,
-    longitude: item.poi.longitude,
-    name: item.name,
-    category: item.poi.category,
-    number: index + 1,
-    imageUrl: item.poi.image_urls?.[0],
-    priceVnd: item.price_vnd,
-    district: item.poi.district,
-  }))
+  const points = useMemo(() => {
+    const uniquePois = new Map<string, Experience>()
+    visible.forEach((item) => {
+      if (!uniquePois.has(item.poi.id)) uniquePois.set(item.poi.id, item)
+    })
+    return [...uniquePois.values()].map((item, index) => ({
+      // Keep an experience ID for the existing card-selection interaction,
+      // but render one map pin per physical POI instead of stacking duplicates.
+      id: item.id,
+      placeId: item.poi.id,
+      latitude: item.poi.latitude,
+      longitude: item.poi.longitude,
+      name: item.poi.name,
+      category: item.poi.category,
+      number: index + 1,
+      imageUrl: item.poi.details?.images?.find((photo) => (photo.local_url || photo.url) && photo.source_url && photo.license)?.local_url
+        || item.poi.details?.images?.find((photo) => photo.url && photo.source_url && photo.license)?.url,
+      priceVnd: item.price_vnd,
+      district: item.poi.district,
+    }))
+  }, [visible])
 
   const resetFilters = () => {
     setSearch('')

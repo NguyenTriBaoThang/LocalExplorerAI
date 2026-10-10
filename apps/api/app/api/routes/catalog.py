@@ -1,15 +1,21 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.repositories.experience_repository import ExperienceRepository
 from app.core.pilot_area import PILOT_DISTRICT
-from app.schemas.common import ExperienceRead, POIRead, SlotRead
-from app.services.experience_service import ExperienceService
 from app.db.session import get_db
-from app.services.e5_search_service import E5NotConfigured, E5ProviderError, E5SearchService
-from app.services.pilot_area import is_pilot_district
+from app.repositories.experience_repository import ExperienceRepository
+from app.models.entities import Experience
+from app.schemas.common import ExperienceRead, POIDetailRead, POIRead, SlotRead
+from app.services.e5_search_service import (
+    E5NotConfigured,
+    E5ProviderError,
+    E5SearchService,
+)
+from app.services.experience_service import ExperienceService
+from app.services.pilot_area import is_pilot_location
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 
@@ -20,13 +26,24 @@ def list_pois(db: Session = Depends(get_db)):
     return [read_poi(repository, item) for item in repository.list_pois(district=PILOT_DISTRICT)]
 
 
-@router.get("/pois/{poi_id}", response_model=POIRead)
+@router.get("/pois/{poi_id}", response_model=POIDetailRead)
 def get_poi(poi_id: str, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     poi = repository.get_poi(poi_id)
-    if not poi or not is_pilot_district(poi.district):
+    if not poi or not is_pilot_location(poi.latitude, poi.longitude):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "POI not found"})
-    return read_poi(repository, poi)
+    place = read_poi(repository, poi)
+    experiences = db.scalars(
+        select(Experience).where(Experience.poi_id == poi.id).order_by(Experience.name)
+    ).all()
+    experience_service = ExperienceService(repository)
+    place_payload = place.model_dump()
+    place_payload["experiences"] = [
+        serialized.model_dump()
+        for item in experiences
+        if (serialized := experience_service.get(item.id)) is not None
+    ]
+    return POIDetailRead.model_validate(place_payload)
 
 
 def read_poi(repository: ExperienceRepository, poi) -> POIRead:
@@ -68,7 +85,7 @@ def list_experiences(
 @router.get("/experiences/{experience_id}", response_model=ExperienceRead)
 def get_experience(experience_id: str, db: Session = Depends(get_db)):
     experience = ExperienceService(ExperienceRepository(db)).get(experience_id)
-    if experience is not None and not is_pilot_district(experience.poi.district):
+    if experience is not None and not is_pilot_location(experience.poi.latitude, experience.poi.longitude):
         experience = None
     if not experience:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
@@ -119,7 +136,7 @@ def search_experiences(
 def get_slots(experience_id: str, start_at: datetime | None = None, end_at: datetime | None = None, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     experience = repository.get_experience(experience_id)
-    if not experience or not is_pilot_district(experience.poi.district):
+    if not experience or not is_pilot_location(experience.poi.latitude, experience.poi.longitude):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
     is_real = experience.verification_status == "verified"
     result = []

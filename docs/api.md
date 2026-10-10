@@ -27,6 +27,8 @@ Catalog trả `verification_status` và `data_mode`. Dữ liệu seed là `simul
 
 ## Planner
 
+`GET /api/pois/{id}` returns the POI detail fields (including source-backed `details`, image/license metadata, current evidence, and linked experience summaries). The crawler workflow is documented in [District 1 catalog crawl and display](district1-place-catalog.md).
+
 `POST /api/itineraries/plan`
 
 ```json

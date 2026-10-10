@@ -2714,6 +2714,9 @@ a {
 /* Experience Cards 3D                                                        */
 /* -------------------------------------------------------------------------- */
 .experience-card-3d {
+  display: block;
+  flex: 0 0 auto;
+  min-height: 350px;
   background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -2736,7 +2739,7 @@ a {
 
 .card-3d-inner {
   transform-style: preserve-3d;
-  height: 100%;
+  min-height: inherit;
   display: flex;
   flex-direction: column;
 }
@@ -2750,6 +2753,7 @@ a {
 /* Photo Header Container */
 .card-photo-container {
   position: relative;
+  flex: 0 0 185px;
   width: 100%;
   height: 185px;
   overflow: hidden;
@@ -2764,6 +2768,95 @@ a {
   display: block;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.card-photo-credit {
+  position: absolute;
+  z-index: 4;
+  left: 10px;
+  right: 10px;
+  bottom: 42px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px #000;
+}
+
+.card-place-detail-link,
+.place-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--emerald);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.card-place-detail-link { margin: 3px 0 8px; }
+.card-place-detail-link:hover,
+.place-back-link:hover { text-decoration: underline; }
+
+.places-page { padding-top: 34px; padding-bottom: 64px; }
+.places-page-header { margin-bottom: 24px; }
+.places-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 720px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+.places-search input { width: 100%; border: 0; outline: 0; color: var(--text-main); background: transparent; }
+.places-count { margin: 18px 0 12px; color: var(--text-muted); font-size: 12px; }
+.places-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.place-card { overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--bg-card); color: var(--text-main); text-decoration: none; transition: transform .18s ease, border-color .18s ease; }
+.place-card:hover { transform: translateY(-3px); border-color: var(--emerald); }
+.place-card > img, .place-card-no-photo { display: grid; width: 100%; height: 168px; object-fit: cover; }
+.place-card-no-photo { place-content: center; justify-items: center; gap: 7px; background: linear-gradient(135deg, rgba(16,185,129,.11), rgba(6,182,212,.12)); color: var(--text-muted); font-size: 11px; }
+.place-card-body { display: grid; gap: 8px; padding: 14px; }
+.place-card-category { color: var(--emerald); font-size: 10px; text-transform: uppercase; }
+.place-card-body > strong { font-size: 15px; }
+.place-card-body small { display: flex; align-items: flex-start; gap: 5px; color: var(--text-muted); font-size: 11px; }
+.place-card-details { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; color: var(--emerald); font-size: 11px; font-weight: 700; }
+.places-empty { padding: 44px 12px; color: var(--text-muted); text-align: center; }
+.place-detail-page { max-width: 1120px; padding-top: 28px; padding-bottom: 64px; }
+.place-detail-heading { margin: 20px 0 24px; }
+.place-detail-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.place-detail-badges span { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size: 11px; }
+.place-photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.place-photo-grid figure { margin: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--bg-card); }
+.place-photo-grid img { display: block; width: 100%; max-height: 480px; aspect-ratio: 16 / 10; object-fit: cover; }
+.place-photo-grid figcaption { padding: 9px 12px; color: var(--text-muted); font-size: 10px; }
+.place-photo-grid a, .place-source-box a { color: var(--emerald); }
+.place-no-photo { display: flex; align-items: center; gap: 12px; padding: 20px; border: 1px dashed var(--border-subtle); border-radius: 14px; color: var(--text-muted); font-size: 13px; }
+.place-detail-section { margin-top: 24px; padding: 20px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--bg-card); }
+.place-detail-section h2 { margin: 0 0 16px; font-size: 17px; }
+.place-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.place-detail-info { display: grid; align-content: start; gap: 8px; min-height: 72px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 12px; }
+.place-detail-info > span { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 11px; }
+.place-detail-info strong, .place-detail-info a { color: var(--text-main); font-size: 13px; overflow-wrap: anywhere; }
+.place-detail-info a { display: flex; align-items: center; gap: 5px; color: var(--emerald); }
+.place-experience-list { display: grid; gap: 10px; }
+.place-experience-item { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 12px; }
+.place-experience-item span, .place-experience-item small { color: var(--text-muted); font-size: 12px; }
+.place-slot-list { display: grid; gap: 7px; margin: 4px 0 0; padding-left: 18px; }
+.place-slot-list li { display: grid; gap: 4px; color: var(--text-muted); font-size: 11px; }
+.place-slot-list a { color: var(--emerald); }
+.place-source-box { display: grid; gap: 8px; color: var(--text-muted); font-size: 12px; }
+.place-source-box a { display: inline-flex; align-items: center; gap: 5px; }
+.place-source-box small { color: var(--text-muted); }
+.place-raw-tags summary { cursor: pointer; font-weight: 700; }
+.place-raw-tags dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px; margin: 16px 0 0; }
+.place-raw-tags dl div { padding: 9px; border-radius: 8px; background: rgba(0,0,0,.13); }
+.place-raw-tags dt { color: var(--emerald); font-size: 10px; }
+.place-raw-tags dd { margin: 3px 0 0; color: var(--text-main); font-size: 12px; overflow-wrap: anywhere; }
 
 .experience-card-3d:hover .card-photo-img {
   transform: scale(1.08);
@@ -2885,6 +2978,7 @@ a {
 }
 
 .card-body-content {
+  min-height: 150px;
   padding: 16px 20px 20px;
   display: flex;
   flex-direction: column;

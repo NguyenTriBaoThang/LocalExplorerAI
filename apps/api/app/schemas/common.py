@@ -70,6 +70,9 @@ class POIRead(ORMModel):
     address: str
     district: str | None = None
     image_urls: list[str] = Field(default_factory=list)
+    details: dict[str, Any] = Field(default_factory=dict)
+    source_attribution: str | None = None
+    data_revision: int = 1
     verification_status: str
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"
@@ -97,3 +100,7 @@ class ExperienceRead(ORMModel):
     slots: list[SlotRead] = Field(default_factory=list)
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"
+
+
+class POIDetailRead(POIRead):
+    experiences: list[ExperienceRead] = Field(default_factory=list)

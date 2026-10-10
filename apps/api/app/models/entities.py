@@ -120,6 +120,9 @@ class POI(Base):
     submitted_by_provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
     is_in_pilot_polygon: Mapped[bool] = mapped_column(Boolean, default=False)
     image_urls: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    # Untouched, source-backed place facts (e.g. OSM tags and image credits).
+    # These are descriptive catalog metadata, not proof of operational verification.
+    details: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
     verification_status: Mapped[str] = mapped_column(String(24), default=VerificationStatus.SIMULATED.value)
     data_revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

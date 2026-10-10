@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities } from '../types'
+import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, POIDetail, RoutingCapabilities } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -218,6 +218,11 @@ export async function getExperiences(params?: Record<string, string | number | b
 
 export async function getPOIs(): Promise<POI[]> {
   const { data } = await api.get<POI[]>('/pois')
+  return data
+}
+
+export async function getPOI(id: string): Promise<POIDetail> {
+  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}`)
   return data
 }
 

@@ -112,6 +112,13 @@ type PlaceImportCandidate = {
   target_poi_status?: string | null
 }
 
+function toDateTimeLocal(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
 const PLACE_ACTIVITY_MODE_LABELS: Record<string, string> = {
   passive_visit: 'Tham quan / quan sát',
   food_service: 'Ăn uống',
@@ -995,6 +1002,15 @@ export function AdminPage() {
                   <div className="moderation-items-list">
                     {placeImportCandidates.map((candidate) => {
                       const raw = candidate.raw_payload
+                      const sourceDetails = (raw.details && typeof raw.details === 'object'
+                        ? raw.details
+                        : {}) as Record<string, unknown> & { osm_tags: Record<string, unknown> }
+                      const sourcePhotos = Array.isArray(sourceDetails.images)
+                        ? sourceDetails.images.filter((photo): photo is Record<string, unknown> => Boolean(photo && typeof photo === 'object'))
+                        : []
+                      const sourceOsmTags = sourceDetails.osm_tags && typeof sourceDetails.osm_tags === 'object'
+                        ? sourceDetails.osm_tags as Record<string, unknown>
+                        : {}
                       const suggested = candidate.suggested_labels
                       const tags = Array.isArray(raw.tags)
                         ? raw.tags.map(String).join(', ')
@@ -1126,6 +1142,7 @@ export function AdminPage() {
                                   max={90}
                                   step="any"
                                   required
+                                  defaultValue={String(raw.lat ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
@@ -1137,6 +1154,7 @@ export function AdminPage() {
                                   max={180}
                                   step="any"
                                   required
+                                  defaultValue={String(raw.lon ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
@@ -1156,11 +1174,12 @@ export function AdminPage() {
                                   type="url"
                                   required
                                   placeholder="https://..."
+                                  defaultValue={String(raw.source || '')}
                                 />
                               </label>
                               <label className="field-group-3d">
                                 <span>Source type</span>
-                                <select name="source_type" defaultValue="official">
+                                <select name="source_type" defaultValue={String(raw.source_type || 'dataset')}>
                                   <option value="official">Official</option>
                                   <option value="provider">Provider</option>
                                   <option value="website">Website</option>
@@ -1175,15 +1194,16 @@ export function AdminPage() {
                                   required
                                   minLength={2}
                                   maxLength={180}
+                                  defaultValue={String(raw.source_label || 'OpenStreetMap contributors')}
                                 />
                               </label>
                               <label className="field-group-3d">
                                 <span>License (optional)</span>
-                                <input name="license" maxLength={120} />
+                                <input name="license" maxLength={120} defaultValue={String(raw.license || 'ODbL-1.0')} />
                               </label>
                               <label className="field-group-3d">
                                 <span>Observed at</span>
-                                <input name="observed_at" type="datetime-local" required />
+                                <input name="observed_at" type="datetime-local" required defaultValue={toDateTimeLocal(raw.source_observed_at)} />
                               </label>
                               <label className="field-group-3d">
                                 <span>Evidence expires at</span>
@@ -1241,6 +1261,22 @@ export function AdminPage() {
                             <span>Nguồn ghi trong file: {String(raw.source || 'không có')}</span>
                             <span>Tags: {tags || 'không có'}</span>
                             {Boolean(raw.description) && <span>{String(raw.description)}</span>}
+                            {Boolean(sourceDetails.opening_hours) && <span>opening_hours (OSM): {String(sourceDetails.opening_hours)}</span>}
+                            {Boolean(sourceDetails.contact_phone) && <span>phone (OSM): {String(sourceDetails.contact_phone)}</span>}
+                            {Boolean(sourceDetails.website) && <span>website (OSM): {String(sourceDetails.website)}</span>}
+                            {Boolean(sourceDetails.fee) && <span>fee (OSM): {String(sourceDetails.fee)}</span>}
+                            {Boolean(sourceDetails.observed_at) && <span>Thời điểm crawl: {String(sourceDetails.observed_at)}</span>}
+                            {sourcePhotos.map((photo, index) => (
+                              <a key={`${String(photo.source_url || photo.url)}-${index}`} href={String(photo.source_url || photo.url || '#')} target="_blank" rel="noreferrer">
+                                Ảnh nguồn: {String(photo.title || 'Wikimedia Commons')} · {String(photo.license || 'không có thông tin giấy phép')}
+                              </a>
+                            ))}
+                            {Object.keys(sourceOsmTags).length > 0 && (
+                              <details>
+                                <summary>Toàn bộ tags OSM ({Object.keys(sourceDetails.osm_tags).length})</summary>
+                                <pre>{JSON.stringify(sourceDetails.osm_tags, null, 2)}</pre>
+                              </details>
+                            )}
                             {Boolean(raw.note) && <span>Ghi chú nguồn: {String(raw.note)}</span>}
                           </div>
                         </details>
