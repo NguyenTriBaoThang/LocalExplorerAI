@@ -41,6 +41,7 @@ export const translations = {
   vi: {
     // Navigation & Header
     'nav.chat': 'AI Chat',
+    'nav.places': 'Địa điểm',
     'nav.explore': 'Khám phá',
     'nav.planner': 'Lập lịch',
     'nav.map3d': 'Bản đồ 3D',
@@ -537,6 +538,7 @@ export const translations = {
   en: {
     // Navigation & Header
     'nav.chat': 'AI Chat',
+    'nav.places': 'Places',
     'nav.explore': 'Explore',
     'nav.planner': 'Planner',
     'nav.map3d': '3D Map',

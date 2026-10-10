@@ -24,6 +24,7 @@ from geoalchemy2 import Geometry
 
 from app.core.enums import ItineraryStatus, PriceBasis, SlotStatus, VerificationStatus
 from app.db.base import Base
+from app.db.types import UTCDateTime
 
 
 def utcnow() -> datetime:
@@ -179,12 +180,12 @@ class ExperienceSlot(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id", ondelete="CASCADE"), index=True)
-    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    start_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+    end_at: Mapped[datetime] = mapped_column(UTCDateTime())
     capacity_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
     available_reported: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     status: Mapped[str] = mapped_column(String(24), default=SlotStatus.TENTATIVE.value)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

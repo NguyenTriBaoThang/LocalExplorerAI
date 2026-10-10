@@ -24,7 +24,8 @@ export function ExperienceCard({
     relaxation: { label: t('explore.intentRelax'), color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200', icon: '🍵' },
   }
 
-  const sourcePhoto = experience.poi.details?.images?.find((item) => item.url && item.source_url && item.license)
+  const sourcePhoto = experience.poi.details?.images?.find((item) => (item.local_url || item.url) && item.source_url && item.license)
+  const photoUrl = (sourcePhoto && (sourcePhoto.local_url || sourcePhoto.url)) || experience.poi.image_urls?.[0] || null
   const slot = experience.slots.find((item) => !['full', 'unavailable', 'cancelled'].includes(item.status))
   const time = slot
     ? new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
@@ -46,23 +47,32 @@ export function ExperienceCard({
       <div className="card-3d-inner">
         {/* Photo Header Container */}
         <div className="card-photo-container">
-          {sourcePhoto ? (
+          {photoUrl ? (
             <img
-              src={sourcePhoto.url}
+              src={photoUrl}
               alt={experience.name}
               className="card-photo-img"
               loading="lazy"
               onError={(e) => {
-                ;(e.target as HTMLElement).style.display = 'none'
+                const img = e.currentTarget
+                img.style.display = 'none'
+                const parent = img.parentElement
+                if (parent) {
+                  const fallback = parent.querySelector('.card-photo-placeholder') as HTMLElement
+                  if (fallback) fallback.style.display = 'flex'
+                }
               }}
             />
-          ) : (
-            <div className="card-photo-placeholder">
-              <span className="card-placeholder-icon">{cat.icon}</span>
-            </div>
-          )}
+          ) : null}
+          <div
+            className="card-photo-placeholder"
+            style={{ display: photoUrl ? 'none' : 'flex' }}
+          >
+            <span className="card-placeholder-icon">{cat.icon}</span>
+            <span className="card-placeholder-label">{cat.label}</span>
+          </div>
           <div className="card-photo-gradient" />
-          {sourcePhoto && (
+          {sourcePhoto ? (
             <a
               className="card-photo-credit"
               href={sourcePhoto.source_url}
@@ -72,7 +82,11 @@ export function ExperienceCard({
             >
               Ảnh: {sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · {sourcePhoto.license}
             </a>
-          )}
+          ) : experience.poi.source_attribution ? (
+            <span className="card-photo-credit">
+              {experience.poi.source_attribution}
+            </span>
+          ) : null}
           
           <div className="card-photo-top-badges">
             <div className="cat-badge">

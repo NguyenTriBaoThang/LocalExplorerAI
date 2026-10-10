@@ -47,6 +47,115 @@ function toNumber(raw: string, fallback: number): number {
   return Number.isFinite(value) ? value : fallback
 }
 
+function createProceduralCathedralModel(): THREE.Group {
+  const root = new THREE.Group()
+
+  // Authentic Toulouse terracotta red brick material
+  const brickMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc84d32,
+    roughness: 0.75,
+    metalness: 0.08,
+  })
+
+  // Off-white stone trims and Romanesque arches
+  const stoneMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe2dcd0,
+    roughness: 0.82,
+    metalness: 0.05,
+  })
+
+  // Zinc-iron slate gray roof spires
+  const roofMaterial = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    roughness: 0.45,
+    metalness: 0.35,
+  })
+
+  // Gold cross material
+  const goldMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.3,
+    metalness: 0.8,
+  })
+
+  // 1. Main Nave Body (Thân thánh đường chính)
+  const naveGeo = new THREE.BoxGeometry(22, 17, 56)
+  const nave = new THREE.Mesh(naveGeo, brickMaterial)
+  nave.position.set(0, 8.5, 6)
+  nave.castShadow = true
+  nave.receiveShadow = true
+  root.add(nave)
+
+  // 1.1 Main Sloped Roof (Mái dốc chính)
+  const roofGeo = new THREE.ConeGeometry(16, 7.5, 4)
+  const roof = new THREE.Mesh(roofGeo, roofMaterial)
+  roof.rotation.y = Math.PI / 4
+  roof.scale.set(1, 1, 3.4)
+  roof.position.set(0, 20.5, 6)
+  roof.castShadow = true
+  root.add(roof)
+
+  // 2. Twin Bell Towers (2 Tháp chuông đôi phía trước cao 60.5m)
+  const towerGeo = new THREE.BoxGeometry(7.8, 36, 7.8)
+  const spireGeo = new THREE.ConeGeometry(5.6, 24, 8)
+
+  // Left Bell Tower
+  const leftTower = new THREE.Mesh(towerGeo, brickMaterial)
+  leftTower.position.set(-8, 18, -22)
+  leftTower.castShadow = true
+  leftTower.receiveShadow = true
+  root.add(leftTower)
+
+  const leftSpire = new THREE.Mesh(spireGeo, roofMaterial)
+  leftSpire.position.set(-8, 48, -22)
+  leftSpire.castShadow = true
+  root.add(leftSpire)
+
+  // Right Bell Tower
+  const rightTower = new THREE.Mesh(towerGeo, brickMaterial)
+  rightTower.position.set(8, 18, -22)
+  rightTower.castShadow = true
+  rightTower.receiveShadow = true
+  root.add(rightTower)
+
+  const rightSpire = new THREE.Mesh(spireGeo, roofMaterial)
+  rightSpire.position.set(8, 48, -22)
+  rightSpire.castShadow = true
+  root.add(rightSpire)
+
+  // 3. Spire Crosses (Thánh giá đỉnh tháp)
+  const crossGeo = new THREE.BoxGeometry(0.5, 3.2, 0.5)
+  const crossBarGeo = new THREE.BoxGeometry(2, 0.5, 0.5)
+
+  const leftCross1 = new THREE.Mesh(crossGeo, goldMaterial)
+  leftCross1.position.set(-8, 61, -22)
+  const leftCross2 = new THREE.Mesh(crossBarGeo, goldMaterial)
+  leftCross2.position.set(-8, 61.4, -22)
+  root.add(leftCross1, leftCross2)
+
+  const rightCross1 = new THREE.Mesh(crossGeo, goldMaterial)
+  rightCross1.position.set(8, 61, -22)
+  const rightCross2 = new THREE.Mesh(crossBarGeo, goldMaterial)
+  rightCross2.position.set(8, 61.4, -22)
+  root.add(rightCross1, rightCross2)
+
+  // 4. Central Front Rose Window (Cửa sổ hoa hồng mặt tiền)
+  const roseGeo = new THREE.CylinderGeometry(3.6, 3.6, 0.8, 24)
+  const rose = new THREE.Mesh(roseGeo, stoneMaterial)
+  rose.rotation.x = Math.PI / 2
+  rose.position.set(0, 16.5, -22.2)
+  root.add(rose)
+
+  // 5. Triple Front Portals (3 Cổng vòm mặt tiền)
+  const portalGeo = new THREE.CylinderGeometry(2.4, 2.4, 4.5, 16, 1, false, 0, Math.PI)
+  const portal = new THREE.Mesh(portalGeo, stoneMaterial)
+  portal.rotation.z = Math.PI / 2
+  portal.position.set(0, 3.5, -22.4)
+  root.add(portal)
+
+  return root
+}
+
 export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
   className = '',
@@ -324,9 +433,32 @@ export function Map3DLandmarkViewer({
       },
       (err) => {
         if (cancelled) return
-        console.error('Error loading 3D model:', err)
+        console.warn('3D GLB model file not present, activating procedural digital twin:', err)
+        const raw = createProceduralCathedralModel()
+        const box = new THREE.Box3().setFromObject(raw)
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
+
+        if (size.y > 0) {
+          raw.position.set(-center.x, -box.min.y, -center.z)
+          const normalizer = new THREE.Group()
+          normalizer.scale.setScalar(1 / size.y)
+          normalizer.add(raw)
+
+          const anchor = new THREE.Group()
+          anchor.add(normalizer)
+
+          if (modelAnchorRef.current) {
+            scene.remove(modelAnchorRef.current)
+          }
+
+          modelAnchorRef.current = anchor
+          scene.add(anchor)
+        }
+
         setLoading(false)
-        setLoadError('Không thể tải file mô hình 3D. Vui lòng kiểm tra file trong thư mục models_3d.')
+        setLoadError(null)
+        mapRef.current?.triggerRepaint()
       }
     )
 

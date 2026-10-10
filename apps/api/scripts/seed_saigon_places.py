@@ -80,7 +80,9 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
             for day_offset in range(days):
                 service_date = today + timedelta(days=day_offset)
                 for slot_time in daily_times:
-                    start = datetime.combine(service_date, slot_time, HCMC)
+                    # Normalize before SQLite persists the slot; SQLite strips
+                    # offsets from DateTime columns unless values are UTC first.
+                    start = datetime.combine(service_date, slot_time, HCMC).astimezone(timezone.utc)
                     existing_slot = db.scalar(
                         select(ExperienceSlot).where(
                             ExperienceSlot.experience_id == exp.id,
@@ -146,6 +148,23 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
             name = str(item.get("name") or "Điểm đến Sài Gòn")
             desc = str(item.get("description") or f"Trải nghiệm khám phá {name}")
 
+            open_hours_raw = item.get("open_hours")
+            opening_hours_text = None
+            if isinstance(open_hours_raw, str) and open_hours_raw.strip().startswith("{"):
+                try:
+                    parsed_oh = json.loads(open_hours_raw)
+                    opening_hours_text = f"{parsed_oh.get('open')} - {parsed_oh.get('close')} ({parsed_oh.get('days', 'T2-CN')})"
+                except Exception:
+                    opening_hours_text = open_hours_raw
+            elif isinstance(open_hours_raw, dict):
+                opening_hours_text = f"{open_hours_raw.get('open')} - {open_hours_raw.get('close')} ({open_hours_raw.get('days', 'T2-CN')})"
+
+            place_details = {}
+            if opening_hours_text:
+                place_details["opening_hours"] = opening_hours_text
+            if open_hours_raw:
+                place_details["open_hours"] = open_hours_raw
+
             poi = POI(
                 id=poi_id,
                 name=name,
@@ -155,10 +174,11 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
                 longitude=lon,
                 geom=WKTElement(f"POINT({lon} {lat})", srid=4326),
                 category=category,
-                address=str(item.get("open_hours") or "TP. Hồ Chí Minh"),
+                address=str(item.get("address") or "Quận 1, TP. Hồ Chí Minh"),
                 source_attribution=str(item.get("source") or "HK2T.HUTECH Local Explorer Dataset"),
                 is_in_pilot_polygon=True,
                 image_urls=[item.get("photo_url")] if item.get("photo_url") else [],
+                details=place_details,
                 verification_status=VerificationStatus.VERIFIED.value,
                 data_revision=1
             )

@@ -18,7 +18,8 @@
     "photo_url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://dinhdoclap.gov.vn",
-    "note": "Nên thuê tai nghe thuyết minh tự động (audio guide) để hiểu trọn vẹn lịch sử dinh thự."
+    "note": "Nên thuê tai nghe thuyết minh tự động (audio guide) để hiểu trọn vẹn lịch sử dinh thự.",
+    "address": "Dinh Độc Lập, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-chung-tich-chien-tranh",
@@ -38,7 +39,8 @@
     "photo_url": "https://images.unsplash.com/photo-1596401057633-54a8fe8ef647?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotangchungtichchientranh.vn",
-    "note": "Có khu trưng bày hiện vật quân sự ngoài trời và các phòng ảnh phóng sự quốc tế xúc động."
+    "note": "Có khu trưng bày hiện vật quân sự ngoài trời và các phòng ảnh phóng sự quốc tế xúc động.",
+    "address": "26(Bao Tang Chung Tich Chien Tranh) Võ Văn Tần, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-nha-tho-duc-ba-sai-gon",
@@ -59,7 +61,8 @@
     "photo_url": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Công trình đang trong giai đoạn trùng tu bảo tồn, thích hợp ngắm cảnh và chụp ảnh từ công viên bên ngoài."
+    "note": "Công trình đang trong giai đoạn trùng tu bảo tồn, thích hợp ngắm cảnh và chụp ảnh từ công viên bên ngoài.",
+    "address": "Nhà thờ Đức Bà Sài Gòn, 01 Công xã Paris, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-buu-dien-trung-tam-sai-gon",
@@ -80,7 +83,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Du khách có thể gửi bưu thiếp tay đóng dấu bưu cục Sài Gòn lưu niệm ngay tại quầy."
+    "note": "Du khách có thể gửi bưu thiếp tay đóng dấu bưu cục Sài Gòn lưu niệm ngay tại quầy.",
+    "address": "Bưu điện trung tâm Sài Gòn, 02 Công xã Paris, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cho-ben-thanh",
@@ -101,7 +105,8 @@
     "photo_url": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Buổi tối có chợ đêm xung quanh với nhiều quầy ẩm thực đường phố và quà lưu niệm."
+    "note": "Buổi tối có chợ đêm xung quanh với nhiều quầy ẩm thực đường phố và quà lưu niệm.",
+    "address": "Công trường Quách Thị Trang, Chợ Bến Thành, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-di-bo-nguyen-hue",
@@ -122,7 +127,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://tphcm.gov.vn",
-    "note": "Thời điểm sôi động nhất là từ 18:00 - 22:00, cấm xe cộ vào tối thứ 7 và Chủ nhật."
+    "note": "Thời điểm sôi động nhất là từ 18:00 - 22:00, cấm xe cộ vào tối thứ 7 và Chủ nhật.",
+    "address": "Saigon Bank - Atm, 117 Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-tuong-chu-tich-ho-chi-minh",
@@ -142,7 +148,8 @@
     "photo_url": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Điểm chụp ảnh lưu niệm trang trọng và đẹp nhất khi tòa nhà UBND lên đèn buổi tối."
+    "note": "Điểm chụp ảnh lưu niệm trang trọng và đẹp nhất khi tòa nhà UBND lên đèn buổi tối.",
+    "address": "86 Lê Thánh Tôn, District 1, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-nha-hat-thanh-pho-ho-chi-minh",
@@ -163,7 +170,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hbso.org.vn",
-    "note": "Nên đặt vé xem kịch hoặc À Ố Show trước để được vào tham quan bên trong khán phòng tráng lệ."
+    "note": "Nên đặt vé xem kịch hoặc À Ố Show trước để được vào tham quan bên trong khán phòng tráng lệ.",
+    "address": "07 Công trường Lam Sơn, Bến Nghé, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-duong-sach-nguyen-van-binh",
@@ -184,7 +192,8 @@
     "photo_url": "https://images.unsplash.com/photo-1507842229458-57b7ab2827ff?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không gian rất yên tĩnh, mát mẻ vào buổi sáng, thích hợp ngồi cà phê đọc sách."
+    "note": "Không gian rất yên tĩnh, mát mẻ vào buổi sáng, thích hợp ngồi cà phê đọc sách.",
+    "address": "1-3 Đường Nguyễn Văn Bình, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-my-thuat-thanh-pho-ho-chi-minh",
@@ -205,7 +214,8 @@
     "photo_url": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotangmythuat.hcmc.gov.vn",
-    "note": "Có thang máy cổ xưa bằng gỗ và kính màu rất độc đáo, góc cầu thang chụp ảnh rất đẹp."
+    "note": "Có thang máy cổ xưa bằng gỗ và kính màu rất độc đáo, góc cầu thang chụp ảnh rất đẹp.",
+    "address": "Trung Nguyên Cafe Bảo Tàng Mỹ Thuật, 97 Phó Đức Chính, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-thanh-pho-ho-chi-minh",
@@ -225,7 +235,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hcmc-museum.edu.vn",
-    "note": "Khuôn viên có dãy hành lang mái vòm cổ kính là điểm check-in áo dài nổi tiếng."
+    "note": "Khuôn viên có dãy hành lang mái vòm cổ kính là điểm check-in áo dài nổi tiếng.",
+    "address": "Ho Chi Minh City Museum, Lý Tự Trọng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-lich-su-thanh-pho-ho-chi-minh",
@@ -245,7 +256,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotanglichsutphcm.com.vn",
-    "note": "Có chương trình múa rối nước truyền thống phục vụ du khách vào các khung giờ cố định."
+    "note": "Có chương trình múa rối nước truyền thống phục vụ du khách vào các khung giờ cố định.",
+    "address": "2B Nguyễn Bỉnh Khiêm, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-phu-nu-nam-bo",
@@ -265,7 +277,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotangphununambo.vn",
-    "note": "Miễn phí vé vào cổng, có phòng trưng bày 3D thực tế ảo hiện đại."
+    "note": "Miễn phí vé vào cổng, có phòng trưng bày 3D thực tế ảo hiện đại.",
+    "address": "Viện Pasteur Thành phố Hồ Chí Minh, 167 Pasteur, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bao-tang-ton-duc-thang",
@@ -285,7 +298,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotangtonducthang.vn",
-    "note": "Kiến trúc mới hiện đại với tầm nhìn trực diện ra sông Sài Gòn và bến cảng."
+    "note": "Kiến trúc mới hiện đại với tầm nhìn trực diện ra sông Sài Gòn và bến cảng.",
+    "address": "Bến Nhà Rồng - Bảo Tàng Hồ Chí Minh, 1 Nguyễn Tất Thành, Xóm Chiếu, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-thao-cam-vien-sai-gon",
@@ -306,7 +320,8 @@
     "photo_url": "https://images.unsplash.com/photo-1534567153574-2b12153a87f0?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigonzoo.net",
-    "note": "Thích hợp cho gia đình có trẻ nhỏ dạo chơi, ngắm hươu cao cổ và cây di sản."
+    "note": "Thích hợp cho gia đình có trẻ nhỏ dạo chơi, ngắm hươu cao cổ và cây di sản.",
+    "address": "Thảo Cầm Viên Sài Gòn, Nguyễn Bỉnh Khiêm, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-vien-tao-dan",
@@ -327,7 +342,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Buổi sáng sớm từ 6:00 - 8:00 có góc cà phê nghe chim hót rất thanh bình."
+    "note": "Buổi sáng sớm từ 6:00 - 8:00 có góc cà phê nghe chim hót rất thanh bình.",
+    "address": "Công viên Tao Đàn, 55C Nguyễn Thị Minh Khai, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-vien-23-thang-9",
@@ -347,7 +363,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Bên dưới công viên có khu ẩm thực và mua sắm ngầm Asiana Food Town."
+    "note": "Bên dưới công viên có khu ẩm thực và mua sắm ngầm Asiana Food Town.",
+    "address": "Liberty Saigon Greenview, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-vien-le-van-tam",
@@ -367,7 +384,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Đừng quên thử đĩa gỏi khô bò đu đủ giòn sần sật đối diện cổng công viên."
+    "note": "Đừng quên thử đĩa gỏi khô bò đu đủ giòn sần sật đối diện cổng công viên.",
+    "address": "Shop dầu gội Mộc Mao chính hãng, 23 Đ. Võ Thị Sáu, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-vien-ben-bach-dang",
@@ -388,7 +406,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Thời điểm lý tưởng nhất là từ 16:30 đón hoàng hôn và ngắm du thuyền lên đèn."
+    "note": "Thời điểm lý tưởng nhất là từ 16:30 đón hoàng hôn và ngắm du thuyền lên đèn.",
+    "address": "28 Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-landmark-81",
@@ -409,7 +428,8 @@
     "photo_url": "https://images.unsplash.com/photo-1578895101407-74291583b482?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://landmark81skyview.com",
-    "note": "Khu công viên Vinhomes Central Park ven sông ngay bên cạnh rất thoáng mát và mở cửa tự do."
+    "note": "Khu công viên Vinhomes Central Park ven sông ngay bên cạnh rất thoáng mát và mở cửa tự do.",
+    "address": "Katinat, Thạnh Mỹ Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-saigon-skydeck",
@@ -430,7 +450,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://bitexcofinancialtower.com",
-    "note": "Nên ghé thăm vào khoảng 17:00 để ngắm cả cảnh hoàng hôn lẫn Sài Gòn rực rỡ về đêm."
+    "note": "Nên ghé thăm vào khoảng 17:00 để ngắm cả cảnh hoàng hôn lẫn Sài Gòn rực rỡ về đêm.",
+    "address": "China Eastern Airlines, Tòa nhà tài chính Bitexco, Hải Triều, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bitexco-financial-tower",
@@ -450,7 +471,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Bên trong có trung tâm thương mại Icon68, rạp chiếu phim và quán cà phê ngắm cảnh."
+    "note": "Bên trong có trung tâm thương mại Icon68, rạp chiếu phim và quán cà phê ngắm cảnh.",
+    "address": "China Eastern Airlines, Tòa nhà tài chính Bitexco, Hải Triều, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cho-lon",
@@ -471,7 +493,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Đi dạo phố Hải Thượng Lãn Ông ngửi hương thuốc bắc và ngắm kiến trúc nhà cổ người Hoa."
+    "note": "Đi dạo phố Hải Thượng Lãn Ông ngửi hương thuốc bắc và ngắm kiến trúc nhà cổ người Hoa.",
+    "address": "Chung cư Phùng Hưng, Đường Phùng Hưng, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cho-binh-tay",
@@ -492,7 +515,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Giữa chợ có khoảng giếng trời đặt bệ thờ và tượng tưởng niệm ông Quách Đàm."
+    "note": "Giữa chợ có khoảng giếng trời đặt bệ thờ và tượng tưởng niệm ông Quách Đàm.",
+    "address": "Cổng ra, Bến xe Chợ Lớn, Chu Văn An, Bình Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hoi-quan-nghia-an",
@@ -512,7 +536,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không gian chiêm bái linh thiêng, giữ trật tự và ăn mặc kín đáo khi vào lễ."
+    "note": "Không gian chiêm bái linh thiêng, giữ trật tự và ăn mặc kín đáo khi vào lễ.",
+    "address": "Trường Tiểu học Chính Nghĩa, Đường Nguyễn Trãi, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hoi-quan-on-lang",
@@ -532,7 +557,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Nơi đây lưu giữ nhiều câu đối khảm xà cừ và tượng gốm nung men việt màu sắc rực rỡ."
+    "note": "Nơi đây lưu giữ nhiều câu đối khảm xà cừ và tượng gốm nung men việt màu sắc rực rỡ.",
+    "address": "Cà Ri Trung Hoa, 267 Đ. Hồng Bàng, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chua-ba-thien-hau",
@@ -553,7 +579,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Du khách có thể thỉnh nhang vòng treo lên trần đền ghi họ tên ước nguyện bình an."
+    "note": "Du khách có thể thỉnh nhang vòng treo lên trần đền ghi họ tên ước nguyện bình an.",
+    "address": "3594 Lương Nhữ Học, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chua-giac-lam",
@@ -574,7 +601,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không gian trầm mặc cổ kính với cây bồ đề lớn được chiết từ Tích Lan năm 1953."
+    "note": "Không gian trầm mặc cổ kính với cây bồ đề lớn được chiết từ Tích Lan năm 1953.",
+    "address": "812 Lạc Long Quân, Tân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chua-ngoc-hoang",
@@ -595,7 +623,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Khuôn viên có hồ rùa phóng sinh và tượng thờ đắp nổi bằng giấy bồi độc nhất vô nhị."
+    "note": "Khuôn viên có hồ rùa phóng sinh và tượng thờ đắp nổi bằng giấy bồi độc nhất vô nhị.",
+    "address": "63 Mai Thị Lựu, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chua-vinh-nghiem",
@@ -615,7 +644,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://chuavinhnghiem.org",
-    "note": "Khuôn viên có nhà hàng cơm chay thanh tịnh rất ngon mở cửa trưa và tối."
+    "note": "Khuôn viên có nhà hàng cơm chay thanh tịnh rất ngon mở cửa trưa và tối.",
+    "address": "384/40 Đường Nam Kỳ Khởi Nghĩa, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-nha-tho-tan-dinh",
@@ -636,7 +666,8 @@
     "photo_url": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Góc chụp đẹp nhất là từ quán cà phê Cộng bên kia đường nhìn thẳng sang mặt tiền màu hồng."
+    "note": "Góc chụp đẹp nhất là từ quán cà phê Cộng bên kia đường nhìn thẳng sang mặt tiền màu hồng.",
+    "address": "Nhà Thờ Giáo Xứ Tân Định, 289 Hai Bà Trưng, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-nha-tho-cha-tam",
@@ -656,7 +687,8 @@
     "photo_url": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Nơi cử hành thánh lễ bằng cả tiếng Việt và tiếng Quảng Đông cho giáo dân người Hoa."
+    "note": "Nơi cử hành thánh lễ bằng cả tiếng Việt và tiếng Quảng Đông cho giáo dân người Hoa.",
+    "address": "Cửa hàng vải sợi 529, 529 Trần Hưng Đạo, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-dia-dao-cu-chi-ben-duoc",
@@ -677,7 +709,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://diadaocuchi.com.vn",
-    "note": "Có thể thử chui địa đạo nguyên bản và thưởng thức món khoai mì luộc chấm muối mè."
+    "note": "Có thể thử chui địa đạo nguyên bản và thưởng thức món khoai mì luộc chấm muối mè.",
+    "address": "Khu vực tham quan Địa đạo, Bếp Hoàng Cầm, Bếp Hoàng Cầm, An Nhơn Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-dia-dao-cu-chi-ben-dinh",
@@ -697,7 +730,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://diadaocuchi.com.vn",
-    "note": "Có trường bắn súng thể thao quốc phòng cho du khách yêu thích trải nghiệm bắn đạn thật."
+    "note": "Có trường bắn súng thể thao quốc phòng cho du khách yêu thích trải nghiệm bắn đạn thật.",
+    "address": "Phòng Thu Âm : WyTy Homie Studio, 1 Đường 536, Xóm Bưng, Nhuận Đức, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-du-lich-van-thanh",
@@ -718,7 +752,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigontourist.com.vn",
-    "note": "Điểm dã ngoại picnic cuối tuần lý tưởng cho nhóm bạn và gia đình có thảm cỏ trải bạt."
+    "note": "Điểm dã ngoại picnic cuối tuần lý tưởng cho nhóm bạn và gia đình có thảm cỏ trải bạt.",
+    "address": "Dung Dinh Coffee, Điện Biên Phủ, Thạnh Mỹ Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-du-lich-binh-quoi-1",
@@ -739,7 +774,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://binhquoi.vn",
-    "note": "Buffet chiều thứ 7 và Chủ nhật có hơn 70 món ngon dân dã Nam Bộ trong tiếng đờn ca tài tử."
+    "note": "Buffet chiều thứ 7 và Chủ nhật có hơn 70 món ngon dân dã Nam Bộ trong tiếng đờn ca tài tử.",
+    "address": "111/28/146 đường Phạm Văn chiêu, Bình Quới, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-du-lich-binh-quoi-2",
@@ -760,7 +796,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://binhquoi.vn",
-    "note": "Khung cảnh ven sông rất yên tĩnh, thích hợp tổ chức tiệc ngoài trời hoặc nghỉ dưỡng trong ngày."
+    "note": "Khung cảnh ven sông rất yên tĩnh, thích hợp tổ chức tiệc ngoài trời hoặc nghỉ dưỡng trong ngày.",
+    "address": "34 84, Thủ Đức, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-du-lich-suoi-tien",
@@ -781,7 +818,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://suoitien.com",
-    "note": "Đã có tuyến Metro số 1 Bến Thành - Suối Tiên kết nối thẳng đến cổng khu du lịch."
+    "note": "Đã có tuyến Metro số 1 Bến Thành - Suối Tiên kết nối thẳng đến cổng khu du lịch.",
+    "address": "Khu du lich vui chơi, Tăng Nhơn Phú, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-dam-sen",
@@ -802,7 +840,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://damsenpark.vn",
-    "note": "Nên mua vé trọn gói (all-in-one) để trải nghiệm không giới hạn tất cả các trò chơi."
+    "note": "Nên mua vé trọn gói (all-in-one) để trải nghiệm không giới hạn tất cả các trò chơi.",
+    "address": "Quán Café Sinh Tố 312, 312, Hòa Bình, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-nhat-le-thanh-ton",
@@ -823,7 +862,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Khám phá ngõ 15B Lê Thánh Tôn để cảm nhận không gian ẩm thực Nhật Bản đích thực về đêm."
+    "note": "Khám phá ngõ 15B Lê Thánh Tôn để cảm nhận không gian ẩm thực Nhật Bản đích thực về đêm.",
+    "address": "22A Thi Sách, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-tay-bui-vien",
@@ -845,7 +885,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Hoạt động sôi nổi nhất từ 20:00 trở đi, cuối tuần cấm xe để trở thành phố đi bộ."
+    "note": "Hoạt động sôi nổi nhất từ 20:00 trở đi, cuối tuần cấm xe để trở thành phố đi bộ.",
+    "address": "BacXiu Tattoo, Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ho-con-rua",
@@ -866,7 +907,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Ngồi bờ hồ hóng mát buổi chiều tối nhâm nhi ly trà tắc và bánh tráng cuốn rất thú vị."
+    "note": "Ngồi bờ hồ hóng mát buổi chiều tối nhâm nhi ly trà tắc và bánh tráng cuốn rất thú vị.",
+    "address": "Hồ Con Rùa, Công Trường Quốc Tế, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cau-mong",
@@ -887,7 +929,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Điểm ngắm hoàng hôn và tòa nhà Bitexco lên đèn cực đẹp cho các bạn trẻ mê nhiếp ảnh."
+    "note": "Điểm ngắm hoàng hôn và tòa nhà Bitexco lên đèn cực đẹp cho các bạn trẻ mê nhiếp ảnh.",
+    "address": "91 Cầu Khánh Hội, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cau-ba-son",
@@ -908,7 +951,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://tphcm.gov.vn",
-    "note": "Chân cầu phía bờ Thủ Thiêm có công viên bờ sông ngắm toàn cảnh trung tâm Quận 1 rực rỡ."
+    "note": "Chân cầu phía bờ Thủ Thiêm có công viên bờ sông ngắm toàn cảnh trung tâm Quận 1 rực rỡ.",
+    "address": "Cầu Ba Son, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ngam-hoang-hon-ben-bach-dang",
@@ -929,7 +973,8 @@
     "photo_url": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Có thể kết hợp mua vé Saigon Waterbus (15.000đ) đi ngắm sông vào khung giờ 16:30 - 17:30."
+    "note": "Có thể kết hợp mua vé Saigon Waterbus (15.000đ) đi ngắm sông vào khung giờ 16:30 - 17:30.",
+    "address": "Toninni Caffe, 27 Đường Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ben-nha-rong",
@@ -950,7 +995,8 @@
     "photo_url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://baotanghochiminh.vn",
-    "note": "Bến cảng lịch sử lộng gió nhìn qua sông sang khu đô thị mới Thủ Thiêm."
+    "note": "Bến cảng lịch sử lộng gió nhìn qua sông sang khu đô thị mới Thủ Thiêm.",
+    "address": "Bến Nhà Rồng - Bảo Tàng Hồ Chí Minh (Chi nhánh TP.HCM), 1 Đ. Nguyễn Tất Thành, Xóm Chiếu, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-pho-di-bo-bui-vien",
@@ -971,7 +1017,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cần chú ý bảo quản tư trang điện thoại cẩn thận khi hòa vào dòng người đông đúc."
+    "note": "Cần chú ý bảo quản tư trang điện thoại cẩn thận khi hòa vào dòng người đông đúc.",
+    "address": "ATM Sacombank, Bùi Viện, P, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-khu-do-thi-phu-my-hung",
@@ -992,7 +1039,8 @@
     "photo_url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://phumyhung.vn",
-    "note": "Cầu Ánh Sao phun nước và lên đèn LED rực rỡ vào các tối cuối tuần."
+    "note": "Cầu Ánh Sao phun nước và lên đèn LED rực rỡ vào các tối cuối tuần.",
+    "address": "11 Nam Thiên 2, Khu phố 4, Tân Hưng, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-sc-vivocity",
@@ -1013,7 +1061,8 @@
     "photo_url": "https://images.unsplash.com/photo-1567449303078-57ad995bd302?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://scvivocity.com.vn",
-    "note": "Công viên trò chơi nước trên tầng thượng rất được trẻ nhỏ ưa chuộng vào cuối tuần."
+    "note": "Công viên trò chơi nước trên tầng thượng rất được trẻ nhỏ ưa chuộng vào cuối tuần.",
+    "address": "so 6, 42 Đường số 6, Tân Hưng, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-crescent-mall",
@@ -1034,7 +1083,8 @@
     "photo_url": "https://images.unsplash.com/photo-1567449303078-57ad995bd302?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://crescentmall.com.vn",
-    "note": "Dạo bước bờ hồ Bán Nguyệt ngắm cầu Ánh Sao ngay trước sảnh trung tâm rất lãng mạn."
+    "note": "Dạo bước bờ hồ Bán Nguyệt ngắm cầu Ánh Sao ngay trước sảnh trung tâm rất lãng mạn.",
+    "address": "Wake point, Hồ Chí Minh, Quận 7, Tân Hưng, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-takashimaya-saigon-centre",
@@ -1055,7 +1105,8 @@
     "photo_url": "https://images.unsplash.com/photo-1567449303078-57ad995bd302?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://takashimaya-vn.com",
-    "note": "Tầng B2 có khu ẩm thực Nhật Bản với bánh mì trà xanh, matcha và kem thủ công hảo hạng."
+    "note": "Tầng B2 có khu ẩm thực Nhật Bản với bánh mì trà xanh, matcha và kem thủ công hảo hạng.",
+    "address": "Gyu Shige - Ngưu Phồn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-vincom-center-dong-khoi",
@@ -1076,7 +1127,8 @@
     "photo_url": "https://images.unsplash.com/photo-1567449303078-57ad995bd302?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://vincom.com.vn",
-    "note": "Vị trí cực kỳ thuận tiện đi bộ sang Nhà thờ Đức Bà, Bưu điện TP và phố đi bộ."
+    "note": "Vị trí cực kỳ thuận tiện đi bộ sang Nhà thờ Đức Bà, Bưu điện TP và phố đi bộ.",
+    "address": "72b Đường Lê Thánh Tôn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-home-saigon-restaurant-bar",
@@ -1097,7 +1149,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://homesaigonrestaurant.com",
-    "note": "Nên đặt bàn trước cho bữa tối nếu đi nhóm đông người."
+    "note": "Nên đặt bàn trước cho bữa tối nếu đi nhóm đông người.",
+    "address": "Beer & Barrel, 12 Lê Quý Đôn, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-tung-s-restaurant",
@@ -1118,7 +1171,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Món chả giò hải sản và gỏi cuốn tôm thịt được đánh giá rất cao."
+    "note": "Món chả giò hải sản và gỏi cuốn tôm thịt được đánh giá rất cao.",
+    "address": "90 Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-de-tham-restaurant",
@@ -1138,7 +1192,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Phục vụ cả bữa sáng nhanh gọn với bánh mì trứng và cà phê sữa đá."
+    "note": "Phục vụ cả bữa sáng nhanh gọn với bánh mì trứng và cà phê sữa đá.",
+    "address": "Art Hotel, Đường Trần Hưng Đạo, Cầu Ông Lãnh, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ruth-s-house",
@@ -1158,7 +1213,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Rất thích hợp cho những ai tìm kiếm hương vị cơm nhà nấu chuẩn vị mẹ làm."
+    "note": "Rất thích hợp cho những ai tìm kiếm hương vị cơm nhà nấu chuẩn vị mẹ làm.",
+    "address": "Ga Bến Thành, 4 Đường Lê Lai, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-secret-house",
@@ -1179,7 +1235,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không gian sân vườn xanh mát giữa trung tâm rất thích hợp để thư giãn."
+    "note": "Không gian sân vườn xanh mát giữa trung tâm rất thích hợp để thư giãn.",
+    "address": "2B Hẻm 74 Lê Thị Riêng, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-quan-ngon",
@@ -1200,7 +1257,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://quannhangan.com.vn",
-    "note": "Địa điểm tuyệt vời để du khách lần đầu đến Việt Nam nếm thử đủ món đặc sản."
+    "note": "Địa điểm tuyệt vời để du khách lần đầu đến Việt Nam nếm thử đủ món đặc sản.",
+    "address": "Pasteur/99 Ward, Street, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-banh-xeo-ngoc-son",
@@ -1221,7 +1279,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Nên gọi bánh xèo nhân củ hũ dừa tôm thịt giòn ngọt đặc trưng miền Tây."
+    "note": "Nên gọi bánh xèo nhân củ hũ dừa tôm thịt giòn ngọt đặc trưng miền Tây.",
+    "address": "cổng Nguyễn Kim/126 Hùng Vương, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bun-cha-145",
@@ -1242,7 +1301,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Quán thường có hàng đợi vào giờ cao điểm trưa và tối, nên đến sớm."
+    "note": "Quán thường có hàng đợi vào giờ cao điểm trưa và tối, nên đến sớm.",
+    "address": "q1, 116/22, Đường Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-hoa-pasteur",
@@ -1263,7 +1323,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Tô phở tái nạm gầu kèm chén tiết hột gà là lựa chọn kinh điển của dân sành ăn."
+    "note": "Tô phở tái nạm gầu kèm chén tiết hột gà là lựa chọn kinh điển của dân sành ăn.",
+    "address": "55/6 Trần Quốc Toản, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-phu-vuong",
@@ -1284,7 +1345,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Có thể gọi thêm chén nước béo hành trần và tủy bò béo ngậy."
+    "note": "Có thể gọi thêm chén nước béo hành trần và tủy bò béo ngậy.",
+    "address": "281/52 Lê Văn Sỹ, Tân Sơn Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pho-le",
@@ -1305,7 +1367,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Bò viên ở đây to tròn, dai giòn tự nhiên chấm tương đen tương đỏ cực ngon."
+    "note": "Bò viên ở đây to tròn, dai giòn tự nhiên chấm tương đen tương đỏ cực ngon.",
+    "address": "209 An Bình, An Đông, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-com-tam-ba-ghien",
@@ -1326,7 +1389,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Khói sườn nướng nghi ngút thơm lừng từ đầu ngõ, nên gọi dĩa sườn bì chả ốp la."
+    "note": "Khói sườn nướng nghi ngút thơm lừng từ đầu ngõ, nên gọi dĩa sườn bì chả ốp la.",
+    "address": "CỬA HÀNG BÉC TƯỚI - XANH TƯƠI TỐT, 251/10 Đ. Nguyễn Văn Trỗi, Phú Nhuận, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-com-tam-thuan-kieu",
@@ -1346,7 +1410,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://comtamthuankieu.com.vn",
-    "note": "Nước mắm pha kẹo sánh dẻo thơm lừng đặc trưng ăn kèm đồ chua giòn ngọt."
+    "note": "Nước mắm pha kẹo sánh dẻo thơm lừng đặc trưng ăn kèm đồ chua giòn ngọt.",
+    "address": "59/6 Thuận Kiều, Chợ Lớn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-com-nieu-sai-gon",
@@ -1367,7 +1432,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://comnieusaigon.com.vn",
-    "note": "Màn biểu diễn đập niêu phục vụ trực tiếp tại bàn tạo ấn tượng thú vị cho du khách."
+    "note": "Màn biểu diễn đập niêu phục vụ trực tiếp tại bàn tạo ấn tượng thú vị cho du khách.",
+    "address": "181 Đường Võ Thị Sáu, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-nha-hang-ngon",
@@ -1388,7 +1454,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Rất phù hợp cho buổi gặp gỡ bạn bè quốc tế muốn thưởng thức đa dạng món ăn."
+    "note": "Rất phù hợp cho buổi gặp gỡ bạn bè quốc tế muốn thưởng thức đa dạng món ăn.",
+    "address": "Nhà Thờ Đức Bà - 1 Công Xã Paris, Số 01 Tp.HCM, Công xã Paris, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hum-vegetarian",
@@ -1409,7 +1476,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://humvietnam.vn",
-    "note": "Món cơm chiên trái dừa và gỏi nấm rong nho sốt mè rang là các món không thể bỏ qua."
+    "note": "Món cơm chiên trái dừa và gỏi nấm rong nho sốt mè rang là các món không thể bỏ qua.",
+    "address": "TOP REVIEWS VIỆT NAM - REVIEWVNTOP, Nguyễn Thị Diệu, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-prem-bistro-cafe",
@@ -1430,7 +1498,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Góc gác lửng ngồi bệt đọc sách thưởng trà thảo mộc rất yên bình."
+    "note": "Góc gác lửng ngồi bệt đọc sách thưởng trà thảo mộc rất yên bình.",
+    "address": "29 Lê Quý Đôn, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chay-garden-vegetarian-restaurant",
@@ -1451,7 +1520,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Nên đặt bàn ngoài sân vườn để tận hưởng không gian thiên nhiên thanh lọc tâm hồn."
+    "note": "Nên đặt bàn ngoài sân vườn để tận hưởng không gian thiên nhiên thanh lọc tâm hồn.",
+    "address": "so nha 46, 52 Võ Văn Tần, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pi-vegetarian-bistro",
@@ -1472,7 +1542,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Món canh sen hầm hạt sen và nấm kho tiêu xanh rất đậm đà hao cơm."
+    "note": "Món canh sen hầm hạt sen và nấm kho tiêu xanh rất đậm đà hao cơm.",
+    "address": "Phòng Khám Đa Khoa Pacific, 4B Đường Lê Quý Đôn, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bong-sung-vegetarian-food",
@@ -1493,7 +1564,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://bongsungrestaurant.com",
-    "note": "Nồi lẩu nấm bông súng thanh mát rất thích hợp cho những ngày nắng ấm Sài Gòn."
+    "note": "Nồi lẩu nấm bông súng thanh mát rất thích hợp cho những ngày nắng ấm Sài Gòn.",
+    "address": "11a Pasteur, Bến Nghé, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-chopsticks-saigon",
@@ -1514,7 +1586,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://thechopstickssaigon.com",
-    "note": "Kiến trúc biệt thự Pháp cổ được bảo tồn gần như nguyên vẹn với phòng ăn sang trọng."
+    "note": "Kiến trúc biệt thự Pháp cổ được bảo tồn gần như nguyên vẹn với phòng ăn sang trọng.",
+    "address": "Trường Marie Curie - Đối Diện Số 206 (247) - Điện Biên Phủ, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-propaganda-bistro",
@@ -1535,7 +1608,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://propagandabistros.com",
-    "note": "Ngồi dãy bàn hiên nhìn ra công viên xanh mướt ngắm Nhà thờ Đức Bà rất chill."
+    "note": "Ngồi dãy bàn hiên nhìn ra công viên xanh mướt ngắm Nhà thờ Đức Bà rất chill.",
+    "address": "176 Lê Duẩn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-quan-bui",
@@ -1556,7 +1630,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://quanbui.vn",
-    "note": "Không gian bài trí chén đĩa gốm mộc mạc và tranh ảnh Sài Gòn xưa rất hoài niệm."
+    "note": "Không gian bài trí chén đĩa gốm mộc mạc và tranh ảnh Sài Gòn xưa rất hoài niệm.",
+    "address": "15B/95 Lê Thánh Tôn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-dua-moc",
@@ -1577,7 +1652,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Rất phù hợp cho bữa trưa văn phòng nhanh gọn và đầy đủ dưỡng chất."
+    "note": "Rất phù hợp cho bữa trưa văn phòng nhanh gọn và đầy đủ dưỡng chất.",
+    "address": "Nhà hàng Khách sạn Hoàng Đế, 117 Nguyễn Đình Chiểu, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cuc-gach-quan",
@@ -1598,7 +1674,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Thực đơn ghi tay bằng chữ thư pháp mộc mạc, ống hút làm từ cọng rau muống độc đáo."
+    "note": "Thực đơn ghi tay bằng chữ thư pháp mộc mạc, ống hút làm từ cọng rau muống độc đáo.",
+    "address": "Bệnh viện thú y New Pet Hospital Đặng Dung, 53 Đặng Dung, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-banh-mi-huynh-hoa",
@@ -1620,7 +1697,8 @@
     "photo_url": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://banhmihuynhhoa.vn",
-    "note": "Bánh mì rất to nhiều đạm, một ổ có thể cắt đôi đủ cho 2 người ăn no nê."
+    "note": "Bánh mì rất to nhiều đạm, một ổ có thể cắt đôi đủ cho 2 người ăn no nê.",
+    "address": "Nguyen Shack - Saigon, Đường Cách Mạng Tháng 8, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-banh-mi-hoa-ma",
@@ -1641,7 +1719,8 @@
     "photo_url": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Quán chỉ bán buổi sáng và ngồi bàn ghế nhựa dọc theo con hẻm nhỏ rất đặc trưng Sài Gòn."
+    "note": "Quán chỉ bán buổi sáng và ngồi bàn ghế nhựa dọc theo con hẻm nhỏ rất đặc trưng Sài Gòn.",
+    "address": "15 Hẻm 361 Nguyễn Đình Chiểu, Bàn Cờ, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-oc-oanh",
@@ -1663,7 +1742,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Món ốc hương xào bắp bơ tỏi và sò dương nướng mỡ hành ăn cùng bánh mì cực ngon."
+    "note": "Món ốc hương xào bắp bơ tỏi và sò dương nướng mỡ hành ăn cùng bánh mì cực ngon.",
+    "address": "266/140 Tôn Đản, Khánh Hội, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-oc-dao",
@@ -1685,7 +1765,8 @@
     "photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://guide.michelin.com",
-    "note": "Nước sốt bơ tỏi ở đây thơm béo vô cùng, chấm bánh mì nóng là hết sẩy."
+    "note": "Nước sốt bơ tỏi ở đây thơm béo vô cùng, chấm bánh mì nóng là hết sẩy.",
+    "address": "168/71 Đường Nguyễn Cư Trinh, Cầu Ông Lãnh, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hai-san-khanh-hoa",
@@ -1705,7 +1786,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Khách có thể tự tay chọn hải sản bơi sống tại bể trước khi đầu bếp chế biến."
+    "note": "Khách có thể tự tay chọn hải sản bơi sống tại bể trước khi đầu bếp chế biến.",
+    "address": "Bãi Giữ Xe, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hai-san-giang-ghe",
@@ -1726,7 +1808,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://giangghe.com",
-    "note": "Ghẹ hấp bia sả và cua rang me ở đây thịt chắc nịch và rất ngọt thịt."
+    "note": "Ghẹ hấp bia sả và cua rang me ở đây thịt chắc nịch và rất ngọt thịt.",
+    "address": "Sân bóng đá Tân Sơn, 5 Đ. Tân Sơn, Tân Sơn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hai-san-tuoi-song-bien-dong",
@@ -1747,7 +1830,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://haisanbiendong.vn",
-    "note": "Có phòng VIP riêng tư máy lạnh phù hợp cho các buổi tiếp đãi đối tác."
+    "note": "Có phòng VIP riêng tư máy lạnh phù hợp cho các buổi tiếp đãi đối tác.",
+    "address": "Tartan, 49 Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ngoc-suong-sai-gon",
@@ -1768,7 +1852,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://ngocsuong.com.vn",
-    "note": "Món gỏi cá Ngọc Sương cuốn bánh tráng rau rừng là huyền thoại ẩm thực Sài Gòn."
+    "note": "Món gỏi cá Ngọc Sương cuốn bánh tráng rau rừng là huyền thoại ẩm thực Sài Gòn.",
+    "address": "PMT AESTHETIC CLINIC - PHÒNG KHÁM THẨM MỸ DA BS PHẠM MINH TRƯỜNG, 60 Đường Sương Nguyệt Anh, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-view-rooftop-bar-restaurant",
@@ -1789,7 +1874,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Giá cocktail và đồ ăn rất hợp lý so với các quán rooftop bar khác ở trung tâm."
+    "note": "Giá cocktail và đồ ăn rất hợp lý so với các quán rooftop bar khác ở trung tâm.",
+    "address": "Ốc Diệu Bùi Viện, 50/52 Đỗ Quang Đẩu, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chanh-bistro-rooftop",
@@ -1810,7 +1896,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://chanhbistro.com",
-    "note": "Rất thích hợp cho các buổi hẹn hò lãng mạn dưới ánh nến và gió mát buổi tối."
+    "note": "Rất thích hợp cho các buổi hẹn hò lãng mạn dưới ánh nến và gió mát buổi tối.",
+    "address": "177 Lý Tự Trọng, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-mountain-retreat-vietnamese-restaurant",
@@ -1831,7 +1918,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cần leo thang bộ lên tầng thượng nhưng khung cảnh ngắm đường Lê Lợi rất đẹp."
+    "note": "Cần leo thang bộ lên tầng thượng nhưng khung cảnh ngắm đường Lê Lợi rất đẹp.",
+    "address": "43 Đường Lê Lợi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-vietnam-house-restaurant",
@@ -1852,7 +1940,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://vietnamhousesaigon.com",
-    "note": "Trang phục lịch sự khi đến dùng bữa; món phở bò Wagyu và tôm hùm nướng xuất sắc."
+    "note": "Trang phục lịch sự khi đến dùng bữa; món phở bò Wagyu và tôm hùm nướng xuất sắc.",
+    "address": "Đu Đủ - Direct Factory, 78 Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-refinery-restaurant",
@@ -1873,7 +1962,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://therefinerysaigon.com",
-    "note": "Khoảng sân rợp bóng cây ngoài trời rất thoáng mát và cách biệt khỏi tiếng ồn phố thị."
+    "note": "Khoảng sân rợp bóng cây ngoài trời rất thoáng mát và cách biệt khỏi tiếng ồn phố thị.",
+    "address": "13 Thi Sách, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-maison-marou-saigon",
@@ -1894,7 +1984,8 @@
     "photo_url": "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://maisonmarou.com",
-    "note": "Nên thử ly socola nóng nguyên chất kèm bánh tart sô-cô-la ớt cay độc đáo."
+    "note": "Nên thử ly socola nóng nguyên chất kèm bánh tart sô-cô-la ớt cay độc đáo.",
+    "address": "180 Calmette, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pizza-4p-s-le-thanh-ton",
@@ -1915,7 +2006,8 @@
     "photo_url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://pizza4ps.com",
-    "note": "Quán cực kỳ đông khách, bắt buộc phải đặt bàn trước qua ứng dụng hoặc hotline."
+    "note": "Quán cực kỳ đông khách, bắt buộc phải đặt bàn trước qua ứng dụng hoặc hotline.",
+    "address": "3C2 Hẻm 8A Thái Văn Lung, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pizza-4p-s-phan-ke-binh",
@@ -1936,7 +2028,8 @@
     "photo_url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://pizza4ps.com",
-    "note": "Kiến trúc gạch mộc và cây xanh bao phủ tạo cảm giác rất thư thái và dễ chịu."
+    "note": "Kiến trúc gạch mộc và cây xanh bao phủ tạo cảm giác rất thư thái và dễ chịu.",
+    "address": "Co.opfood Đinh Tiên Hoàng, 45 Đường Đinh Tiên Hoàng, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-dim-tu-tac",
@@ -1957,7 +2050,8 @@
     "photo_url": "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://dimtutac.com",
-    "note": "Há cảo tôm tươi vỏ mỏng trong veo và bánh cuốn tôm chiên giòn ăn rất ấn tượng."
+    "note": "Há cảo tôm tươi vỏ mỏng trong veo và bánh cuốn tôm chiên giòn ăn rất ấn tượng.",
+    "address": "Cà Phê Cô Xíu, 1 Đ. Đông Du, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-tan-hai-van",
@@ -1978,7 +2072,8 @@
     "photo_url": "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://tanhaivan.vn",
-    "note": "Mở cửa đến 2h sáng, là điểm ăn đêm quen thuộc của người Sài Gòn sau khi đi chơi khuya."
+    "note": "Mở cửa đến 2h sáng, là điểm ăn đêm quen thuộc của người Sài Gòn sau khi đi chơi khuya.",
+    "address": "118-120 Đ. Nguyễn Trãi, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-shamballa-vegetarian-restaurant",
@@ -1999,7 +2094,8 @@
     "photo_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://theshamballa.com",
-    "note": "Món nấm sốt me cay và cơm gạo lứt lá sen có hương thơm rất đặc biệt."
+    "note": "Món nấm sốt me cay và cơm gạo lứt lá sen có hương thơm rất đặc biệt.",
+    "address": "Thiết bị điện lạnh Đại Thắng, 150 Nguyễn Thái Bình, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-anan-saigon",
@@ -2020,7 +2116,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://anansaigon.com",
-    "note": "Bắt buộc phải đặt bàn trước nhiều tuần; trải nghiệm set menu Tasting Menu trứ danh."
+    "note": "Bắt buộc phải đặt bàn trước nhiều tuần; trải nghiệm set menu Tasting Menu trứ danh.",
+    "address": "77/2 Nguyễn Huệ, Bến Nghé, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-secret-garden-restaurant",
@@ -2041,7 +2138,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Leo bộ 4 tầng lầu chung cư nhưng khi lên tới sân thượng sẽ bất ngờ vì không gian xanh mát."
+    "note": "Leo bộ 4 tầng lầu chung cư nhưng khi lên tới sân thượng sẽ bất ngờ vì không gian xanh mát.",
+    "address": "Đường Nguyễn Du, Đ. Nguyễn Du, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-whisfee-cafe",
@@ -2062,7 +2160,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Ban công ngắm dòng người qua lại trên phố cổ ngân hàng rất thư thả."
+    "note": "Ban công ngắm dòng người qua lại trên phố cổ ngân hàng rất thư thả.",
+    "address": "69 Hàm Nghi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-little-hanoi-egg-coffee",
@@ -2083,7 +2182,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cà phê trứng được giữ ấm trong chén nước nóng, khuấy đều lớp kem trứng trước khi uống."
+    "note": "Cà phê trứng được giữ ấm trong chén nước nóng, khuấy đều lớp kem trứng trước khi uống.",
+    "address": "Hạt Cà Lăn, 71 Trần Hưng Đạo, Nguyễn Thái Bình, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-tonkin-specialty-coffee",
@@ -2103,7 +2203,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Các bạn barista am hiểu cà phê sẽ tư vấn hương vị hạt phù hợp gu thưởng thức của bạn."
+    "note": "Các bạn barista am hiểu cà phê sẽ tư vấn hương vị hạt phù hợp gu thưởng thức của bạn.",
+    "address": "33/72 Nguyễn Trung Trực, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-choice-fresh-coffee-and-tea",
@@ -2123,7 +2224,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Trà ổi hồng và cold brew cam vàng giải nhiệt cực tốt sau buổi đi bộ tham quan."
+    "note": "Trà ổi hồng và cold brew cam vàng giải nhiệt cực tốt sau buổi đi bộ tham quan.",
+    "address": "Saigon Saigon Bar, 19 Công Trường Lam Sơn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-caphe-nguyen-hue",
@@ -2144,7 +2246,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://congcaphe.com",
-    "note": "Chỗ ngồi ngoài ban công nhìn thẳng xuống đài phun nước phố đi bộ là góc hot nhất."
+    "note": "Chỗ ngồi ngoài ban công nhìn thẳng xuống đài phun nước phố đi bộ là góc hot nhất.",
+    "address": "Cafe Huy Ngân_Hồi ức một tình yêu (Dương Minh Đức), Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cong-caphe-dinh-tien-hoang",
@@ -2165,7 +2268,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://congcaphe.com",
-    "note": "Không gian yên tĩnh hơn các chi nhánh trung tâm, thích hợp làm việc và trò chuyện."
+    "note": "Không gian yên tĩnh hơn các chi nhánh trung tâm, thích hợp làm việc và trò chuyện.",
+    "address": "154 Trường Sa, Gia Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-workshop-coffee",
@@ -2186,7 +2290,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://theworkshopcoffee.com",
-    "note": "Trải nghiệm cà phê nguyên bản tinh tế cho những người đam mê cà phê đích thực."
+    "note": "Trải nghiệm cà phê nguyên bản tinh tế cho những người đam mê cà phê đích thực.",
+    "address": "69 Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-coffee-house-nguyen-hue",
@@ -2207,7 +2312,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://thecoffeehouse.com",
-    "note": "Điểm dừng chân lý tưởng để nạp lại năng lượng khi dạo chơi phố đi bộ."
+    "note": "Điểm dừng chân lý tưởng để nạp lại năng lượng khi dạo chơi phố đi bộ.",
+    "address": "Sunwah Tower, 115, Đường Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-highlands-coffee-nha-tho-duc-ba",
@@ -2228,7 +2334,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://highlandscoffee.com.vn",
-    "note": "Ngồi ngắm dòng người qua lại vào sáng Chủ nhật với ly Phin sữa đá truyền thống."
+    "note": "Ngồi ngắm dòng người qua lại vào sáng Chủ nhật với ly Phin sữa đá truyền thống.",
+    "address": "81 Công xã Paris, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-highlands-coffee-nguyen-hue",
@@ -2249,7 +2356,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://highlandscoffee.com.vn",
-    "note": "Món Freeze trà xanh thạch giòn là đồ uống bán chạy nhất tại đây."
+    "note": "Món Freeze trà xanh thạch giòn là đồ uống bán chạy nhất tại đây.",
+    "address": "Miniso, 78 Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-starbucks-reserve-han-thuyen",
@@ -2270,7 +2378,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://starbucks.vn",
-    "note": "Ban công tầng 1 nhìn thẳng ra tán cây xanh mát của công viên rất lãng mạn."
+    "note": "Ban công tầng 1 nhìn thẳng ra tán cây xanh mát của công viên rất lãng mạn.",
+    "address": "Cà phê bệt công viên 30/4, Q1 ( đối diện sở ngoại vụ, 6 Alexandre de Rhodes, p, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-starbucks-nguyen-hue",
@@ -2291,7 +2400,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://starbucks.vn",
-    "note": "Có ly giữ nhiệt phiên bản giới hạn Sài Gòn làm quà lưu niệm độc đáo."
+    "note": "Có ly giữ nhiệt phiên bản giới hạn Sài Gòn làm quà lưu niệm độc đáo.",
+    "address": "94 Đ. Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-okkio-caffe",
@@ -2312,7 +2422,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://okkiocaffe.com",
-    "note": "Lối vào cầu thang xoắn ốc dẫn lên gác mái có giếng trời chụp ảnh rất nghệ thuật."
+    "note": "Lối vào cầu thang xoắn ốc dẫn lên gác mái có giếng trời chụp ảnh rất nghệ thuật.",
+    "address": "HerAccessories, Tầng 1, 76A Lê Lợi, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-okkio-caffe-pasteur",
@@ -2333,7 +2444,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://okkiocaffe.com",
-    "note": "Thử món Okkio Cold Brew ngâm 24 giờ với hương trái cây lên men tự nhiên."
+    "note": "Thử món Okkio Cold Brew ngâm 24 giờ với hương trái cây lên men tự nhiên.",
+    "address": "155 Đường Lê Duẩn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bosgaurus-coffee-roasters",
@@ -2354,7 +2466,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://bosgauruscoffee.com",
-    "note": "Món Cà phê sữa đá pha sữa tươi 'Bosgaurus Signature' béo thơm dịu ngọt khó quên."
+    "note": "Món Cà phê sữa đá pha sữa tươi 'Bosgaurus Signature' béo thơm dịu ngọt khó quên.",
+    "address": "V-23 Saigon Pearl, Thạnh Mỹ Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-every-half-coffee-roasters",
@@ -2375,7 +2488,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://everyhalf.vn",
-    "note": "Uống cà phê ngắm hoàng hôn buông xuống sông Sài Gòn tại đây là trải nghiệm tuyệt đỉnh."
+    "note": "Uống cà phê ngắm hoàng hôn buông xuống sông Sài Gòn tại đây là trải nghiệm tuyệt đỉnh.",
+    "address": "Công Ty TNHH Tư Vấn Giáo Dục Toàn Cầu Khải Nguyên, Phòng 1901, Lầu 19, Số 37, Đường Tôn Đức Thắng, Bến Nghé, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-running-bean",
@@ -2396,7 +2510,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://therunningbean.com",
-    "note": "Các món brunch như trứng Benedict và bánh waffle trái cây mọng nước rất ngon."
+    "note": "Các món brunch như trứng Benedict và bánh waffle trái cây mọng nước rất ngon.",
+    "address": "103 Hồ Tùng Mậu, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-soo-kafe",
@@ -2417,7 +2532,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Bàn làm việc ngoài ban công có ổ cắm điện đầy đủ và gió mát tự nhiên."
+    "note": "Bàn làm việc ngoài ban công có ổ cắm điện đầy đủ và gió mát tự nhiên.",
+    "address": "1/3/79 Phan Kế Bính, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-ca-phe-co-ba-dong-khoi",
@@ -2438,7 +2554,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Ban công tầng 5 là vị trí ngắm du thuyền và ánh đèn đêm lung linh đẹp nhất."
+    "note": "Ban công tầng 5 là vị trí ngắm du thuyền và ánh đèn đêm lung linh đẹp nhất.",
+    "address": "5 Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cafe-cardinal",
@@ -2459,7 +2576,8 @@
     "photo_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://thereveriesaigon.com",
-    "note": "Set trà chiều quý tộc với bánh ngọt Pháp tinh xảo phục vụ từ 14:30 - 17:00."
+    "note": "Set trà chiều quý tộc với bánh ngọt Pháp tinh xảo phục vụ từ 14:30 - 17:00.",
+    "address": "Quảng trường Nguyễn Huệ, Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-blank-lounge-landmark-81",
@@ -2480,7 +2598,8 @@
     "photo_url": "https://images.unsplash.com/photo-1578895101407-74291583b482?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cần đặt chỗ trước qua hotline để có bàn sát vách kính ngắm hoàng hôn ngoạn mục."
+    "note": "Cần đặt chỗ trước qua hotline để có bàn sát vách kính ngắm hoàng hôn ngoạn mục.",
+    "address": "Oriental Pearl Restaurant, 720A Đ. Điện Biên Phủ, Vinhomes Tân Cảng, Thạnh Mỹ Tây, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-shin-coffee",
@@ -2501,7 +2620,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://shincoffee.vn",
-    "note": "Có thể mua hạt cà phê rang mộc đóng gói mang về làm quà biếu cao cấp."
+    "note": "Có thể mua hạt cà phê rang mộc đóng gói mang về làm quà biếu cao cấp.",
+    "address": "113 Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-trung-nguyen-legend-cafe",
@@ -2521,7 +2641,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://trungnguyenlegend.com",
-    "note": "Cà phê sữa đá số 8 mang hương thơm nồng nàn đặc trưng không lẫn vào đâu được."
+    "note": "Cà phê sữa đá số 8 mang hương thơm nồng nàn đặc trưng không lẫn vào đâu được.",
+    "address": "JM Beauty Lounge, 174/1 Lý Tự Trọng, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cheese-coffee",
@@ -2542,7 +2663,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://cheesecoffee.vn",
-    "note": "Trà sữa Arabica phô mai macchiato là món đồ uống làm nên tên tuổi quán."
+    "note": "Trà sữa Arabica phô mai macchiato là món đồ uống làm nên tên tuổi quán.",
+    "address": "Power Club, 21 Nguyễn Đình Chiểu, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-katinat-dong-khoi",
@@ -2563,7 +2685,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://katinat.vn",
-    "note": "Món trà sữa chôm chôm thơm mát ngọt thanh kèm thịt chôm chôm tươi giòn rụm."
+    "note": "Món trà sữa chôm chôm thơm mát ngọt thanh kèm thịt chôm chôm tươi giòn rụm.",
+    "address": "Gucci, Saigon Hotel & Towers, Đồng Du, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-katinat-nguyen-hue",
@@ -2584,7 +2707,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://katinat.vn",
-    "note": "Tầng lầu máy lạnh mát rượi, chỗ ngồi view phố đi bộ rất thoáng đãng."
+    "note": "Tầng lầu máy lạnh mát rượi, chỗ ngồi view phố đi bộ rất thoáng đãng.",
+    "address": "Tòa nhà Sunwah, 115 Nguyễn Hu, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-loft-cafe",
@@ -2605,7 +2729,8 @@
     "photo_url": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Góc bàn bên khung cửa sổ mặt đồng hồ kính là góc ảnh huyền thoại của Sài Gòn."
+    "note": "Góc bàn bên khung cửa sổ mặt đồng hồ kính là góc ảnh huyền thoại của Sài Gòn.",
+    "address": "L Design Media Co.,Ltd, 72 Đ. Lê Thánh Tôn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-saigon-coffee-roastery",
@@ -2626,7 +2751,8 @@
     "photo_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigoncoffeeroastery.com",
-    "note": "Mùi hương cà phê rang mới nức nở cả hành lang cầu thang chung cư cổ."
+    "note": "Mùi hương cà phê rang mới nức nở cả hành lang cầu thang chung cư cổ.",
+    "address": "5 Công Trường Lam Sơn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-maison-marou-cafe",
@@ -2647,7 +2773,8 @@
     "photo_url": "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://maisonmarou.com",
-    "note": "Thử món Signature Iced Marou Mocha đậm đà kết hợp hoàn hảo giữa cà phê và socola."
+    "note": "Thử món Signature Iced Marou Mocha đậm đà kết hợp hoàn hảo giữa cà phê và socola.",
+    "address": "172 Calmette, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-apocalypse-now-sai-gon",
@@ -2669,7 +2796,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không khí hoài niệm đậm chất điện ảnh, mở cửa rất khuya."
+    "note": "Không khí hoài niệm đậm chất điện ảnh, mở cửa rất khuya.",
+    "address": "Han Gang Korean Restaurant, 6 Thi Sách, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bodega-saigon",
@@ -2690,7 +2818,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Thích hợp cho buổi trò chuyện tâm sự cùng bạn bè sau giờ làm việc."
+    "note": "Thích hợp cho buổi trò chuyện tâm sự cùng bạn bè sau giờ làm việc.",
+    "address": "74/3 Hai Bà Trưng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-bar-22-girl-bar-ho-chi-minh-city",
@@ -2710,7 +2839,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Nằm ngay khu phố ẩm thực Nhật Bản và các khách sạn 5 sao trung tâm."
+    "note": "Nằm ngay khu phố ẩm thực Nhật Bản và các khách sạn 5 sao trung tâm.",
+    "address": "Elisa Spa, Hẻm 24 Đông Du, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pub-crawl-saigon",
@@ -2732,7 +2862,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cơ hội tuyệt vời để kết bạn mới từ nhiều quốc gia và hòa vào nhịp sống đêm Sài Gòn."
+    "note": "Cơ hội tuyệt vời để kết bạn mới từ nhiều quốc gia và hòa vào nhịp sống đêm Sài Gòn.",
+    "address": "MinhAnh07, Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-lush-saigon",
@@ -2753,7 +2884,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Thứ Ba hàng tuần là đêm Ladies Night rất đông vui và nhiều ưu đãi đồ uống."
+    "note": "Thứ Ba hàng tuần là đêm Ladies Night rất đông vui và nhiều ưu đãi đồ uống.",
+    "address": "3C Lý Tự Trọng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-chill-skybar",
@@ -2775,7 +2907,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Áp dụng quy định trang phục lịch sự (dress code: không mặc quần lửng, dép lê)."
+    "note": "Áp dụng quy định trang phục lịch sự (dress code: không mặc quần lửng, dép lê).",
+    "address": "84 Phạm Hồng Thái, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-social-club-rooftop-bar",
@@ -2796,7 +2929,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hoteldesartssaigon.com",
-    "note": "Khung giờ Sunset Hour từ 17:00 - 19:00 có ưu đãi đồ uống và ngắm hoàng hôn lộng lẫy."
+    "note": "Khung giờ Sunset Hour từ 17:00 - 19:00 có ưu đãi đồ uống và ngắm hoàng hôn lộng lẫy.",
+    "address": "Pizza 4P's Hai Bà Trưng, 151b Hai Bà Trưng, Phường 6, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-glow-skybar",
@@ -2817,7 +2951,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Âm nhạc Deep House nhẹ nhàng, ghế đệm êm ái thích hợp trò chuyện thư giãn."
+    "note": "Âm nhạc Deep House nhẹ nhàng, ghế đệm êm ái thích hợp trò chuyện thư giãn.",
+    "address": "6 Alexandre de Rhodes, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-rex-hotel-rooftop-garden-bar",
@@ -2838,7 +2973,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://rexhotelsaigon.com",
-    "note": "Có chương trình biểu diễn nhạc cụ dân tộc truyền thống Việt Nam vào các buổi tối."
+    "note": "Có chương trình biểu diễn nhạc cụ dân tộc truyền thống Việt Nam vào các buổi tối.",
+    "address": "Tượng đài Bác Hồ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-layla-eatery-bar",
@@ -2859,7 +2995,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://laylasaigon.com",
-    "note": "Bàn cạnh cửa sổ nhìn xuống đường Đông Du rất chill và ấm áp."
+    "note": "Bàn cạnh cửa sổ nhìn xuống đường Đông Du rất chill và ấm áp.",
+    "address": "13 Hai Bà Trưng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-rabbit-hole",
@@ -2880,7 +3017,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://rabbitholesaigon.com",
-    "note": "Lối vào bí mật bên dưới cầu thang, không gian yên tĩnh sang trọng."
+    "note": "Lối vào bí mật bên dưới cầu thang, không gian yên tĩnh sang trọng.",
+    "address": "Pasteur/99 Ward, Street, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-snuffbox-lounge",
@@ -2901,7 +3039,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Cần gõ cửa bước vào không gian bí mật tách biệt hoàn toàn khỏi phố thị ồn ào."
+    "note": "Cần gõ cửa bước vào không gian bí mật tách biệt hoàn toàn khỏi phố thị ồn ào.",
+    "address": "57 Đường Hàm Nghi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-alley-cocktail-bar",
@@ -2922,7 +3061,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Món cocktail pha từ nước mía và rượu rum Phú Quốc rất độc đáo."
+    "note": "Món cocktail pha từ nước mía và rượu rum Phú Quốc rất độc đáo.",
+    "address": "Grand Dentistry, Tòa nhà SunWah, 115 Đ. Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-qui-cuisine-mixology",
@@ -2943,7 +3083,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://quilounge.com",
-    "note": "Càng về khuya không khí càng sôi động với các set nhạc cuốn hút của DJ."
+    "note": "Càng về khuya không khí càng sôi động với các set nhạc cuốn hút của DJ.",
+    "address": "26 Thi Sách, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-view-rooftop-bar",
@@ -2964,7 +3105,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Bia và cocktail giá rất dễ chịu, có phục vụ các món ăn nhẹ Việt Nam."
+    "note": "Bia và cocktail giá rất dễ chịu, có phục vụ các món ăn nhẹ Việt Nam.",
+    "address": "26/50/54C Đỗ Quang Đẩu, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-broma-not-a-bar",
@@ -2985,7 +3127,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Tầng thượng cao nhất nhìn thẳng ra Bitexco và dòng người trên phố đi bộ."
+    "note": "Tầng thượng cao nhất nhìn thẳng ra Bitexco và dòng người trên phố đi bộ.",
+    "address": "Công ty cổ phần đầu tư Time Square Việt Nam, Saigon Times Square, 22-36 Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-fang-pub",
@@ -3006,7 +3149,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Ban nhạc biểu diễn các bài hát tiếng Anh và tiếng Việt được nhiều khán giả hòa giọng."
+    "note": "Ban nhạc biểu diễn các bài hát tiếng Anh và tiếng Việt được nhiều khán giả hòa giọng.",
+    "address": "Lily's Hostel, 5 Hẻm 35 Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-thi-bar",
@@ -3027,7 +3171,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Nên đến sau 21:30 khi ban nhạc bắt đầu biểu diễn các bài hát kinh điển."
+    "note": "Nên đến sau 21:30 khi ban nhạc bắt đầu biểu diễn các bài hát kinh điển.",
+    "address": "84/24/3 Đ. Bùi Viện, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-indika-saigon",
@@ -3049,7 +3194,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Thường có các đêm nhạc Reggae, Dub, Hip-Hop và chiếu phim tài liệu ngoài trời."
+    "note": "Thường có các đêm nhạc Reggae, Dub, Hip-Hop và chiếu phim tài liệu ngoài trời.",
+    "address": "Cafe 15, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-saigon-outcast",
@@ -3070,7 +3216,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigonoutcast.com",
-    "note": "Trải nghiệm leo núi nhân tạo ngoài trời và thưởng thức các dòng bia thủ công Sài Gòn."
+    "note": "Trải nghiệm leo núi nhân tạo ngoài trời và thưởng thức các dòng bia thủ công Sài Gòn.",
+    "address": "Joep Dog Park Saigon, 215C14 Nguyễn Văn Hưởng, An Khánh, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-yoko",
@@ -3092,7 +3239,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Không gian nghe nhạc chân thực và say mê, kiểm tra lịch diễn trên fanpage trước khi đến."
+    "note": "Không gian nghe nhạc chân thực và say mê, kiểm tra lịch diễn trên fanpage trước khi đến.",
+    "address": "133 Nguyễn Đình Chiểu, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-acoustic-bar",
@@ -3113,7 +3261,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Quán luôn chật kín khán giả từ 20:30, nên đến sớm để có chỗ đứng xem gần sân khấu."
+    "note": "Quán luôn chật kín khán giả từ 20:30, nên đến sớm để có chỗ đứng xem gần sân khấu.",
+    "address": "Clb Thể Dục Thể Thao, 28 Ngô Thời Nhiệm, 7, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-cargo-bar",
@@ -3134,7 +3283,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Khán phòng rộng lớn phong cách nhà kho công nghiệp âm thanh cực đã."
+    "note": "Khán phòng rộng lớn phong cách nhà kho công nghiệp âm thanh cực đã.",
+    "address": "7 Đ. Hoàng Diệu, Xóm Chiếu, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-blanchy-s-tash",
@@ -3155,7 +3305,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://visithcmc.vn",
-    "note": "Thích hợp cho các buổi gặp gỡ sau giờ làm việc hoặc tiệc cocktail cùng đối tác."
+    "note": "Thích hợp cho các buổi gặp gỡ sau giờ làm việc hoặc tiệc cocktail cùng đối tác.",
+    "address": "CHOICE - Fresh Coffee and Tea, 9 Công Trường Lam Sơn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-envy-club",
@@ -3176,7 +3327,8 @@
     "photo_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://envyclub.asia",
-    "note": "Các màn trình diễn xiếc nhào lộn trên không diễn ra xen kẽ các set nhạc EDM bùng nổ."
+    "note": "Các màn trình diễn xiếc nhào lộn trên không diễn ra xen kẽ các set nhạc EDM bùng nổ.",
+    "address": "70 Đường Huỳnh Thúc Kháng, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hotel-majestic-saigon",
@@ -3197,7 +3349,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://majesticsaigon.com",
-    "note": "Quán bar M Bar tầng thượng có view ngắm sông và bến tàu lung linh bậc nhất."
+    "note": "Quán bar M Bar tầng thượng có view ngắm sông và bến tàu lung linh bậc nhất.",
+    "address": "Công viên Saigon Riverside, Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hilton-saigon",
@@ -3218,7 +3371,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hilton.com",
-    "note": "Nhà hàng The Strand phục vụ hải sản tươi ngon với tầm nhìn sông tuyệt mỹ."
+    "note": "Nhà hàng The Strand phục vụ hải sản tươi ngon với tầm nhìn sông tuyệt mỹ.",
+    "address": "7/13 Ngô Đức Kế, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hotel-continental-saigon",
@@ -3239,7 +3393,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://continentalsaigon.com",
-    "note": "Ngồi hiên Continental ngắm Nhà hát Thành phố buổi sớm là thú vui tao nhã của người mê văn chương."
+    "note": "Ngồi hiên Continental ngắm Nhà hát Thành phố buổi sớm là thú vui tao nhã của người mê văn chương.",
+    "address": "Trà Đào trà trái cây Đại Hải, Bãi xe Nhà Hát Thành Phố, 7 Công trường Lam Sơn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-park-hyatt-saigon",
@@ -3260,7 +3415,8 @@
     "photo_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hyatt.com",
-    "note": "Nhà hàng Ý Opera và quán 2 Lam Son bar là điểm hẹn của giới thượng lưu Sài Gòn."
+    "note": "Nhà hàng Ý Opera và quán 2 Lam Son bar là điểm hẹn của giới thượng lưu Sài Gòn.",
+    "address": "Khách sạn Park Hyatt Sài Gòn, Lam Son Square, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-caravelle-saigon",
@@ -3281,7 +3437,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://caravellehotel.com",
-    "note": "Saigon Saigon Rooftop Bar tầng 9 giữ nguyên vẹn không khí lịch sử thập niên 1960."
+    "note": "Saigon Saigon Rooftop Bar tầng 9 giữ nguyên vẹn không khí lịch sử thập niên 1960.",
+    "address": "Saigon Saigon Bar, 19 Công Trường Lam Sơn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-rex-hotel",
@@ -3302,7 +3459,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://rexhotelsaigon.com",
-    "note": "Vị trí cực kỳ thuận tiện để tham gia mọi hoạt động lễ hội trên phố đi bộ Nguyễn Huệ."
+    "note": "Vị trí cực kỳ thuận tiện để tham gia mọi hoạt động lễ hội trên phố đi bộ Nguyễn Huệ.",
+    "address": "Công viên Tượng Bác, Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-the-reverie-saigon",
@@ -3323,7 +3481,8 @@
     "photo_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://thereveriesaigon.com",
-    "note": "Trải nghiệm spa xa xỉ và bữa tối tại nhà hàng Quảng Đông The Royal Pavilion danh giá."
+    "note": "Trải nghiệm spa xa xỉ và bữa tối tại nhà hàng Quảng Đông The Royal Pavilion danh giá.",
+    "address": "Người thật như tượng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-intercontinental-saigon",
@@ -3344,7 +3503,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://ihg.com",
-    "note": "Nhà hàng Yu Chu chuyên ẩm thực Quảng Đông và dimsum rất được giới sành ăn ưa chuộng."
+    "note": "Nhà hàng Yu Chu chuyên ẩm thực Quảng Đông và dimsum rất được giới sành ăn ưa chuộng.",
+    "address": "33 Lê Duẩn, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-pullman-saigon-centre",
@@ -3365,7 +3525,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://pullmansaigoncentre.com",
-    "note": "Nhà hàng Mad Cow phục vụ thịt bò ngoại nhập hảo hạng và bộ sưu tập rượu vang phong phú."
+    "note": "Nhà hàng Mad Cow phục vụ thịt bò ngoại nhập hảo hạng và bộ sưu tập rượu vang phong phú.",
+    "address": "166F Trần Hưng Đạo, Cầu Ông Lãnh, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-new-world-saigon-hotel",
@@ -3386,7 +3547,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigon.newworldhotels.com",
-    "note": "Whisper Bar & Lounge tại sảnh là điểm gặp gỡ quen thuộc của giới doanh nhân."
+    "note": "Whisper Bar & Lounge tại sảnh là điểm gặp gỡ quen thuộc của giới doanh nhân.",
+    "address": "International Tourist Club, New World Saigon Hotel, Đường Lê Lai/76 Ward, Street, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-liberty-central-saigon-riverside-hotel",
@@ -3407,7 +3569,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://libertycentralsaigonriverside.com",
-    "note": "Hồ bơi vô cực ngắm bình minh trên sông Sài Gòn buổi sớm rất tuyệt vời."
+    "note": "Hồ bơi vô cực ngắm bình minh trên sông Sài Gòn buổi sớm rất tuyệt vời.",
+    "address": "Catinat Lounge, 1 Đ. Đồng Khởi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-liberty-central-saigon-citypoint",
@@ -3428,7 +3591,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://libertycentralsaigoncitypoint.com",
-    "note": "Vị trí đi bộ 2 phút sang Takashimaya Saigon Centre và chợ Bến Thành."
+    "note": "Vị trí đi bộ 2 phút sang Takashimaya Saigon Centre và chợ Bến Thành.",
+    "address": "47 Lê Lợi, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-fusion-suites-saigon",
@@ -3449,7 +3613,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigon.fusion-suites.com",
-    "note": "Giá phòng đã bao gồm liệu trình massage spa chăm sóc sức khỏe mỗi ngày."
+    "note": "Giá phòng đã bao gồm liệu trình massage spa chăm sóc sức khỏe mỗi ngày.",
+    "address": "Bank Of China, 14C Đ. Cách Mạng Tháng 8, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-alagon-d-antique-hotel-spa",
@@ -3470,7 +3635,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://alagonhotels.com",
-    "note": "Khách lưu trú được phục vụ trà chiều bánh ngọt miễn phí tại sảnh tầng lửng."
+    "note": "Khách lưu trú được phục vụ trà chiều bánh ngọt miễn phí tại sảnh tầng lửng.",
+    "address": "Mina Nails & Beauty, 264 Lý Tự Trọng, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-silverland-yen-hotel",
@@ -3491,7 +3657,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://silverlandhotels.com",
-    "note": "Bữa trà chiều miễn phí với bánh truyền thống Việt Nam và đàn tranh du dương."
+    "note": "Bữa trà chiều miễn phí với bánh truyền thống Việt Nam và đàn tranh du dương.",
+    "address": "41Bis Thủ Khoa Huân, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-silverland-ben-thanh-hotel",
@@ -3511,7 +3678,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://silverlandhotels.com",
-    "note": "Chỉ mất 2 phút đi bộ sang cửa Tây chợ Bến Thành mua sắm và thưởng thức ẩm thực."
+    "note": "Chỉ mất 2 phút đi bộ sang cửa Tây chợ Bến Thành mua sắm và thưởng thức ẩm thực.",
+    "address": "21 Nguyễn An Ninh, Bến Thành, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-m-hotel-saigon",
@@ -3532,7 +3700,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://mhotels.vn",
-    "note": "Xung quanh tập trung nhiều quán cà phê nghệ thuật và nhà hàng phong cách Nhật."
+    "note": "Xung quanh tập trung nhiều quán cà phê nghệ thuật và nhà hàng phong cách Nhật.",
+    "address": "Đường Hồ Tùng Mậu, Phố đi bộ Nguyễn Huệ, Đ. Hồ Tùng Mậu Đ. Nguyễn Huệ, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-fusion-original-saigon-centre",
@@ -3553,7 +3722,8 @@
     "photo_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://saigoncentre.fusionoriginal.com",
-    "note": "Lối đi thông tầng thẳng xuống thiên đường mua sắm Takashimaya tiện lợi."
+    "note": "Lối đi thông tầng thẳng xuống thiên đường mua sắm Takashimaya tiện lợi.",
+    "address": "Chè Sương Sâm Dừa Nước, Pasteur, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-mai-house-saigon-hotel",
@@ -3574,7 +3744,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://maihouse.com",
-    "note": "Trà chiều tại sảnh Thom Lounge rất thơm ngon và thanh lịch."
+    "note": "Trà chiều tại sảnh Thom Lounge rất thơm ngon và thanh lịch.",
+    "address": "222 Nam Kỳ Khởi Nghĩa, Xuân Hòa, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-wink-hotel-saigon-centre",
@@ -3595,7 +3766,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://wink-hotels.com",
-    "note": "Nhận phòng lúc mấy giờ thì trả phòng đúng giờ đó ngày hôm sau, rất linh hoạt."
+    "note": "Nhận phòng lúc mấy giờ thì trả phòng đúng giờ đó ngày hôm sau, rất linh hoạt.",
+    "address": "14/6 Nguyễn Đình Chiểu, Tân Định, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-hotel-nikko-saigon",
@@ -3616,7 +3788,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://hotelnikkosaigon.com.vn",
-    "note": "Buffet tối tại La Brasserie phục vụ không giới hạn tôm hùm tươi sống và rượu vang."
+    "note": "Buffet tối tại La Brasserie phục vụ không giới hạn tôm hùm tươi sống và rượu vang.",
+    "address": "Eyewear HUT Optical Nowzone, 235 Đường Nguyễn Văn Cừ, Cầu Ông Lãnh, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-lotte-hotel-saigon",
@@ -3637,7 +3810,8 @@
     "photo_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://lottehotel.com",
-    "note": "Khu vực hồ bơi ngoài trời rợp bóng dừa mang lại cảm giác nghỉ dưỡng biển ngay giữa lòng Sài Gòn."
+    "note": "Khu vực hồ bơi ngoài trời rợp bóng dừa mang lại cảm giác nghỉ dưỡng biển ngay giữa lòng Sài Gòn.",
+    "address": "243/3a Ton Duc Thang Street, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-eastin-grand-hotel-saigon",
@@ -3658,7 +3832,8 @@
     "photo_url": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://eastingrandsaigon.com",
-    "note": "Chỉ mất 10 phút di chuyển ra sân bay Tân Sơn Nhất, rất thuận tiện cho khách công tác."
+    "note": "Chỉ mất 10 phút di chuyển ra sân bay Tân Sơn Nhất, rất thuận tiện cho khách công tác.",
+    "address": "13 Hẻm 16 Hoàng Diệu, Phú Nhuận, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-sofitel-saigon-plaza",
@@ -3679,7 +3854,8 @@
     "photo_url": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://sofitel-saigon-plaza.com",
-    "note": "Nhà hàng Mezz phục vụ buffet ẩm thực quốc tế với các quầy bếp mở phong phú."
+    "note": "Nhà hàng Mezz phục vụ buffet ẩm thực quốc tế với các quầy bếp mở phong phú.",
+    "address": "Sân Bóng Đá Nhân Tạo, 43 Đường Đinh Tiên Hoàng, Sài Gòn, Hồ Chí Minh"
   },
   {
     "id": "sai-gon-vinpearl-landmark-81-autograph-collection",
@@ -3701,6 +3877,7 @@
     "photo_url": "https://images.unsplash.com/photo-1578895101407-74291583b482?auto=format&fit=crop&w=1200&q=80",
     "verified": true,
     "source": "https://marriott.com",
-    "note": "Bồn tắm sát vách kính kịch trần ngắm toàn cảnh Sài Gòn lung linh từ trên mây."
+    "note": "Bồn tắm sát vách kính kịch trần ngắm toàn cảnh Sài Gòn lung linh từ trên mây.",
+    "address": "Vincom Landmark 81, Vinhomes Central Park, Thạnh Mỹ Tây, Hồ Chí Minh"
   }
 ]

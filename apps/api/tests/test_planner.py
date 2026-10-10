@@ -1,3 +1,6 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from geoalchemy2.elements import WKTElement
 
 from tests.conftest import add_slot
@@ -34,6 +37,32 @@ def test_feasible_plan(client, db_session, sample_experience):
     restored = client.get(f"/api/itineraries/{body['itinerary_id']}")
     assert restored.status_code == 200
     assert restored.json()["stops"][0]["experience_id"] == sample_experience.id
+
+
+def test_planner_normalizes_hcmc_local_slot_times_on_sqlite(client, db_session, sample_experience):
+    local_zone = ZoneInfo("Asia/Ho_Chi_Minh")
+    local_start = datetime(2030, 10, 1, 9, 0, tzinfo=local_zone)
+    slot = add_slot(
+        db_session,
+        sample_experience,
+        start=local_start.isoformat(),
+        available=8,
+    )
+    db_session.refresh(slot)
+
+    # SQLite strips timezone offsets unless the model normalizes to UTC first.
+    assert slot.start_at.utcoffset().total_seconds() == 0
+    assert slot.start_at.astimezone(local_zone).hour == 9
+
+    response = client.post("/api/itineraries/plan", json={
+        **PLAN,
+        "start_at": "2030-10-01T08:00:00+07:00",
+        "end_at": "2030-10-01T16:00:00+07:00",
+    })
+
+    assert response.status_code == 200, response.text
+    planned_start = datetime.fromisoformat(response.json()["stops"][0]["start_at"].replace("Z", "+00:00"))
+    assert planned_start.astimezone(local_zone).hour == 9
 
 
 def test_planner_ignores_experiences_outside_quan_1_pilot(client, db_session, sample_experience):

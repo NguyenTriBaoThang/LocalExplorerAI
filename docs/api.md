@@ -1,5 +1,7 @@
 # API MVP
 
+API nhận thời gian ISO 8601 có timezone offset (ví dụ giờ Việt Nam `+07:00`); slot được chuẩn hóa và lưu theo UTC. SQLite không lưu timezone, vì vậy model chuyển offset sang UTC khi ghi và khôi phục UTC khi đọc.
+
 Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601 có timezone offset và tiền VND nhận integer.
 
 ## Health
