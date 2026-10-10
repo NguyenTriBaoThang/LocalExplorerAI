@@ -49,12 +49,12 @@ export function CalibrationPanel(props: Props) {
           <Compass size={18} className="text-amber-400" />
           <strong className="text-sm font-bold text-white">Hiệu Chỉnh Vị Trí Mô Hình</strong>
         </div>
-        <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${dirty ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+        <span className={`text-xs px-2 py-0.5 rounded font-mono font-bold ${dirty ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
           {dirty ? 'CHƯA LƯU' : 'ĐÃ LƯU'}
         </span>
       </div>
 
-      <p className="text-[11px] text-slate-400 mb-3">
+      <p className="text-xs text-slate-400 mb-3">
         Kéo mũi tên trên mô hình hoặc dùng nút bên dưới để khớp với ảnh vệ tinh. Ghim đỏ là toạ độ chuẩn của địa điểm.
       </p>
 
@@ -130,7 +130,7 @@ export function CalibrationPanel(props: Props) {
       </div>
 
       {status && (
-        <div className={`mt-2.5 p-2 border rounded-lg text-[11px] ${STATUS_STYLE[status.kind]}`}>{status.text}</div>
+        <div className={`mt-2.5 p-2 border rounded-lg text-xs ${STATUS_STYLE[status.kind]}`}>{status.text}</div>
       )}
     </div>
   )

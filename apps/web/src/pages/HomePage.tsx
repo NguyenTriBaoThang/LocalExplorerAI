@@ -126,7 +126,7 @@ export function HomePage() {
 
           <h1 className="hero-heading-3d">
             {t('home.heading1')} <br />
-            <span className="gradient-text-emerald">{t('home.headingHighlight')}</span> {t('home.heading2')}
+            <span className="gradient-text-emerald">{t('home.headingHighlight')}</span> <span className="nowrap">{t('home.heading2')}</span>
           </h1>
 
           <p className="hero-description-3d">
