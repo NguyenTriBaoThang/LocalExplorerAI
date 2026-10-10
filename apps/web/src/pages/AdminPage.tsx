@@ -87,6 +87,12 @@ type PlaceImportCandidate = {
   suggested_labels?: {
     ruleset_version: string
     label_status: string
+    intent_columns: {
+      handicraft: boolean
+      food: boolean
+      culture: boolean
+      relaxation: boolean
+    }
     poi_type: string
     poi_type_label_vi: string
     activity_mode: string
@@ -115,6 +121,13 @@ const PLACE_ACTIVITY_MODE_LABELS: Record<string, string> = {
   participatory_activity: 'Có dấu hiệu tham gia trực tiếp',
   unknown: 'Chưa phân loại',
 }
+
+const PLACE_CORE_INTENT_COLUMNS = [
+  { key: 'handicraft', label: 'Thủ công' },
+  { key: 'food', label: 'Ẩm thực' },
+  { key: 'culture', label: 'Văn hóa' },
+  { key: 'relaxation', label: 'Thư giãn' },
+] as const
 
 type TabKey =
   | 'queue'
@@ -1017,18 +1030,23 @@ export function AdminPage() {
                                 <span key={flag}>{importFlagLabels[flag] || flag}</span>
                               ))}
                             </div>
-                            <div className="item-sub-meta place-label-tags">
-                              {suggested ? (
-                                <>
-                                  <span>Nhãn gợi ý: {suggested.poi_type_label_vi}</span>
-                                  {(suggested.intent_tags || []).map((tag) => (
-                                    <span key={tag}>{intentLabels[tag] || tag}</span>
-                                  ))}
-                                </>
-                              ) : (
-                                <span>Nhãn chưa được API trả về — khởi động lại API để tải bộ nhãn mới.</span>
-                              )}
-                            </div>
+                            {suggested?.intent_columns ? (
+                              <div className="place-intent-columns place-intent-columns-compact">
+                                {PLACE_CORE_INTENT_COLUMNS.map(({ key, label }) => (
+                                  <span
+                                    className={`place-intent-cell ${suggested.intent_columns[key] ? 'is-suggested' : 'is-not-suggested'}`}
+                                    key={key}
+                                  >
+                                    <strong>{label}</strong>
+                                    <small>{suggested.intent_columns[key] ? 'Có dấu hiệu nguồn' : 'Chưa thấy trong nguồn'}</small>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="item-sub-meta place-label-tags">
+                                <span>Nhãn 4 mục đích chưa được API trả về. Khởi động lại API để tải nhãn mới.</span>
+                              </div>
+                            )}
                           </summary>
                           {suggested ? (
                           <div className="place-label-suggestion-panel">
@@ -1053,6 +1071,17 @@ export function AdminPage() {
                                   ? 'Trong nhà theo cột nguồn'
                                   : 'Chưa rõ'}
                               </span>
+                            </div>
+                            <div className="place-intent-columns">
+                              {PLACE_CORE_INTENT_COLUMNS.map(({ key, label }) => (
+                                <span
+                                  className={`place-intent-cell ${suggested.intent_columns?.[key] ? 'is-suggested' : 'is-not-suggested'}`}
+                                  key={key}
+                                >
+                                  <strong>{label}</strong>
+                                  <small>{suggested.intent_columns?.[key] ? 'Có dấu hiệu trong nguồn' : 'Chưa thấy dấu hiệu trong nguồn'}</small>
+                                </span>
+                              ))}
                             </div>
                             <div className="item-sub-meta place-label-tags">
                               {(suggested.intent_tags || []).map((tag) => (

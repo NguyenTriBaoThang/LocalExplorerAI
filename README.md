@@ -873,7 +873,7 @@ python -m venv .venv
 # Cài đặt thư viện cốt lõi:
 pip install -r requirements.txt
 
-# Cài đặt thư viện Huấn luyện Ranker & kiểm thử 93 test cases:
+# Cài đặt thư viện Huấn luyện Ranker & kiểm thử 103+ test cases:
 pip install -r requirements-ranking-training.txt
 
 # (Khuyên dùng) Cài đặt thư viện Học máy và Tìm kiếm Ngữ nghĩa:
@@ -1026,7 +1026,7 @@ LoaclExplorerAI/
 │   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, BotService...)
 │   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0010_place_import_staging)
 │   │   ├── scripts/             # Scripts tiện ích: seed_db.py, worker.py, download_e5_model.py
-│   │   ├── tests/               # Bộ test tự động với pytest (93 test cases)
+│   │   ├── tests/               # Bộ test tự động với pytest (103+ test cases)
 │   │   └── README.md            # Tài liệu chi tiết hướng dẫn Backend API
 │   ├── models_3d/               # Dữ liệu mô hình 3D landmarks
 │   └── web/                     # Frontend React 18 + TypeScript + Three.js + Leaflet

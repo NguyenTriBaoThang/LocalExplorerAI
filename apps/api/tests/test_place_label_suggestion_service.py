@@ -13,6 +13,12 @@ def test_food_place_gets_food_intent_from_kind_and_source_tags():
     assert labels["poi_type"] == "restaurant"
     assert labels["primary_intent"] == "food"
     assert "food" in labels["intent_tags"]
+    assert labels["intent_columns"] == {
+        "handicraft": False,
+        "food": True,
+        "culture": False,
+        "relaxation": False,
+    }
     assert labels["indoor_outdoor"] == "indoor"
 
 
@@ -27,6 +33,7 @@ def test_cultural_poi_is_classified_without_inventing_hands_on():
 
     assert labels["poi_type"] == "sightseeing"
     assert labels["primary_intent"] == "culture"
+    assert labels["intent_columns"]["culture"] is True
     assert labels["hands_on"] is None
     assert labels["hands_on_status"] == "unknown_at_poi_level"
 
@@ -41,6 +48,7 @@ def test_explicit_participatory_description_gets_hands_on_suggestion():
     })
 
     assert labels["primary_intent"] == "handicraft"
+    assert labels["intent_columns"]["handicraft"] is True
     assert labels["hands_on"] is True
     assert labels["hands_on_status"] == "explicit_source_cue"
 
@@ -61,3 +69,21 @@ def test_entertainment_and_lodging_are_not_forced_into_core_intent():
     assert hotel["poi_type"] == "accommodation"
     assert hotel["primary_intent"] is None
     assert "accommodation" in hotel["intent_tags"]
+    assert set(hotel["intent_columns"]) == {"handicraft", "food", "culture", "relaxation"}
+    assert not any(hotel["intent_columns"].values())
+
+
+def test_source_text_can_suggest_multiple_core_intents():
+    labels = suggest_place_labels({
+        "kind": "tham-quan",
+        "name": "Công viên ven sông",
+        "tags": ["van-hoa", "thu-gian"],
+        "description": "Không gian văn hóa và thư giãn bên sông.",
+    })
+
+    assert labels["intent_columns"] == {
+        "handicraft": False,
+        "food": False,
+        "culture": True,
+        "relaxation": True,
+    }

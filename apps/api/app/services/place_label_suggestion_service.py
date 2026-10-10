@@ -9,7 +9,8 @@ import unicodedata
 from collections.abc import Mapping
 
 
-LABEL_RULESET_VERSION = "poi-label-suggestions-v1"
+LABEL_RULESET_VERSION = "poi-label-suggestions-v2"
+CORE_INTENTS = ("handicraft", "food", "culture", "relaxation")
 
 KIND_LABELS = {
     "tham-quan": ("sightseeing", "Điểm tham quan", "passive_visit"),
@@ -23,6 +24,7 @@ INTENT_CUES = {
     "handicraft": (
         "lam gom", "nan gom", "theu tay", "che tac", "pottery class",
         "craft workshop", "workshop lam gom", "thuc hanh thu cong",
+        "thu cong my nghe", "cho thu cong", "handicraft", "lang nghe",
     ),
     "food": (
         "am thuc", "an uong", "nha hang", "quan an", "mon an", "mon viet",
@@ -132,6 +134,10 @@ def suggest_place_labels(record: Mapping[str, object], kind: str | None = None) 
     return {
         "ruleset_version": LABEL_RULESET_VERSION,
         "label_status": "suggested_from_source",
+        "intent_columns": {
+            intent: intent in intent_tags
+            for intent in CORE_INTENTS
+        },
         "poi_type": type_code,
         "poi_type_label_vi": type_label,
         "activity_mode": activity_mode,

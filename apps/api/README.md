@@ -54,7 +54,7 @@ apps/api/
 │   ├── seed_db.py         # Nạp dữ liệu mô phỏng demo & tài khoản dev
 │   ├── worker.py          # Background worker xử lý Email Outbox & Job nền
 │   └── download_e5_model.py # Tải trọng số mô hình Multilingual E5 về local
-├── tests/                 # Bộ kiểm thử tự động pytest (93 test cases)
+├── tests/                 # Bộ kiểm thử tự động pytest (103+ test cases)
 ├── alembic.ini            # Cấu hình đường dẫn migration
 ├── Dockerfile             # Container build cho Backend API
 ├── requirements.txt       # Thư viện ứng dụng cốt lõi (FastAPI, SQLAlchemy, Alembic, Pydantic)
@@ -86,7 +86,7 @@ python -m venv .venv
 # 1. Cài đặt thư viện ứng dụng cốt lõi (bắt buộc)
 pip install -r requirements.txt
 
-# 2. Cài đặt thư viện Huấn luyện Ranker & kiểm thử đầy đủ (khuyên dùng để chạy 93 test cases)
+# 2. Cài đặt thư viện Huấn luyện Ranker & kiểm thử đầy đủ (khuyên dùng để chạy 103 test cases)
 pip install -r requirements-ranking-training.txt
 
 # 3. (Tùy chọn) Cài đặt thư viện Học máy suy luận cục bộ & Vector E5
@@ -148,13 +148,13 @@ python -m scripts.worker
 
 ## 🧪 Chạy Kiểm thử Tự động (Tests)
 
-Bộ kiểm thử được viết bằng `pytest` gồm **93 test cases** bao phủ toàn diện Router, Heuristic Solver, Ranker Training Contracts, ML Integrity & Safety Gates, Role Isolation, Booking State Machine, và Alembic Migration Chain:
+Bộ kiểm thử được viết bằng `pytest` gồm **103 test cases** bao phủ toàn diện Router, Heuristic Solver, Place Label Suggestions, Ranker Training Contracts, ML Integrity & Safety Gates, Role Isolation, Booking State Machine, và Alembic Migration Chain:
 ```powershell
 cd apps/api
 pytest -q
 ```
-- **Môi trường chỉ có Core Dependencies (`requirements.txt`)**: Bộ test chạy an toàn `84 passed, 1 skipped`. Module `test_experience_ranker_training.py` tự động được bỏ qua qua `pytest.importorskip` mà không gây lỗi crash.
-- **Môi trường có đầy đủ Ranking Training Dependencies (`requirements-ranking-training.txt`)**: Toàn bộ **93 test cases** đều được thực thi và xác minh thành công (`93 passed, exit code 0`).
+- **Môi trường chỉ có Core Dependencies (`requirements.txt`)**: Bộ test chạy an toàn `94 passed, 1 skipped`. Module `test_experience_ranker_training.py` tự động được bỏ qua qua `pytest.importorskip` mà không gây lỗi crash.
+- **Môi trường có đầy đủ Ranking Training Dependencies (`requirements-ranking-training.txt`)**: Toàn bộ **103 test cases** đều được thực thi và xác minh thành công (`103 passed, exit code 0`).
 
 ---
 
