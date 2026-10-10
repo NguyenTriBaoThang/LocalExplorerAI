@@ -8,6 +8,7 @@ import { ReviewsPanel } from '../components/content/ReviewsPanel'
 import { Stars } from '../components/content/StarRating'
 import { VerificationBadge } from '../components/common/StatusBadge'
 import { useTranslation } from '../i18n'
+import { tagLabel } from '../tags'
 import type { Experience } from '../types'
 
 export function ExperiencePage() {
@@ -51,7 +52,7 @@ export function ExperiencePage() {
             <Link className="info-chip" to={`/places/${experience.poi_id}`}><MapPin size={15} />{experience.poi.name}</Link>
           </div>
           {experience.description && <p className="prose-content">{experience.description}</p>}
-          {experience.intent_tags.length > 0 && <div className="info-chips">{experience.intent_tags.map((tag) => <span key={tag} className="tag-chip">#{tag.replaceAll('_', ' ')}</span>)}</div>}
+          {experience.intent_tags.length > 0 && <div className="info-chips">{experience.intent_tags.map((tag) => <span key={tag} className="tag-chip">#{tagLabel(tag, locale)}</span>)}</div>}
 
           <section style={{ marginTop: 32 }}>
             <h2 className="section-title-3d" style={{ fontSize: 22 }}>{vi ? 'Khung giờ sắp tới' : 'Upcoming time slots'}</h2>

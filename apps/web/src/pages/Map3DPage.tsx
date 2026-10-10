@@ -80,11 +80,11 @@ export function Map3DPage() {
             <div>
               <h1 className="text-sm font-bold text-white flex items-center gap-2">
                 Bản Đồ 3D Không Gian Landmark Sài Gòn
-                <span className="text-[10px] bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-xs bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                   WebGL 3D
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-400 hidden md:block">
+              <p className="text-xs text-slate-400 hidden md:block">
                 Tương tác không gian 3 chiều với các di sản và công trình biểu tượng của TP. Hồ Chí Minh
               </p>
             </div>
@@ -112,7 +112,7 @@ export function Map3DPage() {
                 <Building2 size={13} />
                 <span>{lm.name}</span>
                 {lm.status === 'coming_soon' && (
-                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-normal">
+                  <span className="text-xs bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-normal">
                     Sắp có
                   </span>
                 )}
@@ -124,7 +124,7 @@ export function Map3DPage() {
 
       {landmarks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 px-4 sm:px-8 py-2.5 bg-slate-900/60 border-b border-slate-800">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Danh thắng</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Danh thắng</span>
           {landmarks.map((place) => {
             const model = modelFor(place)
             return (

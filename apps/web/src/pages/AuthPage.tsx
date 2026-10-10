@@ -14,6 +14,8 @@ import { useAuth } from '../auth'
 import { useTranslation } from '../i18n'
 import type { GoogleOAuthStatus } from '../types'
 
+const IS_DEV = Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV)
+
 export function AuthPage({ register = false }: { register?: boolean }) {
   const { t, locale } = useTranslation()
   const [email, setEmail] = useState('')
@@ -258,9 +260,11 @@ export function AuthPage({ register = false }: { register?: boolean }) {
         </a>
         {googleOAuth?.enabled === false && (
           <p className="auth-oauth-hint">
-            {googleOAuth.configuration_message || (locale === 'en' ? 'Google sign-in is not configured.' : 'Chưa cấu hình đăng nhập Google.')}
-            {' '}{locale === 'en' ? 'Callback URI:' : 'Callback URI:'}{' '}
-            <code>{googleOAuth.redirect_uri}</code>
+            {locale === 'en' ? 'Google sign-in is not available right now. Use your email and password.' : 'Đăng nhập bằng Google hiện chưa khả dụng. Hãy dùng email và mật khẩu.'}
+            {/* Setup details are for whoever runs the server, not for visitors. */}
+            {IS_DEV && googleOAuth.configuration_message && (
+              <>{' '}<small>{googleOAuth.configuration_message} <code>{googleOAuth.redirect_uri}</code></small></>
+            )}
           </p>
         )}
       </div>

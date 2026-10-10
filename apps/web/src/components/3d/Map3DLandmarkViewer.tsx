@@ -326,7 +326,7 @@ export function Map3DLandmarkViewer({
         if (cancelled) return
         console.error('Error loading 3D model:', err)
         setLoading(false)
-        setLoadError('Không thể tải file mô hình 3D. Vui lòng kiểm tra file trong thư mục models_3d.')
+        setLoadError('Mô hình 3D chưa sẵn sàng. Bản đồ nền vẫn dùng được; vui lòng thử lại sau.')
       }
     )
 
@@ -578,7 +578,7 @@ export function Map3DLandmarkViewer({
               <strong className="text-sm font-bold text-white">Hiệu Chỉnh Tọa Độ 3D</strong>
             </div>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+              className={`text-xs px-2 py-0.5 rounded font-mono font-bold ${
                 dirty ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
               }`}
             >
@@ -586,7 +586,7 @@ export function Map3DLandmarkViewer({
             </span>
           </div>
 
-          <p className="text-[11px] text-slate-400 mb-3">
+          <p className="text-xs text-slate-400 mb-3">
             Dùng các nút điều hướng bên dưới để khớp mô hình 3D với mặt đường và vị trí thực tế trên Goong Map.
           </p>
 
@@ -803,7 +803,7 @@ export function Map3DLandmarkViewer({
           {/* Status Message */}
           {statusMessage && (
             <div
-              className={`mt-2.5 p-2 border rounded-lg text-[11px] ${
+              className={`mt-2.5 p-2 border rounded-lg text-xs ${
                 statusMessage.kind === 'success'
                   ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
                   : statusMessage.kind === 'error'
@@ -826,7 +826,7 @@ export function Map3DLandmarkViewer({
           <div>
             <div className="flex items-center gap-1.5">
               <h4 className="text-sm font-bold text-white">{calibration.display_name}</h4>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
+              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
                 GOONG 3D VERIFIED
               </span>
             </div>
@@ -834,7 +834,7 @@ export function Map3DLandmarkViewer({
               {calibration.description ||
                 'Vương cung thánh đường Chính tòa Đức Mẹ Vô nhiễm Nguyên tội tại Công xã Paris, Quận 1.'}
             </p>
-            <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-400 font-mono">
+            <div className="mt-2 flex items-center gap-3 text-xs text-slate-400 font-mono">
               <span>
                 GPS: {calibration.latitude.toFixed(6)}, {calibration.longitude.toFixed(6)}
               </span>

@@ -4,6 +4,7 @@ import type { Experience } from '../../types'
 import { VerificationBadge } from '../common/StatusBadge'
 import { TiltCard3D } from '../3d/TiltCard3D'
 import { useTranslation } from '../../i18n'
+import { tagLabel } from '../../tags'
 
 export function ExperienceCard({
   experience,
@@ -103,7 +104,7 @@ export function ExperienceCard({
           <div className="card-tags-row">
             {experience.intent_tags.slice(0, 3).map((tag) => (
               <span key={tag} className="intent-pill">
-                #{tag.replaceAll('_', ' ')}
+                #{tagLabel(tag, locale)}
               </span>
             ))}
           </div>

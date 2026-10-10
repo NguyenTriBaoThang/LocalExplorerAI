@@ -224,6 +224,7 @@ export function ExplorePage() {
         <div className="search-box-3d">
           <Search size={18} className="search-icon" />
           <input
+            aria-label={t('explore.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={
@@ -258,6 +259,7 @@ export function ExplorePage() {
             </div>
             <input
               type="date"
+              aria-label={t('explore.dateDepart')}
               value={date}
               min={localToday()}
               onChange={(e) => setDate(e.target.value)}
@@ -270,7 +272,7 @@ export function ExplorePage() {
               <Clock size={13} className="text-amber" />
               <span>{t('explore.timeArrive')}</span>
             </div>
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <input type="time" aria-label={t('explore.timeArrive')} value={time} onChange={(e) => setTime(e.target.value)} />
           </div>
 
           {/* Group Size */}
@@ -281,6 +283,7 @@ export function ExplorePage() {
             </div>
             <input
               type="number"
+              aria-label={t('explore.groupLabel')}
               min={1}
               max={50}
               value={groupSize}
@@ -296,6 +299,7 @@ export function ExplorePage() {
             </div>
             <input
               type="number"
+              aria-label={t('explore.groupBudget')}
               min={0}
               step={100000}
               value={budget}
