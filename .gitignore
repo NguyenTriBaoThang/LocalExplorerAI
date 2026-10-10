@@ -468,5 +468,7 @@ apps/api/.local-secrets/
 # Heavy 3D raw models
 *.glb
 models_3d/*.glb
+!models_3d/**/*.glb
 apps/web/public/models_3d/*.glb
+!apps/web/public/models_3d/*.glb
 

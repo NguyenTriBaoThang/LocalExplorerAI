@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-3d-model-packs.mjs",
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "node scripts/sync-3d-model-packs.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "tsc -b --pretty"
@@ -15,7 +17,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
     "leaflet": "^1.9.4",
-    "lucide-react": "^1.49.0",
+    "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
