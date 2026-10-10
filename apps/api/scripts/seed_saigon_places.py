@@ -25,6 +25,11 @@ HCMC = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | None = None) -> int:
+    raise RuntimeError(
+        "Operational seeding is disabled: this legacy loader inferred addresses, prices, "
+        "experiences, slots, and evidence. Import the workbook through "
+        "scripts/import_place_candidates.py and promote records only after source review."
+    )
     # Ensure tables exist
     try:
         with session_factory() as db:
@@ -69,11 +74,64 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
         inserted_count = 0
         today = datetime.now(HCMC).date()
         daily_times = [time(9, 0), time(14, 0), time(18, 30)]
+        now_utc = datetime.now(timezone.utc)
+
+        def _ensure_slots(exp: Experience, days: int = 30):
+            for day_offset in range(days):
+                service_date = today + timedelta(days=day_offset)
+                for slot_time in daily_times:
+                    start = datetime.combine(service_date, slot_time, HCMC)
+                    existing_slot = db.scalar(
+                        select(ExperienceSlot).where(
+                            ExperienceSlot.experience_id == exp.id,
+                            ExperienceSlot.start_at == start,
+                        )
+                    )
+                    if existing_slot:
+                        continue
+
+                    end = start + timedelta(minutes=90)
+                    slot_expires = end if end.tzinfo else end.replace(tzinfo=timezone.utc) + timedelta(days=30)
+                    slot = ExperienceSlot(
+                        experience_id=exp.id,
+                        start_at=start,
+                        end_at=end,
+                        capacity_total=20,
+                        available_reported=15,
+                        status=SlotStatus.OPEN.value,
+                        confirmed_at=now_utc - timedelta(hours=1),
+                        expires_at=slot_expires,
+                        version=1,
+                    )
+                    db.add(slot)
+                    db.flush()
+
+                    db.add(Evidence(
+                        id=str(uuid4()),
+                        source_uri=f"https://hcmc.gov.vn/slots/{slot.id}",
+                        source_type="provider_confirmation",
+                        source_label="Sài Gòn Heritage & Local Partners",
+                        license="Open Data",
+                        notes="Open slot verified",
+                        submitted_by=None,
+                        target_type="slot",
+                        target_id=slot.id,
+                        target_revision=1,
+                        fields_covered=sorted(REQUIRED_FIELDS["slot"]),
+                        observed_at=now_utc - timedelta(hours=2),
+                        valid_from=now_utc - timedelta(hours=2),
+                        expires_at=slot_expires,
+                        verification_status="verified",
+                        verified_at=now_utc - timedelta(hours=1),
+                    ))
 
         for item in places_data:
             poi_id = str(item.get("id") or item.get("name"))
             existing_poi = db.scalar(select(POI).where(POI.id == poi_id))
             if existing_poi:
+                exp = db.scalar(select(Experience).where(Experience.poi_id == existing_poi.id))
+                if exp:
+                    _ensure_slots(exp, days=30)
                 continue
 
             lat = float(item.get("lat") or 10.7769)
@@ -107,7 +165,6 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
             db.add(poi)
             db.flush()
 
-            now_utc = datetime.now(timezone.utc)
             db.add(Evidence(
                 id=str(uuid4()),
                 source_uri=f"https://hcmc.gov.vn/places/{poi.id}",
@@ -167,46 +224,8 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
                 verified_at=now_utc,
             ))
 
-            # Seed 7 days of open slots for planning
-            for day_offset in range(7):
-                service_date = today + timedelta(days=day_offset)
-                for slot_time in daily_times:
-                    start = datetime.combine(service_date, slot_time, HCMC)
-                    end = start + timedelta(minutes=90)
-                    slot_expires = end if end.tzinfo else end.replace(tzinfo=timezone.utc) + timedelta(days=30)
-                    slot = ExperienceSlot(
-                        experience_id=exp.id,
-                        start_at=start,
-                        end_at=end,
-                        capacity_total=20,
-                        available_reported=15,
-                        status=SlotStatus.OPEN.value,
-                        confirmed_at=now_utc - timedelta(hours=1),
-                        expires_at=slot_expires,
-                        version=1
-                    )
-                    db.add(slot)
-                    db.flush()
-
-                    db.add(Evidence(
-                        id=str(uuid4()),
-                        source_uri=f"https://hcmc.gov.vn/slots/{slot.id}",
-                        source_type="provider_confirmation",
-                        source_label="Sài Gòn Heritage & Local Partners",
-                        license="Open Data",
-                        notes="Open slot verified",
-                        submitted_by=None,
-                        target_type="slot",
-                        target_id=slot.id,
-                        target_revision=1,
-                        fields_covered=sorted(REQUIRED_FIELDS["slot"]),
-                        observed_at=now_utc - timedelta(hours=2),
-                        valid_from=now_utc - timedelta(hours=2),
-                        expires_at=slot_expires,
-                        verification_status="verified",
-                        verified_at=now_utc - timedelta(hours=1),
-                    ))
-
+            # Seed 30 days of open slots for planning
+            _ensure_slots(exp, days=30)
             inserted_count += 1
 
         db.commit()
@@ -215,4 +234,7 @@ def seed_saigon_places(session_factory=SessionLocal, json_path: str | Path | Non
 
 
 if __name__ == "__main__":
-    seed_saigon_places()
+    raise SystemExit(
+        "Disabled: this legacy seeder would manufacture operational POI, experience, "
+        "slot, and evidence values. Use scripts/import_place_candidates.py to stage source rows."
+    )

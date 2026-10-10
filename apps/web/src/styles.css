@@ -1256,6 +1256,20 @@ a {
   color: var(--tx-emerald);
 }
 
+.pilot-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.09);
+  color: #6ee7b7;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .pulse-beacon {
   width: 7px;
   height: 7px;

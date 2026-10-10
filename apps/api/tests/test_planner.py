@@ -1,5 +1,7 @@
+from geoalchemy2.elements import WKTElement
+
 from tests.conftest import add_slot
-from app.models.entities import DecisionLog, Experience, ItineraryVersion
+from app.models.entities import DecisionLog, Experience, ItineraryVersion, POI
 from app.schemas.planner import PlanRequest
 from app.services.planner_service import PlannerService
 from app.services.ml_ranker_service import MLRankerService
@@ -32,6 +34,31 @@ def test_feasible_plan(client, db_session, sample_experience):
     restored = client.get(f"/api/itineraries/{body['itinerary_id']}")
     assert restored.status_code == 200
     assert restored.json()["stops"][0]["experience_id"] == sample_experience.id
+
+
+def test_planner_ignores_experiences_outside_quan_1_pilot(client, db_session, sample_experience):
+    add_slot(db_session, sample_experience)
+    outside_poi = POI(
+        name="Outside pilot district", description="Fixture", district="District 10",
+        latitude=10.75, longitude=106.63,
+        geom=WKTElement("POINT(106.63 10.75)", srid=4326),
+        category="handicraft", address="District 10", verification_status="simulated",
+    )
+    outside_experience = Experience(
+        poi=outside_poi, provider=sample_experience.provider, name="Outside workshop",
+        title="Outside workshop", description="Fixture", intent_tags=["handicraft", "hands_on"],
+        duration_min=60, is_hands_on=True, is_indoor=True, indoor=True,
+        price_basis="per_person", price_vnd=1,
+        verification_status="simulated",
+    )
+    db_session.add(outside_experience)
+    db_session.flush()
+    add_slot(db_session, outside_experience)
+
+    response = client.post("/api/itineraries/plan", json=PLAN)
+
+    assert response.status_code == 200, response.text
+    assert {stop["experience_id"] for stop in response.json()["stops"]} == {sample_experience.id}
 
 
 def test_planner_uses_ranker_only_to_break_feasible_same_time_ties(db_session, sample_experience):

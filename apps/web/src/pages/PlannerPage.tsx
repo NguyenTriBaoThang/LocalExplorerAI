@@ -211,7 +211,7 @@ export function PlannerPage() {
         <div className="planner-badge-wrap">
           <span className="planner-city-badge">
             <MapPin size={14} className="text-emerald" />
-            {t('planner.cityBadge')}
+            {locale === 'en' ? 'Pilot area: District 1' : 'Khu vực pilot: Quận 1'}
           </span>
         </div>
       </div>

@@ -76,6 +76,9 @@ class GoongDirectionsProvider:
         self.base_url = base_url.rstrip("/")
         self.eta_ttl_seconds = max(30, eta_ttl_seconds)
         self.timeout_seconds = timeout_seconds
+        # Credentials and base URLs can differ across tests, tenants, or live
+        # configuration reloads. A per-provider cache cannot leak one config's
+        # route result into another provider instance.
         self._route_cache: dict[tuple, RouteEstimate] = {}
 
     def _request_json(self, path: str, params: dict[str, str | int]) -> dict[str, Any]:
@@ -113,8 +116,21 @@ class GoongDirectionsProvider:
             )
         origin = (float(origin[0]), float(origin[1]))
         destination = (float(destination[0]), float(destination[1]))
-        key = (round(origin[0], 6), round(origin[1], 6), round(destination[0], 6), round(destination[1], 6), vehicle)
         now = datetime.now(timezone.utc)
+        if round(origin[0], 5) == round(destination[0], 5) and round(origin[1], 5) == round(destination[1], 5):
+            return RouteEstimate(
+                distance_m=0,
+                duration_min=0,
+                provider="goong_directions_v2",
+                is_realtime=False,
+                eta_source="Goong Directions (cùng tọa độ)",
+                calculated_at=now,
+                valid_until=now + timedelta(seconds=self.eta_ttl_seconds),
+                source_uri=GOONG_DIRECTIONS_DOCS,
+                geometry=[[origin[0], origin[1]]],
+            )
+
+        key = (round(origin[0], 6), round(origin[1], 6), round(destination[0], 6), round(destination[1], 6), vehicle)
         cached = self._route_cache.get(key)
         if cached and cached.valid_until and cached.valid_until > now:
             return cached
@@ -141,7 +157,7 @@ class GoongDirectionsProvider:
             duration = float(legs[0]["duration"]["value"])
         except (KeyError, TypeError, ValueError) as error:
             raise RoutingProviderError("Goong route response omitted distance or duration.") from error
-        if not isfinite(distance) or not isfinite(duration) or distance < 0 or duration <= 0:
+        if not isfinite(distance) or not isfinite(duration) or distance < 0 or duration < 0:
             raise RoutingProviderError("Goong returned invalid distance or duration values.")
 
         encoded_geometry = (routes[0].get("overview_polyline") or {}).get("points")

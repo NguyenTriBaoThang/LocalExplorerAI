@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.repositories.experience_repository import ExperienceRepository
+from app.core.pilot_area import PILOT_DISTRICT
 from app.schemas.common import ExperienceRead, POIRead, SlotRead
 from app.services.experience_service import ExperienceService
 from app.db.session import get_db
 from app.services.e5_search_service import E5NotConfigured, E5ProviderError, E5SearchService
+from app.services.pilot_area import is_pilot_district
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 
@@ -15,14 +17,14 @@ router = APIRouter(prefix="/api", tags=["catalog"])
 @router.get("/pois", response_model=list[POIRead])
 def list_pois(db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
-    return [read_poi(repository, item) for item in repository.list_pois()]
+    return [read_poi(repository, item) for item in repository.list_pois(district=PILOT_DISTRICT)]
 
 
 @router.get("/pois/{poi_id}", response_model=POIRead)
 def get_poi(poi_id: str, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     poi = repository.get_poi(poi_id)
-    if not poi:
+    if not poi or not is_pilot_district(poi.district):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "POI not found"})
     return read_poi(repository, poi)
 
@@ -59,13 +61,15 @@ def list_experiences(
         raise HTTPException(status_code=422, detail={"code": "CENTER_COORDINATES_REQUIRED", "message": "Distance filtering requires center coordinates."})
     return ExperienceService(ExperienceRepository(db)).list(
         intent, start_at, end_at, group_size, max_price, topic, is_indoor, query,
-        max_distance_km, center_latitude, center_longitude, slot_id,
+        max_distance_km, center_latitude, center_longitude, slot_id, district=PILOT_DISTRICT,
     )
 
 
 @router.get("/experiences/{experience_id}", response_model=ExperienceRead)
 def get_experience(experience_id: str, db: Session = Depends(get_db)):
-    experience = next((item for item in ExperienceService(ExperienceRepository(db)).list() if item.id == experience_id), None)
+    experience = ExperienceService(ExperienceRepository(db)).get(experience_id)
+    if experience is not None and not is_pilot_district(experience.poi.district):
+        experience = None
     if not experience:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
     return experience
@@ -96,7 +100,7 @@ def search_experiences(
         intent=intent, start_at=start_at, end_at=end_at, group_size=group_size,
         max_price=max_price, topic=topic, is_indoor=is_indoor, query=None if semantic else q,
         max_distance_km=max_distance_km, center_latitude=center_latitude,
-        center_longitude=center_longitude, slot_id=slot_id,
+        center_longitude=center_longitude, slot_id=slot_id, district=PILOT_DISTRICT,
     )
     if not semantic:
         return {"mode": "keyword", "items": items}
@@ -115,7 +119,7 @@ def search_experiences(
 def get_slots(experience_id: str, start_at: datetime | None = None, end_at: datetime | None = None, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     experience = repository.get_experience(experience_id)
-    if not experience:
+    if not experience or not is_pilot_district(experience.poi.district):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
     is_real = experience.verification_status == "verified"
     result = []

@@ -60,6 +60,14 @@ def test_goong_rejects_unconfigured_transport_modes(mode):
 
 
 def test_goong_requires_server_api_key():
+    configured = GoongDirectionsProvider("configured-test-key")
+    configured._route_cache[(10.75, 106.6, 10.76, 106.7, "car")] = RouteEstimate(
+        distance_m=1, duration_min=1, provider="goong_directions_v2", is_realtime=False,
+        eta_source="test", calculated_at=datetime.now(timezone.utc),
+        valid_until=datetime.now(timezone.utc) + timedelta(minutes=5),
+    )
+    # A route cached by a configured client must never bypass another client's
+    # missing-key check.
     provider = GoongDirectionsProvider(None)
     with pytest.raises(RoutingConfigurationError, match="GOONG_API_KEY"):
         provider.get_route((10.75, 106.6), (10.76, 106.7), "car")

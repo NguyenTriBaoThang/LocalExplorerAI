@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from app.adapters.routing.goong import GoongDirectionsProvider
+from app.core.config import settings
 from app.models.entities import ExperienceSlot, Provider, User
-from app.services.auth_service import create_session_token
+from app.services.auth_service import create_session_token, hash_password
 
 
-def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session):
+def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session, monkeypatch):
     provider = Provider(name="Source-backed studio", status="active")
     db_session.add(provider)
     db_session.flush()
@@ -14,10 +16,12 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
         role="provider", provider_id=provider.id, is_active=True,
     )
     admin = User(id=str(uuid4()), email="source-admin@example.com", display_name="Admin", role="admin", is_active=True)
-    traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler", role="traveler", is_active=True)
+    traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler",
+                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True)
     db_session.add_all([provider_user, admin, traveler])
     db_session.commit()
 
+    client.cookies.clear()
     client.cookies.set("le_session", create_session_token(provider_user.id))
     poi_response = client.post("/api/provider/pois", json={
         "name": "Verified craft studio",
@@ -106,12 +110,31 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert poi_detail.json()["data_mode"] == "real"
     assert poi_detail.json()["source_evidence"]
 
+    monkeypatch.setattr(settings, "routing_provider", "goong")
+    monkeypatch.setattr(settings, "goong_api_key", "test-goong-key")
+
+    def fake_goong_request(_provider, path, params):
+        assert path == "/v2/direction"
+        assert params["vehicle"] == "foot"
+        return {"status": "OK", "routes": [{"legs": [{
+            "distance": {"value": 1_200}, "duration": {"value": 300},
+        }]}]}
+
+    monkeypatch.setattr(GoongDirectionsProvider, "_request_json", fake_goong_request)
+
     trip_start = slot_start - timedelta(hours=1)
-    client.cookies.set("le_session", create_session_token(traveler.id))
+    login = client.post("/api/auth/login", json={
+        "email": traveler.email, "password": "long-enough-password",
+    })
+    assert login.status_code == 200, login.text
+    assert client.get("/api/auth/me").json()["role"] == "traveler"
     planned = client.post("/api/itineraries/plan", json={
-        "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=95)).isoformat(),
+        "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=110)).isoformat(),
         "group_size": 2, "budget_vnd": 1000000, "transport_mode": "walking",
         "intent_weights": {"thủ_công": 1.0}, "locked_experience_ids": [experience_id],
+        "origin_latitude": 10.76, "origin_longitude": 106.68,
+        "destination_latitude": 10.78, "destination_longitude": 106.69,
+        "origin_label": "Điểm xuất phát", "destination_label": "Điểm trở về",
     })
     assert planned.status_code == 200, planned.text
     planned_stop = planned.json()["stops"][0]
@@ -124,6 +147,33 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert planned_stop["slot_source_evidence"][0]["target_type"] == "slot"
     assert planned_stop["slot_confirmed_at"]
     assert planned_stop["slot_expires_at"]
+    assert len(planned.json()["routes"]) == 2
+    assert [route["provider"] for route in planned.json()["routes"]] == [
+        "goong_directions_v2", "goong_directions_v2",
+    ]
+    assert planned.json()["routes"][0]["from_label"] == "Điểm xuất phát"
+    assert planned.json()["routes"][-1]["to_label"] == "Điểm trở về"
+
+    hold = client.post("/api/bookings", json={
+        "itinerary_id": planned.json()["itinerary_id"],
+        "itinerary_stop_id": planned_stop["id"],
+        "quantity": 2,
+    })
+    assert hold.status_code == 201, hold.text
+    assert hold.json()["status"] == "pending_provider"
+    assert hold.json()["amount_vnd"] == 500000
+
+    client.cookies.clear()
+    client.cookies.set("le_session", create_session_token(provider_user.id))
+    confirmation = client.post(
+        f"/api/provider/me/bookings/{hold.json()['id']}/decision",
+        json={"action": "accept", "note": "Capacity checked by provider"},
+    )
+    assert confirmation.status_code == 200, confirmation.text
+    assert confirmation.json()["status"] == "awaiting_payment"
+
+    client.cookies.clear()
+    client.cookies.set("le_session", create_session_token(traveler.id))
     reread = client.get(f"/api/itineraries/{planned.json()['itinerary_id']}")
     assert reread.status_code == 200, reread.text
     assert reread.json()["data_mode"] == "real"

@@ -25,8 +25,10 @@ from app.services.integration_config import (
     resolve_integration_value,
     update_integration_settings,
 )
+from app.services.momo import get_momo_config
 from app.services.place_label_suggestion_service import suggest_place_labels
 from app.services.routing_service import make_geocoding_provider, make_routing_provider
+from app.services.vnpay import get_vnpay_config
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
 
@@ -499,8 +501,8 @@ def test_integration_connection(
         if provider_name == "vnpay":
             tmn = resolve_integration_value(db, "payments", "vnpay_tmn_code")
             secret = resolve_integration_value(db, "payments", "vnpay_hash_secret")
-            if tmn and secret:
-                status = "connected"
+            if get_vnpay_config(db).vnpay_checkout_enabled:
+                status = "configured"
                 detail_vi = f"Cấu hình VNPay hợp lệ (TMN Code: {tmn}, Hash Secret: đã thiết lập)."
             else:
                 status = "not_configured"
@@ -509,17 +511,19 @@ def test_integration_connection(
             partner = resolve_integration_value(db, "payments", "momo_partner_code")
             access = resolve_integration_value(db, "payments", "momo_access_key")
             secret = resolve_integration_value(db, "payments", "momo_secret_key")
-            if partner and access and secret:
-                status = "connected"
+            if get_momo_config(db).checkout_enabled:
+                status = "configured"
                 detail_vi = f"Cấu hình MoMo hợp lệ (Partner Code: {partner}, Access Key: đã thiết lập)."
             else:
                 status = "not_configured"
                 detail_vi = "Chưa cấu hình đầy đủ MoMo Partner Code, Access Key hoặc Secret Key."
     elif service == "google_oauth":
+        from app.api.routes.auth import _google_configuration_issue
+
         client_id = resolve_integration_value(db, "google_oauth", "client_id")
         client_secret = resolve_integration_value(db, "google_oauth", "client_secret")
-        if client_id and client_secret:
-            status = "connected"
+        if client_id and client_secret and not _google_configuration_issue(db):
+            status = "configured"
             detail_vi = f"Cấu hình Google OAuth hợp lệ (Client ID: {client_id[:16]}...)."
         else:
             status = "not_configured"
@@ -527,6 +531,11 @@ def test_integration_connection(
     else:
         status = "not_configured"
         detail_vi = "Dịch vụ không hỗ trợ kiểm tra trực tiếp."
+
+    if service == "payments" and status == "configured":
+        detail_vi = "Merchant credentials and public HTTPS callbacks pass configuration checks; complete a sandbox checkout to verify gateway/IPN behavior."
+    elif service == "google_oauth" and status == "configured":
+        detail_vi = "Client credentials and HTTPS callback pass configuration checks; complete a browser sign-in in staging."
 
     _audit(db, actor, "integration.connection_tested", "integration", service, {"status": status})
     db.commit()
@@ -537,10 +546,12 @@ def test_integration_connection(
         "no_results": "Kết nối được nhưng dịch vụ không trả kết quả kiểm tra.",
         "failed": "Không thể kết nối tới dịch vụ.",
     }
+    messages["configured"] = "Configuration checks passed; complete the sandbox transaction or browser OAuth flow on staging."
     return {
         "service": service,
         "status": status,
-        "ok": status == "connected",
+        "ok": status in {"connected", "configured"},
+        "check_type": "external_request" if service in {"ai", "routing"} else "configuration_only",
         "message_vi": messages[status],
         "detail_vi": detail_vi,
     }
