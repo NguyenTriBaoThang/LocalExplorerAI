@@ -1,0 +1,2 @@
+models_3d/**/*.glb filter=lfs diff=lfs merge=lfs -text
+apps/web/public/models_3d/*.glb filter=lfs diff=lfs merge=lfs -text

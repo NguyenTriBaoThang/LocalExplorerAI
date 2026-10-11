@@ -22,7 +22,7 @@ import {
 import { api } from '../../api/client'
 import { useAuth } from '../../auth'
 import {
-  DEFAULT_CALIBRATION,
+  getDefaultCalibration,
   NOTRE_DAME_ORIGIN,
   sanitizeCalibration,
   type ModelCalibration
@@ -158,9 +158,11 @@ function createProceduralCathedralModel(): THREE.Group {
 
 export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
+  defaultCalibration: providedCalibration,
   className = '',
 }: {
   modelId?: string
+  defaultCalibration?: ModelCalibration
   className?: string
 }) {
   const { user } = useAuth()
@@ -168,6 +170,8 @@ export function Map3DLandmarkViewer({
     user?.role === 'admin' ||
     !user ||
     (import.meta as unknown as { env?: Record<string, unknown> }).env?.DEV === true
+
+  const fallbackCalibration = providedCalibration ?? getDefaultCalibration(modelId)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const threeCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -178,10 +182,10 @@ export function Map3DLandmarkViewer({
   const cameraRef = useRef<THREE.Camera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const modelAnchorRef = useRef<THREE.Group | null>(null)
-  const calibrationRef = useRef<ModelCalibration>(DEFAULT_CALIBRATION)
+  const calibrationRef = useRef<ModelCalibration>(fallbackCalibration)
 
-  const [calibration, setCalibration] = useState<ModelCalibration>(DEFAULT_CALIBRATION)
-  const [saved, setSaved] = useState<ModelCalibration>(DEFAULT_CALIBRATION)
+  const [calibration, setCalibration] = useState<ModelCalibration>(fallbackCalibration)
+  const [saved, setSaved] = useState<ModelCalibration>(fallbackCalibration)
   const [calibrationReady, setCalibrationReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingProgress, setLoadingProgress] = useState(0)
@@ -199,11 +203,13 @@ export function Map3DLandmarkViewer({
   useEffect(() => {
     let alive = true
     setCalibrationReady(false)
+    setCalibration(fallbackCalibration)
+    setSaved(fallbackCalibration)
     api
       .get(`/models-3d/calibration/${modelId}`)
       .then(({ data }) => {
         if (!alive) return
-        const next = sanitizeCalibration(data, DEFAULT_CALIBRATION)
+        const next = sanitizeCalibration(data, fallbackCalibration)
         setCalibration(next)
         setSaved(next)
       })
@@ -212,7 +218,7 @@ export function Map3DLandmarkViewer({
           const cached = localStorage.getItem(`calib_${modelId}`)
           if (cached) {
             try {
-              const parsed = sanitizeCalibration(JSON.parse(cached), DEFAULT_CALIBRATION)
+              const parsed = sanitizeCalibration(JSON.parse(cached), fallbackCalibration)
               setCalibration(parsed)
               setSaved(parsed)
             } catch {}
@@ -225,7 +231,7 @@ export function Map3DLandmarkViewer({
     return () => {
       alive = false
     }
-  }, [modelId])
+  }, [modelId, fallbackCalibration])
 
   // 2. Initialize the independent Three.js overlay. Goong JS 1.0.9 creates a
   // WebGL 1 map context, while current Three.js requires WebGL 2.
@@ -327,7 +333,7 @@ export function Map3DLandmarkViewer({
       container,
       style: GOONG_STYLES[styleMode],
       center: [initialLng, initialLat],
-      zoom: 17.6,
+      zoom: calibration.scale > 350 ? 14.8 : calibration.scale > 150 ? 15.8 : 17.6,
       pitch: 60,
       bearing: 0,
     })
@@ -541,12 +547,13 @@ export function Map3DLandmarkViewer({
 
     const lat = calibration.latitude
     const lng = calibration.longitude
+    const zoomForScale = (zoom: number) => Math.max(13.8, zoom - Math.max(0, Math.log2(calibration.scale / 77.5)))
 
     switch (preset) {
       case 'front': // Mặt tiền chính diện nhìn từ Công xã Paris
         map.flyTo({
           center: [lng, lat - 0.00075],
-          zoom: 17.8,
+          zoom: zoomForScale(17.8),
           pitch: 60,
           bearing: 0,
           duration: 1500,
@@ -555,7 +562,7 @@ export function Map3DLandmarkViewer({
       case 'top': // Góc nhìn trên cao (Fly-over)
         map.flyTo({
           center: [lng, lat],
-          zoom: 17.2,
+          zoom: zoomForScale(17.2),
           pitch: 15,
           bearing: 0,
           duration: 1500,
@@ -564,7 +571,7 @@ export function Map3DLandmarkViewer({
       case 'park': // Góc nhìn từ công viên Bưu điện / Nhà hát
         map.flyTo({
           center: [lng - 0.0009, lat - 0.0006],
-          zoom: 17.8,
+          zoom: zoomForScale(17.8),
           pitch: 65,
           bearing: 45,
           duration: 1500,
@@ -573,7 +580,7 @@ export function Map3DLandmarkViewer({
       case 'cinematic': // Góc nhìn 3D nghệ thuật
         map.flyTo({
           center: [lng + 0.0008, lat + 0.0008],
-          zoom: 17.9,
+          zoom: zoomForScale(17.9),
           pitch: 62,
           bearing: -135,
           duration: 1500,
@@ -631,7 +638,7 @@ export function Map3DLandmarkViewer({
         <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl shadow-xl">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
-            GOONG MAPS 3D · NHÀ THỜ ĐỨC BÀ
+            GOONG MAPS 3D · {calibration.display_name.toUpperCase()}
           </span>
         </div>
 
