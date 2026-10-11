@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Marker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import type { LatLngExpression } from 'leaflet'
 import { divIcon } from 'leaflet'
-import { MapPin, Layers, Sparkles, Box } from 'lucide-react'
+import { MapPin, Layers, Sparkles, Box, Maximize2, Minimize2, RotateCcw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export const LEG_COLORS = [
   '#10b981', // 1: Emerald
-  '#f59e0b', // 2: Amber
-  '#06b6d4', // 3: Cyan
+  '#06b6d4', // 2: Cyan
+  '#f59e0b', // 3: Amber
   '#8b5cf6', // 4: Purple
   '#ec4899', // 5: Pink
   '#3b82f6', // 6: Blue
@@ -26,46 +26,80 @@ export interface MapPoint {
   imageUrl?: string
   priceVnd?: number
   district?: string | null
+  type?: 'origin' | 'stop' | 'destination'
+  time?: string
+  address?: string
 }
 
 export interface MapRoute {
   id: string
   coordinates: [number, number][]
   color?: string
+  fromName?: string
+  toName?: string
+  legIndex?: number
+  durationMin?: number
+  distanceM?: number
 }
 
-function FocusPoint({ point }: { point?: MapPoint }) {
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function MapViewController({
+  selectedPoint,
+  resetCounter,
+  allPositions,
+}: {
+  selectedPoint?: MapPoint
+  resetCounter: number
+  allPositions: [number, number][]
+}) {
   const map = useMap()
 
   useEffect(() => {
     map.invalidateSize()
-    const timer = setTimeout(() => {
-      map.invalidateSize()
-    }, 250)
+    const timer = setTimeout(() => map.invalidateSize(), 250)
     return () => clearTimeout(timer)
   }, [map])
 
   useEffect(() => {
-    if (point) {
-      map.flyTo([point.latitude, point.longitude], Math.max(map.getZoom(), 15), {
+    if (selectedPoint) {
+      map.flyTo([selectedPoint.latitude, selectedPoint.longitude], Math.max(map.getZoom(), 15), {
         duration: 0.8,
         easeLinearity: 0.25,
       })
     }
-  }, [point, map])
+  }, [selectedPoint, map])
+
+  useEffect(() => {
+    if (resetCounter > 0 && allPositions.length > 1) {
+      map.fitBounds(allPositions, { padding: [48, 48], maxZoom: 15 })
+    }
+  }, [resetCounter, map, allPositions])
+
   return null
 }
 
-function FitRouteBounds({ points, routes }: { points: MapPoint[]; routes: MapRoute[] }) {
+function InitialBoundsFitter({ points, routes }: { points: MapPoint[]; routes: MapRoute[] }) {
   const map = useMap()
-  const boundsFingerprint = `${points.map((point) => `${point.latitude},${point.longitude}`).join('|')}::${routes.map((route) => route.coordinates.map(([lat, lon]) => `${lat},${lon}`).join(';')).join('|')}`
+  const fingerprint = `${points.map((p) => `${p.latitude},${p.longitude}`).join('|')}::${routes.map((r) => r.coordinates.map(([lat, lon]) => `${lat},${lon}`).join(';')).join('|')}`
+
   useEffect(() => {
     const positions = [
       ...points.map((point) => [point.latitude, point.longitude] as [number, number]),
       ...routes.flatMap((route) => route.coordinates),
     ]
-    if (positions.length > 1) map.fitBounds(positions, { padding: [36, 36], maxZoom: 15 })
-  }, [map, boundsFingerprint])
+    if (positions.length > 1) {
+      map.fitBounds(positions, { padding: [42, 42], maxZoom: 15 })
+    }
+  }, [map, fingerprint])
+
   return null
 }
 
@@ -96,6 +130,9 @@ export function MapAdapter({
   pointSourceLabel,
   mapFooterLabel,
   className = '',
+  showJourneyTracker = true,
+  isExpanded = false,
+  onExpandToggle,
 }: {
   points: MapPoint[]
   selectedId?: string
@@ -104,179 +141,342 @@ export function MapAdapter({
   pointSourceLabel?: string
   mapFooterLabel?: string
   className?: string
+  showJourneyTracker?: boolean
+  isExpanded?: boolean
+  onExpandToggle?: () => void
 }) {
   const [styleMode, setStyleMode] = useState<string>('goong_streets')
+  const [resetCounter, setResetCounter] = useState(0)
   const selected = points.find((point) => point.id === selectedId)
-  const center: LatLngExpression = [10.775, 106.700]
+  const center: LatLngExpression = [10.775, 106.7]
+
+  const allPositions: [number, number][] = [
+    ...points.map((p) => [p.latitude, p.longitude] as [number, number]),
+    ...routes.flatMap((r) => r.coordinates),
+  ]
+
+  const hasEndpoints = points.some((p) => p.type === 'origin' || p.type === 'destination')
 
   return (
     <div
-      className={`map-shell-3d ${className}`}
-      style={{ height: '680px', minHeight: '500px', width: '100%', position: 'relative' }}
+      className={`map-shell-3d ${isExpanded ? 'map-shell-expanded' : ''} ${className}`}
+      style={{
+        height: isExpanded ? '80vh' : '680px',
+        minHeight: '520px',
+        width: '100%',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
-      <MapContainer
-        center={center}
-        zoom={13}
-        scrollWheelZoom
-        className="map-canvas-3d"
-        style={{ height: '100%', width: '100%', minHeight: '500px' }}
-      >
-        <TileLayer
-          attribution={TILE_PRESETS[styleMode]?.attribution || TILE_PRESETS.goong_streets.attribution}
-          url={TILE_PRESETS[styleMode]?.url || TILE_PRESETS.goong_streets.url}
-          subdomains={TILE_PRESETS[styleMode]?.subdomains || 'abc'}
-          maxZoom={19}
-        />
-        <FitRouteBounds points={points} routes={routes} />
-        <FocusPoint point={selected} />
+      {/* Visual Journey Tracker Strip (Above map canvas if endpoints/routes exist) */}
+      {showJourneyTracker && hasEndpoints && points.length > 1 && (
+        <div className="map-journey-tracker">
+          <div className="journey-tracker-track">
+            {points.map((point, idx) => {
+              const active = point.id === selectedId
+              const isOrigin = point.type === 'origin' || point.id.includes('origin')
+              const isDest = point.type === 'destination' || point.id.includes('destination')
+              const leg = routes[idx]
 
-        {/* Multi-color distinct route legs for clear navigation */}
-        {routes.map((route, idx) => {
-          const legColor = route.color || LEG_COLORS[idx % LEG_COLORS.length]
-          return (
-            <div key={route.id || `leg-${idx}`}>
-              {/* Outer soft glow line */}
-              <Polyline
-                positions={route.coordinates}
-                pathOptions={{
-                  color: legColor,
-                  weight: 10,
-                  opacity: 0.32,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-              {/* Core colored route line */}
-              <Polyline
-                positions={route.coordinates}
-                pathOptions={{
-                  color: legColor,
-                  weight: 5,
-                  opacity: 0.95,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            </div>
-          )
-        })}
+              return (
+                <div key={point.id} className="journey-tracker-step-wrap">
+                  <button
+                    type="button"
+                    className={`journey-node-btn ${active ? 'active' : ''} ${isOrigin ? 'is-origin' : ''} ${isDest ? 'is-dest' : ''}`}
+                    onClick={() => onSelect?.(point.id)}
+                    title={point.name}
+                  >
+                    <span className="journey-node-badge">
+                      {isOrigin ? '🚩' : isDest ? '🏁' : point.number ?? idx + 1}
+                    </span>
+                    <div className="journey-node-text-col">
+                      <span className="journey-node-kicker">
+                        {isOrigin ? 'Xuất phát' : isDest ? 'Điểm về' : `Điểm ${point.number ?? idx + 1}`}
+                      </span>
+                      <span className="journey-node-name">{point.name}</span>
+                    </div>
+                  </button>
 
-        {points.map((point) => {
-          const active = point.id === selectedId
-          const icon = divIcon({
-            className: 'custom-3d-marker',
-            html: `
-              <div class="marker-3d-pin ${active ? 'marker-3d-active' : ''}">
-                <div class="marker-pulse-ring"></div>
-                <div class="marker-bubble">
-                  ${point.number ? `<b>${point.number}</b>` : '<span class="marker-dot-inner"></span>'}
-                </div>
-                <div class="marker-stem"></div>
-                <div class="marker-shadow"></div>
-              </div>
-            `,
-            iconSize: [38, 48],
-            iconAnchor: [19, 44],
-            popupAnchor: [0, -42],
-          })
-
-          return (
-            <Marker
-              key={point.id}
-              position={[point.latitude, point.longitude]}
-              icon={icon}
-              eventHandlers={{ click: () => onSelect?.(point.id) }}
-            >
-              <Popup className="custom-3d-popup">
-                <div className="map-popup-3d">
-                  {point.imageUrl && (
-                    <div className="popup-photo-wrap">
-                      <img
-                        src={point.imageUrl}
-                        alt={point.name}
-                        className="popup-photo-img"
-                        loading="lazy"
-                        onError={(e) => {
-                          ;(e.target as HTMLElement).style.display = 'none'
-                        }}
+                  {idx < points.length - 1 && (
+                    <div className="journey-connector">
+                      <div
+                        className="connector-line"
+                        style={{ backgroundColor: LEG_COLORS[idx % LEG_COLORS.length] }}
                       />
-                      <div className="popup-photo-gradient" />
-                      <span className="popup-kicker-floating">{point.category ?? 'Trải nghiệm'}</span>
+                      <span
+                        className="connector-pill"
+                        style={{ color: LEG_COLORS[idx % LEG_COLORS.length] }}
+                        title={`Chặng ${idx + 1}: ${leg?.durationMin ?? '?'} phút`}
+                      >
+                        {leg?.durationMin ? `${leg.durationMin}p ➔` : '➔'}
+                      </span>
                     </div>
                   )}
-                  <div className="popup-content-box">
-                    {!point.imageUrl && <span className="popup-kicker">{point.category ?? 'Trải nghiệm'}</span>}
-                    <strong className="popup-title">{point.name}</strong>
-                    <div className="popup-sub-row">
-                      <span className="popup-sub">
-                        <MapPin size={11} /> {point.district || pointSourceLabel || 'TP. Hồ Chí Minh'}
-                      </span>
-                      {point.priceVnd !== undefined && (
-                        <span className="popup-price-pill">
-                          {point.priceVnd > 0 ? `${point.priceVnd.toLocaleString('vi-VN')}₫` : 'Miễn phí'}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Main Map View Canvas */}
+      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <MapContainer
+          center={center}
+          zoom={13}
+          scrollWheelZoom
+          className="map-canvas-3d"
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution={TILE_PRESETS[styleMode]?.attribution || TILE_PRESETS.goong_streets.attribution}
+            url={TILE_PRESETS[styleMode]?.url || TILE_PRESETS.goong_streets.url}
+            subdomains={TILE_PRESETS[styleMode]?.subdomains || 'abc'}
+            maxZoom={19}
+          />
+          <InitialBoundsFitter points={points} routes={routes} />
+          <MapViewController
+            selectedPoint={selected}
+            resetCounter={resetCounter}
+            allPositions={allPositions}
+          />
+
+          {/* Distinct Multi-colored Route Polylines & Directional Indicators */}
+          {routes.map((route, idx) => {
+            const legColor = route.color || LEG_COLORS[idx % LEG_COLORS.length]
+            const midIndex = Math.floor(route.coordinates.length / 2)
+            const midCoord = route.coordinates[midIndex]
+            const legNum = route.legIndex ?? idx + 1
+            const durationTxt = route.durationMin ? `${route.durationMin}p` : ''
+            const distanceTxt = route.distanceM ? `${(route.distanceM / 1000).toFixed(1)}km` : ''
+
+            const waypointIcon = divIcon({
+              className: 'leg-waypoint-marker-container',
+              html: `
+                <div class="leg-waypoint-bubble" style="border-left: 3px solid ${legColor};">
+                  <span class="leg-waypoint-num" style="background: ${legColor};">Chặng ${legNum}</span>
+                  <span class="leg-waypoint-info">${durationTxt}${distanceTxt ? ` · ${distanceTxt}` : ''} ➔</span>
+                </div>
+              `,
+              iconSize: [120, 26],
+              iconAnchor: [60, 13],
+            })
+
+            return (
+              <div key={route.id || `leg-${idx}`}>
+                {/* Outer glowing line */}
+                <Polyline
+                  positions={route.coordinates}
+                  pathOptions={{
+                    color: legColor,
+                    weight: 9,
+                    opacity: 0.35,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+                {/* Core route line */}
+                <Polyline
+                  positions={route.coordinates}
+                  pathOptions={{
+                    color: legColor,
+                    weight: 4.5,
+                    opacity: 0.95,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+                {/* Directional midpoint chip */}
+                {midCoord && (
+                  <Marker
+                    position={midCoord}
+                    icon={waypointIcon}
+                    interactive={false}
+                  />
+                )}
+              </div>
+            )
+          })}
+
+          {/* Points Markers: Origin, Intermediate Stops, and Destination */}
+          {points.map((point) => {
+            const active = point.id === selectedId
+            const isOrigin = point.type === 'origin' || point.id.includes('origin')
+            const isDest = point.type === 'destination' || point.id.includes('destination')
+
+            let markerTypeClass = 'marker-stop-pin'
+            let bubbleContent = `<b>${point.number ?? '•'}</b>`
+            let labelText = `${point.number ? `${point.number}. ` : ''}${point.name}`
+            let labelBadge = ''
+
+            if (isOrigin) {
+              markerTypeClass = 'marker-origin-pin'
+              bubbleContent = '<span class="marker-symbol">🚩</span>'
+              labelText = point.name
+              labelBadge = '<span class="badge-origin-pill">XUẤT PHÁT</span>'
+            } else if (isDest) {
+              markerTypeClass = 'marker-dest-pin'
+              bubbleContent = '<span class="marker-symbol">🏁</span>'
+              labelText = point.name
+              labelBadge = '<span class="badge-dest-pill">ĐIỂM VỀ</span>'
+            } else if (point.number) {
+              labelBadge = `<span class="badge-stop-pill">ĐIỂM ${point.number}</span>`
+            }
+
+            const icon = divIcon({
+              className: 'custom-3d-marker',
+              html: `
+                <div class="marker-3d-pin-v2 ${markerTypeClass} ${active ? 'marker-3d-active' : ''}">
+                  <div class="marker-floating-label-pill">
+                    ${labelBadge}
+                    <span class="marker-label-name">${escapeHtml(labelText)}</span>
+                    ${point.time ? `<span class="marker-label-time">${point.time}</span>` : ''}
+                  </div>
+                  <div class="marker-pulse-ring"></div>
+                  <div class="marker-bubble">
+                    ${bubbleContent}
+                  </div>
+                  <div class="marker-stem"></div>
+                  <div class="marker-shadow"></div>
+                </div>
+              `,
+              iconSize: [180, 78],
+              iconAnchor: [90, 72],
+              popupAnchor: [0, -68],
+            })
+
+            return (
+              <Marker
+                key={point.id}
+                position={[point.latitude, point.longitude]}
+                icon={icon}
+                eventHandlers={{ click: () => onSelect?.(point.id) }}
+              >
+                <Popup className="custom-3d-popup">
+                  <div className="map-popup-3d">
+                    {point.imageUrl && (
+                      <div className="popup-photo-wrap">
+                        <img
+                          src={point.imageUrl}
+                          alt={point.name}
+                          className="popup-photo-img"
+                          loading="lazy"
+                          onError={(e) => {
+                            ;(e.target as HTMLElement).style.display = 'none'
+                          }}
+                        />
+                        <div className="popup-photo-gradient" />
+                        <span className="popup-kicker-floating">{point.category ?? 'Trải nghiệm'}</span>
+                      </div>
+                    )}
+                    <div className="popup-content-box">
+                      <div className="popup-badge-row">
+                        <span className="popup-kicker">
+                          {isOrigin ? '🚩 Điểm xuất phát' : isDest ? '🏁 Điểm kết thúc' : point.category ?? 'Trải nghiệm'}
                         </span>
+                        {point.time && <span className="popup-time-pill">{point.time}</span>}
+                      </div>
+                      <strong className="popup-title">{point.name}</strong>
+                      <div className="popup-sub-row">
+                        <span className="popup-sub">
+                          <MapPin size={11} /> {point.address || point.district || pointSourceLabel || 'TP. Hồ Chí Minh'}
+                        </span>
+                        {point.priceVnd !== undefined && (
+                          <span className="popup-price-pill">
+                            {point.priceVnd > 0 ? `${point.priceVnd.toLocaleString('vi-VN')}₫` : 'Miễn phí'}
+                          </span>
+                        )}
+                      </div>
+                      {point.placeId ? (
+                        <Link
+                          className="popup-select-btn"
+                          to={`/places/${encodeURIComponent(point.placeId)}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Sparkles size={12} /> Xem chi tiết địa điểm
+                        </Link>
+                      ) : onSelect && (
+                        <button
+                          type="button"
+                          className="popup-select-btn"
+                          onClick={() => onSelect(point.id)}
+                        >
+                          <Sparkles size={12} /> Tập trung điểm này
+                        </button>
                       )}
                     </div>
-                    {point.placeId ? (
-                      <Link
-                        className="popup-select-btn"
-                        to={`/places/${encodeURIComponent(point.placeId)}`}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <Sparkles size={12} /> Xem chi tiết địa điểm
-                      </Link>
-                    ) : onSelect && (
-                      <button
-                        type="button"
-                        className="popup-select-btn"
-                        onClick={() => onSelect(point.id)}
-                      >
-                        <Sparkles size={12} /> Xem chi tiết
-                      </button>
-                    )}
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          )
-        })}
-      </MapContainer>
+                </Popup>
+              </Marker>
+            )
+          })}
+        </MapContainer>
 
-      {/* Top Map Controls */}
-      <div className="map-3d-controls">
-        <div className="map-3d-badge">
-          <span className="badge-live-pulse" />
-          <span>GOONG MAPS & DIRECTIONS V2 · SÀI GÒN</span>
+        {/* Floating Top Controls (Neat Top-Right Stack) */}
+        <div className="map-floating-top-right">
+          <div className="map-control-btn-group">
+            <button
+              type="button"
+              className="map-float-btn"
+              onClick={() => setResetCounter((c) => c + 1)}
+              title="Xem toàn cảnh toàn bộ chuyến đi (Fit Bounds)"
+            >
+              <RotateCcw size={14} />
+              <span>Toàn cảnh</span>
+            </button>
+
+            <button
+              type="button"
+              className="map-float-btn"
+              onClick={() => {
+                const keys = Object.keys(TILE_PRESETS)
+                const nextIdx = (keys.indexOf(styleMode) + 1) % keys.length
+                setStyleMode(keys[nextIdx])
+              }}
+              title="Chuyển chế độ lớp bản đồ"
+            >
+              <Layers size={14} />
+              <span>{TILE_PRESETS[styleMode]?.name.split(' ')[0] || 'Lớp bản đồ'}</span>
+            </button>
+
+            {onExpandToggle && (
+              <button
+                type="button"
+                className="map-float-btn"
+                onClick={onExpandToggle}
+                title={isExpanded ? 'Thu nhỏ bản đồ về cột bên phải' : 'Phóng to bản đồ toàn chiều rộng'}
+              >
+                {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span>{isExpanded ? 'Thu nhỏ' : 'Mở rộng'}</span>
+              </button>
+            )}
+
+            <Link
+              to="/map-3d"
+              className="map-float-btn map-float-btn-accent"
+              title="Xem bản đồ 3D Landmark Sài Gòn Digital Twin"
+            >
+              <Box size={14} />
+              <span>3D Sài Gòn</span>
+            </Link>
+          </div>
         </div>
 
-        <Link
-          to="/map-3d"
-          className="map-layer-toggle"
-          style={{ textDecoration: 'none', background: 'rgba(99, 102, 241, 0.2)', borderColor: 'rgba(129, 140, 248, 0.4)' }}
-          title="Xem mô hình 3D Landmark & Tùy chỉnh vị trí"
-        >
-          <Box size={13} />
-          <span>Bản đồ 3D Landmark</span>
-        </Link>
+        {/* Top-Left Provider Status Pill */}
+        <div className="map-floating-top-left">
+          <div className="map-provider-pill">
+            <span className="badge-live-pulse" />
+            <span>Goong Maps & Directions · Sài Gòn</span>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          className="map-layer-toggle"
-          onClick={() => {
-            const keys = Object.keys(TILE_PRESETS)
-            const nextIdx = (keys.indexOf(styleMode) + 1) % keys.length
-            setStyleMode(keys[nextIdx])
-          }}
-          title="Chuyển lớp bản đồ (Goong HD / Google / Đêm)"
-        >
-          <Layers size={13} />
-          <span>{TILE_PRESETS[styleMode]?.name || 'Goong Streets'}</span>
-        </button>
-      </div>
-
-      <div className="map-3d-bottom-info">
-        <span>{mapFooterLabel || 'Tọa độ & tuyến đường chính xác từ Goong Directions API · Đồng bộ với lịch trình'}</span>
+        {/* Bottom Route Legend Overlay */}
+        <div className="map-3d-bottom-info">
+          <span>{mapFooterLabel || 'Tọa độ & lộ trình chính xác từ Goong Directions API · Cập nhật theo thời gian thực'}</span>
+        </div>
       </div>
     </div>
   )
 }
+

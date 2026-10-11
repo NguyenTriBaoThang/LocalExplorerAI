@@ -11260,3 +11260,727 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Modern Itinerary Redesign & Clear Route Navigation (UI/UX Overhaul)        */
+/* -------------------------------------------------------------------------- */
+
+/* Hero Journey Overview Bar */
+.itinerary-journey-overview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(var(--surface-rgb), 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+}
+
+.journey-summary-node {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.journey-summary-node .summary-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+}
+
+.journey-summary-node.is-start .summary-icon {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.35);
+}
+
+.journey-summary-node.is-end .summary-icon {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+.journey-summary-node .summary-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.journey-summary-node .summary-meta small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.journey-summary-node .summary-meta strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.journey-summary-arrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 180px;
+  min-width: 70px;
+}
+
+.journey-summary-arrow .arrow-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), rgba(6, 182, 212, 0.6));
+}
+
+.journey-summary-arrow .arrow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tx-mint);
+  white-space: nowrap;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+@media (max-width: 960px) {
+  .itinerary-journey-overview-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .journey-summary-arrow {
+    max-width: 100%;
+  }
+  .journey-summary-node .summary-meta strong {
+    max-width: 100%;
+  }
+}
+
+/* Upgraded 3D Map Markers with Permanent Floating Label */
+.marker-3d-pin-v2 {
+  position: relative;
+  width: 180px;
+  height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.marker-floating-label-pill {
+  position: absolute;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 10px rgba(16, 185, 129, 0.2);
+  white-space: nowrap;
+  max-width: 176px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  transition: all 0.2s ease;
+}
+
+.marker-floating-label-pill:hover,
+.marker-3d-active .marker-floating-label-pill {
+  transform: translateY(-2px) scale(1.04);
+  border-color: #34d399;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(52, 211, 153, 0.4);
+}
+
+.badge-origin-pill {
+  background: #06b6d4;
+  color: #080c14;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.badge-dest-pill {
+  background: #f43f5e;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.badge-stop-pill {
+  background: #10b981;
+  color: #080c14;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.marker-label-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marker-label-time {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.marker-bubble-origin {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  box-shadow: 0 8px 18px rgba(6, 182, 212, 0.45) !important;
+}
+
+.marker-bubble-dest {
+  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+  box-shadow: 0 8px 18px rgba(244, 63, 94, 0.45) !important;
+}
+
+.marker-stem-origin {
+  background: #06b6d4 !important;
+}
+
+.marker-stem-dest {
+  background: #f43f5e !important;
+}
+
+.marker-pulse-origin {
+  border-color: #06b6d4 !important;
+}
+
+.marker-pulse-dest {
+  border-color: #f43f5e !important;
+}
+
+.marker-symbol {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Directional Midpoint Badges along Route Legs */
+.leg-waypoint-marker-container {
+  background: transparent;
+  border: 0;
+}
+
+.leg-waypoint-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-full);
+  padding: 2px 7px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 10px;
+}
+
+.leg-waypoint-num {
+  font-weight: 800;
+  font-size: 9px;
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.leg-waypoint-info {
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+/* Map Journey Tracker (Above map canvas) */
+.map-journey-tracker {
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.journey-tracker-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.journey-tracker-step-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.journey-node-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 5px 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.journey-node-btn:hover,
+.journey-node-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: var(--emerald);
+  color: var(--text-strong);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+
+.journey-node-btn.is-origin.active {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: var(--cyan);
+}
+
+.journey-node-btn.is-dest.active {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: var(--rose);
+}
+
+.journey-node-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.journey-node-btn.active .journey-node-badge {
+  background: var(--emerald);
+  color: #080c14;
+}
+
+.journey-node-text-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.journey-node-kicker {
+  font-size: 9px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.journey-node-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journey-connector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.journey-connector .connector-line {
+  width: 18px;
+  height: 2px;
+  opacity: 0.6;
+}
+
+.journey-connector .connector-pill {
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Floating Map Controls in Top Right */
+.map-floating-top-right {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.map-control-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+  align-items: flex-end;
+}
+
+.map-float-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.map-float-btn:hover {
+  background: rgba(30, 41, 59, 0.95);
+  color: #ffffff;
+  border-color: var(--border-highlight);
+  transform: translateY(-1px);
+}
+
+.map-float-btn-accent {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #c7d2fe;
+}
+
+.map-float-btn-accent:hover {
+  background: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+}
+
+.map-floating-top-left {
+  position: absolute;
+  top: 14px;
+  left: 56px; /* leaves room for leaflet zoom controls */
+  z-index: 500;
+  pointer-events: none;
+}
+
+.map-provider-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+/* Timeline Endpoint Cards (Origin & Destination) */
+.timeline-endpoint-card {
+  border-radius: var(--radius-lg);
+}
+
+.timeline-endpoint-card .endpoint-badge-origin {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  color: #080c14;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4) !important;
+}
+
+.timeline-endpoint-card .endpoint-badge-dest {
+  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%) !important;
+  color: #ffffff;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4) !important;
+}
+
+.endpoint-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.endpoint-tag-origin {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.endpoint-tag-dest {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--rose);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.endpoint-card-body {
+  border-left: 3px solid transparent;
+}
+
+.timeline-origin-wrapper .endpoint-card-body {
+  border-left-color: var(--cyan);
+}
+
+.timeline-dest-wrapper .endpoint-card-body {
+  border-left-color: var(--rose);
+}
+
+.endpoint-subnote {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Travel Leg Connector in Timeline */
+.travel-leg-connector {
+  display: flex;
+  align-items: stretch;
+  margin: 6px 0 16px 20px;
+}
+
+.travel-leg-line {
+  width: 2px;
+  background: var(--emerald);
+  margin-right: 22px;
+  opacity: 0.6;
+}
+
+.travel-leg-card {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.leg-badge-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.leg-number-pill {
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.leg-route-direction {
+  font-size: 12px;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.leg-details-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.leg-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.leg-stat-item strong {
+  color: #ffffff;
+}
+
+.leg-provider-tag {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* Data Provenance Collapsible Accordion */
+.stop-provenance-accordion {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.provenance-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tx-mint);
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.2s;
+}
+
+.provenance-summary:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.provenance-toggle-icon {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.provenance-details-content {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.provenance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Modern Booking Panel in Stop Card */
+.booking-inline-panel-v2 {
+  margin-top: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.booking-v2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.booking-v2-header strong {
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
+.booking-v2-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.guest-stepper-box {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.guest-stepper-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s;
+}
+
+.guest-stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.guest-stepper-value {
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.booking-price-preview {
+  font-size: 12px;
+  color: var(--tx-gold);
+  font-weight: 700;
+}
+
+/* Sticky Map Column */
+.map-col-3d {
+  position: sticky;
+  top: 84px;
+  z-index: 20;
+}
+
+.is-map-expanded-split {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) !important;
+}
+
