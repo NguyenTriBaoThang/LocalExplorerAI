@@ -35,6 +35,11 @@ python -m pip install -r apps/api/requirements-ranking-training.txt
 python scripts/train_experience_ranker.py --mode weak_label
 ```
 
+For verified human preference training and model packaging, use `notebooks/LocalExplorerAI_Train_Verified_Ranker_Colab.ipynb` or:
+```powershell
+python scripts/train_verified_experience_ranker.py
+```
+
 The script compares a tag/category rule baseline with LightGBM `LGBMRanker(objective="lambdarank")` and XGBoost `XGBRanker(objective="rank:ndcg")`. Both rankers receive the same API feature function, POI split, and four tuning configurations. Validation NDCG@5 selects the candidate; NDCG@10, latency, artifact size, and three-seed validation stability are supporting checks. Test metrics are calculated only for the selected model and baseline.
 
 The default output is under `models/ai-ranker/weak-experiment/`. The directory is ignored by Git and is not the API's active bundle directory. An ML bundle is emitted only when it improves validation NDCG@5 over the rule baseline by at least 0.01. A weak-label bundle is always marked `deployment_eligible=false`; the API refuses to load it. If the rule baseline wins or ties, no ML bundle is created.

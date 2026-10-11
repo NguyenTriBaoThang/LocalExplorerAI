@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db
+from app.api.dependencies import get_current_user, get_db, get_optional_user
 from app.core.config import settings
 from app.models.entities import User, Itinerary
 from app.schemas.auth import ClaimTicketRequest, LoginRequest, PasswordChangeRequest, ProfileUpdateRequest, RegisterRequest, UserRead
@@ -100,6 +100,12 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
 @router.get("/me", response_model=UserRead)
 def get_profile(user: User = Depends(get_current_user)):
     return user
+
+
+@router.get("/session")
+def get_session(user: User | None = Depends(get_optional_user)):
+    """Bootstrap the UI without treating an anonymous visitor as an API error."""
+    return {"user": UserRead.model_validate(user) if user is not None else None}
 
 
 @router.patch("/me", response_model=UserRead)

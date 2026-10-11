@@ -53,12 +53,14 @@ python -m scripts.seed_db
 
 ---
 
-## 4. Liên kết với các Mô hình Học máy (`models/`)
+## 4. Liên kết với các Mô hình Học máy (`models/` & `data/training/`)
 
 Dữ liệu trong thư mục này được liên kết trực tiếp với các mô hình AI/ML chạy cục bộ:
-1. `models/ai-ranker/`: Sử dụng đặc trưng trải nghiệm, thời tiết và người dùng để huấn luyện mô hình XGBRanker (NDCG@5 = 0.9516).
-2. `models/flood-risk/`: Mô hình Scikit-learn đánh giá rủi ro ngập lụt đô thị khi lập tuyến đường di chuyển.
-3. `models/e5/`: Mô hình vector Multilingual E5 phục vụ tìm kiếm ngữ nghĩa văn bản tiếng Việt cho các hoạt động trong catalog.
+1. `models/ai-ranker/`: Mô hình Xếp hạng Trải nghiệm (Experience Ranker) với 15 đặc trưng (`ranker-features-v2`), huấn luyện bằng XGBoost/LightGBM. Hệ thống phân định nghiêm ngặt giữa:
+   - Dữ liệu thực nghiệm yếu (`data/experimental/ranking/ranking_candidates_labeled.csv` - 3,828 hàng OSM).
+   - Biểu mẫu dữ liệu kiểm chứng bởi con người (`data/training/experience_ranker_verified_template.csv`).
+2. `models/flood-risk/`: Mô hình Scikit-learn đánh giá rủi ro ngập lụt đô thị khi lập tuyến đường di chuyển, dựa trên dữ liệu báo cáo ngập lịch sử TP.HCM (`data/raw/hcmc_flood_reports_2002_2026.csv`).
+3. `models/e5/`: Mô hình vector Multilingual E5 (`intfloat/multilingual-e5-base`) phục vụ tìm kiếm ngữ nghĩa văn bản tiếng Việt cho các hoạt động trong catalog.
 
 ---
 

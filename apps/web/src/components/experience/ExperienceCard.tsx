@@ -3,6 +3,7 @@ import type { Experience } from '../../types'
 import { VerificationBadge } from '../common/StatusBadge'
 import { TiltCard3D } from '../3d/TiltCard3D'
 import { useTranslation } from '../../i18n'
+import { Link } from 'react-router-dom'
 
 export function ExperienceCard({
   experience,
@@ -23,6 +24,8 @@ export function ExperienceCard({
     relaxation: { label: t('explore.intentRelax'), color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200', icon: '🍵' },
   }
 
+  const sourcePhoto = experience.poi.details?.images?.find((item) => (item.local_url || item.url) && item.source_url && item.license)
+  const photoUrl = (sourcePhoto && (sourcePhoto.local_url || sourcePhoto.url)) || experience.poi.image_urls?.[0] || null
   const slot = experience.slots.find((item) => !['full', 'unavailable', 'cancelled'].includes(item.status))
   const time = slot
     ? new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
@@ -44,22 +47,46 @@ export function ExperienceCard({
       <div className="card-3d-inner">
         {/* Photo Header Container */}
         <div className="card-photo-container">
-          {experience.poi.image_urls?.[0] ? (
+          {photoUrl ? (
             <img
-              src={experience.poi.image_urls[0]}
+              src={photoUrl}
               alt={experience.name}
               className="card-photo-img"
               loading="lazy"
               onError={(e) => {
-                ;(e.target as HTMLElement).style.display = 'none'
+                const img = e.currentTarget
+                img.style.display = 'none'
+                const parent = img.parentElement
+                if (parent) {
+                  const fallback = parent.querySelector('.card-photo-placeholder') as HTMLElement
+                  if (fallback) fallback.style.display = 'flex'
+                }
               }}
             />
-          ) : (
-            <div className="card-photo-placeholder">
-              <span className="card-placeholder-icon">{cat.icon}</span>
-            </div>
-          )}
+          ) : null}
+          <div
+            className="card-photo-placeholder"
+            style={{ display: photoUrl ? 'none' : 'flex' }}
+          >
+            <span className="card-placeholder-icon">{cat.icon}</span>
+            <span className="card-placeholder-label">{cat.label}</span>
+          </div>
           <div className="card-photo-gradient" />
+          {sourcePhoto ? (
+            <a
+              className="card-photo-credit"
+              href={sourcePhoto.source_url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Ảnh: {sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · {sourcePhoto.license}
+            </a>
+          ) : experience.poi.source_attribution ? (
+            <span className="card-photo-credit">
+              {experience.poi.source_attribution}
+            </span>
+          ) : null}
           
           <div className="card-photo-top-badges">
             <div className="cat-badge">
@@ -84,6 +111,13 @@ export function ExperienceCard({
         <div className="card-body-content">
           <h3 className="card-title">{experience.name}</h3>
           <p className="card-desc">{experience.description}</p>
+          <Link
+            className="card-place-detail-link"
+            to={`/places/${encodeURIComponent(experience.poi.id)}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            Xem chi tiết địa điểm <ArrowUpRight size={13} />
+          </Link>
 
           {/* Intent Tags */}
           <div className="card-tags-row">

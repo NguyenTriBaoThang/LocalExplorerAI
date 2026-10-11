@@ -3,9 +3,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
+
+np = pytest.importorskip("numpy")
+pd = pytest.importorskip("pandas")
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -19,6 +20,10 @@ from train_experience_ranker import (  # noqa: E402
     read_weak_dataset,
     split_by_poi,
     split_by_query_id,
+)
+from train_verified_experience_ranker import (  # noqa: E402
+    REQUIRED_COLUMNS as VERIFIED_REQUIRED_COLUMNS,
+    read_verified_dataset,
 )
 from app.services.ranker_features import (  # noqa: E402
     FEATURE_NAMES,
@@ -115,6 +120,18 @@ def test_weak_data_cannot_be_silently_promoted_to_verified_mode():
         read_weak_dataset(DATA, "verified_human_labeled")
 
 
+def test_weak_osm_dataset_is_rejected_by_verified_human_trainer():
+    with pytest.raises(DatasetContractError, match="Missing required verified-data columns"):
+        read_verified_dataset(DATA)
+
+
+def test_verified_template_has_only_a_header_and_matches_contract():
+    template = ROOT / "data" / "training" / "experience_ranker_verified_template.csv"
+    frame = pd.read_csv(template)
+    assert frame.empty
+    assert VERIFIED_REQUIRED_COLUMNS <= set(frame.columns)
+
+
 def test_api_adapter_never_loads_a_weak_label_bundle(tmp_path):
     pytest.importorskip("pydantic_settings")
     from app.services.ml_ranker_service import MLRankerService, MLRankerUnavailable
@@ -141,3 +158,29 @@ def test_api_adapter_never_loads_a_weak_label_bundle(tmp_path):
     assert "never deployable" in status["block_reason"]
     with pytest.raises(MLRankerUnavailable):
         service._load()
+
+    ranked, rejected, inference_status = service.rank(
+        {
+            "user_intent_text": "handicraft",
+            "user_intent_tags": ["handicraft"],
+            "remaining_time_min": 120,
+            "group_size": 2,
+            "budget_remaining_vnd": 500_000,
+        },
+        [{
+            "candidate_experience_id": "craft-1",
+            "candidate_name": "Craft workshop",
+            "candidate_tags": ["handicraft"],
+            "duration_min": 60,
+            "price_vnd_per_person": 100_000,
+            "eta_min": 10,
+            "is_hands_on": True,
+            "is_indoor": True,
+            "hard_feasible": True,
+        }],
+    )
+    assert rejected == []
+    assert ranked[0]["rank_score"] == 3
+    assert inference_status["ranking_source"] == "rule_baseline"
+    assert inference_status["model_version"] == "rule-baseline-v1"
+    assert service._model is None

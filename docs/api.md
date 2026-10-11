@@ -1,5 +1,7 @@
 # API MVP
 
+API nhận thời gian ISO 8601 có timezone offset (ví dụ giờ Việt Nam `+07:00`); slot được chuẩn hóa và lưu theo UTC. SQLite không lưu timezone, vì vậy model chuyển offset sang UTC khi ghi và khôi phục UTC khi đọc.
+
 Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601 có timezone offset và tiền VND nhận integer.
 
 ## Health
@@ -8,10 +10,11 @@ Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601
 
 ## Local ML inference
 
-Optional local supervised models are separate from the prompt-backed LLM workflows and the existing E5 semantic-search model. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
+Local ranker inference is separate from prompt-backed LLM workflows and the E5 semantic-search model. The active ranker defaults to `rule-baseline-v1`. The explicitly marked bootstrap bundle can run only as an opt-in pilot; it is not production-eligible. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
 
-- `GET /api/ml/status` reports local ranker/flood bundle configuration and metadata.
-- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same local ranker can break ties among earliest feasible candidates in `POST /api/itineraries/plan` and rank re-plan replacements. Planning hard constraints remain authoritative, and responses expose `explanation.ranking_model_version` when ML ranking was used.
+- `GET /api/ml/status` reports active ranker, ML bundle eligibility, and whether the rule baseline is serving as fallback.
+- Experience-ranker bundles with a model SHA-256 are integrity-checked before loading. The verified trainer emits that checksum and explicit human-label/deployment metadata. Generic weak-label bundles remain blocked; only the exact `bootstrap_pilot` artifact can be enabled with `ENABLE_BOOTSTRAP_RANKER=true` for a controlled experiment.
+- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same ranker breaks ties among earliest feasible candidates in `POST /api/itineraries/plan` and orders re-plan replacements. Planning hard constraints remain authoritative. Planner explanations expose `ranking_source` and `ranking_model_version`; bootstrap plans also display an experimental weak-label warning.
 - `POST /api/ml/flood-risk` returns advisory flood-risk probabilities; it does not confirm a closure and does not alter routing. It returns 503 until a real-label flood bundle is installed; demo-mode bundles are rejected.
 
 ## Catalog
@@ -25,6 +28,8 @@ Optional local supervised models are separate from the prompt-backed LLM workflo
 Catalog trả `verification_status` và `data_mode`. Dữ liệu seed là `simulated`; `available_reported: null` không có nghĩa là hết chỗ.
 
 ## Planner
+
+`GET /api/pois/{id}` returns the POI detail fields (including source-backed `details`, image/license metadata, current evidence, and linked experience summaries). The crawler workflow is documented in [District 1 catalog crawl and display](district1-place-catalog.md).
 
 `POST /api/itineraries/plan`
 

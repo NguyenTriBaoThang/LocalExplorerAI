@@ -61,16 +61,25 @@ def covered_fields(evidence_items: list[Evidence]) -> set[str]:
     return {field for evidence in evidence_items for field in (evidence.fields_covered or [])}
 
 
-def entity_is_operationally_verified(db: Session, target_type: str, target) -> bool:
+def entity_is_operationally_verified(
+    db: Session,
+    target_type: str,
+    target,
+    evidence_items: list[Evidence] | None = None,
+) -> bool:
     if target is None or getattr(target, "verification_status", None) != "verified":
         return False
     revision = target_revision(target_type, target)
-    evidence = current_verified_evidence(db, target_type, target.id, revision)
+    evidence = evidence_items if evidence_items is not None else current_verified_evidence(db, target_type, target.id, revision)
     return REQUIRED_FIELDS[target_type].issubset(covered_fields(evidence))
 
 
-def slot_is_operationally_verified(db: Session, slot: ExperienceSlot) -> bool:
-    evidence = current_verified_evidence(db, "slot", slot.id, slot.version)
+def slot_is_operationally_verified(
+    db: Session,
+    slot: ExperienceSlot,
+    evidence_items: list[Evidence] | None = None,
+) -> bool:
+    evidence = evidence_items if evidence_items is not None else current_verified_evidence(db, "slot", slot.id, slot.version)
     if not REQUIRED_FIELDS["slot"].issubset(covered_fields(evidence)) or not slot.expires_at or not slot.confirmed_at:
         return False
     expires_at = slot.expires_at

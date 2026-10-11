@@ -12,6 +12,9 @@ from typing import Any
 from app.services.ranker_features import intent_families, parse_tags
 
 
+RULE_BASELINE_VERSION = "rule-baseline-v1"
+
+
 _RELATED: dict[str, set[str]] = {
     "food": {"coffee"},
     "coffee": {"food"},

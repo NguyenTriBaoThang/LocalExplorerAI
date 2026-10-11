@@ -84,11 +84,57 @@ type PlaceImportCandidate = {
   name: string
   kind: string
   raw_payload: Record<string, unknown>
+  suggested_labels?: {
+    ruleset_version: string
+    label_status: string
+    intent_columns: {
+      handicraft: boolean
+      food: boolean
+      culture: boolean
+      relaxation: boolean
+    }
+    poi_type: string
+    poi_type_label_vi: string
+    activity_mode: string
+    primary_intent: string | null
+    intent_tags: string[]
+    source_topic_tags: string[]
+    hands_on: boolean | null
+    hands_on_status: string
+    indoor_outdoor: string
+    weather_sensitivity: string
+    basis_fields: string[]
+    warning: string
+  } | null
   quality_flags: string[]
   review_status: string
   target_poi_id?: string | null
   target_poi_status?: string | null
 }
+
+function toDateTimeLocal(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+const PLACE_ACTIVITY_MODE_LABELS: Record<string, string> = {
+  passive_visit: 'Tham quan / quan sát',
+  food_service: 'Ăn uống',
+  coffee_service: 'Cà phê',
+  entertainment: 'Giải trí',
+  lodging: 'Lưu trú',
+  participatory_activity: 'Có dấu hiệu tham gia trực tiếp',
+  unknown: 'Chưa phân loại',
+}
+
+const PLACE_CORE_INTENT_COLUMNS = [
+  { key: 'handicraft', label: 'Thủ công' },
+  { key: 'food', label: 'Ẩm thực' },
+  { key: 'culture', label: 'Văn hóa' },
+  { key: 'relaxation', label: 'Thư giãn' },
+] as const
 
 type TabKey =
   | 'queue'
@@ -956,9 +1002,29 @@ export function AdminPage() {
                   <div className="moderation-items-list">
                     {placeImportCandidates.map((candidate) => {
                       const raw = candidate.raw_payload
+                      const sourceDetails = (raw.details && typeof raw.details === 'object'
+                        ? raw.details
+                        : {}) as Record<string, unknown> & { osm_tags: Record<string, unknown> }
+                      const sourcePhotos = Array.isArray(sourceDetails.images)
+                        ? sourceDetails.images.filter((photo): photo is Record<string, unknown> => Boolean(photo && typeof photo === 'object'))
+                        : []
+                      const sourceOsmTags = sourceDetails.osm_tags && typeof sourceDetails.osm_tags === 'object'
+                        ? sourceDetails.osm_tags as Record<string, unknown>
+                        : {}
+                      const suggested = candidate.suggested_labels
                       const tags = Array.isArray(raw.tags)
                         ? raw.tags.map(String).join(', ')
                         : String(raw.tags || '')
+                      const intentLabels: Record<string, string> = {
+                        handicraft: 'Thủ công',
+                        food: 'Ẩm thực',
+                        culture: 'Văn hóa',
+                        relaxation: 'Thư giãn',
+                        shopping: 'Mua sắm',
+                        entertainment: 'Giải trí',
+                        accommodation: 'Lưu trú',
+                        sightseeing: 'Tham quan',
+                      }
                       return (
                         <details key={candidate.id} className="moderation-item-card">
                           <summary className="item-meta-info" style={{ cursor: 'pointer' }}>
@@ -980,7 +1046,74 @@ export function AdminPage() {
                                 <span key={flag}>{importFlagLabels[flag] || flag}</span>
                               ))}
                             </div>
+                            {suggested?.intent_columns ? (
+                              <div className="place-intent-columns place-intent-columns-compact">
+                                {PLACE_CORE_INTENT_COLUMNS.map(({ key, label }) => (
+                                  <span
+                                    className={`place-intent-cell ${suggested.intent_columns[key] ? 'is-suggested' : 'is-not-suggested'}`}
+                                    key={key}
+                                  >
+                                    <strong>{label}</strong>
+                                    <small>{suggested.intent_columns[key] ? 'Có dấu hiệu nguồn' : 'Chưa thấy trong nguồn'}</small>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="item-sub-meta place-label-tags">
+                                <span>Nhãn 4 mục đích chưa được API trả về. Khởi động lại API để tải nhãn mới.</span>
+                              </div>
+                            )}
                           </summary>
+                          {suggested ? (
+                          <div className="place-label-suggestion-panel">
+                            <strong>Nhãn phân loại gợi ý · {suggested.ruleset_version}</strong>
+                            <div className="item-sub-meta">
+                              <span>Loại POI: {suggested.poi_type_label_vi}</span>
+                              <span>Loại hoạt động: {PLACE_ACTIVITY_MODE_LABELS[suggested.activity_mode] || suggested.activity_mode}</span>
+                              <span>
+                                Mục đích chính: {suggested.primary_intent
+                                  ? intentLabels[suggested.primary_intent] || suggested.primary_intent
+                                  : 'Chưa khớp 4 mục đích cốt lõi'}
+                              </span>
+                              <span>
+                                Hands-on: {suggested.hands_on === true
+                                  ? 'Có dấu hiệu tham gia trực tiếp trong mô tả'
+                                  : 'Chưa xác định ở cấp địa điểm'}
+                              </span>
+                              <span>
+                                Không gian: {suggested.indoor_outdoor === 'outdoor'
+                                  ? 'Ngoài trời theo cột nguồn'
+                                  : suggested.indoor_outdoor === 'indoor'
+                                  ? 'Trong nhà theo cột nguồn'
+                                  : 'Chưa rõ'}
+                              </span>
+                            </div>
+                            <div className="place-intent-columns">
+                              {PLACE_CORE_INTENT_COLUMNS.map(({ key, label }) => (
+                                <span
+                                  className={`place-intent-cell ${suggested.intent_columns?.[key] ? 'is-suggested' : 'is-not-suggested'}`}
+                                  key={key}
+                                >
+                                  <strong>{label}</strong>
+                                  <small>{suggested.intent_columns?.[key] ? 'Có dấu hiệu trong nguồn' : 'Chưa thấy dấu hiệu trong nguồn'}</small>
+                                </span>
+                              ))}
+                            </div>
+                            <div className="item-sub-meta place-label-tags">
+                              {(suggested.intent_tags || []).map((tag) => (
+                                <span key={tag}>{intentLabels[tag] || tag}</span>
+                              ))}
+                            </div>
+                            <small>{suggested.warning}</small>
+                          </div>
+                          ) : (
+                            <div className="place-label-suggestion-panel">
+                              <strong>Chưa có nhãn gợi ý từ API</strong>
+                              <small>
+                                Bản ghi này dùng phản hồi API cũ hoặc thiếu trường nhãn. Khởi động lại API rồi tải lại trang để nhận nhãn phân loại.
+                              </small>
+                            </div>
+                          )}
                           {candidate.review_status === 'needs_enrichment' && (
                             <form
                               className="form-fields-grid-2"
@@ -1009,6 +1142,7 @@ export function AdminPage() {
                                   max={90}
                                   step="any"
                                   required
+                                  defaultValue={String(raw.lat ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
@@ -1020,6 +1154,7 @@ export function AdminPage() {
                                   max={180}
                                   step="any"
                                   required
+                                  defaultValue={String(raw.lon ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
@@ -1039,11 +1174,12 @@ export function AdminPage() {
                                   type="url"
                                   required
                                   placeholder="https://..."
+                                  defaultValue={String(raw.source || '')}
                                 />
                               </label>
                               <label className="field-group-3d">
                                 <span>Source type</span>
-                                <select name="source_type" defaultValue="official">
+                                <select name="source_type" defaultValue={String(raw.source_type || 'dataset')}>
                                   <option value="official">Official</option>
                                   <option value="provider">Provider</option>
                                   <option value="website">Website</option>
@@ -1058,15 +1194,16 @@ export function AdminPage() {
                                   required
                                   minLength={2}
                                   maxLength={180}
+                                  defaultValue={String(raw.source_label || 'OpenStreetMap contributors')}
                                 />
                               </label>
                               <label className="field-group-3d">
                                 <span>License (optional)</span>
-                                <input name="license" maxLength={120} />
+                                <input name="license" maxLength={120} defaultValue={String(raw.license || 'ODbL-1.0')} />
                               </label>
                               <label className="field-group-3d">
                                 <span>Observed at</span>
-                                <input name="observed_at" type="datetime-local" required />
+                                <input name="observed_at" type="datetime-local" required defaultValue={toDateTimeLocal(raw.source_observed_at)} />
                               </label>
                               <label className="field-group-3d">
                                 <span>Evidence expires at</span>
@@ -1124,6 +1261,22 @@ export function AdminPage() {
                             <span>Nguồn ghi trong file: {String(raw.source || 'không có')}</span>
                             <span>Tags: {tags || 'không có'}</span>
                             {Boolean(raw.description) && <span>{String(raw.description)}</span>}
+                            {Boolean(sourceDetails.opening_hours) && <span>opening_hours (OSM): {String(sourceDetails.opening_hours)}</span>}
+                            {Boolean(sourceDetails.contact_phone) && <span>phone (OSM): {String(sourceDetails.contact_phone)}</span>}
+                            {Boolean(sourceDetails.website) && <span>website (OSM): {String(sourceDetails.website)}</span>}
+                            {Boolean(sourceDetails.fee) && <span>fee (OSM): {String(sourceDetails.fee)}</span>}
+                            {Boolean(sourceDetails.observed_at) && <span>Thời điểm crawl: {String(sourceDetails.observed_at)}</span>}
+                            {sourcePhotos.map((photo, index) => (
+                              <a key={`${String(photo.source_url || photo.url)}-${index}`} href={String(photo.source_url || photo.url || '#')} target="_blank" rel="noreferrer">
+                                Ảnh nguồn: {String(photo.title || 'Wikimedia Commons')} · {String(photo.license || 'không có thông tin giấy phép')}
+                              </a>
+                            ))}
+                            {Object.keys(sourceOsmTags).length > 0 && (
+                              <details>
+                                <summary>Toàn bộ tags OSM ({Object.keys(sourceDetails.osm_tags).length})</summary>
+                                <pre>{JSON.stringify(sourceDetails.osm_tags, null, 2)}</pre>
+                              </details>
+                            )}
                             {Boolean(raw.note) && <span>Ghi chú nguồn: {String(raw.note)}</span>}
                           </div>
                         </details>

@@ -451,6 +451,14 @@ models/e5/*
 !models/e5/.gitkeep
 models/ai-ranker/*
 !models/ai-ranker/.gitkeep
+!models/ai-ranker/xgboost_ranker.json
+!models/ai-ranker/model_metadata.json
+!models/ai-ranker/feature_schema.json
+!models/ai-ranker/preprocessing.json
+!models/ai-ranker/metrics.json
+!models/ai-ranker/model_card.md
+!models/ai-ranker/validation_comparison.csv
+!models/ai-ranker/test_predictions.csv
 models/flood-report-experiment/*
 !models/flood-report-experiment/.gitkeep
 models/flood-risk/*
@@ -458,7 +466,11 @@ models/flood-risk/*
 
 # Notebooks / Google Colab training files
 notebooks/
+!notebooks/
+notebooks/*
 *.ipynb
+!notebooks/LocalExplorerAI_Train_Verified_Ranker_Colab.ipynb
+!notebooks/LocalExplorerAI_Bootstrap_Ranker_Colab.ipynb
 .ipynb_checkpoints/
 
 # Bot runtime store

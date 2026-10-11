@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.adapters.routing.provider import NoRouteFound, RoutingProvider
+from app.core.pilot_area import PILOT_DISTRICT
 from app.core.enums import ItineraryStatus, PriceBasis, normalize_intent_tag
 from app.models.entities import DecisionLog, Experience, ExperienceSlot, Itinerary, ItineraryStop, ItineraryVersion
 from app.repositories.experience_repository import ExperienceRepository
@@ -19,11 +21,20 @@ from app.services.routing_service import RoutingService
 
 
 class NoFeasiblePlan(Exception):
-    pass
+    def __init__(self, message: str, code: str = "NO_FEASIBLE_PLAN"):
+        super().__init__(message)
+        self.code = code
+
+
+LOCAL_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 def as_aware(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    # SQLite drops tzinfo when reloading DateTime(timezone=True); persisted values
+    # are UTC, while incoming PlanRequest datetimes are required to be offset-aware.
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 class PlannerService:
@@ -40,10 +51,11 @@ class PlannerService:
 
     def _rank_feasible_candidates(self, candidates: list[dict], request: PlanRequest,
                                   cursor: datetime, end_at: datetime,
-                                  budget_remaining_vnd: int) -> str | None:
-        """Use the optional ranker as a tie-break only; feasibility stays solver-owned."""
+                                  budget_remaining_vnd: int) -> tuple[str, str] | None:
+        """Rank only the planner-approved candidates; feasibility stays planner-owned."""
         if (len(candidates) < 2 or any(item["locked"] for item in candidates)
-                or not isinstance(self.engine, HeuristicPlanner) or not self.ranker.configured):
+                or not isinstance(self.engine, HeuristicPlanner)
+                or getattr(self.ranker, "available", True) is False):
             return None
 
         intent_tags = [tag for tag, weight in request.intent_weights.items() if weight > 0]
@@ -92,20 +104,29 @@ class PlannerService:
             return None
         for key, item in candidates_by_key.items():
             item["score"] = float(scores[key])
-        return status.get("model_version") or "local-ranker"
+        return (
+            status.get("model_version") or "local-ranker",
+            status.get("ranking_source") or "ml_model",
+        )
 
     def plan(self, request: PlanRequest, user_id: str | None = None) -> dict:
         start_at, end_at = as_aware(request.start_at), as_aware(request.end_at)
         if end_at <= start_at or start_at < datetime.now(timezone.utc):
             raise NoFeasiblePlan("The trip must start in the future and end after it starts")
 
-        experiences = self.repository.list_experiences()
+        # The pilot intentionally plans only against Quận 1 and only loads slots
+        # overlapping this trip, not the entire historical slot calendar.
+        experiences = self.repository.list_experiences(
+            district=PILOT_DISTRICT,
+            slot_start_at=start_at,
+            slot_end_at=end_at,
+        )
         by_id = {experience.id: experience for experience in experiences}
         if any(experience_id not in by_id for experience_id in request.locked_experience_ids):
-            raise NoFeasiblePlan("A locked experience does not exist")
+            raise NoFeasiblePlan(f"A locked experience is not available in the current {PILOT_DISTRICT} pilot catalog.")
         poi_ids = {experience.poi_id for experience in experiences}
         if any(poi_id not in poi_ids for poi_id in request.locked_poi_ids):
-            raise NoFeasiblePlan("A locked POI does not exist or has no experience")
+            raise NoFeasiblePlan(f"A locked POI is not available in the current {PILOT_DISTRICT} pilot catalog or has no experience.")
 
         chosen: list[dict] = []
         chosen_experience_ids: set[str] = set()
@@ -121,15 +142,23 @@ class PlannerService:
         reason_codes: set[str] = set()
         unknown_capacity = False
         ranking_model_version = "heuristic-v1"
+        ranking_source: str | None = None
 
         # Locked experiences are scheduled first in the caller's requested order.
         ordered_ids = list(dict.fromkeys(request.locked_experience_ids))
         remaining = [item for item in experiences if item.id not in ordered_ids]
+        remaining.sort(
+            key=lambda item: self.recommender.score(item, request.intent_weights, request.group_size, request.budget_vnd - total_cost)[0],
+            reverse=True,
+        )
         pool = [by_id[item] for item in ordered_ids] + remaining
 
+        remaining_locked = set(request.locked_experience_ids)
         while len(chosen) < 6:
             candidates: list[dict] = []
             for experience in pool:
+                if len(candidates) >= 5 and not (remaining_locked - chosen_experience_ids):
+                    break
                 if experience.id in chosen_experience_ids:
                     continue
                 locked = experience.id in request.locked_experience_ids or (
@@ -140,10 +169,10 @@ class PlannerService:
                     continue
                 score, reasons = self.recommender.score(experience, request.intent_weights, request.group_size, request.budget_vnd - total_cost)
                 for slot in sorted(experience.slots, key=lambda item: as_aware(item.start_at)):
-                    if experience.verification_status == "verified" and not self.repository.is_fresh_slot(slot):
-                        continue
                     slot_start, slot_end = as_aware(slot.start_at), as_aware(slot.end_at)
                     if slot_start < start_at or slot_end > end_at or slot_end <= cursor:
+                        continue
+                    if experience.verification_status == "verified" and not self.repository.is_fresh_slot(slot):
                         continue
                     if not self.availability.can_fit(slot, request.group_size):
                         continue
@@ -185,12 +214,15 @@ class PlannerService:
                         "return_leg": return_leg,
                         "return_travel": return_travel,
                     })
-            used_ranker_version = self._rank_feasible_candidates(
+            ranker_result = self._rank_feasible_candidates(
                 candidates, request, cursor, end_at, request.budget_vnd - total_cost,
             )
-            if used_ranker_version:
-                ranking_model_version = used_ranker_version
-                reason_codes.add("ML_RANKER")
+            if ranker_result:
+                ranking_model_version, ranking_source = ranker_result
+                reason_codes.add({
+                    "rule_baseline": "RULE_BASELINE_RANKER",
+                    "bootstrap_ml_model": "BOOTSTRAP_PILOT_RANKER",
+                }.get(ranking_source, "ML_RANKER"))
             next_item = self.engine.plan(candidates)
             if not next_item:
                 break
@@ -230,8 +262,31 @@ class PlannerService:
                 unknown_capacity = True
                 reason_codes.add("CAPACITY_UNKNOWN")
 
+        if not chosen:
+            requested_local_date = start_at.astimezone(LOCAL_TIMEZONE).date()
+            slots_on_requested_date = [
+                (experience, slot)
+                for experience in experiences
+                for slot in experience.slots
+                if as_aware(slot.start_at).astimezone(LOCAL_TIMEZONE).date() == requested_local_date
+            ]
+            has_bookable_slot = any(
+                self.availability.can_fit(slot, request.group_size)
+                and (
+                    experience.verification_status != "verified"
+                    or self.repository.is_fresh_slot(slot)
+                )
+                for experience, slot in slots_on_requested_date
+            )
+            if slots_on_requested_date and not has_bookable_slot:
+                raise NoFeasiblePlan(
+                    "No bookable slots are currently available on "
+                    f"{requested_local_date.isoformat()}. Choose another date or ask the provider to update availability.",
+                    code="NO_BOOKABLE_SLOTS",
+                )
+
         if not chosen or any(item not in chosen_experience_ids for item in request.locked_experience_ids) or not set(request.locked_poi_ids).issubset(chosen_poi_ids):
-            raise NoFeasiblePlan("No itinerary satisfies time, capacity, and budget constraints")
+            raise NoFeasiblePlan(f"No itinerary in {PILOT_DISTRICT} satisfies time, capacity, and budget constraints")
 
         estimated_return_at = as_aware(chosen[-1]["slot"].end_at)
         if request.destination_latitude is not None and request.destination_longitude is not None:
@@ -309,7 +364,8 @@ class PlannerService:
             preserved_intents_ratio=(len(preserved) / sum(weight > 0 for weight in request.intent_weights.values())) if any(weight > 0 for weight in request.intent_weights.values()) else 1.0,
         ))
         explanation = self.explainer.explain(sorted(reason_codes), preserved, lost)
-        explanation["ranking_model_version"] = ranking_model_version if "ML_RANKER" in reason_codes else None
+        explanation["ranking_model_version"] = ranking_model_version if ranking_source else None
+        explanation["ranking_source"] = ranking_source
         explanation["evidence_refs"] = sorted({
             evidence["id"]
             for item in response_stops

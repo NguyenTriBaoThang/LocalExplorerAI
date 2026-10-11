@@ -54,7 +54,7 @@ def seed(session_factory=SessionLocal) -> None:
             poi = POI(
                 name=f"Điểm demo {index:02d}: {name}",
                 description="Địa điểm hư cấu dùng để trình diễn giao diện; cần xác minh trước khi sử dụng thực tế.",
-                latitude=lat, longitude=lon, category=category, geom=WKTElement(f"POINT({lon} {lat})", srid=4326),
+                district="District 1", latitude=lat, longitude=lon, category=category, geom=WKTElement(f"POINT({lon} {lat})", srid=4326),
                 address=f"Khu vực trung tâm TP. Hồ Chí Minh — tọa độ mô phỏng {index:02d}",
                 verification_status=VerificationStatus.SIMULATED.value,
             )

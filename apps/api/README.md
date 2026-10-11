@@ -10,9 +10,9 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 - **Cơ sở Dữ liệu & ORM**: PostgreSQL 16 + PostGIS 3.4, [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [GeoAlchemy2](https://geoalchemy-2.readthedocs.io/), [Alembic](https://alembic.sqlalchemy.org/)
 - **Xác thực & Bảo mật**: HTTP-only Session Cookie (`le_session`), Google OAuth 2.0 PKCE, Argon2/PBKDF2 Password Hashing, Fernet AES-128-CBC encryption cho khóa tích hợp động
 - **Học máy Cục bộ (Local ML)**:
-  - `xgboost` (XGBRanker 13 features, NDCG@5 = 0.9516)
-  - `sentence-transformers` + `multilingual-e5-small` (Vector Search chạy trên CPU)
-  - `scikit-learn` + `joblib` (Saigon Flood Risk Classifier)
+  - `xgboost` & `lightgbm` (Ranker `ranker-features-v2` 15 features, LambdaMART/NDCG objective, kiểm tra toàn vẹn SHA-256 & Fallback an toàn về Rule Baseline)
+  - `sentence-transformers` + `multilingual-e5-base` (Vector Search chạy trên CPU)
+  - `scikit-learn` + `joblib` (Saigon Flood Risk Classifier & Calibration)
 - **Định tuyến & Địa lý**: Goong Directions API + Goong Forward Geocoding (với cache in-memory TTL và provenance)
 - **Thanh toán Trực tuyến**: Cổng VNPay (HMAC-SHA512 với sandbox/production) và Ví MoMo (HMAC-SHA256 captureWallet)
 - **Vận hành & Hàng đợi**: Transactional Email Outbox worker (`worker.py`), Redis Rate Limiting, HTTP structured JSON logging
@@ -54,11 +54,12 @@ apps/api/
 │   ├── seed_db.py         # Nạp dữ liệu mô phỏng demo & tài khoản dev
 │   ├── worker.py          # Background worker xử lý Email Outbox & Job nền
 │   └── download_e5_model.py # Tải trọng số mô hình Multilingual E5 về local
-├── tests/                 # Bộ kiểm thử tự động pytest (56+ test cases)
+├── tests/                 # Bộ kiểm thử tự động pytest (103+ test cases)
 ├── alembic.ini            # Cấu hình đường dẫn migration
 ├── Dockerfile             # Container build cho Backend API
-├── requirements.txt       # Thư viện ứng dụng cốt lõi
-├── requirements-ml.txt    # Thư viện mô hình Học máy (XGBoost, Scikit-learn)
+├── requirements.txt       # Thư viện ứng dụng cốt lõi (FastAPI, SQLAlchemy, Alembic, Pydantic)
+├── requirements-ranking-training.txt # Thư viện Huấn luyện Ranker & CI Benchmark (NumPy, Pandas, XGBoost, LightGBM)
+├── requirements-ml.txt    # Thư viện mô hình Học máy suy luận (XGBoost, Scikit-learn, Joblib)
 └── requirements-e5.txt    # Thư viện Vector Embedding (Sentence-Transformers)
 ```
 
@@ -82,10 +83,13 @@ python -m venv .venv
 
 ### Bước 2: Cài đặt thư viện dependencies
 ```powershell
-# Cài đặt thư viện cốt lõi
+# 1. Cài đặt thư viện ứng dụng cốt lõi (bắt buộc)
 pip install -r requirements.txt
 
-# (Khuyên dùng) Cài đặt thư viện Học máy và Vector E5
+# 2. Cài đặt thư viện Huấn luyện Ranker & kiểm thử đầy đủ (khuyên dùng để chạy 103 test cases)
+pip install -r requirements-ranking-training.txt
+
+# 3. (Tùy chọn) Cài đặt thư viện Học máy suy luận cục bộ & Vector E5
 pip install -r requirements-ml.txt
 pip install -r requirements-e5.txt
 ```
@@ -93,7 +97,9 @@ pip install -r requirements-e5.txt
 ### Bước 3: Cấu hình biến môi trường
 Tạo file `.env` tại thư mục gốc repository (`g:\GITHUB\LoaclExplorerAI\.env`) theo mẫu `.env.example`. Đảm bảo các biến quan trọng sau đã được khai báo:
 ```env
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer
+DATABASE_URL=sqlite:///G:/GITHUB/LoaclExplorerAI/apps/api/local_explorer.sqlite3
+# Hoặc PostgreSQL production:
+# DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer
 AUTH_SECRET=your-secure-random-auth-secret-key-at-least-32-chars
 APP_SIGNING_SECRET=your-secure-app-signing-secret
 INTEGRATION_SECRETS_KEY=your-fernet-master-key-base64
@@ -142,12 +148,13 @@ python -m scripts.worker
 
 ## 🧪 Chạy Kiểm thử Tự động (Tests)
 
-Bộ kiểm thử được viết bằng `pytest` và kiểm thử toàn diện từ Router, Solver, ML Ranker đến Booking State Machine:
+Bộ kiểm thử được viết bằng `pytest` gồm **103 test cases** bao phủ toàn diện Router, Heuristic Solver, Place Label Suggestions, Ranker Training Contracts, ML Integrity & Safety Gates, Role Isolation, Booking State Machine, và Alembic Migration Chain:
 ```powershell
 cd apps/api
 pytest -q
 ```
-*Yêu cầu kiểm thử: Quá trình test phải hoàn tất bình thường với mã thoát **0** (exit code 0).*
+- **Môi trường chỉ có Core Dependencies (`requirements.txt`)**: Bộ test chạy an toàn `94 passed, 1 skipped`. Module `test_experience_ranker_training.py` tự động được bỏ qua qua `pytest.importorskip` mà không gây lỗi crash.
+- **Môi trường có đầy đủ Ranking Training Dependencies (`requirements-ranking-training.txt`)**: Toàn bộ **103 test cases** đều được thực thi và xác minh thành công (`103 passed, exit code 0`).
 
 ---
 

@@ -62,6 +62,7 @@ erDiagram
       uuid submitted_by_provider_id FK
       boolean is_in_pilot_polygon
       jsonb image_urls
+      jsonb details
     }
     EXPERIENCES {
       varchar id PK
@@ -242,6 +243,10 @@ service validates the target and provider ownership. Editing a POI or
 experience increments its revision and makes evidence for the older version
 ineligible. Migration `0006_provider_poi_ownership` adds the owner pointer for
 provider-submitted POIs. See [sourced catalog workflow](sourced-catalog.md).
+
+Migration `0011_poi_source_details` adds a JSON document to preserve source-backed
+POI facts and individual image credits/licenses without claiming those fields
+are operationally verified. See [District 1 catalog crawl and display](district1-place-catalog.md).
 
 Migration `0007_booking_payments` adds temporary reservations (`bookings`), a
 gateway transaction ledger (`payment_transactions`), and state/audit history

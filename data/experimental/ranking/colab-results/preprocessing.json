@@ -1,0 +1,8 @@
+{
+  "type": "deterministic_shared_feature_builder",
+  "feature_version": "ranker-features-v2",
+  "fitted_transformer": null,
+  "fit_scope": "No learned preprocessing. Ratios and tag matching use the same deterministic API function at training and inference.",
+  "numeric_missing_values": "NaN is preserved for model-native missing-value handling.",
+  "identifiers_and_label_text": "Never transformed or included as model features."
+}

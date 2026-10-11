@@ -35,6 +35,7 @@ export function AppLayout() {
       ? [{ to: '/provider-portal', label: t('nav.providerPortal') }, { to: '/map-3d', label: t('nav.map3d') }]
       : [
           { to: '/chat', label: t('nav.chat') },
+          { to: '/places', label: t('nav.places') },
           { to: '/explore', label: t('nav.explore') },
           { to: '/planner', label: t('nav.planner') },
           { to: '/map-3d', label: t('nav.map3d') },

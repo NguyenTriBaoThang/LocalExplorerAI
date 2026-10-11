@@ -48,7 +48,7 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def sample_experience(db_session: Session) -> Experience:
     provider = Provider(name="Demo provider", status="simulated")
-    poi = POI(name="Demo craft point", description="Synthetic", latitude=10.775, longitude=106.7, geom=WKTElement("POINT(106.7 10.775)", srid=4326), category="handicraft", address="Demo address", verification_status="simulated")
+    poi = POI(name="Demo craft point", description="Synthetic", district="District 1", latitude=10.775, longitude=106.7, geom=WKTElement("POINT(106.7 10.775)", srid=4326), category="handicraft", address="Demo address", verification_status="simulated")
     experience = Experience(
         poi=poi, provider=provider, name="Paper workshop", description="Simulated workshop",
         intent_tags=["handicraft", "hands_on"], duration_min=60, indoor=True,

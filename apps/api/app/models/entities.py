@@ -24,6 +24,7 @@ from geoalchemy2 import Geometry
 
 from app.core.enums import ItineraryStatus, PriceBasis, SlotStatus, VerificationStatus
 from app.db.base import Base
+from app.db.types import UTCDateTime
 
 
 def utcnow() -> datetime:
@@ -120,6 +121,9 @@ class POI(Base):
     submitted_by_provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
     is_in_pilot_polygon: Mapped[bool] = mapped_column(Boolean, default=False)
     image_urls: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    # Untouched, source-backed place facts (e.g. OSM tags and image credits).
+    # These are descriptive catalog metadata, not proof of operational verification.
+    details: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
     verification_status: Mapped[str] = mapped_column(String(24), default=VerificationStatus.SIMULATED.value)
     data_revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -176,12 +180,12 @@ class ExperienceSlot(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id", ondelete="CASCADE"), index=True)
-    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    start_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+    end_at: Mapped[datetime] = mapped_column(UTCDateTime())
     capacity_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
     available_reported: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     status: Mapped[str] = mapped_column(String(24), default=SlotStatus.TENTATIVE.value)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

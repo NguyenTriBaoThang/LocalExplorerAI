@@ -17,6 +17,7 @@ export const LEG_COLORS = [
 
 export interface MapPoint {
   id: string
+  placeId?: string
   latitude: number
   longitude: number
   name: string
@@ -216,7 +217,15 @@ export function MapAdapter({
                         </span>
                       )}
                     </div>
-                    {onSelect && (
+                    {point.placeId ? (
+                      <Link
+                        className="popup-select-btn"
+                        to={`/places/${encodeURIComponent(point.placeId)}`}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Sparkles size={12} /> Xem chi tiết địa điểm
+                      </Link>
+                    ) : onSelect && (
                       <button
                         type="button"
                         className="popup-select-btn"

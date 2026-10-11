@@ -14,6 +14,8 @@ import { SharedItineraryPage } from './pages/SharedItineraryPage'
 import { ComparePage } from './pages/ComparePage'
 import { ChatPage } from './pages/ChatPage'
 import { Map3DPage } from './pages/Map3DPage'
+import { PlacesPage } from './pages/PlacesPage'
+import { PlaceDetailPage } from './pages/PlaceDetailPage'
 import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
 
 export const router = createBrowserRouter([{
@@ -22,6 +24,8 @@ export const router = createBrowserRouter([{
     { path: '/', element: <RoleHome><HomePage /></RoleHome> },
     { path: '/map-3d', element: <Map3DPage /> },
     { element: <CustomerRoute />, children: [
+      { path: '/places', element: <PlacesPage /> },
+      { path: '/places/:id', element: <PlaceDetailPage /> },
       { path: '/explore', element: <ExplorePage /> },
       { path: '/chat', element: <ChatPage /> },
       { path: '/planner', element: <PlannerPage /> },
