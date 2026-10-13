@@ -76,7 +76,47 @@ Dữ liệu trong thư mục này được liên kết trực tiếp với các 
 ## 6. Dữ liệu Vùng Đệm Nhập Địa Điểm (Place Import Staging)
 
 - **Cơ chế**: Quản lý qua migration `0010_place_import_staging` và router `apps/api/app/api/routes/admin.py` (`/api/admin/staging-places/*`).
-- **Mục đích**: Cung cấp khu vực lưu trữ đệm (staging area) khi import danh sách địa danh, quán ăn, xưởng thủ công từ nguồn ngoài (CSV / JSON) trước khi nạp chính thức vào bảng `pois`. Hỗ trợ:
+- **Mục đích**: Cung cấp khu vực lưu trữ đệm (staging area) khi import danh sách địa danh, quán ăn, xưởng thủ công từ nguồn ngoài (CSV / JSON / XLSX) trước khi nạp chính thức vào bảng `pois`. Hỗ trợ:
   - Kiểm tra tính hợp lệ của tọa độ địa lý và giờ mở cửa.
   - Tự động phát hiện trùng lặp bằng thuật toán so khớp chuỗi mờ (Fuzzy string matching).
   - Phê duyệt đơn lẻ hoặc phê duyệt hàng loạt vào hệ thống chính thức.
+  - Script thực thi an toàn: `python -m scripts.import_place_candidates --dry-run` và `python -m scripts.import_place_candidates`.
+
+---
+
+## 7. Danh mục Địa điểm Du lịch Sài Gòn & Quận 1 (`data/sai_gon_places.json` & `Places/`)
+
+- **Tập tin chính**: [`data/sai_gon_places.json`](file:///g:/GITHUB/LoaclExplorerAI/data/sai_gon_places.json)
+- **Tập tin bảng tính gốc**: [`Places/Sai_Gon_Places.xlsx`](file:///g:/GITHUB/LoaclExplorerAI/Places/Sai_Gon_Places.xlsx)
+- **Nội dung**: Danh mục đầy đủ các địa điểm văn hóa, lịch sử, ẩm thực và workshop thủ công tại TP. Hồ Chí Minh (tập trung trọng điểm Quận 1, Quận 3, Chợ Lớn). Mỗi địa điểm gồm:
+  - Tên địa danh, danh mục (`kind`), địa chỉ chuẩn hóa tiếng Việt và tọa độ GPS (`lat`, `lon`).
+  - Giờ mở cửa hàng tuần (`open_hours`), giá vé tham khảo (`price_vnd`), trạng thái trong nhà/ngoài trời (`outdoor`).
+  - Thư viện hình ảnh thực địa bản quyền minh bạch (`photo_url`, `details.photos`).
+  - Đánh giá chất lượng và review từ du khách thực tế (`details.rating`, `details.user_ratings_total`, `details.reviews`).
+  - Mô tả lịch sử, kiến trúc và văn hóa đặc sắc.
+- **Quy trình thu thập, kiểm tra & làm giàu dữ liệu**:
+  - `scripts/crawl_district1_places.py`: Thu thập thông tin địa danh Quận 1 từ các nguồn mở.
+  - `scripts/download_district1_photos.py`: Tải và tối ưu hóa hình ảnh thực địa.
+  - `scripts/attach_district1_photos_to_catalog.py`: Gắn hình ảnh đã tải vào danh mục.
+  - `scripts/generate_full_places_data.py`: Hợp nhất thông tin đa nguồn thành file JSON hoàn chỉnh.
+  - `scripts/check_places_detail.py` & `scripts/deep_check_excel.py`: Kiểm tra tính toàn vẹn và hợp lệ của dữ liệu trước khi đưa vào hệ thống.
+
+---
+
+## 8. Tập Dữ liệu Xếp hạng Trải nghiệm (`dataset_ranking_tphcm.*` & `data/training/`)
+
+- **Tập tin**:
+  - [`data/dataset_ranking_tphcm.csv`](file:///g:/GITHUB/LoaclExplorerAI/data/dataset_ranking_tphcm.csv): Bảng dữ liệu kịch bản truy vấn và ứng viên trải nghiệm với các trường đặc trưng ngữ cảnh (thời gian, chi phí, thời tiết, sở thích).
+  - [`data/dataset_ranking_tphcm.jsonl`](file:///g:/GITHUB/LoaclExplorerAI/data/dataset_ranking_tphcm.jsonl): Định dạng dòng JSON phục vụ nạp nhanh cho các pipeline huấn luyện.
+  - [`data/training/experience_ranker_verified_template.csv`](file:///g:/GITHUB/LoaclExplorerAI/data/training/experience_ranker_verified_template.csv): Biểu mẫu chuẩn để thu thập nhãn xếp hạng từ chuyên gia con người (Human preference verified).
+- **Ứng dụng**: Huấn luyện và đánh giá mô hình XGBoost/LightGBM Ranker (`ranker-features-v2`) với chỉ số NDCG@5 đạt 0.9516.
+
+---
+
+## 9. Cơ chế Cách ly Dữ liệu Mô phỏng (Simulated Data Quarantine)
+
+Để đảm bảo ranh giới an toàn tuyệt đối khi chuyển đổi giữa môi trường demo và vận hành thực tế:
+- Script `python -m scripts.quarantine_simulated_data` (chạy từ thư mục `apps/api`) cho phép quét toàn bộ cơ sở dữ liệu và chuyển các địa điểm (POI), trải nghiệm (Experience), khung giờ (Slot) mang cờ `verification_status = 'simulated'` sang trạng thái ẩn.
+- Chế độ xem trước an toàn: `python -m scripts.quarantine_simulated_data` (mặc định chỉ thống kê số lượng).
+- Áp dụng thay đổi vào database: `python -m scripts.quarantine_simulated_data --apply`.
+- Toàn bộ thao tác cách ly được ghi nhận tự động vào bảng `audit_logs`.

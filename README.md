@@ -31,7 +31,9 @@
   </a>
   <img src="https://img.shields.io/badge/PRD-3.0_Production_Ready-blueviolet" alt="PRD 3.0 Ready"/>
   <img src="https://img.shields.io/badge/ML_Ranker-NDCG%405%200.9516-success" alt="ML Ranker"/>
-  <img src="https://img.shields.io/badge/Alembic-0010_Place_Import_Staging-teal?logo=alembic" alt="Alembic Migrations"/>
+  <img src="https://img.shields.io/badge/Alembic-0012_Slot_Timestamps_UTC-teal?logo=alembic" alt="Alembic Migrations"/>
+  <img src="https://img.shields.io/badge/Pytest-107_Passed-brightgreen?logo=pytest" alt="Pytest Status"/>
+  <img src="https://img.shields.io/badge/Saigon_Places-District_1_Catalog-orange" alt="Saigon Places"/>
   <img src="https://img.shields.io/badge/Payments-VNPay%20%7C%20MoMo-blue" alt="Payments"/>
   <img src="https://img.shields.io/badge/Maps-Goong_Directions_%26_Geocoding-orange" alt="Goong API"/>
   <img src="https://img.shields.io/badge/3D_Digital_Twin-GLB_Landmarks-purple" alt="3D Landmarks"/>
@@ -40,12 +42,14 @@
 </p>
 
 <p align="center">
-  <b>3D WebGL Digital Twin · 3D Landmark Viewer · AI Concierge Chat · Local E5 Semantic Search · XGBoost ML Ranker · Dynamic Replanning · Goong Directions & Geocoding · CartoDB 3D Map · Seat Holds & VNPay / MoMo · Telegram Bot & n8n · Provider & Admin Portals · Bilingual VI/EN · Operations Outbox</b><br/>
+  <b>3D WebGL Digital Twin · 3D Landmark Viewer · Saigon Tourist Places · AI Concierge Chat · Local E5 Semantic Search · XGBoost ML Ranker · Dynamic Replanning · Goong Directions & Geocoding · CartoDB 3D Map · Seat Holds & VNPay / MoMo · Telegram Bot & Zalo Poller · Provider & Admin Portals · Bilingual VI/EN · Operations Outbox</b><br/>
   React 18.3 + TypeScript 5.6 · Three.js · Vite 6 · FastAPI 0.142+ · Python 3.12+ · PostgreSQL 16 + PostGIS 3.4 · Goong API · Docker Compose
 </p>
 
 <p align="center">
   <a href="http://localhost:8080/"><strong>Khám phá Dashboard 3D</strong></a>
+  &nbsp;|&nbsp;
+  <a href="http://localhost:8080/places"><strong>Địa điểm Sài Gòn</strong></a>
   &nbsp;|&nbsp;
   <a href="http://localhost:8080/map-3d"><strong>Trình xem 3D Landmark</strong></a>
   &nbsp;|&nbsp;
@@ -72,6 +76,8 @@
   <a href="./apps/api/README.md">Tài liệu Backend</a>
   &nbsp;|&nbsp;
   <a href="./apps/web/README.md">Tài liệu Frontend</a>
+  &nbsp;|&nbsp;
+  <a href="./data/README.md">Tài liệu Dữ liệu</a>
 </p>
 
 <p align="center">
@@ -130,14 +136,18 @@ Local Explorer AI chuyển đổi phương thức tiếp cận từ các chấm 
   - Quản lý tác vụ nền (`worker.py`), gửi email giao dịch đặt chỗ/hủy ca với cơ chế retry lũy thừa chống trùng lặp (Idempotency keys).
   - Endpoints giám sát vận hành dành cho quản trị viên (`/api/ops/*`, `/health`, `/ready`).
   - Bộ công cụ sao lưu và phục hồi dữ liệu tự động (`scripts/backup-postgres.*`, `scripts/restore-postgres.*`).
+- 📍 **Kho Địa Điểm Du Lịch Sài Gòn & Quận 1 Đa Chiều (`/places`, `/places/:id`)**: Danh mục phong phú các điểm đến di sản, văn hóa, ẩm thực và workshop nghệ thuật tại trung tâm TP.HCM. Cung cấp bộ sưu tập hình ảnh thực địa, thông tin giờ mở cửa, giá vé tham khảo, đánh giá xếp hạng thực tế từ du khách, liên kết trải nghiệm tương ứng và định vị trực quan trên bản đồ hoặc mô hình 3D Landmark.
+- 🤖 **Tự Động Hóa Bot Đa Nền Tảng (Telegram Bot & Zalo Poller)**:
+  - Telegram Bot tích hợp tự động đồng bộ Webhook, chuyển tiếp sự kiện sang workflow n8n, tùy biến persona và mô hình AI cho bot trợ lý (`/api/admin/bot/*`).
+  - Zalo Poller (`zalo_bot_poller.py`) kết nối mô hình Gemini Flash để tương tác tự nhiên, tư vấn du lịch, tạo vé và chốt lịch trình với du khách trên Zalo.
+  - Bảng tinh chỉnh tham số lõi toàn hệ thống (`/api/admin/system-settings`): giới hạn điểm dừng, phạt thời gian di chuyển, buffer minutes, chế độ bảo trì và thông báo toàn trang.
 - 🔐 **Quản lý Khóa Tích hợp Động & Mã hóa Fernet (Dynamic Secrets Vault)**: Quản trị viên cấu hình API keys cho Goong, Google OAuth, Gemini LLM, VNPay và MoMo trực tiếp trên giao diện Admin; toàn bộ secret được mã hóa AES-128-CBC / HMAC-SHA256 (Fernet) trong database, không lưu trữ plain-text.
 - 🌐 **Hệ thống Song ngữ Toàn diện (VI/EN) & Bộ Theme Kép (Light/Dark)**: Chuyển đổi ngôn ngữ linh hoạt Tiếng Việt / English toàn diện, cùng 2 giao diện đồ họa cao cấp: Warm Light Theme (Ấm áp, thanh lịch) và Nocturnal Emerald Theme (Đêm cyberpunk huyền bí).
 - 🏛️ **Bản Sao Số 3D Công Trình Biểu Tượng (`/map-3d`)**: Tích hợp mô hình 3D thực tế chi tiết dạng `.glb` (Nhà thờ Đức Bà Sài Gòn...), tương tác xoay 360°, phóng to thu nhỏ, kiểm soát chính xác góc xoay (`heading`), cao độ (`altitude`), tỉ lệ thực (`scale`) và tọa độ thực địa qua endpoint `/api/models-3d/*`.
-- 🤖 **Tự Động Hóa Telegram Bot & Quản Trị Hệ Thống Toàn Diện (`/api/admin/bot/*`, `/admin`)**: Đồng bộ Webhook tự động, chuyển tiếp sự kiện sang workflow n8n, tùy biến persona và mô hình AI cho bot trợ lý, cùng bảng tinh chỉnh tham số lõi toàn hệ thống (giới hạn điểm dừng, phạt thời gian di chuyển, chế độ bảo trì, thông báo toàn trang).
-- 📥 **Vùng Đệm Nhập Liệu Địa Danh Hàng Loạt (Place Import Staging)**: Hỗ trợ import danh mục địa danh từ file ngoài (CSV/JSON) vào bảng đệm `place_import_staging`, tự động lọc trùng và kiểm duyệt trước khi đưa vào catalog chính.
+- 📥 **Vùng Đệm Nhập Liệu Địa Danh Hàng Loạt (Place Import Staging)**: Hỗ trợ import danh mục địa danh từ file ngoài (CSV/JSON/XLSX) vào bảng đệm `place_import_staging`, tự động lọc trùng và kiểm duyệt trước khi đưa vào catalog chính qua `scripts.import_place_candidates`.
 - 🚦 **Điều hướng Phân quyền Theo Vai trò (Role-based Navigation & Route Guards)**: Phân luồng trải nghiệm người dùng thông minh (`RoleHome`, `CustomerRoute`, `RoleRoute`).
 - 🛡️ **Hệ Thống Phân Quyền Đa Tầng (RBAC) & Cổng Quản Lý Chuyên Biệt**:
-  - **Traveler**: Lưu lịch sử chuyến đi, quản lý hồ sơ, chia sẻ lịch trình qua link bảo mật (`/shared/:token`), so sánh đa phương án (`/compare`), đánh giá trải nghiệm theo rubric chuẩn 5 sao.
+  - **Traveler**: Khám phá danh mục địa điểm (`/places`), lưu lịch sử chuyến đi, quản lý hồ sơ, chia sẻ lịch trình qua link bảo mật (`/shared/:token`), so sánh đa phương án (`/compare`), đánh giá trải nghiệm theo rubric chuẩn 5 sao.
   - **Provider Portal (`/provider-portal`)**: Quản lý chi tiết hoạt động, thêm/sửa slot với Optimistic Locking (`version`), duyệt/từ chối đặt chỗ, quản lý minh chứng pháp lý, trợ lý AI `PROVIDER_ASSISTANT` với cơ chế xác nhận 2 bước bằng token chữ ký số HMAC-SHA256 (`ProviderSlotAssistantPanel`).
   - **Admin Portal (`/admin`)**: Dashboard KPI thời gian thực, hàng đợi kiểm duyệt (Moderation Queue), công cụ phát hiện & hợp nhất POI trùng lặp (Fuzzy string similarity merge), cấu hình tích hợp các cổng thanh toán và bên thứ 3, quản lý Telegram bot & n8n, tinh chỉnh tham số lõi hệ thống, khu vực đệm staging địa danh, bảng công cụ AI (`AdminAiToolsPanel`), bảng rủi ro ngập (`AdminFloodRiskPanel`), bảng vận hành (`AdminOperationsPanel`) và nhật ký kiểm toán (Audit Logs).
 - 🌧️ **Mô hình Cảnh báo Nguy cơ Ngập lụt & Chỉ số Thời tiết/AQI**: Tích hợp mô hình phân tích rủi ro ngập lụt tại các tuyến đường TP. Hồ Chí Minh (`/api/ml/flood-risk`) và tự động điều chỉnh ưu tiên điểm dừng trong nhà khi mưa lớn hoặc AQI vượt ngưỡng an toàn.
@@ -524,20 +534,20 @@ Hệ thống triển khai 2 bài toán Học máy có giám sát (Supervised Lea
 
 ```text
 models/
-├── ai-ranker/                       # Mô hình Xếp hạng Trải nghiệm (XGBoost)
-│   ├── xgboost_ranker.json / lightgbm_ranker.txt   # Model native; model_file nằm trong metadata
-│   ├── model_metadata.json          # Metadata phiên bản, NDCG metrics & feature schema
-│   └── feature_schema.json          # Định nghĩa 13 đặc trưng đầu vào
+├── ai-ranker/                       # Mô hình Xếp hạng Trải nghiệm (XGBoost / LightGBM)
+│   ├── xgboost_ranker.json          # Model native XGBRanker (LambdaMART / rank:ndcg)
+│   ├── model_metadata.json          # Metadata phiên bản ranker-features-v2, metrics & checksum
+│   └── feature_schema.json          # Định nghĩa 15 đặc trưng đầu vào (ranker-features-v2)
 ├── flood-risk/                      # Mô hình Phân tích Rủi ro Ngập lụt Đô thị TP.HCM
-│   ├── model.joblib                 # Mô hình phân loại ngập lụt
+│   ├── model.joblib                 # Mô hình phân loại ngập lụt Scikit-learn
 │   ├── preprocessor.joblib          # Tiền xử lý dữ liệu không gian
 │   └── threshold.json               # Ngưỡng xác suất cảnh báo an toàn
 └── e5/                              # Mô hình Vector Embedding Đa ngôn ngữ Multilingual E5
 ```
 
-### 1. Mô hình Xếp hạng Trải nghiệm (Experience Ranker - XGBoost)
-- **Kiến trúc:** `xgboost.XGBRanker` với hàm mục tiêu `rank:ndcg`.
-- **Bộ 13 đặc trưng cốt lõi:**
+### 1. Mô hình Xếp hạng Trải nghiệm (Experience Ranker - XGBoost & LightGBM)
+- **Kiến trúc:** `xgboost.XGBRanker(objective="rank:ndcg")` và `lightgbm.LGBMRanker(objective="lambdarank")`.
+- **Bộ 15 đặc trưng phiên bản `ranker-features-v2`:**
   1. `tag_jaccard`: Độ trùng lặp Jaccard giữa sở thích người dùng và nhãn trải nghiệm.
   2. `intent_match`: Điểm khớp mục đích chính của chuyến đi.
   3. `is_hands_on`: Hoạt động có tính chất thực hành/workshop thủ công.
@@ -551,8 +561,10 @@ models/
   11. `temperature_c`: Nhiệt độ môi trường đô thị (°C).
   12. `pm2_5`: Nồng độ bụi mịn PM2.5 (µg/m³).
   13. `european_aqi`: Chỉ số chất lượng không khí châu Âu.
+  14. `is_hands_on_known`: Cờ xác định giá trị thực hành đã được quan trắc/kiểm chứng.
+  15. `is_indoor_known`: Cờ xác định giá trị trong nhà/ngoài trời đã được kiểm chứng.
 - **Chỉ số kiểm thử:** Đạt **NDCG@5 = 0.9516**, **NDCG@2 = 0.9031**, **Recall@5 = 1.0**.
-- **Vai trò trong hệ thống:** Đóng vai trò bộ phân loại tinh chỉnh (Tie-breaker) trong Heuristic Planner và xếp hạng các ứng viên thay thế trong Dynamic Replanning (`/api/ml/rank-experiences`).
+- **Vai trò trong hệ thống:** Đóng vai trò bộ phân loại tinh chỉnh (Tie-breaker) trong Heuristic Planner và xếp hạng các ứng viên thay thế trong Dynamic Replanning (`/api/ml/rank-experiences`). Cơ chế fail-closed tự động fallback về Rule Baseline an toàn nếu model không đạt ngưỡng.
 
 ### 2. Mô hình Rủi ro Ngập lụt Đô thị Sài Gòn (Saigon Flood Risk Classifier)
 - Tích hợp dữ liệu lịch sử ngập lụt TP. Hồ Chí Minh giai đoạn 2002–2026 từ 53 nguồn báo cáo chính thống kết hợp chỉ số triều cường và lượng mưa.
@@ -676,12 +688,14 @@ flowchart TB
 | **Cổng thanh toán** | VNPay Gateway & Ví MoMo | Tích hợp giữ chỗ 15 phút, chữ ký HMAC-SHA512 (VNPay) & HMAC-SHA256 (MoMo), IPN an toàn |
 | **Backend API** | Python 3.12, FastAPI 0.142+, Pydantic v2 | Xây dựng RESTful API hiệu năng cao, xác thực dữ liệu chặt chẽ |
 | **Cơ sở dữ liệu** | PostgreSQL 16, PostGIS 3.4, SQLAlchemy 2.0 | Lưu trữ thực thể địa lý, truy vấn không gian `geography(POINT)` |
-| **Database Migration** | Alembic | Quản lý 10 phiên bản lược đồ cơ sở dữ liệu (`0001_initial` -> `0010_place_import_staging`) |
+| **Database Migration** | Alembic | Quản lý 12 phiên bản lược đồ cơ sở dữ liệu (`0001_initial` -> `0012_normalize_slot_timestamps_to_utc`) |
 | **Bảo mật & Mã hóa** | Fernet (AES-128-CBC), HTTP-only Cookies, Google OAuth PKCE | Mã hóa khóa tích hợp động, session an toàn và đăng nhập 1-chạm |
 | **Vận hành & Hàng đợi** | Transactional Email Outbox Worker, Redis Limiter | Xử lý email thông báo đặt chỗ, hàng đợi nền, chống gửi trùng lặp |
-| **Học máy Cục bộ (ML)** | XGBoost 2.1, Scikit-learn 1.5, NumPy, Pandas | Mô hình xếp hạng trải nghiệm NDCG@5 = 0.9516 và mô hình rủi ro ngập lụt |
+| **Tự động hóa Bot & AI** | Telegram Webhook, n8n integration, Zalo Poller, Gemini | Bot tư vấn du lịch tự động, đồng bộ webhook và chuyển tiếp sự kiện |
+| **Học máy Cục bộ (ML)** | XGBoost 2.1, LightGBM, Scikit-learn 1.5, NumPy, Pandas | Ranker 15 đặc trưng (`ranker-features-v2`, NDCG@5 = 0.9516) và rủi ro ngập lụt |
 | **Tìm kiếm Ngữ nghĩa** | Sentence-Transformers, Multilingual E5 | Tìm kiếm trải nghiệm theo ngữ nghĩa vector chạy cục bộ trên CPU |
-| **Container & CI/CD** | Docker Compose v2, GitHub Actions | Đóng gói môi trường đồng nhất và tự động kiểm thử lint/pytest |
+| **Kiểm thử Tự động** | Pytest, Playwright, Vitest | Bộ test tự động 22 modules, 107+ test cases bao phủ toàn diện hệ thống |
+| **Container & CI/CD** | Docker Compose v2, GitHub Actions | Đóng gói môi trường đồng nhất và tự động kiểm thử lint/pytest/build |
 
 ---
 
@@ -774,7 +788,7 @@ Toàn bộ API được tài liệu hóa tự động tại Swagger UI: `http://
 | Phương thức | Đường dẫn | Chức năng |
 |:---:|---|---|
 | `GET` | `/api/ml/status` | Kiểm tra trạng thái nạp và phiên bản của XGBoost Ranker & Flood Model |
-| `POST` | `/api/ml/rank-experiences` | Xếp hạng các ứng viên trải nghiệm bằng mô hình XGBRanker (13 đặc trưng) |
+| `POST` | `/api/ml/rank-experiences` | Xếp hạng các ứng viên trải nghiệm bằng mô hình XGBRanker / LightGBM (15 đặc trưng `ranker-features-v2`) |
 | `POST` | `/api/ml/flood-risk` | Dự đoán xác suất rủi ro ngập lụt tại các cung đường đô thị TP.HCM |
 
 ### 9. Cổng Đối Tác (Provider Portal)
@@ -810,9 +824,28 @@ Toàn bộ API được tài liệu hóa tự động tại Swagger UI: `http://
 | `POST` | `/api/admin/duplicates/pois/merge` | Hợp nhất 2 POI trùng lặp, liên kết lại toàn bộ trải nghiệm và điểm dừng |
 | `GET` | `/api/admin/integrations` | Xem trạng thái cấu hình các dịch vụ tích hợp (Google, Goong, Gemini, VNPay, MoMo) |
 | `PUT` | `/api/admin/integrations/{service}` | Cập nhật thông tin cấu hình và khóa bí mật mã hóa Fernet |
+| `GET` | `/api/admin/bot/config` | Lấy cấu hình Telegram Bot, webhook, model AI và forward n8n |
+| `PATCH` | `/api/admin/bot/config` | Cập nhật cấu hình bot, prompt persona và chuyển tiếp n8n |
+| `POST` | `/api/admin/bot/sync-webhook` | Đồng bộ Webhook bot lên Telegram API |
+| `POST` | `/api/admin/bot/send-message` | Gửi tin nhắn thủ công qua Telegram bot |
+| `GET` | `/api/admin/system-settings` | Xem thông số lõi: giới hạn chặng dừng, phạt di chuyển, buffer, bảo trì |
+| `PATCH` | `/api/admin/system-settings` | Cập nhật thông số hệ thống, thông báo toàn trang và chế độ bảo trì |
+| `GET` | `/api/admin/staging-places` | Xem danh sách địa điểm trong vùng đệm staging chờ duyệt |
+| `POST` | `/api/admin/staging-places/import-csv` | Nạp danh mục địa điểm dạng CSV vào vùng đệm staging |
+| `POST` | `/api/admin/staging-places/import-json` | Nạp danh mục địa điểm dạng JSON vào vùng đệm staging |
+| `POST` | `/api/admin/staging-places/{id}/approve` | Phê duyệt đưa địa điểm từ staging vào catalog POI chính thức |
+| `POST` | `/api/admin/staging-places/{id}/reject` | Từ chối bản ghi địa điểm staging |
+| `POST` | `/api/admin/staging-places/approve-all` | Phê duyệt hàng loạt toàn bộ địa điểm hợp lệ trong staging |
 | `GET` | `/api/admin/audit` | Xem nhật ký kiểm toán hệ thống toàn diện |
 
-### 11. Giám sát Vận hành (Operations Monitoring)
+### 11. Bản Sao Số 3D & Hiệu Chuẩn (3D Digital Twin)
+| Phương thức | Đường dẫn | Chức năng |
+|:---:|---|---|
+| `GET` | `/api/models-3d` | Danh sách mô hình 3D Landmark và thông số hiệu chuẩn tọa độ |
+| `GET` | `/api/models-3d/{model_id}` | Chi tiết thông số góc xoay, cao độ, tỉ lệ thực của mô hình 3D |
+| `PUT` | `/api/models-3d/{model_id}/calibration` | Cập nhật thông số hiệu chuẩn thực địa mô hình 3D (Admin) |
+
+### 12. Giám sát Vận hành (Operations Monitoring)
 | Phương thức | Đường dẫn | Chức năng |
 |:---:|---|---|
 | `GET` | `/api/ops/status` | Tình trạng tổng quan Outbox Email, kết nối SMTP và worker |
@@ -1023,29 +1056,32 @@ LoaclExplorerAI/
 │   │   │   ├── prompts/         # Versioned Prompt Catalog v3_0_0 (manifest.json)
 │   │   │   ├── repositories/    # Data Access Layer
 │   │   │   ├── schemas/         # Pydantic Schemas (AI, Auth, Bookings, ML, Planner, Routing)
-│   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, BotService...)
-│   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0010_place_import_staging)
-│   │   ├── scripts/             # Scripts tiện ích: seed_db.py, worker.py, download_e5_model.py
-│   │   ├── tests/               # Bộ test tự động với pytest (103+ test cases)
+│   │   │   └── services/        # Business Logic (Planner, Replan, Ranker, VNPay, MoMo, BotService, TicketService...)
+│   │   ├── migrations/          # Alembic Migrations (0001_initial -> 0012_normalize_slot_timestamps_to_utc)
+│   │   ├── scripts/             # Scripts tiện ích: seed_db, seed_saigon_places, import_place_candidates, quarantine, zalo_bot_poller, worker, download_e5_model
+│   │   ├── tests/               # Bộ test tự động với pytest (22 modules, 107+ test cases)
 │   │   └── README.md            # Tài liệu chi tiết hướng dẫn Backend API
-│   ├── models_3d/               # Dữ liệu mô hình 3D landmarks
+│   ├── models_3d/               # Dữ liệu hiệu chuẩn mô hình 3D (calibration.json)
 │   └── web/                     # Frontend React 18 + TypeScript + Three.js + Leaflet
 │       ├── src/
 │       │   ├── api/             # API Client tích hợp Offline Mock Engine Fallback
 │       │   ├── auth.tsx         # Auth Context, RoleHome, CustomerRoute & RoleRoute
-│       │   ├── components/3d/   # Canvas 3D City WebGL, Map3DLandmarkViewer (GLB loader) & Thẻ 3D TiltCard
-│       │   ├── components/map/  # MapAdapter với CartoDB Voyager / Dark Matter & Goong geometry
+│       │   ├── components/      # Thư viện UI: 3d/ (CityHero3D, Map3DLandmarkViewer, TiltCard3D), common/, experience/, map/
 │       │   ├── layouts/         # AppLayout kính mờ, LanguageSwitcher & Theme toggle
 │       │   ├── locales/         # Bộ từ điển song ngữ Tiếng Việt & Tiếng Anh (vi.ts, en.ts)
-│       │   ├── pages/           # 14 trang ứng dụng (Home, Map3D, Chat, Explore, Planner, Itinerary, Portals...)
+│       │   ├── pages/           # 16 trang ứng dụng (Home, Map3D, Places, PlaceDetail, Chat, Explore, Planner, Itinerary, Portals...)
 │       │   └── styles.css       # Design tokens 3D, hiệu ứng kính mờ & Warm Light / Dark Theme
 │       └── README.md            # Tài liệu chi tiết hướng dẫn Frontend Web
 ├── assets/                      # Hình ảnh đồ họa, banner, logo, screenshots
 ├── data/                        # Dữ liệu mô phỏng, báo cáo ngập lụt thô & nhãn thực nghiệm
 │   ├── experimental/            # flood_training_weak_labels.csv & tài liệu phương pháp
 │   ├── raw/                     # hcmc_flood_reports_2002_2026.csv gốc
+│   ├── training/                # Biểu mẫu dữ liệu kiểm chứng gán nhãn bởi con người
+│   ├── dataset_ranking_tphcm.*  # Tập dữ liệu kịch bản truy vấn xếp hạng TP.HCM (CSV, JSONL)
+│   ├── sai_gon_places.json      # Danh mục địa điểm du lịch & văn hóa Sài Gòn đầy đủ
 │   └── README.md                # Tài liệu chi tiết về các tập dữ liệu
-├── models_3d/                   # Dữ liệu hiệu chuẩn vị trí, góc xoay và tỉ lệ thực tế các mô hình 3D Landmark (calibration.json)
+├── Places/                      # Dữ liệu bảng tính nguồn địa danh TP.HCM (Sai_Gon_Places.xlsx)
+├── models_3d/                   # Dữ liệu hiệu chuẩn không gian Landmark 3D (calibration.json)
 ├── docs/                        # Tài liệu kỹ thuật chuyên sâu
 │   ├── api.md                   # Đặc tả kỹ thuật REST API chi tiết
 │   ├── architecture.md          # Đặc tả kiến trúc hệ thống
@@ -1055,9 +1091,10 @@ LoaclExplorerAI/
 │   ├── sourced-catalog.md       # Quy chuẩn minh chứng nguồn và kiểm duyệt POI
 │   ├── ai-prompt-catalog.md     # Danh mục 8 prompt AI chuẩn PRD 3.0
 │   └── ml-training-and-data.md  # Quy trình huấn luyện mô hình Ranker & Flood Model
-├── models/                      # Thư mục Artifacts mô hình (XGBoost Ranker, E5, Flood Risk)
+├── docs-site/                   # Trang tài liệu kỹ thuật tĩnh chạy GitHub Pages (React + Vite)
+├── models/                      # Thư mục Artifacts mô hình (XGBoost/LightGBM Ranker, E5, Flood Risk)
 ├── notebooks/                   # Jupyter Notebooks huấn luyện Ranker & Flood Model trên Google Colab
-├── scripts/                     # Scripts vận hành: backup-postgres, restore-postgres, production-smoke
+├── scripts/                     # Scripts thu thập dữ liệu Quận 1, xử lý ảnh, huấn luyện ML, backup-postgres, run-dev
 ├── docker-compose.yml           # Cấu hình cụm container chính (API, Web, DB, Redis)
 ├── docker-compose.override.yml  # Cấu hình phát triển cục bộ
 ├── docker-compose.prod.yml      # Cấu hình triển khai production có rate limiting

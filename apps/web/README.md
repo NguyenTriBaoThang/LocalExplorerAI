@@ -26,6 +26,8 @@
 |---|---|---|---|
 | `/` | `RoleHome` / `HomePage` | Trang chủ với Canvas 3D WebGL Sài Gòn, thông điệp định vị và lối tắt nhanh. Tự động chuyển hướng nếu là Provider hoặc Admin | Công khai |
 | `/map-3d` | `Map3DPage` | Bản đồ & Trình diễn 3D Digital Twin các công trình biểu tượng (Nhà thờ Đức Bà...), xoay / phóng to thu nhỏ / xem thông tin kiến trúc & lịch sử | Công khai |
+| `/places` | `PlacesPage` | Danh mục địa điểm du lịch & văn hóa Sài Gòn (Quận 1...), tìm kiếm, lọc theo loại hình, đánh giá sao và hình ảnh thực địa | Khách du lịch (`traveler`) / Vãng lai |
+| `/places/:id` | `PlaceDetailPage` | Chi tiết địa điểm: bộ sưu tập ảnh, bản đồ vị trí, giờ mở cửa, giá vé, đánh giá trải nghiệm và liên kết hoạt động | Khách du lịch (`traveler`) / Vãng lai |
 | `/explore` | `ExplorePage` | Khám phá danh mục địa điểm và hoạt động, tìm kiếm ngữ nghĩa E5, bộ lọc đa chiều và bản đồ radar | Khách du lịch (`traveler`) / Vãng lai |
 | `/chat` | `ChatPage` | Trợ lý AI Concierge thông minh, trích xuất ràng buộc chuyến đi với Live Constraints Inspector, tạo lịch trình 1-chạm | Khách du lịch (`traveler`) / Vãng lai |
 | `/planner` | `PlannerPage` | Wizard lập lịch trình 3 bước, tự động gợi ý địa chỉ qua Goong Geocoding, Thẻ xem trước 3D Live Day Preview | Khách du lịch (`traveler`) / Vãng lai |
@@ -49,16 +51,18 @@ apps/web/
 ├── src/
 │   ├── api/               # API Client (Axios) tích hợp Offline Mock Engine Fallback
 │   ├── components/        # Thư viện thành phần giao diện:
-│   │   ├── 3d/            # ThreeCanvas (Saigon Cityscape), Map3DLandmarkViewer (GLB loader), TiltCard3D
-│   │   ├── map/           # MapAdapter (Leaflet + CartoDB tiles + Goong polylines)
-│   │   ├── ui/            # Modal, Toast, Button, Input, Badges
-│   │   └── LanguageSwitcher.tsx # Nút chuyển đổi ngôn ngữ Việt / Anh
+│   │   ├── 3d/            # CityHero3D (WebGL Cityscape), Map3DLandmarkViewer (GLB loader), TiltCard3D, landmark/
+│   │   ├── common/        # LanguageSwitcher, StatusBadge
+│   │   ├── experience/    # ExperienceCard hiển thị thẻ trải nghiệm & tags
+│   │   └── map/           # MapAdapter (Leaflet + CartoDB tiles + Goong polylines)
 │   ├── hooks/             # Custom React Hooks (theme, window size, debounce)
 │   ├── layouts/           # AppLayout (Header thanh điều hướng nổi, Theme toggle, Footer)
 │   ├── locales/           # Từ điển đa ngôn ngữ (vi.ts, en.ts)
-│   ├── pages/             # 14 trang ứng dụng chính & các Panels nghiệp vụ:
+│   ├── pages/             # 16 trang ứng dụng chính & các Panels nghiệp vụ:
 │   │   ├── HomePage.tsx               # Trang chủ với Canvas 3D
 │   │   ├── Map3DPage.tsx              # Bản đồ 3D Landmark công trình biểu tượng
+│   │   ├── PlacesPage.tsx             # Danh mục địa điểm du lịch & văn hóa Sài Gòn
+│   │   ├── PlaceDetailPage.tsx        # Trang chi tiết địa điểm du lịch & ảnh thực tế
 │   │   ├── ExplorePage.tsx            # Khám phá danh mục & Semantic search
 │   │   ├── ChatPage.tsx               # AI Concierge Chatbot & Constraints
 │   │   ├── PlannerPage.tsx            # Lập lịch trình 3 bước & Preview 3D

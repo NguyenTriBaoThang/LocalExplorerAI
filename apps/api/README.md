@@ -49,12 +49,16 @@ apps/api/
 │   ├── schemas/           # Pydantic Schemas xác thực dữ liệu vào/ra
 │   └── services/          # Business Logic (Planner, Replanner, Ranker, VNPay, MoMo, BotService...)
 ├── migrations/            # Lịch sử lược đồ cơ sở dữ liệu Alembic:
-│   └── versions/          # 0001_initial -> 0010_place_import_staging
+│   └── versions/          # 0001_initial -> 0012_normalize_slot_timestamps_to_utc (12 migrations)
 ├── scripts/               # Scripts tiện ích hệ thống:
 │   ├── seed_db.py         # Nạp dữ liệu mô phỏng demo & tài khoản dev
+│   ├── seed_saigon_places.py # Nạp danh mục địa điểm Sài Gòn & Quận 1 từ dữ liệu JSON
+│   ├── import_place_candidates.py # Staging dữ liệu địa điểm từ workbook XLSX vào khu vực kiểm duyệt
+│   ├── quarantine_simulated_data.py # Ẩn/cách ly dữ liệu mô phỏng demo để vận hành dữ liệu thật
+│   ├── zalo_bot_poller.py # Bot Zalo tự động hóa tư vấn & chốt lịch trình với Gemini
 │   ├── worker.py          # Background worker xử lý Email Outbox & Job nền
 │   └── download_e5_model.py # Tải trọng số mô hình Multilingual E5 về local
-├── tests/                 # Bộ kiểm thử tự động pytest (103+ test cases)
+├── tests/                 # Bộ kiểm thử tự động pytest (22 modules, 107+ test cases)
 ├── alembic.ini            # Cấu hình đường dẫn migration
 ├── Dockerfile             # Container build cho Backend API
 ├── requirements.txt       # Thư viện ứng dụng cốt lõi (FastAPI, SQLAlchemy, Alembic, Pydantic)
@@ -114,11 +118,15 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 ### Bước 4: Chạy Migration & Nạp dữ liệu mô phỏng
 ```powershell
-# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất (0010_place_import_staging)
+# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất (0012_normalize_slot_timestamps_to_utc)
 alembic upgrade head
 
-# Nạp dữ liệu mô phỏng ban đầu và tài khoản thử nghiệm
+# Cách 1: Nạp dữ liệu mô phỏng ban đầu và tài khoản thử nghiệm phát triển
 python -m scripts.seed_db
+
+# Cách 2: Staging dữ liệu địa điểm du lịch Sài Gòn từ file Excel/JSON vào hệ thống kiểm duyệt
+python -m scripts.import_place_candidates --dry-run
+python -m scripts.import_place_candidates
 ```
 
 ### Bước 5: (Tùy chọn) Tải mô hình Multilingual E5 cục bộ
@@ -144,17 +152,23 @@ python -m scripts.worker
 ```
 *Worker tự động quét bảng `email_outbox` để gửi email xác nhận đặt chỗ, thông báo quyết định của nhà cung cấp và xử lý sự cố hủy ca.*
 
+### Bước 8: (Tùy chọn) Khởi chạy Zalo Bot Poller
+```powershell
+python -m scripts.zalo_bot_poller
+```
+*Poller tự động kết nối Zalo với mô hình Gemini Flash để trò chuyện, tư vấn du lịch và chốt lịch trình với du khách.*
+
 ---
 
 ## 🧪 Chạy Kiểm thử Tự động (Tests)
 
-Bộ kiểm thử được viết bằng `pytest` gồm **103 test cases** bao phủ toàn diện Router, Heuristic Solver, Place Label Suggestions, Ranker Training Contracts, ML Integrity & Safety Gates, Role Isolation, Booking State Machine, và Alembic Migration Chain:
+Bộ kiểm thử được viết bằng `pytest` gồm **22 modules kiểm thử và 107+ test cases** bao phủ toàn diện Router, Heuristic Solver, Place Label Suggestions, Ranker Training Contracts, District 1 Crawler & Photos, ML Integrity & Safety Gates, Role Isolation, Booking State Machine, và Alembic Migration Chain:
 ```powershell
 cd apps/api
 pytest -q
 ```
-- **Môi trường chỉ có Core Dependencies (`requirements.txt`)**: Bộ test chạy an toàn `94 passed, 1 skipped`. Module `test_experience_ranker_training.py` tự động được bỏ qua qua `pytest.importorskip` mà không gây lỗi crash.
-- **Môi trường có đầy đủ Ranking Training Dependencies (`requirements-ranking-training.txt`)**: Toàn bộ **103 test cases** đều được thực thi và xác minh thành công (`103 passed, exit code 0`).
+- **Môi trường chỉ có Core Dependencies (`requirements.txt`)**: Bộ test chạy an toàn vượt qua các module nghiệp vụ cốt lõi; module `test_experience_ranker_training.py` tự động được bỏ qua qua `pytest.importorskip` mà không gây lỗi crash.
+- **Môi trường có đầy đủ Ranking Training Dependencies (`requirements-ranking-training.txt`)**: Toàn bộ **107 test cases** đều được thực thi và xác minh thành công (`107 passed, exit code 0`).
 
 ---
 
