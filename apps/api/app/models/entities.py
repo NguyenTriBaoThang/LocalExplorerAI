@@ -78,7 +78,7 @@ class Provider(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # Partner lifecycle: pending (self-registered, awaiting review) -> verified | rejected; verified <-> suspended.
     # "mock" and "simulated" are legacy demo values and behave like verified.
-    verification_status: Mapped[str] = mapped_column(String(32), default="mock")
+    verification_status: Mapped[str] = mapped_column(String(32), default="mock", index=True)
     portal_access_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # Partner application submitted through the portal, and the administrator's review of it.
     business_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
