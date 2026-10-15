@@ -1,0 +1,40 @@
+{
+  "model_type": "logistic_regression",
+  "model_target": "target_public_report_present",
+  "target_definition": "Whether the public HCMC flood-report source contains a record for a named location-month.",
+  "positive_label": "documented_report",
+  "negative_label": "pseudo_no_matching_record; actual flood status unknown",
+  "source_dataset_doi": "10.23708/8Y16HU",
+  "dataset_filename": "flood_training_weak_labels.csv",
+  "dataset_sha256": "8fd21271b8f0125ffc41c7dec8fd188674ae066d0f580b044817153e4de6679c",
+  "rows": 662,
+  "feature_columns": [
+    "location_name",
+    "location_type",
+    "administrative_area_key",
+    "year",
+    "month"
+  ],
+  "audit_columns_used_as_features": false,
+  "split_strategy": "GroupShuffleSplit; entire location held out",
+  "train_rows": 490,
+  "test_rows": 172,
+  "train_locations": 183,
+  "test_locations": 61,
+  "metrics_unweighted_sampled_test": {
+    "accuracy": 0.5116279069767442,
+    "balanced_accuracy": 0.5116279069767442,
+    "precision": 1.0,
+    "recall": 0.023255813953488372,
+    "f1": 0.045454545454545456,
+    "roc_auc": 0.7207950243374797,
+    "average_precision": 0.6953527589199714
+  },
+  "metrics_weighted_for_negative_subsampling_only": {
+    "roc_auc": 0.7206438922364424,
+    "average_precision": 0.2016753384095622
+  },
+  "deployment_eligible": false,
+  "safety_note": "Not a physical flood/no-flood model. Never use to mark a road safe or unsafe or deploy to Flood Risk API.",
+  "created_at_utc": "2026-10-03T03:31:16.355704+00:00"
+}
