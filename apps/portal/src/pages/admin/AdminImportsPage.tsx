@@ -60,6 +60,52 @@ const FLAG_LABELS: Record<string, string> = {
   field_level_evidence_pending: 'Chưa duyệt bằng chứng theo từng trường',
 }
 
+const ACTIVITY_MODE_LABELS: Record<string, string> = {
+  passive_visit: 'Tham quan / quan sát',
+  food_service: 'Ăn uống',
+  coffee_service: 'Cà phê',
+  entertainment: 'Giải trí',
+  lodging: 'Lưu trú',
+  participatory_activity: 'Có dấu hiệu tham gia trực tiếp',
+  unknown: 'Chưa phân loại',
+}
+
+const CORE_INTENT_COLUMNS = [
+  { key: 'handicraft', label: 'Thủ công' },
+  { key: 'food', label: 'Ẩm thực' },
+  { key: 'culture', label: 'Văn hóa' },
+  { key: 'relaxation', label: 'Thư giãn' },
+] as const
+
+const INTENT_LABELS: Record<string, string> = {
+  handicraft: 'Thủ công', food: 'Ẩm thực', culture: 'Văn hóa', relaxation: 'Thư giãn',
+  shopping: 'Mua sắm', entertainment: 'Giải trí', accommodation: 'Lưu trú', sightseeing: 'Tham quan',
+}
+
+/** An ISO timestamp as the value of a datetime-local input (local time, minute precision). */
+function toDateTimeLocal(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+function IntentColumns({ labels, compact }: { labels: NonNullable<PlaceImportCandidate['suggested_labels']>; compact?: boolean }) {
+  return (
+    <span className="mt-2 flex flex-wrap gap-2">
+      {CORE_INTENT_COLUMNS.map(({ key, label }) => {
+        const on = labels.intent_columns?.[key]
+        return (
+          <span key={key} className={`rounded-lg border px-2.5 py-1 text-xs ${on ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+            <strong className="font-medium">{label}</strong>
+            {!compact && <span className="block text-[11px]">{on ? 'Có dấu hiệu trong nguồn' : 'Chưa thấy dấu hiệu trong nguồn'}</span>}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
 const QUALITY_METRICS: Array<[string, string]> = [
   ['Thiếu địa chỉ', 'address_missing'],
   ['Tọa độ dùng lại', 'coordinates_reused'],
@@ -188,6 +234,12 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
   const raw = candidate.raw_payload
   const tags = Array.isArray(raw.tags) ? raw.tags.map(String).join(', ') : String(raw.tags || '')
   const [statusLabel, statusTone] = candidateStatus(candidate)
+  const suggested = candidate.suggested_labels
+  const details = (raw.details && typeof raw.details === 'object' ? raw.details : {}) as Record<string, unknown>
+  const photos = Array.isArray(details.images)
+    ? details.images.filter((photo): photo is Record<string, unknown> => Boolean(photo && typeof photo === 'object'))
+    : []
+  const osmTags = details.osm_tags && typeof details.osm_tags === 'object' ? details.osm_tags as Record<string, unknown> : {}
   const lines: string[] = [
     `ID nguồn: ${candidate.external_id}`,
     `Tọa độ trong file: ${String(raw.lat ?? 'trống')}, ${String(raw.lon ?? 'trống')}`,
@@ -205,6 +257,11 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
     `Tags: ${tags || 'không có'}`,
   )
   if (raw.description) lines.push(String(raw.description))
+  if (details.opening_hours) lines.push(`opening_hours (OSM): ${String(details.opening_hours)}`)
+  if (details.contact_phone) lines.push(`phone (OSM): ${String(details.contact_phone)}`)
+  if (details.website) lines.push(`website (OSM): ${String(details.website)}`)
+  if (details.fee) lines.push(`fee (OSM): ${String(details.fee)}`)
+  if (details.observed_at) lines.push(`Thời điểm crawl: ${String(details.observed_at)}`)
   if (raw.note) lines.push(`Ghi chú nguồn: ${String(raw.note)}`)
 
   return (
@@ -225,6 +282,9 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
                 {candidate.quality_flags.map((flag) => <Badge key={flag} tone="amber">{FLAG_LABELS[flag] || flag}</Badge>)}
               </span>
             )}
+            {suggested?.intent_columns
+              ? <IntentColumns labels={suggested} compact />
+              : <span className="mt-2 block text-xs text-slate-500">Nhãn 4 mục đích chưa được API trả về. Khởi động lại API để tải nhãn mới.</span>}
           </span>
         </button>
         {candidate.review_status === 'needs_enrichment' && (
@@ -232,9 +292,48 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
         )}
       </div>
       {open && (
-        <ul className="mt-3 space-y-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-          {lines.map((line, index) => <li key={index} className="break-words">{line}</li>)}
-        </ul>
+        <div className="mt-3 space-y-3">
+          {suggested ? (
+            <div className="rounded-lg border border-slate-200 p-3 text-xs text-slate-600">
+              <p className="font-medium text-slate-900">Nhãn phân loại gợi ý · {suggested.ruleset_version}</p>
+              <ul className="mt-2 space-y-1">
+                <li>Loại POI: {suggested.poi_type_label_vi}</li>
+                <li>Loại hoạt động: {ACTIVITY_MODE_LABELS[suggested.activity_mode] || suggested.activity_mode}</li>
+                <li>Mục đích chính: {suggested.primary_intent ? INTENT_LABELS[suggested.primary_intent] || suggested.primary_intent : 'Chưa khớp 4 mục đích cốt lõi'}</li>
+                <li>Hands-on: {suggested.hands_on === true ? 'Có dấu hiệu tham gia trực tiếp trong mô tả' : 'Chưa xác định ở cấp địa điểm'}</li>
+                <li>Không gian: {suggested.indoor_outdoor === 'outdoor' ? 'Ngoài trời theo cột nguồn' : suggested.indoor_outdoor === 'indoor' ? 'Trong nhà theo cột nguồn' : 'Chưa rõ'}</li>
+              </ul>
+              {suggested.intent_columns && <IntentColumns labels={suggested} />}
+              {(suggested.intent_tags || []).length > 0 && (
+                <span className="mt-2 flex flex-wrap gap-1.5">
+                  {suggested.intent_tags.map((tag) => <Badge key={tag}>{INTENT_LABELS[tag] || tag}</Badge>)}
+                </span>
+              )}
+              <p className="mt-2 text-slate-500">{suggested.warning}</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-200 p-3 text-xs text-slate-600">
+              <p className="font-medium text-slate-900">Chưa có nhãn gợi ý từ API</p>
+              <p className="mt-1">Bản ghi này dùng phản hồi API cũ hoặc thiếu trường nhãn. Khởi động lại API rồi tải lại trang để nhận nhãn phân loại.</p>
+            </div>
+          )}
+          <ul className="space-y-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+            {lines.map((line, index) => <li key={index} className="break-words">{line}</li>)}
+            {photos.map((photo, index) => (
+              <li key={`${String(photo.source_url || photo.url)}-${index}`}>
+                <a className="text-brand-700 underline" href={String(photo.source_url || photo.url || '#')} target="_blank" rel="noreferrer">
+                  Ảnh nguồn: {String(photo.title || 'Wikimedia Commons')} · {String(photo.license || 'không có thông tin giấy phép')}
+                </a>
+              </li>
+            ))}
+          </ul>
+          {Object.keys(osmTags).length > 0 && (
+            <details className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+              <summary className="cursor-pointer">Toàn bộ tags OSM ({Object.keys(osmTags).length})</summary>
+              <pre className="mt-2 overflow-x-auto">{JSON.stringify(osmTags, null, 2)}</pre>
+            </details>
+          )}
+        </div>
       )}
     </div>
   )
@@ -297,19 +396,19 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
           <Input name="address" defaultValue={String(candidate.raw_payload.address || '')} required minLength={5} maxLength={300} />
         </Field>
         <Field label="Vĩ độ (nhập lại và xác minh)" required>
-          <Input name="latitude" type="number" min={-90} max={90} step="any" required />
+          <Input name="latitude" type="number" min={-90} max={90} step="any" required defaultValue={String(candidate.raw_payload.lat ?? '')} />
         </Field>
         <Field label="Kinh độ (nhập lại và xác minh)" required>
-          <Input name="longitude" type="number" min={-180} max={180} step="any" required />
+          <Input name="longitude" type="number" min={-180} max={180} step="any" required defaultValue={String(candidate.raw_payload.lon ?? '')} />
         </Field>
         <Field label="Danh mục đã xác minh" required>
           <Input name="category" defaultValue={candidate.kind} required minLength={2} maxLength={40} />
         </Field>
         <Field label="URL nguồn (HTTPS)" required>
-          <Input name="source_uri" type="url" required placeholder="https://..." />
+          <Input name="source_uri" type="url" required placeholder="https://..." defaultValue={String(candidate.raw_payload.source || '')} />
         </Field>
         <Field label="Loại nguồn">
-          <Select name="source_type" defaultValue="official">
+          <Select name="source_type" defaultValue={String(candidate.raw_payload.source_type || 'dataset')}>
             <option value="official">Chính thức</option>
             <option value="provider">Đối tác</option>
             <option value="website">Website</option>
@@ -318,13 +417,13 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
           </Select>
         </Field>
         <Field label="Tên nguồn / người xác minh" required>
-          <Input name="source_label" required minLength={2} maxLength={180} />
+          <Input name="source_label" required minLength={2} maxLength={180} defaultValue={String(candidate.raw_payload.source_label || 'OpenStreetMap contributors')} />
         </Field>
         <Field label="Giấy phép (tùy chọn)">
-          <Input name="license" maxLength={120} />
+          <Input name="license" maxLength={120} defaultValue={String(candidate.raw_payload.license || 'ODbL-1.0')} />
         </Field>
         <Field label="Ngày quan sát" required>
-          <Input name="observed_at" type="datetime-local" required />
+          <Input name="observed_at" type="datetime-local" required defaultValue={toDateTimeLocal(candidate.raw_payload.source_observed_at)} />
         </Field>
         <Field label="Bằng chứng hết hạn vào" required>
           <Input name="expires_at" type="datetime-local" required />

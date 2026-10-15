@@ -115,14 +115,34 @@ export function AdminAiToolsPage() {
 
         {modelStatus && (
           <Card>
-            <CardHeader title="Trạng thái model local" description="Model chưa được triển khai sẽ không sinh điểm dự đoán." />
+            <CardHeader title="Trạng thái model local" description="Baseline quy tắc là mặc định. Bootstrap chỉ chạy khi bật pilot rõ ràng; không được xem là model production." />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               {([['Ranker trải nghiệm', modelStatus.experience_ranker], ['Dự đoán ngập', modelStatus.flood_risk_model]] as const).map(([name, model]) => (
                 <div key={name} className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs text-slate-500">{name}</p>
-                  <p className="mt-1 text-base font-semibold text-slate-900">{model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}</p>
-                  <p className="mt-1 text-sm text-slate-600">{model.model_version || model.block_reason || 'Chưa có artifact'}</p>
-                  {model.dataset_status && <p className="mt-1 text-xs text-slate-500">Dataset: {model.dataset_status}</p>}
+                  <p className="mt-1 text-base font-semibold text-slate-900">
+                    {model.active_ranker === 'bootstrap_ml_ranker'
+                      ? 'Bootstrap pilot đang hoạt động'
+                      : model.active_ranker === 'rule_baseline'
+                        ? 'Baseline quy tắc đang hoạt động'
+                        : model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">{model.active_version || model.model_version || model.block_reason || 'Chưa có artifact'}</p>
+                  {model.active_ranker === 'rule_baseline' && model.block_reason && <p className="mt-1 text-xs text-slate-500">{model.block_reason}</p>}
+                  {model.pilot_runtime_eligible && !model.pilot_runtime_enabled && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Artifact bootstrap đã nhận diện nhưng pilot đang tắt. Đặt ENABLE_BOOTSTRAP_RANKER=true và khởi động lại API để chạy thử có kiểm soát.
+                    </p>
+                  )}
+                  {model.active_ranker === 'bootstrap_ml_ranker' && (
+                    <p role="note" className="mt-1 text-xs font-medium text-amber-700">
+                      CẢNH BÁO: nhãn yếu do quy tắc tạo, chưa xác nhận chất lượng với du khách thật; không đủ điều kiện production.
+                    </p>
+                  )}
+                  {model.error && <p role="alert" className="mt-1 text-xs text-red-600">Không tải được model: {model.error}</p>}
+                  {(model.dataset_status || model.artifact_dataset_status) && (
+                    <p className="mt-1 text-xs text-slate-500">Dataset: {model.dataset_status || model.artifact_dataset_status}</p>
+                  )}
                 </div>
               ))}
             </div>

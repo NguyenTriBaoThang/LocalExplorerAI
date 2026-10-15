@@ -10,6 +10,24 @@ export interface PlaceImportBatch {
   created_at: string
 }
 
+export interface SuggestedLabels {
+  ruleset_version: string
+  label_status: string
+  intent_columns: { handicraft: boolean; food: boolean; culture: boolean; relaxation: boolean }
+  poi_type: string
+  poi_type_label_vi: string
+  activity_mode: string
+  primary_intent: string | null
+  intent_tags: string[]
+  source_topic_tags: string[]
+  hands_on: boolean | null
+  hands_on_status: string
+  indoor_outdoor: string
+  weather_sensitivity: string
+  basis_fields: string[]
+  warning: string
+}
+
 export interface PlaceImportCandidate {
   id: string
   external_id: string
@@ -17,6 +35,7 @@ export interface PlaceImportCandidate {
   name: string
   kind: string
   raw_payload: Record<string, unknown>
+  suggested_labels?: SuggestedLabels | null
   quality_flags: string[]
   review_status: string
   target_poi_id?: string | null

@@ -7,7 +7,19 @@ export type AiTargetSet = {
 export type PromptManifest = { suite: string; version: string; prd_version: string; effective_date: string; prompt_ids: string[] }
 export type LocalModelStatus = {
   configured: boolean; loaded: boolean; deployment_allowed: boolean
-  model_version: string | null; block_reason: string | null; dataset_status?: string
+  model_version: string | null
+  active_version?: string | null
+  active_ranker?: string
+  fallback_active?: boolean
+  block_reason: string | null
+  dataset_status?: string
+  artifact_dataset_status?: string
+  pilot_runtime_eligible?: boolean
+  pilot_runtime_enabled?: boolean
+  model_runtime_active?: boolean
+  production_eligible?: boolean
+  warning?: string | null
+  error?: string | null
 }
 export type FloodModelStatus = LocalModelStatus & { demo_mode?: boolean | null; error?: string | null }
 export type MlStatus = { experience_ranker: LocalModelStatus; flood_risk_model: FloodModelStatus }
