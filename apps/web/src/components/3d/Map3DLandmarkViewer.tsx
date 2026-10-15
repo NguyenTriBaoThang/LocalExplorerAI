@@ -688,11 +688,29 @@ export function Map3DLandmarkViewer({
           <Layers size={13} />
           <span>{styleMode === 'streets' ? 'Goong Sáng' : 'Goong Đêm'}</span>
         </button>
+
+        {/* On phones the admin toggle joins this wrapping toolbar; on wider screens it sits top-right. */}
+        {canEdit && (
+          <div className="sm:hidden">
+            <button
+              type="button"
+              onClick={() => setEditMode((v) => !v)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold backdrop-blur-md border transition-all ${
+                editMode
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/10'
+                  : 'bg-slate-900/80 border-slate-700/60 text-slate-300 hover:text-white'
+              }`}
+            >
+              <Settings size={14} />
+              <span>{editMode ? 'Đang Căn Chỉnh (Admin)' : 'Căn Chỉnh Vị Trí'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Top-Right Admin HUD Toggle */}
       {canEdit && (
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <div className="absolute top-4 right-4 z-20 hidden items-center gap-2 sm:flex">
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}
