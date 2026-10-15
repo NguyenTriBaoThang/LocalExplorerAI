@@ -18,7 +18,8 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     )
     admin = User(id=str(uuid4()), email="source-admin@example.com", display_name="Admin", role="admin", is_active=True)
     traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler",
-                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True)
+                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True,
+                    email_verified_at=datetime.now(timezone.utc))
     db_session.add_all([provider_user, admin, traveler])
     db_session.commit()
 

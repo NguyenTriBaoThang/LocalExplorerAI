@@ -167,8 +167,8 @@ def test_payment_integration_check_validates_https_callbacks_without_claiming_li
 
 
 def test_google_oauth_integration_check_validates_https_callback_without_claiming_login(client, db_session, monkeypatch):
+    # app_env stays "test": the session/permission caches switch to Redis in production, which CI does not run.
     _admin_session(client, db_session)
-    monkeypatch.setattr(settings, "app_env", "production")
     monkeypatch.setattr(settings, "google_client_id", "client-id-for-test")
     monkeypatch.setattr(settings, "google_client_secret", "client-secret-for-test")
     monkeypatch.setattr(settings, "google_redirect_uri", "https://api.staging.localexplorer.ai/api/auth/google/callback")

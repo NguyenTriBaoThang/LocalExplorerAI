@@ -83,7 +83,11 @@ class ExperienceService:
         if item.verification_status == "verified":
             slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                      and self.repository.is_fresh_slot(slot)]
-        return self.serialize(item, slots, item.verification_status == "verified")
+        experience = self.serialize(item, slots, item.verification_status == "verified")
+        stats = self.repository.review_stats([item.id])
+        if item.id in stats:
+            experience = experience.model_copy(update={"rating_count": stats[item.id][0], "rating_average": stats[item.id][1]})
+        return experience
 
     def serialize(self, item, slots, is_real: bool) -> ExperienceRead:
         poi = POIRead.model_validate(item.poi)
