@@ -1,78 +1,109 @@
-# Project scripts
+# Local Explorer AI — System scripts directory
 
-The scripts directory contains utilities for place-source collection, image metadata, model training, data inspection, development, database backup, and smoke testing. Inspect a script's command-line help and source before running it; collection scripts contact external services and source terms apply.
+The scripts/ directory contains automation for data collection, image processing, machine-learning model training, database operations, and system testing for **Local Explorer AI**.
 
-## Place and image data
+---
 
-| Script | Purpose |
-|---|---|
-| crawl_district1_places.py | Collects named OpenStreetMap candidates inside the configured historical District 1 pilot boundary. This is not a complete or operationally verified venue list. |
-| download_district1_photos.py | Retrieves candidate place images and source metadata where available; it cannot guarantee an image for every place. Check each file's license and required credit. |
-| attach_district1_photos_to_catalog.py | Attaches eligible local image references to the project catalog data. |
-| generate_full_places_data.py | Generates/combines place-data files from the project data sources. Review provenance before using its output operationally. |
-| saigon_places_data_part1.py / saigon_places_data_part2.py | Place-data source modules. |
-| apply_enriched_places.py | Applies place enrichment fields to catalog data. |
-| analyze_places_excel.py / deep_check_excel.py | Inspect workbook structure and missing or invalid fields. |
-| check_places_detail.py | Checks place JSON details and consistency. |
-| dump_sheets.py / dump_indexed.py | Export workbook sheets and indexed rows for inspection. |
+## 🗂️ Script categories
 
-OSM discovery and image matching produce source candidates, not verified current operating facts. The supported catalog intake path is the API's admin staging queue; see [place import and verification](../docs/place-import-staging.md).
+### 1. Collecting, processing, and enriching Saigon place data
 
-## Model and dataset utilities
-
-| Script | Example | Purpose |
+| Script | Language | Purpose |
 |---|---|---|
-| train_experience_ranker.py | python scripts/train_experience_ranker.py --mode weak_label | Reproduce a research benchmark on weak-label ranking data. Not a production promotion path. |
-| train_verified_experience_ranker.py | python scripts/train_verified_experience_ranker.py | Validate/train from reviewed human-label data when a qualifying dataset exists. |
-| train_bootstrap_experience_ranker.py | python scripts/train_bootstrap_experience_ranker.py | Train the explicitly experimental bootstrap ranker. |
-| verify_alignment.py | python scripts/verify_alignment.py | Check the feature contract shared by the API and training pipeline. |
-| download_e5_model.py | python -m scripts.download_e5_model (from apps/api) | Download intfloat/multilingual-e5-base to the configured models/e5 location. |
+| crawl_district1_places.py | Python | Collects cultural, historical, and food place candidates in District 1 from open sources |
+| download_district1_photos.py | Python | Retrieves candidate images for District 1 places; coverage is not guaranteed for every place |
+| attach_district1_photos_to_catalog.py | Python | Attaches eligible downloaded image references to the catalog data |
+| generate_full_places_data.py | Python | Combines data from multiple sources into a JSON output |
+| saigon_places_data_part1.py / part2.py | Python | Partial source modules for the Saigon place catalog |
+| apply_enriched_places.py | Python | Applies additional fields (rating, review, open_hours) to catalog data |
+| analyze_places_excel.py | Python | Analyzes the structure of Places/Sai_Gon_Places.xlsx |
+| deep_check_excel.py | Python | Performs detailed validation and checks for missing spreadsheet fields |
+| check_places_detail.py | Python | Checks place JSON consistency and details |
+| dump_sheets.py / dump_indexed.py | Python | Exports spreadsheet sheets and indexed rows for review |
 
-The verified training template in data/training is intentionally header-only. Do not fabricate labels, user outcomes, or operational features to make training run.
+Crawled places and image matches are source candidates, not proof of current operating status. Check source attribution and each image's license. Use the admin staging workflow before promoting operational place data.
 
-## Flood-report research
+### 2. Machine-learning model training
 
-| Script | Example | Purpose |
+| Script | Example command | Purpose |
 |---|---|---|
-| download_hcmc_flood_reports.py | python scripts/download_hcmc_flood_reports.py | Download/convert the public historical Ho Chi Minh City report dataset. |
-| build_flood_report_weak_labels.mjs | node scripts/build_flood_report_weak_labels.mjs | Rebuild an experiment about public report presence; not physical flood labels. |
-| build_flood_report_experiment_notebook.py | python scripts/build_flood_report_experiment_notebook.py | Generate the separate Colab research notebook. |
+| train_experience_ranker.py | python scripts/train_experience_ranker.py --mode weak_label | Trains/benchmarks XGBoost and LightGBM rankers (ranker-features-v2) on weak-label data |
+| train_verified_experience_ranker.py | python scripts/train_verified_experience_ranker.py | Trains a ranker on human-reviewed data when a qualifying dataset is available |
+| train_bootstrap_experience_ranker.py | python scripts/train_bootstrap_experience_ranker.py | Early experimental bootstrap version |
+| verify_alignment.py | python scripts/verify_alignment.py | Checks feature-contract alignment between the backend API and ML pipeline |
+| download_e5_model.py | python -m scripts.download_e5_model (from apps/api) | Downloads intfloat/multilingual-e5-base into models/e5/ |
 
-The historical reports and weak-label experiment are not suitable as verified no-flood observations for road-level prediction.
+### 3. Flood-risk research
 
-## Development and operations
+| Script | Example command | Purpose |
+|---|---|---|
+| download_hcmc_flood_reports.py | python scripts/download_hcmc_flood_reports.py | Downloads and converts the 2002–2026 Ho Chi Minh City historical flood reports to UTF-8 CSV |
+| build_flood_report_weak_labels.mjs | node scripts/build_flood_report_weak_labels.mjs | Generates 662 balanced examples for predicting the presence of public flood reports |
+| build_flood_report_experiment_notebook.py | python scripts/build_flood_report_experiment_notebook.py | Creates a standalone research Colab notebook |
+
+The flood-report experiment measures the presence of a source report; it does not label physical road flooding or verified dry conditions.
+
+### 4. Operations, databases, and development environments
 
 | Script | Environment | Purpose |
 |---|---|---|
-| run-dev.ps1 | Windows PowerShell | Starts the local database services and prints instructions for starting the API and web app. |
-| production-smoke.ps1 | Windows PowerShell | Runs configured API smoke checks before a release. |
-| backup-postgres.ps1 / backup-postgres.sh | PowerShell / Bash | Create a timestamped PostgreSQL backup. |
-| restore-postgres.ps1 / restore-postgres.sh | PowerShell / Bash | Restore a PostgreSQL backup. |
+| run-dev.ps1 | Windows PowerShell | Starts the DB/Redis containers and prints instructions to launch Vite and FastAPI separately |
+| production-smoke.ps1 | Windows PowerShell | Runs smoke checks for main API flows before a release |
+| backup-postgres.ps1 / .sh | PowerShell / Bash | Creates a timestamped PostgreSQL backup |
+| restore-postgres.ps1 / .sh | PowerShell / Bash | Restores PostgreSQL from a backup |
 
-## Common commands
+---
 
-From the repository root:
+## 🚀 Common commands
+
+### Start the development environment (database services, then app processes separately)
 
 ~~~powershell
 ./scripts/run-dev.ps1
-./scripts/production-smoke.ps1
-./scripts/backup-postgres.ps1
-python scripts/verify_alignment.py
 ~~~
 
-From apps/api, install the ranker training dependencies and run the weak-label benchmark:
+### Run a pre-deployment smoke test
 
 ~~~powershell
-python -m pip install -r requirements-ranking-training.txt
-cd ../..
+./scripts/production-smoke.ps1
+~~~
+
+### Back up PostgreSQL
+
+~~~powershell
+./scripts/backup-postgres.ps1
+~~~
+
+### Train/benchmark the Experience Ranker
+
+~~~powershell
+python -m pip install -r apps/api/requirements-ranking-training.txt
 python scripts/train_experience_ranker.py --mode weak_label
 ~~~
 
-Check each command's working-directory expectations before running it. For database recovery, verify the target database and backup before restoring.
+This is a weak-label experiment, not a production model training workflow.
 
-## Related resources
+### Check ML feature-contract alignment
 
-- [Data](../data/README.md)
-- [Model artifacts](../models/README.md)
-- [API](../apps/api/README.md)
-- [ML training guide](../docs/ml-training-and-data.md)
+~~~powershell
+python scripts/verify_alignment.py
+~~~
+
+### Download and rebuild the weak-label flood-report dataset
+
+~~~powershell
+# Download the latest historical flood-report data:
+python scripts/download_hcmc_flood_reports.py
+
+# Regenerate weak labels (use --force if the output file already exists):
+node scripts/build_flood_report_weak_labels.mjs --force
+~~~
+
+---
+
+## 🔗 Related resources
+
+- **Source data:** [data/](../data/README.md) — raw, experimental, training, and ranking datasets
+- **ML models:** [models/](../models/README.md) — ai-ranker, e5, flood-risk artifacts
+- **API backend:** [apps/api/](../apps/api/README.md) — seed_db, import_place_candidates, worker, zalo_bot_poller
+- **Research notebooks:** [notebooks/](../notebooks/) — Flood Report Experiment Colab

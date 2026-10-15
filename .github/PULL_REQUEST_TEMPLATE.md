@@ -1,13 +1,13 @@
-## Mô tả Thay đổi (Description)
-<!-- Tóm tắt các thay đổi được thực hiện trong PR này -->
+## Description
+<!-- Summarize the changes made in this pull request. -->
 
-## Loại thay đổi (Type of Change)
-- [ ] Tính năng mới (feat)
-- [ ] Sửa lỗi (fix)
-- [ ] Cập nhật tài liệu (docs)
-- [ ] Tối ưu giao diện / Thẩm mỹ (style/ui)
-- [ ] Cải thiện hiệu năng (perf)
+## Type of Change
+- [ ] Feature (`feat`)
+- [ ] Bug fix (`fix`)
+- [ ] Documentation (`docs`)
+- [ ] UI/style improvement (`style/ui`)
+- [ ] Performance improvement (`perf`)
 
-## Danh sách kiểm tra (Checklist)
-- [ ] Mã nguồn đã được build thử thành công (`npm run build`).
-- [ ] Đã tuân thủ quy chuẩn mã nguồn mở của dự án.
+## Checklist
+- [ ] The code builds successfully (`npm run build`).
+- [ ] The project’s open-source contribution standards have been followed.

@@ -1,16 +1,16 @@
-# Kiến trúc
+# Architecture
 
-## Thành phần
+## Components
 
-- **Web**: React + TypeScript + Vite; trang Explore, Planner, itinerary, provider portal, admin và About. Axios gom tại `src/api`, Leaflet chỉ nằm sau `MapAdapter`.
-- **API**: FastAPI route nhận/kiểm tra request rồi ủy quyền cho service. Pydantic giữ contract và định dạng lỗi có request ID.
-- **Service**: `ExperienceService`, `RecommendationService`, `PlannerService`, `ExplanationService`, `evidence_service`; Planner điều phối repository, kiểm tra nguồn/hạn, routing và engine.
-- **Planner engine**: `PlannerEngine` là interface; `HeuristicPlanner` lựa slot khả thi sớm nhất rồi ưu tiên intent khi cùng giờ. Có thể thêm engine OR-Tools mà không đổi route contract.
-- **Repository**: truy vấn SQLAlchemy cho catalog và slot, tách chi tiết persistence khỏi route.
-- **Database**: PostgreSQL + PostGIS; tọa độ latitude/longitude phục vụ response và `pois.geom geography(POINT,4326)`/GIST phục vụ truy vấn không gian tương lai.
-- **Routing/geocoding adapters**: `RoutingProvider` dùng `GoongDirectionsProvider` theo `ROUTING_PROVIDER=goong` (mặc định local/production), `GoongGeocodingProvider` cho địa chỉ người dùng nhập, và `MockRoutingProvider` chỉ để kiểm thử/chạy demo chủ động. Goong trả distance, duration và route geometry; cả nguồn, thời điểm tính, TTL cache và cờ `is_realtime=false` đi theo từng leg. Không có traffic ETA trực tiếp.
-- **Redis**: được đưa vào Compose và health check; chưa có cache, queue hoặc event consumer.
-- **Map adapter**: Leaflet + OpenStreetMap trong demo. Map SDK không giữ business logic.
+- **Web**: React + TypeScript + Vite; Explore, Planner, itinerary, provider portal, admin, and About pages. Axios is centralized under `src/api`; Leaflet is accessed only through `MapAdapter`.
+- **API**: FastAPI routes receive/validate requests, then delegate to services. Pydantic defines contracts and error responses with request IDs.
+- **Services**: `ExperienceService`, `RecommendationService`, `PlannerService`, `ExplanationService`, and `evidence_service`; the Planner coordinates repositories, source/expiry checks, routing, and the engine.
+- **Planner engine**: `PlannerEngine` is an interface; `HeuristicPlanner` selects the earliest feasible slot, then prioritizes intent when times are equal. An OR-Tools engine could be added without changing the route contract.
+- **Repository**: SQLAlchemy queries for the catalog and slots, separating persistence details from routes.
+- **Database**: PostgreSQL + PostGIS; latitude/longitude serve API responses while `pois.geom geography(POINT,4326)`/GIST is available for future spatial queries.
+- **Routing/geocoding adapters**: `RoutingProvider` uses `GoongDirectionsProvider` when `ROUTING_PROVIDER=goong` (the local/production default), `GoongGeocodingProvider` for user-entered addresses, and `MockRoutingProvider` only for tests/explicit demos. Goong returns distance, duration, and route geometry; each leg carries its source, calculation time, cache TTL, and `is_realtime=false`. Live-traffic ETA is not provided.
+- **Redis**: included in Compose and health checks; it is not currently used for cache, queue, or event consumption.
+- **Map adapter**: Leaflet + OpenStreetMap in the demo. The map SDK does not contain business logic.
 
 ```mermaid
 flowchart TD
@@ -36,15 +36,15 @@ flowchart TD
     Postgres -. future events .-> Redis[(Redis)]
 ```
 
-## Dòng lập lịch
+## Planning Flow
 
-1. Request datetime phải có offset; planner chuẩn hóa thời điểm cho so sánh/lưu UTC.
-2. Lọc slot trong khoảng chuyến đi, loại slot đã hủy/hết chỗ và loại `available_reported` nhỏ hơn quy mô nhóm.
-3. Tính giá theo `price_basis`, loại trải nghiệm vượt ngân sách còn lại.
-4. Geocode địa chỉ nhập thành các lựa chọn tọa độ có source/time/expiry; với mỗi ứng viên, lấy route estimate từ Goong cho leg đi và chặng về. Chỉ nhận slot bắt đầu sau ETA và lịch về trước deadline.
-5. Engine chọn slot khả thi; lý do, mục đích được giữ/mất, tính bất định, nguồn/tuổi ETA và encoded route geometry được đưa vào response.
-6. Với catalog thật, Planner chỉ dùng POI/experience đủ bằng chứng đang duyệt và slot có xác nhận chưa hết hạn. Persist itinerary, stops và DecisionLog. Slot capacity chưa biết không bị coi là 0; itinerary chuyển `tentative`.
+1. Request datetimes must include an offset; the planner normalizes timestamps for comparison/storage in UTC.
+2. Filter slots to the trip window; remove canceled/full slots and slots where `available_reported` is below the group size.
+3. Calculate cost using `price_basis`; remove experiences that exceed the remaining budget.
+4. Geocode entered addresses into coordinate options with source/time/expiry; for each candidate, get Goong route estimates for the outbound and return legs. Only consider slots starting after the ETA and itineraries returning before the deadline.
+5. The engine selects a feasible slot; rationale, preserved/lost intents, uncertainty, ETA source/age, and encoded route geometry are included in the response.
+6. For the operational catalog, the Planner only uses POIs/experiences with sufficient approved evidence and slots with unexpired confirmation. It persists the itinerary, stops, and DecisionLog. Unknown slot capacity is not treated as zero; the itinerary becomes `tentative`.
 
-## Ranh giới tin cậy
+## Trust Boundaries
 
-POI/experience/slot do seed và 10 POI fallback phía web tạo đều là dữ liệu mô phỏng; UI gắn nhãn mô phỏng và không cho admin duyệt thành dữ liệu thật khi thiếu chứng cứ. Provider đã có luồng gửi POI/experience và nguồn chờ admin rà soát; slot là báo cáo số chỗ của cơ sở có thời điểm xác nhận và hạn dùng, không phải booking. Tuyến và ETA dùng Goong khi đã cấu hình key nhưng ETA không phải traffic trực tiếp; không giả lập fallback khi nhà cung cấp lỗi. Goong mode hiện map motorcycle/walking/car theo profile `bike`/`foot`/`car`; do bảng tham số Directions V2 và mô tả capability của Goong chưa hoàn toàn đồng nhất, phải smoke-test với API key/tài khoản thực trước khi pilot. Không hỗ trợ transit/bicycling trong Goong adapter. Quy mô pilot ghi trong draft (20–30 POI, 10–15 experiences, 30–50 slots, tiếp cận 3–5 cơ sở) chưa được nhóm xác nhận và không bị hard-code; chi tiết tại [sourced catalog workflow](sourced-catalog.md).
+Seed POIs/experiences/slots and the 10 web fallback POIs are simulated data; the UI labels them as simulated and does not let administrators approve them as real without evidence. Providers can submit POIs/experiences and sources for admin review; a slot is a venue-reported availability with a confirmation time and expiry, not a booking. Routes and ETAs use Goong when a key is configured, but the ETA is not live traffic; there is no simulated fallback when the provider fails. Goong modes currently map motorcycle/walking/car to the `bike`/`foot`/`car` profiles. Because the Directions V2 parameter table and Goong's capability description are not fully consistent, smoke-test with a real API key/account before the pilot. Transit/bicycling are not supported by the Goong adapter. The pilot scale in the draft (20–30 POIs, 10–15 experiences, 30–50 slots, outreach to 3–5 venues) has not been reconfirmed by the team and is not hard-coded; see [sourced catalog workflow](sourced-catalog.md).

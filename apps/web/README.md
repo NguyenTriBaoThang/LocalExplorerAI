@@ -4,26 +4,22 @@ The frontend is a React and TypeScript single-page application built with Vite. 
 
 ## Run locally
 
-~~~powershell
-cd apps/web
-npm ci
-npm run dev
-~~~
+    cd apps/web
+    npm ci
+    npm run dev
 
-Open http://localhost:8080. Run the backend separately on port 8000 and configure it using the root .env.example and the API documentation. Never put private API credentials in frontend variables: client-side values can be read by users.
+Open http://localhost:8080. Run the backend separately on port 8000 and configure it using the root .env.example and the API documentation. Do not put API secrets in the frontend because client-side values can be viewed by users.
 
-## Check and build
+## Checks and build
 
-~~~powershell
-npm run lint
-npm run build
-npm run preview
-~~~
+    npm run lint
+    npm run build
+    npm run preview
 
-## Application areas
+## Interface
 
-The web application includes place discovery and details, chat/concierge, itinerary planning, itinerary sharing and comparison, and role-specific areas. Actual availability depends on the API, reviewed catalog records, and integration configuration. An imported candidate, placeholder, or experimental record is not a verified operational catalog entry.
+The web app includes place discovery, chat/assistant, itinerary planning, itinerary sharing/comparison, and role-specific areas. Real availability depends on the API, reviewed data, and integration configuration. Place-import candidates, placeholders, and experimental data must not be treated as a verified catalog.
 
 ## Related documentation
 
-[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Authentication and search setup](../../docs/auth-and-search-setup.md) · [Sourced catalog](../../docs/sourced-catalog.md)
+[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Authentication and search setup](../../docs/auth-and-search-setup.md) · [ML training and data](../../docs/ml-training-and-data.md)

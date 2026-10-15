@@ -1,6 +1,6 @@
-# Hướng dẫn Cài đặt Commitlint
+# Commitlint Setup Guide
 
-Cài đặt commitlint để đảm bảo quy chuẩn commit messages:
+Install commitlint to enforce the commit-message convention:
 ```bash
 npm install --save-dev @commitlint/config-conventional @commitlint/cli
 ```

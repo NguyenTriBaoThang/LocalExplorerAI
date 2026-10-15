@@ -1,267 +1,268 @@
-# Đề xuất giải pháp Local Explorer AI cho MLAI Hackathon 2026 Track Tasco
+# Local Explorer AI Proposal for MLAI Hackathon 2026 — Tasco Track
 
-**Tên giải pháp:** Local Explorer AI — Lớp trải nghiệm địa phương trên bản đồ  
-**Track:** Xây dựng lớp ứng dụng cho bản đồ của người Việt — định hướng Tasco  
-**Địa bàn demo:** Khu vực pilot Quận 1, TP. Hồ Chí Minh  
-**Phiên bản:** 2.0 — cập nhật ngày 15/10/2026  
-**Sản phẩm dự thi:** Working Web Demo và Pitch Deck
+**Solution name:** Local Explorer AI — A Local-Experience Layer on the Map<br>
+**Track:** Building an application layer for a Vietnamese map — Tasco direction<br>
+**Demo area:** District 1 pilot area, Ho Chi Minh City<br>
+**Version:** 2.0 — updated 15 October 2026<br>
+**Competition deliverables:** Working Web Demo and Pitch Deck
 
-## 1. Tóm tắt giải pháp
+## 1. Solution Summary
 
-Local Explorer AI bổ sung một lớp dữ liệu và ứng dụng chuyên đề du lịch địa phương lên bản đồ: thay vì chỉ tìm “địa điểm ở đâu”, người dùng có thể tìm “trải nghiệm nào phù hợp, có thể tham gia trong khung giờ của mình, đi theo tuyến nào và thông tin đó được xác nhận từ đâu”.
+Local Explorer AI adds a local-tourism data and application layer to a map. Instead of only asking “where is this place?”, users can ask “which experience fits, can be joined within my time window, what route should I take, and where was this information verified?”
 
-Du khách nhập nhu cầu bằng tiếng Việt, chọn điểm đi/đến và các ràng buộc. Hệ thống truy vấn trải nghiệm có dữ liệu phù hợp, kiểm tra thời gian hoạt động, thời lượng, ngân sách, sức chứa, điểm bắt buộc và chặng đường về; sau đó hiển thị kết quả trên bản đồ và lịch trình có nguồn dữ liệu. Nếu thông tin quan trọng chưa được xác nhận, giao diện phải nói rõ thay vì trình bày như sự thật.
+Travelers enter their needs in Vietnamese, choose origin/destination, and specify constraints. The system retrieves experiences with relevant data, checks opening times, duration, budget, capacity, required stops, and the return leg, then displays sourced results on the map and in an itinerary. If important information has not been verified, the interface must say so instead of presenting it as fact.
 
-Giải pháp phù hợp với định hướng Track Tasco vì tạo một lớp ứng dụng bản đồ có tính địa phương, có thể mở rộng sang hệ sinh thái di chuyển. VMap/T-Maps là nền bản đồ đích cần được kiểm chứng bằng SDK/API và quyền truy cập do Tasco hoặc Ban Tổ chức cấp. Repository hiện có giao diện bản đồ và adapter định tuyến Goong, nhưng chưa có bằng chứng đủ để tuyên bố đã tích hợp hoặc nghiệm thu VMap/T-Maps. Demo phải ghi đúng nhà cung cấp đang sử dụng.
+The solution fits the Tasco Track direction because it creates a localized map application layer that could extend into a mobility ecosystem. VMap/T-Maps is the target map platform and must be verified using an SDK/API and access granted by Tasco or the organizers. The repository currently has a map interface and a Goong routing adapter, but there is not enough evidence to claim that VMap/T-Maps has been integrated or accepted. The demo must accurately identify the provider actually in use.
 
-## 2. Bài toán và nhu cầu
+## 2. Problem and Need
 
-Bản đồ phổ thông giúp người dùng định vị và tìm đường, nhưng hành trình trải nghiệm địa phương còn cần biết:
+General-purpose maps help users locate places and find routes, but a local-experience journey also requires answers to:
 
-- Địa điểm đó có hoạt động/trải nghiệm nào, hay chỉ là một POI để ghé thăm?
-- Giá, thời lượng và giờ hoạt động lấy từ đâu, được xác nhận khi nào?
-- Có slot phù hợp và đủ sức chứa cho nhóm không?
-- Lịch trình có đáp ứng thời gian, ngân sách và điểm bắt buộc, kể cả chặng trở về không?
-- Nếu ca bị hủy hoặc dữ liệu đã cũ, người dùng được cảnh báo và có phương án thay thế nào?
+- Does this place offer an activity/experience, or is it only a POI to visit?
+- Where do its price, duration, and opening hours come from, and when were they confirmed?
+- Is there a suitable slot with enough capacity for the group?
+- Does the itinerary meet the time, budget, and required-stop constraints, including the return leg?
+- If a slot is canceled or data is stale, how will the user be warned and what alternatives are available?
 
-Một marker trên bản đồ không đồng nghĩa với một dịch vụ đang hoạt động hoặc còn chỗ tham gia. Sản phẩm tách địa điểm, trải nghiệm và slot; đồng thời cho biết nguồn và độ mới của thông tin.
+A marker on a map does not mean that a service is operating or has availability. The product separates places, experiences, and slots, and also shows information sources and freshness.
 
-### Người dùng mục tiêu
+### Target Users
 
-- **Du khách:** khách nội địa, khách lần đầu đến TP.HCM, nhóm bạn hoặc gia đình muốn khám phá văn hóa, ẩm thực và hoạt động địa phương mà không phải tự ghép nhiều ứng dụng.
-- **Cơ sở/đối tác:** cơ sở nhỏ, nghệ nhân, đơn vị workshop và điểm trải nghiệm cần cập nhật thông tin, ca và sức chứa, đồng thời xác nhận yêu cầu.
-- **Hệ sinh thái bản đồ Tasco:** đối tác có thể bổ sung lớp dữ liệu địa phương và tăng ngữ cảnh sử dụng bản đồ trong hành trình thực tế. Mức độ hợp tác và tích hợp cần được xác nhận, không mặc định đã có thỏa thuận.
+- **Travelers:** domestic visitors, first-time visitors to Ho Chi Minh City, friend groups, or families who want to explore local culture, food, and activities without manually combining multiple apps.
+- **Venues/partners:** small businesses, artisans, workshop operators, and experience providers who need to update information, slots, and capacity and confirm requests.
+- **Tasco map ecosystem:** a partner could add a local data layer and enrich map context for real journeys. The extent of collaboration and integration must be confirmed; no agreement is assumed to exist.
 
-## 3. Giá trị và điểm khác biệt
+## 3. Value and Differentiators
 
-1. **POI → Experience → Slot:** phân biệt địa điểm vật lý với hoạt động cụ thể và ca tham gia.
-2. **Lịch trình có ràng buộc:** planner kiểm tra tính khả thi trước; ranker không thể hợp thức hóa lựa chọn vi phạm giờ về, ngân sách, điểm khóa hoặc sức chứa.
-3. **Nguồn và freshness nhìn thấy được:** thông tin có nguồn, thời điểm xác nhận và hạn dùng; dữ liệu thiếu căn cứ hiển thị pending/unknown.
-4. **Bản địa hóa:** truy vấn tiếng Việt, văn hóa và hoạt động đặc thù tại TP.HCM.
-5. **Phối hợp vai trò:** khách lập lịch, cơ sở cập nhật ca, quản trị viên kiểm duyệt nguồn và dữ liệu.
+1. **POI → Experience → Slot:** distinguishes a physical place from a specific activity and a bookable time slot.
+2. **Constraint-aware itineraries:** the planner checks feasibility first; the ranker cannot legitimize an option that violates the return deadline, budget, locked stops, or capacity.
+3. **Visible source and freshness:** information has a source, confirmation time, and expiry; unsupported data is marked pending/unknown.
+4. **Localization:** Vietnamese queries and activities specific to Ho Chi Minh City.
+5. **Role coordination:** travelers plan, venues update slots, and administrators review sources and data.
 
-Local Explorer AI không định vị là một bản đồ tổng quát khác. Sản phẩm bổ sung một lớp trải nghiệm có thời gian, dịch vụ và bằng chứng dữ liệu lên nền bản đồ.
+Local Explorer AI is not positioned as another general-purpose map. It adds an experience layer—with timing, services, and data evidence—to a map platform.
 
-## 4. Luồng sản phẩm
+## 4. Product Flows
 
-### Luồng du khách
+### Traveler Flow
 
-1. Nhập yêu cầu tự nhiên bằng tiếng Việt; hệ thống trích xuất nhóm khách, giờ, ngân sách, phương tiện, mục đích và địa điểm bắt buộc.
-2. Xem lại, chỉnh sửa ràng buộc đã trích xuất; LLM không tự xác nhận giá hoặc chỗ trống.
-3. Chọn điểm đi, điểm đến, ngày, phương tiện và điểm cần khóa.
-4. Xem trải nghiệm có nguồn trên bản đồ; mở chi tiết để xem giá, thời lượng, giờ, slot, tình trạng xác nhận và dữ liệu còn thiếu.
-5. Yêu cầu planner tạo lịch; planner kiểm tra tuyến giữa các điểm và chặng trở về trước deadline.
-6. Lưu/chia sẻ lịch; nếu ca hỗ trợ, gửi yêu cầu giữ chỗ.
-7. Khi slot thay đổi, nhận cảnh báo và xem phương án thay thế; khách quyết định có đổi lịch hay không.
+1. Enter a natural-language request in Vietnamese; the system extracts group size, times, budget, travel mode, intent, and required places.
+2. Review and edit the extracted constraints; the LLM does not independently confirm prices or availability.
+3. Choose origin, destination, date, travel mode, and required stops.
+4. View sourced experiences on the map; open details to see price, duration, hours, slots, confirmation status, and missing data.
+5. Ask the planner to build an itinerary; the planner checks routes between stops and the return leg before the deadline.
+6. Save/share the itinerary and, when supported by the slot, submit a reservation-hold request.
+7. Receive a warning and review alternatives if a slot changes; the traveler decides whether to change the itinerary.
 
-### Luồng đối tác và quản trị
+### Partner and Administration Flows
 
-- Đối tác cập nhật slot/sức chứa hoặc xác nhận/từ chối yêu cầu.
-- Quản trị viên rà soát nguồn, evidence theo trường, dữ liệu trùng và trạng thái duyệt.
-- Trạng thái thay đổi và thông tin xác nhận được lưu để truy vết.
+- Partners update slots/capacity or accept/reject requests.
+- Administrators review sources, field-level evidence, duplicates, and approval status.
+- Status changes and confirmation information are stored for traceability.
 
-### Kịch bản trình diễn
+### Demo Scenario
 
-Chọn một tình huống Quận 1 có dữ liệu đã được nhóm kiểm tra; nhập yêu cầu; khóa một điểm; tạo lịch đi-về; mở chi tiết xem nguồn và thời điểm xác nhận; sau đó mô phỏng hủy slot trong sandbox và hiển thị các phương án replan. Mọi dữ liệu synthetic/mock hoặc giao dịch sandbox phải được gắn nhãn trên giao diện và khi thuyết trình.
+Choose a District 1 scenario whose data has been checked by the team; enter a request; lock a stop; create a round-trip itinerary; open details to inspect sources and confirmation times; then simulate a slot cancellation in a sandbox and show replanning options. Any synthetic/mock data or sandbox transaction must be labeled in the interface and in the presentation.
 
-## 5. Phạm vi demo
+## 5. Demo Scope
 
-### Ưu tiên cho Working Web Demo
+### Working Web Demo Priorities
 
-- Một khu vực nhỏ có ranh pilot và ngày snapshot dữ liệu được ghi rõ.
-- Tìm kiếm/khám phá địa điểm trên bản đồ và chi tiết có provenance.
-- Tạo lịch theo điểm đi/đến, khung giờ, ngân sách, điểm khóa và thời gian quay về.
-- Phân tách giao diện khách, đối tác và quản trị ở mức cần thiết cho kịch bản.
-- Một luồng cập nhật/hủy slot và tư vấn phương án thay thế.
-- Dùng sandbox hoặc kịch bản demo có nhãn nếu external service chưa sẵn sàng.
+- A small area with a defined pilot boundary and a stated data-snapshot date.
+- Place search/discovery on the map and details with provenance.
+- Itinerary generation using origin/destination, time window, budget, locked stops, and return time.
+- Traveler, partner, and administrator interfaces separated as needed by the scenario.
+- One slot update/cancellation flow and an alternative recommendation.
+- A labeled sandbox or demo scenario if an external service is not ready.
 
-### Không cam kết trong demo
+### Not Promised in the Demo
 
-- Phủ hết địa điểm TP.HCM hoặc khẳng định 177 dòng workbook đã đủ evidence cho mọi trường.
-- Gọi ETA là traffic thời gian thực nếu nhà cung cấp không đảm bảo điều đó.
-- Giao dịch production, hoàn tiền tự động hoặc năng lực phục vụ thực khi chưa có kiểm thử staging/đối tác.
-- Tuyên bố ranker đã học sở thích khách thật từ weak-label.
-- Dự báo ngập đường từ dữ liệu lịch sử thiếu quan trắc âm và nhãn road-edge phù hợp.
+- Complete coverage of all Ho Chi Minh City places, or a claim that the 177 workbook rows have evidence for every field.
+- Calling an ETA real-time traffic if the provider does not guarantee that.
+- Production transactions, automatic refunds, or actual service capacity without staging/partner testing.
+- Claiming that the ranker learned real customer preferences from weak labels.
+- Road-flood prediction from historical data lacking negative observations and suitable road-edge labels.
 
-## 6. Tích hợp bản đồ Tasco
+## 6. Tasco Map Integration
 
-Bản đồ là bề mặt tương tác chính để hiển thị lớp trải nghiệm, trạng thái dữ liệu, tuyến và điểm dừng. Adapter giúp thay đổi map/routing provider theo môi trường mà không trộn logic nhà cung cấp vào planner.
+The map is the primary interaction surface for displaying the experience layer, data status, routes, and stops. Adapters allow the map/routing provider to vary by environment without coupling provider-specific logic to the planner.
 
-### Mục tiêu và điều kiện
+### Target and Conditions
 
-- Đích tích hợp của bài dự thi là VMap/T-Maps của Tasco, theo API/SDK, quota và điều khoản sử dụng được cấp.
-- Cần kiểm thử tải bản đồ, hiển thị marker/layer, geocoding hoặc tìm kiếm nếu API hỗ trợ, route đi-về, quota và timeout.
-- Nếu được cấp quyền truy cập kịp thời, ưu tiên trình diễn lớp trải nghiệm trên nền Tasco.
-- Nếu chưa được cấp, demo dùng nền bản đồ hiện tại và ghi rõ đó là provider đang chạy; Tasco được trình bày là đích tích hợp, không giả định đã kết nối.
-- Không vẽ tuyến thủ công rồi gọi là route API; hiển thị provider và thời điểm/tuổi dữ liệu ETA.
-- Credits/API Ban Tổ chức cung cấp chỉ dùng theo điều kiện chương trình; không đưa API key lên frontend, ảnh chụp pitch hoặc repository.
+- The competition's integration target is Tasco VMap/T-Maps, subject to the API/SDK, quota, and terms of use granted.
+- Testing must cover map loading, marker/layer rendering, geocoding or search if supported, round-trip routing, quota, and timeouts.
+- If access is granted in time, prioritize demonstrating the experience layer on Tasco's platform.
+- If access is not granted, use the current map provider in the demo and identify it accurately; present Tasco as the integration target, without implying it is already connected.
+- Do not draw a route manually and call it an API route; show the provider and ETA timestamp/age.
+- Credits/APIs supplied by the organizers may only be used under program conditions; do not expose API keys in the frontend, pitch screenshots, or repository.
 
-## 7. Chiến lược dữ liệu
+## 7. Data Strategy
 
-Challenge Brief cho phép kết hợp dữ liệu nhóm tự thu thập, open data hợp pháp, dữ liệu địa lý, cộng đồng, API bên thứ ba và synthetic/mock đại diện. Local Explorer AI phân loại rõ từng nguồn, không trộn dữ liệu demo với catalog vận hành.
+The Challenge Brief permits combining team-collected data, lawful open data, geographic and community data, third-party APIs, and representative synthetic/mock data. Local Explorer AI clearly classifies each source and does not mix demo data with the operational catalog.
 
-| Nguồn | Vai trò | Giới hạn cần công khai |
+| Source | Role | Limitations to Disclose |
 | --- | --- | --- |
-| Workbook 177 địa điểm nhóm thu thập | Nguồn ban đầu để đối soát POI và phân loại | Số dòng không chứng minh mọi trường đã được xác minh; giá, giờ, hoạt động, ảnh và slot cần căn cứ riêng. |
-| OpenStreetMap | Candidate vị trí, tên và tag địa lý | Ghi attribution và tuân thủ ODbL; không xác nhận venue hoạt động, giá hay chỗ trống. |
-| Cơ sở/đối tác | Xác nhận trải nghiệm, giá, thời lượng, slot/capacity của chính cơ sở | Lưu người/tổ chức xác nhận, thời điểm, revision và hạn hiệu lực. |
-| API bản đồ/định tuyến | Bản đồ, geocoding và ETA theo hợp đồng nhà cung cấp | Lưu provider, timestamp, lỗi/cache age; ETA không tự động có nghĩa là realtime. |
-| Ảnh | Ảnh có nguồn và quyền sử dụng rõ theo từng file | Lưu trang nguồn, tác giả, license và credit; thiếu căn cứ thì dùng placeholder được ghi nhãn. |
-| Synthetic/mock theo brief | Minh họa hủy ca, quá tải hoặc trạng thái tương lai | Gắn nhãn demo/test; tách khỏi catalog vận hành và không dùng làm bằng chứng chất lượng thật. |
+| 177-place team workbook | Initial source for POI reconciliation and classification | Row count does not prove that every field is verified; prices, hours, activities, photos, and slots each need evidence. |
+| OpenStreetMap | Candidate locations, names, and geographic tags | Provide attribution and comply with ODbL; it does not verify that a venue is operating, its price, or its availability. |
+| Venues/partners | Confirmation of a venue's own experiences, prices, durations, slots/capacity | Record the confirming person/organization, time, revision, and expiry. |
+| Map/routing APIs | Maps, geocoding, and ETA under the provider's contract | Record provider, timestamp, errors/cache age; an ETA is not automatically real-time. |
+| Photos | Images with a clear source and usage right for each file | Store the source page, author, license, and credit; if unsupported, use a labeled placeholder. |
+| Synthetic/mock data under the brief | Demonstrate slot cancellation, over-capacity, or future states | Label as demo/test; separate it from the operational catalog and do not use it as evidence of real quality. |
 
-Mỗi trường quan trọng cần có source, thời điểm quan sát/xác nhận, phạm vi xác nhận, revision và hạn dùng. Giá, giờ, sức chứa và slot cần freshness phù hợp với tốc độ thay đổi. Thiếu evidence thì để unknown/pending, không suy diễn thành verified.
+Each important field needs a source, observation/confirmation time, confirmation scope, revision, and expiry. Prices, hours, capacity, and slots need freshness appropriate to their rate of change. If evidence is missing, mark the value unknown/pending; do not infer that it is verified.
 
-## 8. AI và xử lý không gian
+## 8. AI and Spatial Processing
 
-- **NLU tiếng Việt:** trích xuất ràng buộc thành dữ liệu có cấu trúc; người dùng xem và sửa được.
-- **Planner:** logic quyết định feasibility, thời gian, ngân sách, điểm khóa, capacity và chặng về. Planner là thẩm quyền về tính hợp lệ của lịch.
-- **Ranking:** rule baseline là mặc định dễ giải thích. Artifact XGBoost bootstrap hiện có dùng weak-label, chưa đủ căn cứ làm preference model production. Chỉ đánh giá ML trên nhãn độc lập/consented và split chống leakage.
-- **Replanning/XAI:** đề xuất thay thế trên candidate mà solver đã lọc; đánh đổi lấy từ số liệu API, không bịa.
-- **Fallback:** khi LLM hoặc dịch vụ ngoài lỗi, dùng form/rule fallback và nói rõ giới hạn.
-- **Flood/GeoAI:** không làm thành tuyên bố cốt lõi của demo nếu thiếu dữ liệu quan trắc theo thời gian và road-edge labels. Đây là hướng nghiên cứu riêng.
+- **Vietnamese NLU:** extracts constraints into structured data that users can review and edit.
+- **Planner:** decides feasibility, time, budget, locked stops, capacity, and return leg. The planner is authoritative for itinerary validity.
+- **Ranking:** the explainable rule baseline is the default. The existing bootstrap XGBoost artifact uses weak labels and does not have enough evidence to serve as a production preference model. Evaluate ML only on independent/consented labels with leakage-resistant splits.
+- **Replanning/XAI:** proposes alternatives from solver-filtered candidates; trade-offs come from API data and are not fabricated.
+- **Fallback:** when the LLM or an external service fails, use a form/rule fallback and state its limitations.
+- **Flood/GeoAI:** do not make this a core demo claim without time-based observational data and road-edge labels. It is a separate research direction.
 
-## 9. Kiến trúc khả thi
+## 9. Feasible Architecture
 
-1. **Web client:** chat, bản đồ/danh sách, chi tiết, planner và giao diện theo vai trò.
-2. **API:** xác thực, catalog, staging, planner, ranking, booking và adapters.
-3. **Data layer:** POI, experience, slot, source/evidence, trạng thái duyệt và lịch sử.
-4. **Map/routing adapters:** chuẩn hóa provider theo môi trường và lưu provenance.
-5. **AI components:** parser, rule baseline, giải thích và replan; đầu ra được kiểm tra schema và business rules.
-6. **Operations:** log truy vết, kiểm soát lỗi/quota, backup và smoke tests.
+1. **Web client:** chat, map/list, details, planner, and role-based interfaces.
+2. **API:** authentication, catalog, staging, planner, ranking, booking, and adapters.
+3. **Data layer:** POI, experience, slot, source/evidence, approval status, and history.
+4. **Map/routing adapters:** normalize providers by environment and store provenance.
+5. **AI components:** parser, rule baseline, explanation, and replanning; validate outputs against schemas and business rules.
+6. **Operations:** traceable logs, error/quota controls, backups, and smoke tests.
 
-Mô hình POI → Experience → Slot giúp hệ thống không nhầm “địa điểm có thật” với “dịch vụ có ca đang nhận khách”.
+The POI → Experience → Slot model prevents the system from confusing “a real place” with “a service currently accepting guests in a particular slot.”
 
-## 10. Tình trạng code và điều kiện trình diễn
+## 10. Code Status and Demo Conditions
 
-Repository hiện có nền web React/TypeScript, API FastAPI, giao diện theo vai trò, chat với fallback, planner, bản đồ/routing adapter, import staging, luồng booking/slot và adapter/cấu hình cho một số dịch vụ ngoài. Đây là nền mã nguồn cho demo; không chứng minh service bên ngoài đã được staging-test.
+The repository currently contains a React/TypeScript web app, FastAPI API, role-based interfaces, chat with fallback, a planner, map/routing adapter, staging import, booking/slot flows, and adapters/configuration for some external services. This is a codebase for a demo; it does not prove that external services have been staging-tested.
 
-Trước khi tuyên bố một chức năng là chạy thật, nhóm cần xác nhận:
+Before claiming that a feature works with a real service, the team must verify:
 
-- API/SDK Tasco/VMap/T-Maps, quyền truy cập và điều khoản;
-- provider định tuyến đang hoạt động, trạng thái route và độ mới ETA;
-- OAuth, LLM, email, payment sandbox và callback HTTPS nếu đưa vào demo;
-- tập địa điểm nhỏ được kiểm tra, ảnh có license, slot được cơ sở xác nhận;
-- database/migrations, tài khoản test theo role, log và bản build dự phòng.
+- Tasco/VMap/T-Maps API/SDK, access, and terms;
+- active routing provider, route status, and ETA freshness;
+- OAuth, LLM, email, payment sandbox, and HTTPS callbacks if included in the demo;
+- a small checked place set, licensed photos, and slots confirmed by venues;
+- database/migrations, role-specific test accounts, logs, and a backup build.
 
-Nếu một tích hợp chưa sẵn sàng, hãy tắt nó khỏi live demo hoặc ghi rõ sandbox/mock. Không suy ra tích hợp thành công từ việc có key/config hoặc giao diện hiển thị.
+If an integration is not ready, disable it in the live demo or clearly label it sandbox/mock. Do not infer a successful integration from the presence of a key/configuration or a visible interface.
 
-## 11. Tiêu chí demo đề xuất
+## 11. Proposed Demo Criteria
 
-Đây là mục tiêu cần đội khóa và đo trước khi pitch, không phải kết quả đã đạt:
+These are targets for the team to finalize and measure before pitching, not achieved results:
 
-| Chỉ số | Mục tiêu đề xuất | Cách kiểm tra |
+| Metric | Proposed Target | How to Check |
 | --- | --- | --- |
-| Kịch bản planner | 5/5 kịch bản demo trả đúng trạng thái | Ghi input/output, có ít nhất một trường hợp không khả thi. |
-| Hard-constraint violation | 0 trên test set đã định trước | Kiểm giờ, ngân sách, điểm khóa, capacity và chặng về. |
-| Truy vết dữ liệu | 100% trường được gọi “đã xác nhận” trong demo có source và thời điểm tương ứng | Đối chiếu giao diện với evidence; phần còn lại ghi unknown/pending. |
-| Minh bạch route | 100% màn hình route ghi provider chính xác, không tự gọi realtime | Kiểm tra cache, dữ liệu cũ, timeout và nhãn UI. |
-| Rehearsal | Hoàn tất luồng chính bằng build cuối và tài khoản test | Chạy trên máy/mạng dự kiến; lưu checklist lỗi. |
+| Planner scenarios | 5/5 demo scenarios return the correct status | Record inputs/outputs and include at least one infeasible case. |
+| Hard-constraint violations | 0 on the predefined test set | Check hours, budget, locked stops, capacity, and return leg. |
+| Data traceability | 100% of fields called “confirmed” in the demo have a corresponding source and timestamp | Compare the interface with evidence; mark all remaining fields unknown/pending. |
+| Route transparency | 100% of route screens show the correct provider and do not claim “real-time” without support | Check cache, stale data, timeout behavior, and UI labels. |
+| Rehearsal | Complete the main flow using the final build and test accounts | Run on the expected device/network and save an issue checklist. |
 
-Sau cuộc thi, pilot mới đo thời gian lập lịch, tỷ lệ khách chọn phương án, tỷ lệ provider xác nhận, độ stale, hủy ca và mức hài lòng. Thu thập hành vi cần consent và định nghĩa mẫu số.
+Only after the competition should a pilot measure planning time, traveler option-selection rate, provider confirmation rate, data staleness, slot cancellations, and satisfaction. Behavioral data collection requires consent and defined denominators.
 
-## 12. Tác động và hướng mở rộng
+## 12. Impact and Expansion
 
-### Tác động dự kiến
+### Expected Impact
 
-- Giúp khách khám phá hoạt động địa phương theo thời gian chứ không chỉ xem marker.
-- Tạo kênh dữ liệu có cấu trúc cho cơ sở nhỏ và dịch vụ văn hóa.
-- Tăng ngữ cảnh địa phương trên bản đồ Việt Nam và nối khám phá với hành trình di chuyển.
-- Tạo quy trình cập nhật có provenance, phân biệt thông tin đáng tin với dữ liệu cũ/chưa rõ.
+- Help travelers discover local activities by time, rather than only viewing map markers.
+- Create a structured data channel for small businesses and cultural services.
+- Add local context to a Vietnamese map and connect discovery with mobility journeys.
+- Establish a provenance-aware update workflow that distinguishes reliable information from stale/uncertain data.
 
-### Giả thuyết vận hành
+### Operating Hypotheses
 
-Sau khi kiểm chứng nhu cầu, có thể thử công cụ quản lý cho cơ sở, phí giới thiệu/booking minh bạch, giải pháp B2B cho điểm đến hoặc lớp dữ liệu chuyên đề cho bản đồ. Đây là các giả thuyết kinh doanh, chưa phải doanh thu hay thỏa thuận đã có.
+After validating demand, the team could test venue-management tools, transparent referral/booking fees, B2B solutions for destinations, or a specialized map data layer. These are business hypotheses, not existing revenue or agreements.
 
-### Mở rộng
+### Expansion
 
-Bắt đầu ở pilot Quận 1. Chỉ mở rộng địa bàn khi quy trình xác nhận trường dữ liệu, cập nhật slot và hỗ trợ vận hành ổn định; không mở rộng chỉ bằng cách thêm POI chưa kiểm tra.
+Start with a District 1 pilot. Expand only after field verification, slot updates, and operational support are stable; do not expand merely by adding unchecked POIs.
 
-## 13. Kế hoạch thực hiện
+## 13. Implementation Plan
 
-Challenge Brief ghi mốc mở đăng ký 24/08, đóng đăng ký 15/09, kick-off 19/09 và chung kết 17/10/2026. Bản đề xuất lập ngày 15/10/2026 nên ưu tiên khóa demo trong hai ngày cuối; đội cần đối chiếu lịch chính thức của mình.
+The Challenge Brief lists registration opening on 24/08, registration closing on 15/09, kick-off on 19/09, and the final on 17/10/2026. This proposal is dated 15/10/2026, so the demo should be frozen during the final two days; the team should confirm its official schedule.
 
-| Thời điểm | Việc cần làm | Đầu ra |
+| Date | Work | Deliverable |
 | --- | --- | --- |
-| 15/10 | Chốt câu chuyện demo; kiểm tra integration thật; chọn dữ liệu nhỏ có căn cứ; chuẩn bị fallback có nhãn. | Demo scope, danh sách dữ liệu được phép trình bày, checklist lỗi. |
-| 16/10 | Đóng băng tính năng; chạy lại 5 kịch bản, phân quyền, lịch đi-về và trạng thái slot; diễn tập pitch và dự phòng mạng. | Build trình diễn, pitch deck, phương án dự phòng. |
-| 17/10 | Trình bày vấn đề → thao tác trên bản đồ → giá trị → dữ liệu/AI → kế hoạch tích hợp Tasco và mở rộng. | Working Web Demo và Pitch Deck theo yêu cầu cuộc thi. |
+| 15/10 | Finalize the demo narrative; check real integrations; select a small evidence-backed data set; prepare a labeled fallback. | Demo scope, list of data permitted for presentation, issue checklist. |
+| 16/10 | Freeze features; rerun five scenarios, role permissions, round-trip itinerary, and slot states; rehearse the pitch and network fallback. | Demo build, pitch deck, contingency plan. |
+| 17/10 | Present the problem → map interaction → value → data/AI → Tasco integration and expansion plan. | Working Web Demo and Pitch Deck required by the competition. |
 
-### Roadmap sau hackathon
+### Post-Hackathon Roadmap
 
-| Giai đoạn | Trọng tâm | Cổng quyết định |
+| Phase | Focus | Decision Gate |
 | --- | --- | --- |
-| 0–30 ngày | Chốt quyền dùng map API; audit catalog Quận 1; phỏng vấn khách/cơ sở; hoàn thiện data policy. | Chỉ mở pilot khi có subset dữ liệu theo trường đủ nguồn và provider đồng ý. |
-| 31–60 ngày | Onboard cơ sở; tạo experience/slot thật; kiểm thử booking sandbox, notification và replan. | End-to-end test và xử lý stale/error đạt tiêu chí nội bộ. |
-| 61–90 ngày | Pilot giới hạn; đo usability, freshness, ETA/slot và tỷ lệ chuyển đổi. | Báo cáo số liệu, giới hạn và quyết định có mở rộng hay không. |
+| Days 0–30 | Confirm map API usage rights; audit the District 1 catalog; interview travelers/venues; complete the data policy. | Launch a pilot only when a subset has sufficient field-level sources and providers agree. |
+| Days 31–60 | Onboard venues; create real experiences/slots; test sandbox booking, notifications, and replanning. | End-to-end tests and stale/error handling meet internal criteria. |
+| Days 61–90 | Run a limited pilot; measure usability, freshness, ETA/slots, and conversion. | Report metrics and limitations and decide whether to expand. |
 
-Mục tiêu số lượng POI, experience, slot và đối tác phải được đội xác nhận theo năng lực thực tế; số lượng không thay cho chất lượng bằng chứng.
+The team must confirm POI, experience, slot, and partner targets against actual capacity; quantity does not replace evidence quality.
 
-## 14. Phân công nhóm đề xuất
+## 14. Proposed Team Responsibilities
 
-Điền tên sau khi đội thống nhất; các vai trò dưới đây không giả định thành viên cụ thể.
+Fill in names after the team agrees; the roles below do not assume any specific members.
 
-| Vai trò | Trách nhiệm |
+| Role | Responsibility |
 | --- | --- |
-| Product/pitch lead | Người dùng, vấn đề, câu chuyện demo, điều phối mentor và pitch. |
-| Frontend/map | Bản đồ, lớp hiển thị, tương tác và trạng thái nguồn. |
-| Backend/planner | API, feasibility, routing adapter, booking/replan và test. |
-| Data/AI | Catalog/provenance, NLU, baseline, đánh giá và giới hạn AI. |
-| Demo/QA | Tài khoản test, dữ liệu, rehearsal, bản build dự phòng. |
+| Product/pitch lead | Users, problem, demo narrative, mentor coordination, and pitch. |
+| Frontend/map | Map, layers, interactions, and source status. |
+| Backend/planner | API, feasibility, routing adapter, booking/replanning, and tests. |
+| Data/AI | Catalog/provenance, NLU, baseline, evaluation, and AI limitations. |
+| Demo/QA | Test accounts, data, rehearsal, and backup build. |
 
-Một người có thể kiêm nhiệm. Pitch cần nói rõ ai chịu trách nhiệm và không trình bày kinh nghiệm chưa có như thành tích.
+One person may cover multiple roles. The pitch should state who is responsible and must not present unearned experience as an achievement.
 
-## 15. Rủi ro và giảm thiểu
+## 15. Risks and Mitigations
 
-| Rủi ro | Ảnh hưởng | Giảm thiểu |
+| Risk | Impact | Mitigation |
 | --- | --- | --- |
-| Chưa có SDK/API Tasco | Không chứng minh được tích hợp nền bản đồ đích | Xin sandbox/credits; nêu rõ adapter và trạng thái; không giả lập API/branding. |
-| Thiếu bằng chứng cho giá, giờ, slot, ảnh | Gợi ý có thể gây hiểu nhầm | Thu hẹp tập demo; trường thiếu hiển thị pending; mock gắn nhãn. |
-| API hoặc Internet lỗi | Demo gián đoạn | Chuẩn bị snapshot/video nếu được phép, có nhãn và fallback rõ. |
-| ETA/slot cũ | Lịch sai hoặc khách không được phục vụ | Timestamp, TTL, stale warning và xác nhận provider. |
-| Weak-label bị hiểu là sở thích thật | Tuyên bố AI thiếu căn cứ | Giữ baseline; không trình bày metric weak-label là hiệu quả với khách. |
-| Payment/callback chưa staging | Rủi ro giao dịch | Chỉ dùng sandbox, không thu tiền thật trong demo. |
-| Scope quá rộng | Demo thiếu ổn định | Chỉ trình diễn một journey Quận 1 và một kịch bản replan. |
+| Risk | Impact | Mitigation |
+| No Tasco SDK/API yet | Unable to demonstrate integration with the target map platform | Request sandbox/credits; state the adapter and status; do not simulate the API or branding. |
+| Missing evidence for prices, hours, slots, or photos | Recommendations may mislead users | Narrow the demo data set; show missing fields as pending; label mock data. |
+| API or Internet failure | Demo interruption | Prepare a permitted, labeled snapshot/video and a clear fallback. |
+| Stale ETA/slot data | Invalid itinerary or unserved customer | Use timestamps, TTL, stale warnings, and provider confirmation. |
+| Weak labels mistaken for real preferences | Unsupported AI claim | Keep the baseline; do not present weak-label metrics as customer effectiveness. |
+| Payment/callback not staging-tested | Transaction risk | Use sandbox only; do not collect real money in the demo. |
+| Scope too broad | Unstable demo | Demonstrate only one District 1 journey and one replanning scenario. |
 
-## 16. Đối chiếu tiêu chí chấm điểm MLAI Hackathon
+## 16. MLAI Hackathon Scoring Criteria Alignment
 
-| Tiêu chí theo Challenge Brief | Điểm tối đa | Cách Local Explorer AI đáp ứng và bằng chứng cần chuẩn bị |
+| Challenge Brief Criterion | Maximum Points | How Local Explorer AI Addresses It and Evidence to Prepare |
 | --- | ---: | --- |
-| Giải quyết vấn đề và tác động | 20 | Nêu rõ khách/cơ sở mục tiêu; demo giảm thao tác ghép lịch; chuẩn bị phỏng vấn hoặc ghi rõ giả định nếu chưa khảo sát. |
-| Phù hợp với Việt Nam | 15 | Dữ liệu, ngôn ngữ và trải nghiệm TP.HCM; trình bày attribution, điều kiện dữ liệu và khả năng triển khai trong hạ tầng nội địa. |
-| Sáng tạo và khác biệt | 20 | Lớp experience/slot và lịch trình theo deadline, không chỉ layer POI; cho thấy khác biệt qua demo. |
-| Đổi mới dữ liệu và AI | 20 | Provenance/freshness; NLU tiếng Việt; planner/ranking; phân biệt minh bạch model baseline với weak-label. |
-| Khả thi và sản phẩm thử nghiệm | 15 | Working Web Demo ổn định; luồng chính có thể chạy lại; trình bày tích hợp Tasco theo đúng trạng thái API thực. |
-| Trình bày và UX | 10 | UI trực quan; demo 1 kịch bản xuyên suốt; pitch deck trả lời rõ vấn đề, sản phẩm, dữ liệu, AI và mở rộng. |
+| Problem-solving and impact | 20 | Identify target travelers/venues; demonstrate fewer manual itinerary steps; prepare interviews or state assumptions if no research has been done. |
+| Relevance to Vietnam | 15 | Ho Chi Minh City data, language, and experiences; explain attribution, data conditions, and deployment feasibility on local infrastructure. |
+| Creativity and differentiation | 20 | Experience/slot layer and deadline-constrained itinerary—not only POI layers; demonstrate the difference. |
+| Data and AI innovation | 20 | Provenance/freshness; Vietnamese NLU; planner/ranking; clearly distinguish the baseline from weak-label models. |
+| Feasibility and prototype | 15 | Stable Working Web Demo; repeatable main flow; describe Tasco integration according to actual API status. |
+| Presentation and UX | 10 | Clear UI; one end-to-end demo scenario; pitch deck clearly answers the problem, product, data, AI, and expansion. |
 
-## 17. Pitch Deck đề xuất
+## 17. Proposed Pitch Deck
 
-1. Vấn đề và người dùng: bản đồ có POI nhưng không cho biết trải nghiệm nào tham gia được theo khung giờ.
-2. Nhu cầu: khách/cơ sở mục tiêu và bằng chứng khảo sát; phân biệt dữ liệu khảo sát với giả định.
-3. Giải pháp: Local Explorer AI như lớp experience/slot trên bản đồ.
-4. Demo: câu lệnh tiếng Việt → điểm đi/đến → lịch khả thi → chi tiết có nguồn → replan.
-5. Dữ liệu và AI: provenance, giấy phép, freshness; planner quyết định feasibility, AI hỗ trợ ngôn ngữ/xếp hạng/giải thích.
-6. Tasco fit: lớp dữ liệu dùng trên bản đồ Việt Nam; trạng thái VMap/T-Maps thật và lộ trình tích hợp.
-7. Khả thi, tác động và đo lường: trạng thái prototype, KPI demo/pilot, giới hạn và mô hình mở rộng.
-8. Đội ngũ và đề nghị: phân công và API/mentor/credits/dữ liệu cần Ban Tổ chức/Tasco hỗ trợ.
+1. Problem and users: maps show POIs but do not say which experiences can be joined within a time window.
+2. Need: target travelers/venues and research evidence; distinguish research data from assumptions.
+3. Solution: Local Explorer AI as an experience/slot layer on a map.
+4. Demo: Vietnamese request → origin/destination → feasible itinerary → sourced details → replanning.
+5. Data and AI: provenance, licenses, freshness; the planner decides feasibility while AI supports language, ranking, and explanations.
+6. Tasco fit: a data layer for a Vietnamese map; actual VMap/T-Maps status and integration roadmap.
+7. Feasibility, impact, and measurement: prototype status, demo/pilot KPIs, limitations, and expansion model.
+8. Team and asks: responsibilities and the API/mentoring/credits/data requested from the organizers/Tasco.
 
-## 18. Đề nghị hỗ trợ từ Tasco và Ban Tổ chức
+## 18. Support Requested from Tasco and the Organizers
 
-- Tài liệu, sandbox và quyền truy cập phù hợp cho VMap/T-Maps SDK/API; hướng dẫn attribution, quota và điều kiện dùng trong demo.
-- Mẫu tích hợp lớp marker/layer, deep link, geocoding và route API nếu chương trình cung cấp.
-- Mentor hoặc kết nối cơ sở địa phương để kiểm tra cách cập nhật dữ liệu.
-- Thông tin về credits và API/dữ liệu chương trình cấp, gồm thời hạn và điều khoản.
+- Documentation, sandbox, and suitable access for the VMap/T-Maps SDK/API, with guidance on attribution, quota, and demo usage conditions.
+- Examples for marker/layer integration, deep links, geocoding, and route APIs if supplied by the program.
+- A mentor or connections to local venues to validate the data-update workflow.
+- Details of any credits and APIs/data provided by the program, including expiry and terms.
 
-Challenge Brief cũng đề cập mentor từ Tasco/Mạng lưới AI, credits Codex và Goong.io, cùng API/dữ liệu Ban Tổ chức có thể cung cấp trong phạm vi Hackathon. Đội cần xác nhận quyền được cấp cụ thể trước khi lên kế hoạch phụ thuộc vào chúng.
+The Challenge Brief also mentions mentors from Tasco/the AI Network, Codex and Goong.io credits, and APIs/data that the organizers may provide during the Hackathon. The team must confirm the specific granted rights before making plans that depend on them.
 
-## 19. Tuyên bố trung thực khi pitch
+## 19. Truthful Claims During the Pitch
 
-- Prototype chạy được không đồng nghĩa đã triển khai production.
-- Có adapter/config không đồng nghĩa dịch vụ ngoài đã staging-test.
-- 177 địa điểm là dữ liệu nhóm thu thập; trạng thái xác nhận phải xét theo từng trường, đặc biệt giá, giờ, slot, capacity và ảnh.
-- Challenge Brief cho phép synthetic/mock trong một số trường hợp; nếu dùng, phải gắn nhãn và tách khỏi dữ liệu thật.
-- Weak-label đo khả năng khớp quy tắc tạo nhãn, không chứng minh ranker hiểu sở thích du khách.
-- Chỉ ghi “đã tích hợp Tasco/VMap/T-Maps” sau khi chạy và lưu kết quả kiểm thử API/SDK thực tế.
+- A working prototype does not mean production deployment.
+- Having an adapter/configuration does not mean an external service has been staging-tested.
+- The 177 places are team-collected data; confirmation status must be assessed field by field, especially for prices, hours, slots, capacity, and photos.
+- The Challenge Brief permits synthetic/mock data in some cases; if used, it must be labeled and kept separate from real data.
+- Weak labels measure agreement with the rules that generated those labels; they do not prove that a ranker understands traveler preferences.
+- Say “integrated with Tasco/VMap/T-Maps” only after running and recording actual API/SDK test results.
 
-## Lời giới thiệu pitch
+## Pitch Introduction
 
-“Local Explorer AI biến bản đồ thành nơi du khách không chỉ thấy địa điểm mà còn tìm được trải nghiệm phù hợp với thời gian và hành trình của mình. Người dùng nói nhu cầu bằng tiếng Việt, chọn điểm đi và điểm về, rồi hệ thống kiểm tra giờ, ngân sách, slot và tuyến trước khi đề xuất lịch. Mỗi thông tin cho biết nguồn và độ mới; nội dung chưa xác nhận sẽ không bị trình bày như sự thật. Chúng tôi muốn đưa lớp trải nghiệm địa phương này lên bản đồ Việt Nam của Tasco, bắt đầu bằng pilot nhỏ tại Quận 1 và mở rộng khi dữ liệu, đối tác và tích hợp đã được kiểm chứng.”
+“Local Explorer AI turns a map into a place where travelers can not only see locations but also find experiences that fit their schedule and journey. Users describe their needs in Vietnamese, choose an origin and destination, and the system checks hours, budget, slots, and routes before suggesting an itinerary. Each item shows its source and freshness; unconfirmed information is never presented as fact. We want to bring this local-experience layer to Tasco’s Vietnamese map, starting with a small District 1 pilot and expanding when the data, partners, and integrations have been verified.”

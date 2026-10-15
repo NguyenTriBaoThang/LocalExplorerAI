@@ -1,32 +1,34 @@
-# Local Explorer AI - Hồ Sơ Thuyết Minh Dự Án (Competition Submission)
+# Local Explorer AI — Project Submission (Competition Submission)
 
-## 1. Thông Tin Nhận Diện Dự Án
+> This translated submission preserves the original project narrative. Its technical claims are proposal-era descriptions, not current deployment evidence; verify each claim against the current code and staging results before external use.
 
-- **Tên dự án:** Local Explorer AI
-- **Tên đầy đủ:** Nền tảng Khám phá Trải nghiệm Đô thị Thông minh, Lập Lịch trình Có Khung giờ Thời gian thực ứng dụng Đồ họa 3D WebGL & Thuật toán Heuristic Tối ưu hóa Di chuyển cho TP. Hồ Chí Minh.
-- **Lĩnh vực dự thi:** Đô thị Thông minh (Smart City), Đổi mới Sáng tạo Trí tuệ Nhân tạo (AI Innovation), Du lịch Số & Bảo tồn Văn hóa Bản địa.
-- **Tác giả / Trưởng nhóm:** Nguyễn Trí Bảo Thắng
-- **Năm hoàn thành:** 2026
+## 1. Project Information
 
----
-
-## 2. Tính Cấp Thiết Của Đề Tài (Problem Statement)
-
-1. **Nghịch lý của bản đồ du lịch số hiện tại:**
-   - Các nền tảng bản đồ phổ biến hiện nay chỉ cung cấp thông tin không gian tĩnh (vị trí kinh độ, vĩ độ) và giờ mở cửa chung của địa điểm kinh doanh.
-   - Một địa điểm mở cửa từ 8h đến 21h không đồng nghĩa với việc workshop làm gốm, lớp học nấu ăn Nam Bộ hay chuyến thuyền ngắm hoàng hôn diễn ra xuyên suốt thời gian đó. Rất nhiều du khách đến nơi gặp cảnh hụt hẫng vì hoạt động đã hết khung giờ hoặc hết chỗ.
-2. **Khủng hoảng quá tải và ảo tưởng của Chatbot LLM (Hallucination Problem):**
-   - Trào lưu dùng ChatGPT để lên lịch trình thường tạo ra các lịch trình thiếu tính khả thi: bịa đặt địa chỉ không có thật, tính sai thời gian di chuyển trong giao thông đô thị và gợi ý mức giá không chính xác.
-3. **Bài toán kết nối kinh tế đêm và du lịch văn hóa bền vững:**
-   - Các cơ sở thủ công truyền thống, quán cà phê bít tất di sản và không gian văn hóa bản địa tại TP. Hồ Chí Minh rất khó tiếp cận đúng du khách vào đúng khung giờ rảnh rỗi.
+- **Project name:** Local Explorer AI
+- **Full title:** A Smart Urban Experience Discovery and Time-Slot-Aware Itinerary Planning Platform for Ho Chi Minh City, using 3D WebGL Graphics and a Heuristic Travel Optimization Algorithm.
+- **Competition fields:** Smart City, AI Innovation, Digital Tourism, and Local Cultural Preservation.
+- **Author / Team Lead:** Nguyễn Trí Bảo Thắng
+- **Completion year:** 2026
 
 ---
 
-## 3. Giải Pháp & Đột Phá Công Nghệ
+## 2. Problem Statement
 
-**Local Explorer AI** giải quyết bài toán bằng hệ thống công nghệ phối hợp 4 trụ cột:
+1. **The paradox of current digital travel maps:**
+   - Popular mapping platforms generally provide static spatial information (longitude/latitude) and general business opening hours.
+   - A venue being open from 8:00 to 21:00 does not mean that a pottery workshop, Southern Vietnamese cooking class, or sunset boat trip runs throughout that period. Travelers can arrive only to find that an activity's session has ended or is full.
+2. **Overloaded information and LLM chatbot hallucinations:**
+   - Using ChatGPT to plan an itinerary can produce infeasible plans: invented addresses, inaccurate urban travel-time estimates, and incorrect prices.
+3. **Connecting the night-time economy with sustainable cultural tourism:**
+   - Traditional craft businesses, heritage sock-coffee shops, and local cultural spaces in Ho Chi Minh City can have difficulty reaching the right travelers during their available hours.
 
-1. **Mô hình Dữ liệu 3 Cấp (POI → Experience → Slot):** Tách bạch rõ giữa Địa điểm, Hoạt động cụ thể và Khung giờ thực tế có sức chứa.
-2. **Thuật toán Heuristic Planner Toán học:** Lập lịch trình tất định (deterministic), không ảo tưởng, tối ưu hóa đồng thời 4 yếu tố: Sở thích, Ngân sách, Khung giờ mở và Ma trận cự ly di chuyển Haversine.
-3. **Giao diện Không Gian 3D WebGL (Three.js):** Nâng tầm trải nghiệm thị giác với Digital Twin thành phố Sài Gòn, camera xoay thị sai và thẻ tương tác 3D Tilt.
-4. **Tính Minh Bạch Tuyệt Đối (Data Transparency):** Đánh dấu trạng thái khả thi rõ ràng (`feasible` vs `tentative`), giải thích lý do đề xuất qua Reason Codes.
+---
+
+## 3. Solution and Technical Innovation
+
+**Local Explorer AI** addresses the problem through a system built around four pillars:
+
+1. **Three-level data model (POI → Experience → Slot):** Clearly separates a place, a specific activity, and an actual time slot with capacity.
+2. **Mathematical heuristic planner:** Creates deterministic itineraries and aims to optimize four factors together: preferences, budget, opening hours, and a Haversine travel-distance matrix.
+3. **3D WebGL interface (Three.js):** Enriches the visual experience with a Saigon digital twin, parallax camera motion, and interactive 3D tilt cards.
+4. **Data transparency:** Clearly marks feasibility (`feasible` vs `tentative`) and explains recommendations with reason codes.

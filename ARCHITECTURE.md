@@ -1,17 +1,19 @@
-# Local Explorer AI — Đặc tả Kiến trúc Hệ thống Kỹ thuật
+# Local Explorer AI — Technical System Architecture Specification
 
-## 1. Tổng quan Kiến trúc (Executive Summary)
+> This is a translated historical architecture specification. It preserves the original component inventory and design details, but some model, service, endpoint, test-count, and deployment statements may be aspirational or stale. Check the current implementation and [architecture notes](docs/architecture.md) before treating a statement as live operational status.
 
-**Local Explorer AI** là nền tảng khám phá đô thị thông minh và lập lịch trình có khung giờ thực tế (Slot-aware) tại TP. Hồ Chí Minh. Hệ thống được thiết kế để giải quyết triệt để khoảng cách giữa biểu diễn bản đồ tĩnh và khả năng tham gia thực tế của du khách.
+## 1. Architecture Overview (Executive Summary)
 
-**Nguyên lý cốt lõi của kiến trúc:**
+**Local Explorer AI** is a smart urban discovery and slot-aware itinerary planning platform for Ho Chi Minh City. The system is designed to address the gap between static map representation and travelers' ability to actually participate in an experience.
+
+**Core architectural principle:**
 ```text
-POI (Địa điểm) ──> Experience (Hoạt động) ──> ExperienceSlot (Khung giờ + Sức chứa) ──> Itinerary (Lịch trình)
+POI (Place) ──> Experience (Activity) ──> ExperienceSlot (Time + Capacity) ──> Itinerary
 ```
 
 ---
 
-## 2. Sơ đồ Kiến trúc Tổng thể (High-Level Architecture)
+## 2. High-Level Architecture Diagram
 
 ```mermaid
 flowchart TB
@@ -86,94 +88,94 @@ flowchart TB
 
 ---
 
-## 3. Đặc tả Chi tiết Từng Tầng (4-Tier Layer Specification)
+## 3. Four-Tier Layer Specification
 
 ### 3.1 Presentation Layer — Frontend SPA
 
 - **Framework**: React 18.3 + Vite 6.0 + TypeScript 5.6
-- **Đồ họa 3D**: Three.js WebGL dựng Digital Twin Sài Gòn: toà cao ốc ánh sáng neon, dòng sông Sài Gòn phản quang, điểm ghim POI radar-pulse, camera thị sai đa hướng. Trình xem 3D Landmark (GLB) tại `/map-3d`.
-- **Bản đồ**: Leaflet + CartoDB Voyager (Sáng) / Dark Matter (Tối) + Goong polylines thực tế.
-- **Thiết kế**: Vanilla CSS + Tailwind CSS utilities, Glassmorphism (`backdrop-filter: blur(20px)`), hiệu ứng neon, `TiltCard3D` (specular glare overlay).
-- **Chủ đề kép**: Warm Light Theme (ban ngày) và Nocturnal Emerald Dark Theme (cyberpunk huyền bí).
-- **Song ngữ**: VI/EN toàn diện với `LanguageSwitcher` và từ điển `i18n.ts`.
-- **Phân quyền**: `CustomerRoute`, `RoleRoute`, `RoleHome` phân luồng Traveler / Provider / Admin.
-- **Offline Resilience**: `Offline Heuristic Mock Engine` tự kích hoạt khi backend không khả dụng.
+- **3D graphics**: Three.js WebGL renders a Saigon digital twin with neon-lit high-rises, a reflective Saigon River, radar-pulse POI pins, and multidirectional parallax camera motion. A 3D landmark viewer (GLB) is available at `/map-3d`.
+- **Map**: Leaflet + CartoDB Voyager (light) / Dark Matter (dark) + actual Goong polylines.
+- **Design**: Vanilla CSS + Tailwind CSS utilities, Glassmorphism (`backdrop-filter: blur(20px)`), neon effects, and `TiltCard3D` (specular glare overlay).
+- **Dual themes**: Warm Light Theme (daytime) and Nocturnal Emerald Dark Theme (mysterious cyberpunk).
+- **Bilingual UI**: VI/EN throughout, using `LanguageSwitcher` and the `i18n.ts` dictionary.
+- **Access control**: `CustomerRoute`, `RoleRoute`, and `RoleHome` route Travelers / Providers / Admins.
+- **Offline resilience**: `Offline Heuristic Mock Engine` activates automatically when the backend is unavailable.
 
 ### 3.2 Application Layer — FastAPI Backend
 
 - **Framework**: Python 3.12+ + FastAPI 0.142+ + Pydantic v2 + Uvicorn (ASGI)
 - **14 Route Modules** (`apps/api/app/api/routes/`):
 
-| Module | Prefix | Chức năng chính |
+| Module | Prefix | Main Function |
 |---|---|---|
 | `health.py` | `/health`, `/ready` | Liveness & Readiness probe |
-| `ops.py` | `/api/ops/*` | Giám sát vận hành, outbox, events |
-| `auth.py` | `/api/auth/*` | Đăng ký, đăng nhập, Google OAuth PKCE |
-| `catalog.py` | `/api/pois`, `/api/experiences`, `/api/experience-search` | Danh mục POI, trải nghiệm, tìm kiếm E5 |
-| `planner.py` | `/api/itineraries/*` | Lập lịch trình, CRUD, version, share, feedback |
-| `bookings.py` | `/api/bookings/*` | Giữ chỗ 15p, VNPay, MoMo IPN |
+| `ops.py` | `/api/ops/*` | Operations monitoring, outbox, events |
+| `auth.py` | `/api/auth/*` | Registration, sign-in, Google OAuth PKCE |
+| `catalog.py` | `/api/pois`, `/api/experiences`, `/api/experience-search` | POI catalog, experiences, E5 search |
+| `planner.py` | `/api/itineraries/*` | Itinerary planning, CRUD, versions, sharing, feedback |
+| `bookings.py` | `/api/bookings/*` | 15-minute holds, VNPay, MoMo IPN |
 | `routing.py` | `/api/routing/*`, `/api/geocoding/*` | Goong Directions & Forward Geocoding |
 | `ai.py` | `/api/ai/*` | Prompt tools, replan advice, tagging, XAI |
 | `chat.py` | `/api/chat/*` | AI Concierge chatbot |
 | `ml.py` | `/api/ml/*` | ML status, rank-experiences, flood-risk |
-| `provider.py` | `/api/providers/*` | Quản lý POI, experiences, slots, evidence, slot-assistant |
+| `provider.py` | `/api/providers/*` | Manage POIs, experiences, slots, evidence, slot assistant |
 | `admin.py` | `/api/admin/*` | KPI dashboard, moderation, merge, staging, integrations, audit |
 | `admin_bot.py` | `/api/admin/bot/*`, `/api/admin/system-settings` | Telegram Bot, n8n, system settings |
 | `models_3d.py` | `/api/models-3d/*` | 3D Landmark calibration & management |
 
-- **Middleware chuỗi**:
+- **Middleware chain**:
   1. `request_id_middleware`: X-Request-ID tracing
-  2. Rate Limit Middleware (Redis — phân category: auth / chat / general)
+  2. Rate Limit Middleware (Redis — categories: auth / chat / general)
   3. CORS Middleware (origin whitelist)
 
 ### 3.3 Heuristic Planner Engine
 
-Thuật toán xác định 3 bước, không dùng LLM tự do, đảm bảo zero hallucination:
+The deterministic three-step algorithm does not use an unconstrained LLM for planning and is intended to prevent hallucinated plans:
 
 ```text
 Input: [T_start, T_end, Budget_VND, Group_Size, Intent_Weights, Transport_Mode, Locked_IDs, Origin/Dest]
          │
          ▼
-Bước 1 — Feasibility Pruning:
-  - Loại ca ngoài [T_start, T_end] hoặc đã hết chỗ (status = full | cancelled)
-  - Loại trải nghiệm vượt ngân sách bình quân (price > Budget / Group_Size)
-  - Giữ nguyên locked_experience_ids theo yêu cầu người dùng
+Step 1 — Feasibility Pruning:
+  - Remove slots outside [T_start, T_end] or with no availability (status = full | cancelled)
+  - Remove experiences exceeding the per-person budget (price > Budget / Group_Size)
+  - Preserve `locked_experience_ids` as requested by the user
          │
          ▼
-Bước 2 — Multi-objective Scoring & ML Tie-breaking:
+Step 2 — Multi-objective Scoring & ML Tie-breaking:
   - Score = w1 * intent_match + w2 * slot_freshness + w3 * cost_efficiency
-  - Khi đồng điểm: Kích hoạt XGBoost Ranker (15 đặc trưng ranker-features-v2)
-  - Tự động fallback về Rule Baseline nếu model không đạt ngưỡng SHA-256
+  - On a tie: activate the XGBoost Ranker (15 `ranker-features-v2` features)
+  - Automatically fall back to the rule baseline if the model does not meet the SHA-256 integrity check
          │
          ▼
-Bước 3 — Sequential Routing Optimization (Goong API):
-  - Tra cứu địa chỉ xuất phát/đích qua Goong Forward Geocoding
-  - Lấy ETA, quãng đường và hình học tuyến từ Goong Directions API
-  - Tính buffer thời gian di chuyển + kiểm tra giờ về deadline
+Step 3 — Sequential Routing Optimization (Goong API):
+  - Resolve origin/destination addresses through Goong Forward Geocoding
+  - Retrieve ETA, distance, and route geometry from the Goong Directions API
+  - Add travel-time buffers and check the return deadline
          │
          ▼
 Output:
-  - ItineraryStops có thứ tự thời gian + Feasibility Status
-  - Reason Codes + Explanation XAI (lưu decision_logs)
-  - Thống kê tổng di chuyển, chi phí, số điểm dừng
+  - Time-ordered `ItineraryStops` + feasibility status
+  - Reason codes + XAI explanation (stored in `decision_logs`)
+  - Total travel, cost, and stop-count statistics
 ```
 
 ### 3.4 Dynamic Replanning Service
 
-- **Trigger**: Sự kiện `SLOT_CANCELLED` từ đối tác hoặc `WEATHER_ALERT` từ AI Weather Advisor.
-- **Quy trình**: Solver lọc ứng viên thay thế khả thi → `REPLAN_ADVISOR` prompt đề xuất phương án tối ưu → Hiển thị XAI giải thích → Atomic update khi xác nhận + tăng version.
+- **Trigger**: A `SLOT_CANCELLED` event from a partner or a `WEATHER_ALERT` event from the AI Weather Advisor.
+- **Process**: The solver filters feasible replacement candidates → the `REPLAN_ADVISOR` prompt proposes an option → XAI explains it → an atomic update occurs on confirmation and increments the version.
 
 ### 3.5 Persistence Layer
 
-- **Cơ sở dữ liệu**: PostgreSQL 16 + PostGIS 3.4 (production) / SQLite 3 (development/demo).
-- **Cột địa lý**: `pois.geom` kiểu `geography(POINT, 4326)` với GIST spatial index.
+- **Database**: PostgreSQL 16 + PostGIS 3.4 (production) / SQLite 3 (development/demo).
+- **Geographic column**: `pois.geom` as `geography(POINT, 4326)` with a GiST spatial index.
 - **ORM**: SQLAlchemy 2.0 (synchronous engine) + GeoAlchemy2 + Alembic.
 - **12 Migration versions**: `0001_initial` → `0012_normalize_slot_timestamps_to_utc`.
-- **Redis**: Rate limiting phân category + optional API response caching.
+- **Redis**: Categorized rate limiting + optional API response caching.
 
 ---
 
-## 4. Mô hình Dữ liệu Cốt lõi (Core Data Model)
+## 4. Core Data Model
 
 ```text
 User (RBAC: traveler|provider|admin)
@@ -192,40 +194,40 @@ PlaceImportStaging (import buffer for batch place onboarding)
 
 ---
 
-## 5. Cơ chế Bảo mật & Toàn vẹn Dữ liệu (Security & Safety)
+## 5. Security and Data Integrity
 
-| Cơ chế | Triển khai |
+| Mechanism | Implementation |
 |---|---|
-| **Session Management** | HTTP-only Cookie (`le_session`), chống XSS |
+| **Session Management** | HTTP-only cookie (`le_session`), protection against XSS |
 | **Password Security** | Argon2 / PBKDF2 hashing |
-| **Google OAuth** | PKCE flow — không cần client_secret trên trình duyệt |
-| **Secret Vault** | Fernet AES-128-CBC cho mọi integration key trong `integration_settings` |
-| **Seat Hold Isolation** | `SELECT ... FOR UPDATE` row-level lock trên PostgreSQL |
+| **Google OAuth** | PKCE flow — no `client_secret` in the browser |
+| **Secret Vault** | Fernet AES-128-CBC for every integration key in `integration_settings` |
+| **Seat Hold Isolation** | PostgreSQL row-level lock via `SELECT ... FOR UPDATE` |
 | **Payment Integrity** | HMAC-SHA512 (VNPay) + HMAC-SHA256 (MoMo), IPN server-to-server |
-| **ML Integrity** | SHA-256 checksum kiểm tra model binary trước khi load |
-| **Simulated Data Boundary** | `verification_status = 'simulated'` không thể đặt chỗ/thanh toán thật |
-| **Rate Limiting** | Redis sliding window, phân category: auth/chat/general |
-| **Audit Trail** | `audit_logs` ghi vết mọi can thiệp quản trị |
-| **Error Envelope** | Mọi lỗi trả về chuẩn `{ "error": { "code", "message", "details", "request_id" } }` |
+| **ML Integrity** | SHA-256 checksum validates the model binary before loading |
+| **Simulated Data Boundary** | `verification_status = 'simulated'` cannot be used for real booking/payment |
+| **Rate Limiting** | Redis sliding window, categorized as auth/chat/general |
+| **Audit Trail** | `audit_logs` records administrative actions |
+| **Error Envelope** | All errors use `{ "error": { "code", "message", "details", "request_id" } }` |
 
 ---
 
-## 6. Luồng Thanh toán End-to-End (Payment Flow)
+## 6. End-to-End Payment Flow
 
 ```text
-Traveler chọn slot → POST /api/bookings/hold
+Traveler selects a slot → POST /api/bookings/hold
   → SELECT ... FOR UPDATE (15-minute lock)
-  → Provider nhận thông báo → POST /api/bookings/{id}/decision (accept/reject)
-  → accept → POST /api/bookings/{id}/payment-link (VNPay hoặc MoMo)
-  → User redirect → thanh toán gateway
-  → Gateway gọi IPN webhook → POST /api/bookings/vnpay/ipn hoặc /momo/ipn
+  → Provider receives a notification → POST /api/bookings/{id}/decision (accept/reject)
+  → accept → POST /api/bookings/{id}/payment-link (VNPay or MoMo)
+  → User is redirected to pay through the gateway
+  → Gateway calls the IPN webhook → POST /api/bookings/vnpay/ipn or /momo/ipn
   → Verify HMAC signature → UPDATE booking.status = confirmed
-  → EmailOutbox enqueue → Worker gửi email xác nhận
+  → EmailOutbox enqueues a message → Worker sends a confirmation email
 ```
 
 ---
 
-## 7. Sơ đồ Luồng Dữ liệu ML (ML Data Flow)
+## 7. ML Data Flow Diagram
 
 ```text
 [data/raw/hcmc_flood_reports_2002_2026.csv]
@@ -256,7 +258,7 @@ Steps:
   2. ruff lint check
   3. pytest -q (22 modules, 107+ test cases)
   4. Node.js 20 + npm ci (apps/web) + npm run build
-     (tự động inject @rollup/rollup-linux-x64-gnu cho CI Linux)
+      (automatically injects @rollup/rollup-linux-x64-gnu for Linux CI)
 ```
 
 ---
@@ -278,10 +280,10 @@ Services:
 
 ---
 
-## 10. Lưu ý Khoảng cách Tài liệu (Known Documentation Gaps)
+## 10. Known Documentation Gaps
 
 > [!WARNING]
-> - File `ARCHITECTURE.md` cũ (v1.0) mô tả `Haversine Routing Adapter` — **đã lỗi thời**. Hệ thống thực tế sử dụng **Goong Directions API** + Goong Forward Geocoding.
-> - `Itinerary Rollback` được đề cập trong README nhưng rollback là thông qua Versioning (xem `/api/itineraries/{id}/versions`), không phải endpoint rollback riêng biệt.
-> - Model weights (`models/ai-ranker/`, `models/e5/`, `models/flood-risk/`) không được commit vào repository. Cần tải/huấn luyện trước khi chạy ML endpoints.
-> - `apps/api/local_explorer.sqlite3` là database SQLite cho môi trường dev/demo; production dùng PostgreSQL.
+> - The older v1.0 `ARCHITECTURE.md` described a `Haversine Routing Adapter` — **that description is outdated**. The system actually uses the **Goong Directions API** + Goong Forward Geocoding.
+> - `Itinerary Rollback` is mentioned in the README, but rollback is handled through versioning (see `/api/itineraries/{id}/versions`); there is no dedicated rollback endpoint.
+> - Model weights (`models/ai-ranker/`, `models/e5/`, `models/flood-risk/`) are not committed to the repository. Download/train them before using the ML endpoints.
+> - `apps/api/local_explorer.sqlite3` is the SQLite database for development/demo; production uses PostgreSQL.
