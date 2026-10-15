@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.session import SessionLocal, engine
 from app.models.entities import NotificationDelivery, OpsJobRun
-from app.services.notifications import deliver_email
+from app.services.notifications import REDACTED_BODY, SENSITIVE_KEY_PREFIX, deliver_email
 from app.services.rate_limit import _redis
 
 logger = logging.getLogger("local_explorer.worker")
@@ -73,6 +73,8 @@ def run_once() -> bool:
                 else:
                     row.status = "retry"
                     row.available_at = finished + timedelta(seconds=min(3600, 15 * (2 ** (attempt - 1))))
+            if row.status in ("sent", "failed") and row.idempotency_key.startswith(SENSITIVE_KEY_PREFIX):
+                row.body_text = REDACTED_BODY  # do not keep live reset/verification links in the outbox
         db.commit()
     if error_type:
         logger.warning("email delivery failed id=%s attempt=%s error=%s", delivery_id, attempt, error_type)

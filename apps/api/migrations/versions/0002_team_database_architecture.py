@@ -20,6 +20,13 @@ branch_labels = None
 depends_on = None
 
 
+# (table, column) pairs created by the live models but introduced by a later revision; kept in step with 0003+.
+LATER_COLUMNS: list[tuple[str, str]] = [
+    ("intent_similarities", "can_substitute_purpose"),
+    ("intent_similarities", "prompt_version"),
+]
+
+
 def _slug(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     return re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-") or "provider"
@@ -131,7 +138,7 @@ def upgrade() -> None:
             start_time = start_at,
             return_deadline = end_at,
             current_version = version,
-            target_intents = COALESCE(constraints->'intent_weights', '{}'::jsonb)
+            target_intents = COALESCE((constraints->'intent_weights')::jsonb, '{}'::jsonb)
     """))
     op.alter_column("itineraries", "budget_vnd", type_=sa.BigInteger(), postgresql_using="budget_vnd::bigint")
     op.alter_column("itineraries", "estimated_cost_vnd", type_=sa.BigInteger(), postgresql_using="estimated_cost_vnd::bigint")
@@ -163,7 +170,23 @@ def upgrade() -> None:
     op.create_index("ix_itinerary_stops_poi_id", "itinerary_stops", ["poi_id"])
 
     # New tables from the team's ERD (plus feedbacks, referenced in its relation diagram).
-    Base.metadata.create_all(bind=connection)
+    # Create only the tables this revision introduces. Using the whole live metadata here would also create every table
+    # and column added by later revisions, which then fail with "already exists" on a clean database.
+    new_tables = [Base.metadata.tables[name] for name in ("events", "itinerary_versions", "intent_similarities")]
+    Base.metadata.create_all(bind=connection, tables=new_tables)
+    # feedbacks as it was at this revision: the live model also has user_id (0004) and the labelling columns (0003).
+    op.create_table(
+        "feedbacks",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("itinerary_id", sa.String(36), sa.ForeignKey("itineraries.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("rating", sa.Integer(), nullable=True),
+        sa.Column("comment", sa.Text(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="ck_feedback_rating_range"),
+    )
+    # Columns of those tables that later revisions add themselves.
+    for table, column in LATER_COLUMNS:
+        op.drop_column(table, column)
 
     # `reason_codes` was JSON in the first schema; preserve its values while adopting text[].
     _replace_json_array_column("decision_logs", "reason_codes")
@@ -183,7 +206,7 @@ def upgrade() -> None:
         INSERT INTO itinerary_versions
             (id, itinerary_id, version_number, stops_snapshot, total_cost_vnd, total_travel_time_s, preserved_intents_ratio, created_at)
         SELECT
-            md5(i.id || ':v' || i.current_version)::uuid::text, i.id, i.current_version,
+            md5(i.id || '\\:v' || i.current_version)::uuid::text, i.id, i.current_version,
             COALESCE((
                 SELECT jsonb_agg(jsonb_build_object(
                     'stop_id', s.id, 'stop_order', s.stop_order, 'poi_id', s.poi_id,

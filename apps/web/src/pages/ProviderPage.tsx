@@ -1,270 +1,108 @@
-import { useEffect, useState } from 'react'
-import {
-  CalendarClock,
-  CircleAlert,
-  CircleCheck,
-  Clock3,
-  Pencil,
-  Users,
-  Search,
-  Plus,
-  Compass,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react'
-import { apiErrorMessage, getExperiences } from '../api/client'
-import { VerificationBadge } from '../components/common/StatusBadge'
-import { TiltCard3D } from '../components/3d/TiltCard3D'
-import type { Experience } from '../types'
+import { useCallback, useEffect, useState } from 'react'
+import { AlertCircle, MapPin, Search, Store } from 'lucide-react'
+import { contentApi } from '../api/content'
+import '../components/content/content.css'
+import { Stars } from '../components/content/StarRating'
 import { useTranslation } from '../i18n'
+import type { PartnerSummary } from '../types'
 
-const today = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
+const CATEGORY_KEYS: Record<string, string> = {
+  food: 'explore.intentFood', handicraft: 'explore.intentCraft', culture: 'explore.intentCulture', nature: 'explore.intentNature', relaxation: 'explore.intentRelax',
+}
 
-const hour = (value: string, locale: string) =>
-  new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Ho_Chi_Minh',
-  }).format(new Date(value))
+const PORTAL_URL = ((import.meta as unknown as { env?: Record<string, string> }).env?.VITE_PORTAL_URL || 'http://localhost:5174').replace(/\/$/, '')
 
 export function ProviderPage() {
   const { t, locale } = useTranslation()
-  const [experiences, setExperiences] = useState<Experience[]>([])
-  const [error, setError] = useState('')
-  const [selected, setSelected] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
+  const vi = locale === 'vi'
+  const [input, setInput] = useState('')
+  const [q, setQ] = useState('')
+  const [partners, setPartners] = useState<PartnerSummary[] | null>(null)
+  const [error, setError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    const start = new Date(`${today()}T00:00:00+07:00`).toISOString()
-    const end = new Date(`${today()}T23:59:59+07:00`).toISOString()
-    getExperiences({ start_at: start, end_at: end })
-      .then(setExperiences)
-      .catch((reason) => setError(apiErrorMessage(reason)))
-  }, [])
+    const t = window.setTimeout(() => setQ(input.trim()), 300)
+    return () => window.clearTimeout(t)
+  }, [input])
 
-  const slotCount = experiences.reduce((total, exp) => total + exp.slots.length, 0)
-  const uncertain = experiences
-    .flatMap((exp) => exp.slots)
-    .filter((slot) => slot.available_reported === null).length
+  useEffect(() => {
+    let alive = true
+    setError(false)
+    setPartners(null)
+    contentApi.partners(q).then((d) => alive && setPartners(d)).catch(() => alive && setError(true))
+    return () => { alive = false }
+  }, [q, attempt])
 
-  const filtered = experiences.filter(
-    (e) =>
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.poi.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
 
   return (
-    <div className="provider-page-3d page-wrap">
-      {/* Partner Banner */}
-      <div className="provider-banner-3d">
-        <div className="banner-glow-shape" />
-        <div className="banner-content-row">
-          <div>
-            <span className="eyebrow-3d text-emerald-300">
-              <span className="eyebrow-dot bg-emerald-400" /> {locale === 'en' ? 'LOCAL PROVIDER PORTAL' : 'CỔNG THÔNG TIN ĐỐI TÁC'}
-            </span>
-            <h1 className="provider-banner-title">
-              {locale === 'en' ? 'Your experiences,' : 'Trải nghiệm của bạn,'} <br />
-              <em>{locale === 'en' ? 'better scheduled & discovered.' : 'được lên kế hoạch tốt hơn.'}</em>
-            </h1>
-            <p className="provider-banner-sub">
-              {t('provider.subtitle')}
-            </p>
-          </div>
-          <div className="banner-badge-mark">
-            <div className="mark-circle">
-              <CalendarClock size={36} className="text-emerald-400" />
-            </div>
-            <span>{locale === 'en' ? '3D PARTNER WORKSPACE' : 'WORKSPACE ĐỐI TÁC 3D'}</span>
-          </div>
+    <div className="pd-wrap">
+      <section className="pd-hero">
+        <div className="pd-hero-main">
+        <h1>{vi ? 'Đối tác địa phương' : 'Local partners'}</h1>
+        <p>{vi ? 'Các cơ sở và đơn vị tổ chức trải nghiệm đã được duyệt trên LocalExplorer. Xem đánh giá thật từ du khách trước khi đặt.' : 'Approved venues and experience hosts on LocalExplorer. Read real traveler reviews before you book.'}</p>
+        <label className="pd-search">
+          <Search size={18} aria-hidden />
+          <input type="search" value={input} onChange={(e) => setInput(e.target.value)} aria-label={vi ? 'Tìm đối tác' : 'Search partners'} placeholder={vi ? 'Tìm theo tên, loại hình, địa chỉ…' : 'Search by name, category, address…'} />
+        </label>
         </div>
-      </div>
+        <aside className="pd-hero-side">
+          <strong>{vi ? 'Bạn điều hành một cơ sở hoặc tour?' : 'Run a venue or tour?'}</strong>
+          <span>{vi ? 'Hồ sơ được quản trị viên xem xét trước khi hiển thị.' : 'Your profile is reviewed by an admin before it appears.'}</span>
+          <a className="pd-btn pd-btn-primary" href={`${PORTAL_URL}/register`}>{vi ? 'Đăng ký trở thành đối tác' : 'Become a partner'}</a>
+        </aside>
+      </section>
 
-      {/* 3D KPI Metrics Cards */}
-      <div className="provider-stats-grid">
-        <TiltCard3D maxTilt={6} className="provider-stat-card">
-          <span className="stat-label">{t('provider.activeOpen')}</span>
-          <div className="stat-main">
-            <strong>{experiences.length}</strong>
-            <span className="stat-pill-ok">
-              <CircleCheck size={13} /> {t('provider.ready')}
-            </span>
-          </div>
-          <small>{t('provider.todayActivities')}</small>
-        </TiltCard3D>
+      {partners && !error && <p className="pd-count" aria-live="polite">{vi ? `${partners.length} đối tác${q ? ` cho “${q}”` : ''}` : `${partners.length} partner${partners.length === 1 ? '' : 's'}${q ? ` for “${q}”` : ''}`}</p>}
+      {!partners && !error && <p className="pd-count">{vi ? 'Đang tải…' : 'Loading…'}</p>}
 
-        <TiltCard3D maxTilt={6} className="provider-stat-card">
-          <span className="stat-label">{t('provider.totalSlots')}</span>
-          <div className="stat-main">
-            <strong>{slotCount}</strong>
-            <span className="stat-pill-info">
-              <Clock3 size={13} /> {t('provider.realtime')}
-            </span>
-          </div>
-          <small>{locale === 'en' ? 'Verified slots with current partner confirmation' : 'Ca đã xác minh, còn xác nhận từ đối tác'}</small>
-        </TiltCard3D>
-
-        <TiltCard3D maxTilt={6} className="provider-stat-card">
-          <span className="stat-label">{t('provider.needsCapacityConfirm')}</span>
-          <div className="stat-main">
-            <strong className="text-amber">{uncertain}</strong>
-            <span className="stat-pill-warn">
-              <CircleAlert size={13} /> {t('provider.awaitingPartner')}
-            </span>
-          </div>
-          <small>{t('provider.unclearRemaining')}</small>
-        </TiltCard3D>
-      </div>
-
-      {/* Table Header & Search */}
-      <div className="table-controls-bar">
-        <div>
-          <span className="results-sub">{locale === 'en' ? 'MANAGE EXPERIENCES CATALOG' : 'QUẢN LÝ DANH MỤC TRẢI NGHIỆM'}</span>
-          <h2 className="table-heading-title">{t('provider.tableHeading')}</h2>
+      {error ? (
+        <div className="pd-state" role="alert">
+          <AlertCircle size={28} />
+          <h3>{vi ? 'Không tải được danh sách đối tác' : 'Could not load partners'}</h3>
+          <p>{vi ? 'Vui lòng kiểm tra kết nối rồi thử lại.' : 'Please check your connection and try again.'}</p>
+          <button type="button" className="pd-btn" onClick={retry}>{vi ? 'Thử lại' : 'Retry'}</button>
         </div>
-
-        <div className="table-actions-group">
-          <div className="table-search-box">
-            <Search size={15} />
-            <input
-              placeholder={t('provider.filterActivities')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <button
-            className="btn-primary-3d btn-sm"
-            type="button"
-            onClick={() =>
-              window.alert(
-                locale === 'en'
-                  ? 'Adding experiences will be activated after signing in with a provider account.'
-                  : 'Tính năng thêm mới hoạt động sẽ được kích hoạt sau khi đăng nhập tài khoản nhà cung cấp.'
-              )
-            }
-          >
-            <Plus size={15} />
-            <span>{t('provider.addExperience')}</span>
-          </button>
+      ) : !partners ? (
+        <div className="pd-grid" aria-busy="true">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="pd-skeleton" />)}</div>
+      ) : partners.length === 0 ? (
+        <div className="pd-state">
+          <Store size={28} />
+          <h3>{q ? (vi ? 'Không có đối tác phù hợp' : 'No matching partners') : (vi ? 'Chưa có đối tác nào' : 'No partners yet')}</h3>
+          <p>{q ? (vi ? 'Thử từ khóa khác.' : 'Try a different keyword.') : (vi ? 'Đối tác sẽ xuất hiện khi có trải nghiệm được mở.' : 'Partners appear once they have an open experience.')}</p>
         </div>
-      </div>
-
-      {error && <div className="inline-alert-3d">{error}</div>}
-
-      {/* 3D Modern Table */}
-      <div className="provider-table-card-3d">
-        <div className="table-header-row">
-          <span>{locale === 'en' ? 'EXPERIENCE & VENUE' : 'TRẢI NGHIỆM & ĐỊA ĐIỂM'}</span>
-          <span>{locale === 'en' ? 'NEXT SLOT' : 'KHUNG GIỜ TIẾP THEO'}</span>
-          <span>{locale === 'en' ? 'CAPACITY' : 'SỨC CHỨA'}</span>
-          <span>{locale === 'en' ? 'STATUS' : 'TRẠNG THÁI'}</span>
-          <span>{locale === 'en' ? 'ACTIONS' : 'HÀNH ĐỘNG'}</span>
-        </div>
-
-        <div className="table-rows-container">
-          {filtered.map((experience) => {
-            const slot = experience.slots[0]
-            const capacity =
-              slot?.available_reported == null
-                ? (locale === 'en' ? 'Unconfirmed' : 'Chưa xác nhận')
-                : (locale === 'en' ? `${slot.available_reported} open seats` : `${slot.available_reported} chỗ trống`)
-            const isOpen = selected === experience.id
-
+      ) : (
+        <div className="pd-grid">
+          {partners.map((p) => {
+            const cover = p.cover_url && /^https?:\/\//i.test(p.cover_url) ? p.cover_url : null
             return (
-              <div
-                key={experience.id}
-                className={`table-interactive-row ${isOpen ? 'row-expanded' : ''}`}
-                onClick={() => setSelected(isOpen ? '' : experience.id)}
-              >
-                <div className="row-main-grid">
-                  <div className="col-experience">
-                    <span className="exp-glyph">
-                      {experience.poi.category.slice(0, 1).toUpperCase()}
-                    </span>
-                    <div className="exp-details">
-                      <strong>{experience.name}</strong>
-                      <small>{experience.poi.name}</small>
-                    </div>
+              <article key={p.id} className="pd-card">
+                <div className={`pd-cover${cover ? '' : ' pd-cover-empty'}`}>
+                  <Store size={34} aria-hidden />
+                  {cover && <img src={cover} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
+                </div>
+                <div className="pd-card-body">
+                  <h3>{p.name}</h3>
+                  {p.description && <p className="pd-desc">{p.description}</p>}
+                  {p.address && <div className="pd-line"><MapPin size={14} /><span>{p.address}</span></div>}
+                  {p.categories.length > 0 && <div className="pd-chips">{p.categories.slice(0, 3).map((c) => <span key={c} className="tag-chip">{CATEGORY_KEYS[c] ? t(CATEGORY_KEYS[c]) : c.replaceAll('_', ' ')}</span>)}</div>}
+                  <div className="pd-rating">
+                    {p.rating_average != null && p.rating_count > 0
+                      ? <><Stars value={p.rating_average} size={13} />{p.rating_average.toFixed(1)} ({p.rating_count})</>
+                      : <span className="pd-muted">{vi ? 'Chưa có đánh giá' : 'No reviews yet'}</span>}
                   </div>
-
-                  <div className="col-time">
-                    {slot ? (
-                      <>
-                        <strong>
-                          {hour(slot.start_at, locale)} – {hour(slot.end_at, locale)}
-                        </strong>
-                        <small>
-                          {new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
-                            dateStyle: 'medium',
-                            timeZone: 'Asia/Ho_Chi_Minh',
-                          }).format(new Date(slot.start_at))}
-                        </small>
-                      </>
-                    ) : (
-                      <span className="text-muted">{locale === 'en' ? 'No slot scheduled' : 'Chưa có slot'}</span>
-                    )}
-                  </div>
-
-                  <div className={`col-capacity ${slot?.available_reported == null ? 'text-amber' : ''}`}>
-                    <Users size={14} />
-                    <span>{capacity}</span>
-                  </div>
-
-                  <div className="col-badge">
-                    <VerificationBadge status={experience.data_mode === 'real' ? 'verified' : 'unverified'} />
-                  </div>
-
-                  <div className="col-action">
-                    <button type="button" className="btn-table-inspect">
-                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      <span>{isOpen ? (locale === 'en' ? 'Close' : 'Đóng') : (locale === 'en' ? 'View' : 'Xem')}</span>
-                    </button>
+                  <div className="pd-foot">
+                    <span>{p.experience_count} {vi ? 'trải nghiệm đang mở' : p.experience_count === 1 ? 'open experience' : 'open experiences'}</span>
+                    {p.min_price_vnd != null && <span>{vi ? 'Từ ' : 'From '}<strong>{p.min_price_vnd.toLocaleString('vi-VN')}₫</strong></span>}
                   </div>
                 </div>
-
-                {isOpen && (
-                  <div className="row-expanded-panel">
-                    <p className="exp-full-desc">{experience.description}</p>
-                    <div className="exp-extra-info">
-                      <span>{locale === 'en' ? `Duration: ${experience.duration_min} mins` : `Thời lượng: ${experience.duration_min} phút`}</span>
-                      <span>
-                        {locale === 'en' ? `Price: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / person` : `Giá: ${experience.price_vnd.toLocaleString('vi-VN')}₫ / người`}
-                      </span>
-                      <span>{locale === 'en' ? `Address: ${experience.poi.address}` : `Địa chỉ: ${experience.poi.address}`}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-edit-action"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.alert(locale === 'en' ? 'Editing requires provider role permission.' : 'Tính năng chỉnh sửa yêu cầu phân quyền quản trị viên.')
-                      }}
-                    >
-                      <Pencil size={13} />
-                      <span>{locale === 'en' ? 'Edit Experience Details' : 'Chỉnh sửa thông tin trải nghiệm'}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+              </article>
             )
           })}
-
-          {!filtered.length && !error && (
-            <div className="empty-table-state">
-              <Compass size={24} className="text-emerald" />
-              <span>{locale === 'en' ? 'No experiences match your search query.' : 'Không tìm thấy hoạt động phù hợp với từ khóa.'}</span>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
-      <p className="provider-disclaimer">
-        {locale === 'en'
-          ? 'Only source-verified catalog entries and recently confirmed slots are shown. Manage listings after signing in with a provider account.'
-          : 'Chỉ hiển thị địa điểm có nguồn đã xác minh và ca còn xác nhận mới. Đăng nhập bằng tài khoản đối tác để quản lý dữ liệu.'}
-      </p>
     </div>
   )
 }

@@ -45,7 +45,40 @@ export interface AuthUser {
   provider_id: string | null
   phone: string | null
   is_active: boolean
+  email_verified_at?: string | null
+  mfa_enabled?: boolean
   created_at: string
+}
+
+export interface MfaChallenge {
+  mfa_required: true
+  mfa_ticket: string
+  expires_in: number
+}
+
+export interface MfaStatus {
+  enabled: boolean
+  required: boolean
+  setup_pending: boolean
+  recovery_codes_remaining: number
+}
+
+export interface MfaSetup {
+  secret: string
+  otpauth_uri: string
+  qr: string
+}
+
+export interface SessionInfo {
+  id: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string
+  absolute_expires_at: string
+  ip: string | null
+  user_agent: string | null
+  amr: string[]
+  current: boolean
 }
 
 export interface POI {
@@ -60,6 +93,10 @@ export interface POI {
   source_evidence?: SourceEvidence[]
   district?: string | null
   image_urls?: string[]
+  opening_hours?: string | null
+  ticket_info?: string | null
+  tags?: string[]
+  is_landmark?: boolean
   details?: {
     contact_phone?: string | null
     contact_email?: string | null
@@ -143,6 +180,25 @@ export interface Experience {
   slots: Slot[]
   source_evidence?: SourceEvidence[]
   data_mode?: DataMode
+  rating_average?: number | null
+  rating_count?: number
+  provider_name?: string | null
+  provider_slug?: string | null
+}
+
+export interface PartnerSummary {
+  id: string
+  name: string
+  slug: string
+  description: string
+  address: string
+  website: string | null
+  cover_url: string | null
+  categories: string[]
+  experience_count: number
+  min_price_vnd: number | null
+  rating_average: number | null
+  rating_count: number
 }
 
 export interface RouteLeg {
@@ -264,4 +320,73 @@ export interface Booking {
   cancellation_reason: string | null
   created_at: string
   updated_at: string
+}
+
+/* ---------- Content managed in the partner/admin portal ---------- */
+
+export interface SiteBanner {
+  id: string
+  title: string
+  subtitle: string
+  image_url: string
+  link_url: string
+}
+
+export interface ArticleSummary {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  cover_url: string
+  category: string
+  published_at: string | null
+}
+
+export interface Article extends ArticleSummary {
+  body: string
+}
+
+export interface CollectionPlace {
+  id: string
+  name: string
+  district: string | null
+  category: string
+  image_url: string | null
+  is_landmark: boolean
+}
+
+export interface SiteCollection {
+  id: string
+  title: string
+  description: string
+  places: CollectionPlace[]
+}
+
+export interface HomeContent {
+  banners: SiteBanner[]
+  collections: SiteCollection[]
+  articles: ArticleSummary[]
+}
+
+export interface ExperienceReview {
+  id: string
+  rating: number
+  comment: string
+  author: string
+  reply: string | null
+  replied_at: string | null
+  created_at: string
+}
+
+export interface ReviewSummary {
+  count: number
+  average: number | null
+  items: ExperienceReview[]
+}
+
+export interface ReviewableBooking {
+  booking_id: string
+  experience_id: string
+  experience_title: string
+  slot_start_at: string
 }

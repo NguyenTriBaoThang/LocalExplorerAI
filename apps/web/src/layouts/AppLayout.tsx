@@ -1,3 +1,4 @@
+import { EmailVerificationBanner } from '../components/account/EmailVerificationBanner'
 import { useState, useRef, useEffect } from 'react'
 import {
   Sparkles,
@@ -19,6 +20,7 @@ import { logout } from '../api/client'
 import { setTheme, useTheme } from '../theme'
 import { useTranslation } from '../i18n'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
+import { usePageViewTracking } from '../analytics'
 
 export function AppLayout() {
   const [open, setOpen] = useState(false)
@@ -28,20 +30,21 @@ export function AppLayout() {
   const theme = useTheme()
   const { t } = useTranslation()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  usePageViewTracking()
 
-  const links = loading ? [] : user?.role === 'admin'
-    ? [{ to: '/admin', label: t('nav.admin') }, { to: '/map-3d', label: t('nav.map3d') }]
-    : user?.role === 'provider'
-      ? [{ to: '/provider-portal', label: t('nav.providerPortal') }, { to: '/map-3d', label: t('nav.map3d') }]
-      : [
-          { to: '/chat', label: t('nav.chat') },
-          { to: '/places', label: t('nav.places') },
-          { to: '/explore', label: t('nav.explore') },
-          { to: '/planner', label: t('nav.planner') },
-          { to: '/map-3d', label: t('nav.map3d') },
-          { to: '/provider', label: t('nav.provider') },
-          { to: '/about', label: t('nav.about') },
-        ]
+  const isStaff = user?.role === 'admin' || user?.role === 'provider'
+  // Staff browse the same public site as everyone else; chat and planner are traveler features. A Portal link leads back to work.
+  const links = loading ? [] : [
+    ...(isStaff ? [] : [{ to: '/chat', label: t('nav.chat') }]),
+    { to: '/places', label: t('nav.places') },
+    { to: '/explore', label: t('nav.explore') },
+    ...(isStaff ? [] : [{ to: '/planner', label: t('nav.planner') }]),
+    { to: '/map-3d', label: t('nav.map3d') },
+    { to: '/guides', label: t('nav.guides') },
+    { to: '/provider', label: t('nav.provider') },
+    { to: '/about', label: t('nav.about') },
+    ...(isStaff ? [{ to: user?.role === 'admin' ? '/admin' : '/provider-portal', label: user?.role === 'admin' ? t('nav.admin') : t('nav.providerPortal') }] : []),
+  ]
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -315,6 +318,7 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <main className="main-content-3d">
+        <EmailVerificationBanner />
         <Outlet />
       </main>
 

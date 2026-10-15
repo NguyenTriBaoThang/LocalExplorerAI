@@ -316,6 +316,7 @@ export function PlannerPage() {
                 <input
                   required
                   type="number"
+                  aria-label={t('planner.budget')}
                   min={100000}
                   step={50000}
                   value={budget}
@@ -419,7 +420,7 @@ export function PlannerPage() {
                 <span>
                   <MapPin size={14} className="text-emerald" /> {t('planner.originLabel')}
                 </span>
-                <select value={originId} onChange={(e) => {
+                <select aria-label={locale === 'en' ? 'Start point' : 'Điểm xuất phát'} value={originId} onChange={(e) => {
                   setOriginId(e.target.value)
                   setOriginAddress('')
                   setOriginResolved(null)
@@ -433,7 +434,7 @@ export function PlannerPage() {
                   ))}
                 </select>
                 <div className="address-resolve-row">
-                  <input value={originAddress} placeholder={locale === 'en' ? 'Or enter a street address' : 'Hoặc nhập địa chỉ'} onChange={(event) => {
+                  <input aria-label={locale === 'en' ? 'Start address' : 'Địa chỉ xuất phát'} value={originAddress} placeholder={locale === 'en' ? 'Or enter a street address' : 'Hoặc nhập địa chỉ'} onChange={(event) => {
                     setOriginAddress(event.target.value)
                     setOriginId('')
                     setOriginResolved(null)
@@ -455,7 +456,7 @@ export function PlannerPage() {
                 <span>
                   <MapPin size={14} className="text-amber" /> {t('planner.destinationLabel')}
                 </span>
-                <select value={destinationId} onChange={(e) => {
+                <select aria-label={locale === 'en' ? 'End point' : 'Điểm kết thúc'} value={destinationId} onChange={(e) => {
                   setDestinationId(e.target.value)
                   setDestinationAddress('')
                   setDestinationResolved(null)
@@ -469,7 +470,7 @@ export function PlannerPage() {
                   ))}
                 </select>
                 <div className="address-resolve-row">
-                  <input value={destinationAddress} placeholder={locale === 'en' ? 'Or enter a return address' : 'Hoặc nhập địa chỉ điểm về'} onChange={(event) => {
+                  <input aria-label={locale === 'en' ? 'End address' : 'Địa chỉ điểm về'} value={destinationAddress} placeholder={locale === 'en' ? 'Or enter a return address' : 'Hoặc nhập địa chỉ điểm về'} onChange={(event) => {
                     setDestinationAddress(event.target.value)
                     setDestinationId('')
                     setDestinationResolved(null)

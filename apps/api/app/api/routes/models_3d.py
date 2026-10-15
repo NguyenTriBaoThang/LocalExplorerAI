@@ -10,8 +10,9 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.api.dependencies import require_roles
 from app.models.entities import User
+from app.api.guards import public, require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/models-3d", tags=["3D Models & Landmarks"])
 
@@ -277,13 +278,13 @@ class CalibrationPayload(BaseModel):
     scale: float = Field(default=58.0, gt=0.5, le=1000, description="Chiều cao thực tế (mét)")
 
 
-@router.get("/calibration")
+@router.get("/calibration", dependencies=[Depends(public('3D landmark calibration is display data'))])
 def get_all_calibrations():
     """Lấy thông số hiệu chỉnh của tất cả mô hình 3D."""
     return _read_calibrations()
 
 
-@router.get("/calibration/{model_id}")
+@router.get("/calibration/{model_id}", dependencies=[Depends(public('3D landmark calibration is display data'))])
 def get_model_calibration(model_id: str):
     """Lấy thông số hiệu chỉnh của một mô hình (ví dụ: nhathoducba)."""
     return _get_known_model(model_id, _read_calibrations())
@@ -293,7 +294,7 @@ def get_model_calibration(model_id: str):
 def save_model_calibration(
     model_id: str,
     payload: CalibrationPayload,
-    actor: User = Depends(require_roles("admin")),
+    actor: User = Depends(require_user(P.ADMIN_MODELS_3D)),
 ):
     """Admin lưu vị trí, góc xoay và tỉ lệ đã căn chỉnh của mô hình 3D."""
     data = _read_calibrations()

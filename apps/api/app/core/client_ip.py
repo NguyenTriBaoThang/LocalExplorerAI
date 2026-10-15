@@ -3,6 +3,19 @@ import ipaddress
 from fastapi import Request
 
 
+def request_scheme(request: Request, trusted_proxy_ips: str = "") -> str:
+    """The scheme the browser used: ``X-Forwarded-Proto`` is believed only when the direct peer is a trusted proxy."""
+    scheme = request.url.scheme
+    peer = request.client.host if request.client else ""
+    try:
+        peer_ip = ipaddress.ip_address(peer)
+        trusted = any(peer_ip in ipaddress.ip_network(item.strip(), strict=False) for item in trusted_proxy_ips.split(",") if item.strip())
+    except ValueError:
+        return scheme
+    forwarded = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip().lower()
+    return forwarded if trusted and forwarded in {"http", "https"} else scheme
+
+
 def client_ip(request: Request, trusted_proxy_ips: str = "") -> str:
     peer = request.client.host if request.client else "unknown"
     if not trusted_proxy_ips.strip():

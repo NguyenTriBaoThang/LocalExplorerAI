@@ -1,19 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import text
 
 from app.core.config import settings
 from app.db.session import engine
 from app.services.rate_limit import ping_redis
+from app.api.guards import public
 
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+@router.get("/health", dependencies=[Depends(public('liveness probe'))])
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/ready")
+@router.get("/ready", dependencies=[Depends(public('readiness probe'))])
 def readiness() -> dict[str, str]:
     checks = {"database": "ok", "redis": "not_required"}
     try:

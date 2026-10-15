@@ -18,6 +18,7 @@ from app.models.entities import (
     Provider,
 )
 from app.services.offline_chat_fallback import build_offline_constraints
+from tests.helpers import bearer_for, make_user
 
 
 class FakeStructuredProvider:
@@ -74,6 +75,7 @@ class FakeStructuredProvider:
 def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experience):
     ai = FakeStructuredProvider()
     client.app.dependency_overrides[get_llm_provider] = lambda: ai
+    admin = bearer_for(make_user(db_session, "admin"))  # only the administrator-tool calls below carry it
 
     catalog = client.get("/api/ai/prompts")
     assert catalog.status_code == 200
@@ -85,7 +87,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     assert chat.json()["prompt_version"] == "3.0.0"
     assert chat.json()["structured_constraints"]["travel_mode"] == "motorcycle"
 
-    tagged = client.post(f"/api/experiences/{sample_experience.id}/ai-tag", json={})
+    tagged = client.post(f"/api/experiences/{sample_experience.id}/ai-tag", json={}, headers=admin)
     assert tagged.status_code == 200, tagged.text
     assert sample_experience.primary_intent == "thủ_công"
     assert sample_experience.tagger_prompt_version == "3.0.0"
@@ -100,7 +102,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
                        verification_status="simulated")
     db_session.add(other)
     db_session.flush()
-    similarity = client.post("/api/ai/intent-similarity", json={"experience_a_id": sample_experience.id, "experience_b_id": other.id})
+    similarity = client.post("/api/ai/intent-similarity", json={"experience_a_id": sample_experience.id, "experience_b_id": other.id}, headers=admin)
     assert similarity.status_code == 200, similarity.text
     assert similarity.json()["stored_pair"] == sorted([sample_experience.id, other.id])
     assert similarity.json()["prompt_version"] == "3.0.0"
@@ -157,7 +159,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     })
     assert accepted.status_code == 200, accepted.text
 
-    feedback = client.post(f"/api/itineraries/{itinerary.id}/feedback/label", json={"review_text": "Rất hài lòng, tự tay đan giỏ.", "rating": 5})
+    feedback = client.post(f"/api/itineraries/{itinerary.id}/feedback/label", json={"review_text": "Rất hài lòng, tự tay đan giỏ.", "rating": 5}, headers=admin)
     assert feedback.status_code == 200, feedback.text
     assert feedback.json()["label"]["relevance_grade"] == 3
 
@@ -165,7 +167,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     weather = client.post(f"/api/itineraries/{itinerary.id}/weather-advisory", json={
         "rain_mm_per_hour": 14, "aqi_pm25": 80, "temperature_c": 30, "children_in_group": False,
         "observed_at": "2030-10-01T09:00:00+07:00",
-    })
+    }, headers=admin)
     assert weather.status_code == 200, weather.text
     assert weather.json()["advisory"]["indoor_priority_boost"] is True
     assert weather.json()["flood_status_inferred"] is False

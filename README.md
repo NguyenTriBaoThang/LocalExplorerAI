@@ -370,7 +370,13 @@ classDiagram
 - Supports heading, altitude, scale, and real-world coordinates.
 - Calibration API: PUT /api/models-3d/{model_id}/calibration.
 
-### 16. Role-based navigation and guards
+### 17. Xác Thực Người Dùng & Quản Lý Hồ Sơ
+- Đăng ký và đăng nhập bằng Email/Mật khẩu với cơ chế băm mật khẩu an toàn.
+- Đăng nhập một chạm bằng **Google OAuth 2.0 PKCE** với kiểm tra trạng thái kích hoạt tự động.
+- Phiên đăng nhập được quản lý bằng **HTTP-only Cookie** (`le_at` access token 15 phút, `le_rt` refresh token xoay vòng), bảo vệ chống tấn công XSS và đánh cắp token.
+- Trang hồ sơ cá nhân (`/profile`): Đổi tên hiển thị, số điện thoại, đổi mật khẩu và xem danh sách lịch trình đã lưu.
+
+### 18. Role-based navigation and guards
 - RoleHome routes travelers to /explore, providers to /provider-portal, and admins to /admin.
 - CustomerRoute and RoleRoute protect role-specific pages.
 
@@ -707,45 +713,38 @@ The helper starts database services and prints instructions for launching the AP
 
 Create apps/api/.env from the root .env.example if it does not already exist:
 
-~~~env
-# ===== Database =====
-DATABASE_URL=sqlite:///./apps/api/local_explorer.sqlite3
-# Production PostgreSQL:
-# DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer
-
-# ===== Security =====
-AUTH_SECRET=your-secure-random-auth-secret-key-32-chars-minimum
-APP_SIGNING_SECRET=your-app-signing-secret
-INTEGRATION_SECRETS_KEY=your-fernet-master-key-base64
-APP_ENV=development
-
-# ===== Routing =====
-ROUTING_PROVIDER=goong
-GOONG_API_KEY=your-goong-api-key
-
-# ===== LLM (configure through Admin UI or .env) =====
-# GEMINI_API_KEY=your-gemini-api-key
-# OPENAI_API_KEY=your-openai-api-key
-
-# ===== Payments (configure through Admin UI; encrypted with Fernet) =====
-# VNPAY_TMN_CODE=your-vnpay-tmn-code
-# VNPAY_HASH_SECRET=your-vnpay-hash-secret
-# MOMO_PARTNER_CODE=your-momo-partner-code
-
-# ===== Google OAuth =====
-# GOOGLE_CLIENT_ID=your-google-client-id
-# GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# ===== Rate limiting =====
-RATE_LIMIT_ENABLED=false
-# REDIS_URL=redis://localhost:6379/0
-
-# ===== CORS =====
-CORS_ORIGINS=http://localhost:8080,http://localhost:5173
-
-# ===== Feature flags =====
-REAL_DATA_ONLY=true  # Set true to hide simulated records from API responses
-~~~
+| Biến môi trường | Giá trị mặc định | Giải thích |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer` | Chuỗi kết nối PostGIS |
+| `REDIS_URL` | `redis://localhost:6379/0` | Chuỗi kết nối Redis phục vụ cache và rate limit |
+| `AUTH_JWT_KEY_ID`, `AUTH_JWT_PRIVATE_KEY_B64` | *(sinh bằng `python -m scripts.generate_auth_keys`)* | Khóa RS256 ký access token (base64 PEM) |
+| `ADMIN_MFA_REQUIRED` | *(mặc định: bật ở production)* | Bắt buộc admin dùng MFA TOTP |
+| `APP_SIGNING_SECRET` | *(chuỗi ngẫu nhiên)* | Khóa ký token xác nhận 2 bước cho Provider Slot Assistant |
+| `INTEGRATION_SECRETS_KEY` | *(khóa Fernet base64)* | Master key mã hóa AES-128-CBC cho các cổng tích hợp động |
+| *(đã bỏ)* `ADMIN_API_KEY` | — | Thay bằng service account: tạo khóa `lek_...` qua `POST /api/admin/service-accounts` (chỉ quyền `ops:read`) |
+| `OPENAI_API_KEY` | *(tùy chọn)* | API key cho các prompt LLM (Hỗ trợ OpenAI hoặc Gemini API compatible) |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | URL endpoint của nhà cung cấp LLM |
+| `ROUTING_PROVIDER` | `goong` | Nhà cung cấp tuyến đường (`goong` hoặc `mock` cho test/demo) |
+| `GEOCODING_PROVIDER` | `goong` | Nhà cung cấp geocoding địa chỉ |
+| `GOONG_API_KEY` | *(bắt buộc để dùng Goong)* | Key Goong chỉ được API server gửi, không lộ ra frontend |
+| `GOONG_ETA_TTL_SECONDS` | `300` | Thời hạn cache ETA trong tiến trình API (5 phút) |
+| `GEOCODE_CACHE_TTL_SECONDS` | `86400` | Thời hạn cache kết quả geocoding (24 giờ) |
+| `PAYMENT_PROVIDER` | `vnpay` | Cổng thanh toán trực tuyến mặc định (`vnpay` hoặc `momo`) |
+| `VNPAY_ENVIRONMENT` | `sandbox` | Môi trường VNPay (`sandbox` hoặc `production`) |
+| `VNPAY_TMN_CODE` | *(tùy chọn)* | Mã Terminal ID do VNPay cấp |
+| `VNPAY_HASH_SECRET` | *(tùy chọn)* | Khóa bí mật tạo chữ ký số HMAC-SHA512 VNPay |
+| `VNPAY_PAYMENT_URL` | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` | Endpoint thanh toán VNPay |
+| `VNPAY_RETURN_URL` | `http://localhost:5173/itinerary/` | URL điều hướng hiển thị kết quả sau thanh toán |
+| `VNPAY_IPN_URL` | `http://localhost:8000/api/payments/vnpay/ipn` | Webhook IPN tiếp nhận xác nhận thanh toán |
+| `MOMO_ENVIRONMENT` | `sandbox` | Môi trường Ví MoMo (`sandbox` hoặc `production`) |
+| `MOMO_PARTNER_CODE` | *(tùy chọn)* | Mã đối tác do MoMo cấp |
+| `MOMO_ACCESS_KEY` | *(tùy chọn)* | Khóa truy cập API MoMo |
+| `MOMO_SECRET_KEY` | *(tùy chọn)* | Khóa bí mật tạo chữ ký số HMAC-SHA256 MoMo |
+| `SMTP_HOST` / `SMTP_PORT` | `localhost` / `587` | Cấu hình máy chủ gửi email giao dịch |
+| `INSTALL_ML` | `true` | Bật tính năng nạp mô hình XGBoost Ranker & Flood Risk |
+| `INSTALL_E5` | `true` | Bật tính năng tìm kiếm ngữ nghĩa cục bộ Multilingual E5 |
+| `GOOGLE_CLIENT_ID` | *(tùy chọn)* | Client ID đăng nhập Google OAuth 2.0 PKCE |
+| `GOOGLE_CLIENT_SECRET` | *(tùy chọn)* | Client Secret đăng nhập Google |
 
 Keep production secrets in an appropriate secret manager. Do not commit credentials or expose them to the browser. Test external integrations in staging with the required HTTPS callbacks.
 

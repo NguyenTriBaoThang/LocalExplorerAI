@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.entities import User, Itinerary, ItineraryStop, POI, Experience, ExperienceSlot
-from app.services.auth_service import hash_password, create_session_token
+from app.auth import hash_password
+from app.services.account_tokens import issue_claim_token
 
 PROD_DOMAIN = "https://www.localexplorerai.site"
 LOCAL_DOMAIN = "http://localhost:8080"
@@ -25,6 +26,16 @@ SCHEDULE_TIMELINE = [
 ]
 
 
+SHADOW_EMAIL_PREFIX = "zalo_"
+SHADOW_EMAIL_DOMAIN = "localexplorer.site"
+
+
+def is_shadow_email(email: str | None) -> bool:
+    """Addresses reserved for the placeholder accounts the chat bot creates; nobody can register or log in as one."""
+    value = (email or "").strip().lower()
+    return value.startswith(SHADOW_EMAIL_PREFIX) and value.endswith("@" + SHADOW_EMAIL_DOMAIN)
+
+
 class TicketService:
     def __init__(self, db: Optional[Session] = None):
         self._db = db
@@ -35,7 +46,7 @@ class TicketService:
     def get_or_create_shadow_user(self, db: Session, chat_id: str, display_name: str) -> User:
         """Find or create an underlying shadow traveler account for this Zalo chat."""
         clean_id = str(chat_id).replace("-", "_").replace(" ", "")
-        email = f"zalo_{clean_id}@localexplorer.site".lower()
+        email = f"{SHADOW_EMAIL_PREFIX}{clean_id}@{SHADOW_EMAIL_DOMAIN}".lower()
         
         user = db.scalar(select(User).where(User.email == email))
         if user is not None:
@@ -185,7 +196,10 @@ class TicketService:
 
             # Generate fresh, dedicated ticket code and ID for this confirmed schedule
             itinerary_id = str(uuid4())
-            token = f"SG-PASS-{secrets.token_hex(3).upper()}"
+            # The short code is only printed on the ticket; the share token is the read credential, so it must
+            # be unguessable, and ownership moves only through the separate single-use claim token below.
+            ticket_code = f"SG-PASS-{secrets.token_hex(3).upper()}"
+            token = secrets.token_urlsafe(32)
             
             now = datetime.now(timezone.utc)
             start_date = now + timedelta(days=1)
@@ -214,6 +228,7 @@ class TicketService:
                     "intent": intent_summary,
                     "customer_name": customer_name,
                     "chat_id": str(chat_id),
+                    "ticket_code": ticket_code,
                 },
                 data_mode="simulated"
             )
@@ -256,14 +271,18 @@ class TicketService:
                 db.add(stop)
                 
             itinerary.estimated_cost_vnd = total_calculated_cost if total_calculated_cost > 0 else budget_vnd
+            claim_token = issue_claim_token(db, itinerary.id)
             db.commit()
             
             return {
-                "ticket_code": token,
+                "ticket_code": ticket_code,
                 "share_token": token,
                 "itinerary_id": itinerary.id,
                 "url_prod": f"{PROD_DOMAIN}/shared/{token}",
                 "url_local": f"{LOCAL_DOMAIN}/shared/{token}",
+                # Send only to the traveller who booked: whoever opens it first can attach the trip to an account.
+                "claim_url_prod": f"{PROD_DOMAIN}/shared/{token}?claim={claim_token}",
+                "claim_url_local": f"{LOCAL_DOMAIN}/shared/{token}?claim={claim_token}",
                 "estimated_cost_vnd": itinerary.estimated_cost_vnd,
                 "stops_count": len(experiences[:4]),
                 "customer_name": customer_name,

@@ -5,7 +5,7 @@ from app.adapters.llm.provider import (
     LLMProviderError,
     StructuredOutputProvider,
 )
-from app.api.dependencies import get_llm_provider, get_optional_user
+from app.api.dependencies import get_llm_provider
 from app.api.dependencies import get_db
 from app.core.config import settings
 from app.prompts.registry import catalog
@@ -15,6 +15,8 @@ from app.services.integration_config import IntegrationSecretConfigurationError,
 from sqlalchemy.orm import Session
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.models.entities import User
+from app.api.guards import public, require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -23,7 +25,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 def chat_message(
     payload: ChatMessage,
     provider: StructuredOutputProvider = Depends(get_llm_provider),
-    user: User | None = Depends(get_optional_user),
+    user: User | None = Depends(require_user(P.CHAT_USE, optional=True)),
 ):
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "AI chat is a traveler feature."})
@@ -52,7 +54,7 @@ def chat_message(
     }
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(public('reports whether the concierge is LLM-backed or on the fallback'))])
 def chat_status(provider: StructuredOutputProvider = Depends(get_llm_provider), db: Session = Depends(get_db)):
     configured = provider.model_name != "not-configured"
     try:

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -75,8 +76,21 @@ class Provider(Base):
     contact_email: Mapped[str | None] = mapped_column(String(254), nullable=True)
     address: Mapped[str] = mapped_column(String(300), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Partner lifecycle: pending (self-registered, awaiting review) -> verified | rejected; verified <-> suspended.
+    # "mock" and "simulated" are legacy demo values and behave like verified.
     verification_status: Mapped[str] = mapped_column(String(32), default="mock")
     portal_access_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Partner application submitted through the portal, and the administrator's review of it.
+    business_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    tax_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    business_license_no: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    document_urls: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    application_note: Mapped[str] = mapped_column(Text, default="")
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), nullable=True)  # user id; no FK, users already reference providers
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Retained for compatibility with the first project schema/API.
     status: Mapped[str] = mapped_column(String(24), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -99,6 +113,10 @@ class User(Base):
     provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Bumped on role change, deactivation, password change or "sign out everywhere": invalidates every access token at once.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -121,6 +139,12 @@ class POI(Base):
     submitted_by_provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
     is_in_pilot_polygon: Mapped[bool] = mapped_column(Boolean, default=False)
     image_urls: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    # Visitor information curated in the admin portal (not part of the evidence-backed required fields).
+    opening_hours: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    ticket_info: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    is_landmark: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     # Untouched, source-backed place facts (e.g. OSM tags and image credits).
     # These are descriptive catalog metadata, not proof of operational verification.
     details: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
@@ -575,3 +599,122 @@ class IntegrationSecret(Base):
     updated_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ItineraryClaimToken(Base):
+    """Single-use link that lets a chat-bot traveller attach a ticket itinerary to a real account.
+
+    Kept apart from ``itineraries.share_token``: the share token only grants read access and may be passed around,
+    while this token transfers ownership. Only its SHA-256 hash is stored.
+    """
+
+    __tablename__ = "itinerary_claim_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    itinerary_id: Mapped[str] = mapped_column(ForeignKey("itineraries.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# Register the auth tables on Base (they live in their own module to keep the auth package independent).
+from app.models import auth_entities  # noqa: E402,F401
+
+
+class SiteBanner(Base):
+    """Hero banner on the traveler web home page, managed in the admin portal."""
+
+    __tablename__ = "site_banners"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    title: Mapped[str] = mapped_column(String(180))
+    subtitle: Mapped[str] = mapped_column(String(300), default="")
+    image_url: Mapped[str] = mapped_column(String(1000))
+    link_url: Mapped[str] = mapped_column(String(500), default="/")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class SiteArticle(Base):
+    """Travel guide / news article shown on the traveler web."""
+
+    __tablename__ = "site_articles"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_site_articles_slug"),
+        CheckConstraint("status IN ('draft', 'published')", name="ck_site_articles_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    title: Mapped[str] = mapped_column(String(220))
+    slug: Mapped[str] = mapped_column(String(220), index=True)
+    excerpt: Mapped[str] = mapped_column(String(600), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    cover_url: Mapped[str] = mapped_column(String(1000), default="")
+    category: Mapped[str] = mapped_column(String(60), default="Cẩm nang")
+    status: Mapped[str] = mapped_column(String(16), default="draft", index=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    author_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class SiteCollection(Base):
+    """Curated list of places featured on the traveler web."""
+
+    __tablename__ = "site_collections"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    title: Mapped[str] = mapped_column(String(180))
+    description: Mapped[str] = mapped_column(String(600), default="")
+    place_ids: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class PageView(Base):
+    """One page view on the traveler web. No IP address is stored and the browser id is hashed before it is saved."""
+
+    __tablename__ = "page_views"
+    __table_args__ = (Index("ix_page_views_entity", "entity_type", "entity_id", "occurred_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    visitor_hash: Mapped[str] = mapped_column(String(64), index=True)
+    session_hash: Mapped[str] = mapped_column(String(64))
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    path: Mapped[str] = mapped_column(String(300))
+    entity_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    referrer_host: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    device: Mapped[str] = mapped_column(String(16), default="desktop")
+
+
+class ExperienceReview(Base):
+    """A traveler's review of an experience they attended (one per booking), with the partner's public reply."""
+
+    __tablename__ = "experience_reviews"
+    __table_args__ = (
+        UniqueConstraint("booking_id", name="uq_experience_reviews_booking"),
+        CheckConstraint("rating BETWEEN 1 AND 5", name="ck_experience_reviews_rating"),
+        CheckConstraint("status IN ('published', 'hidden')", name="ck_experience_reviews_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id", ondelete="CASCADE"), index=True)
+    provider_id: Mapped[str] = mapped_column(ForeignKey("providers.id", ondelete="CASCADE"), index=True)
+    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id", ondelete="CASCADE"))
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    reply: Mapped[str | None] = mapped_column(Text, nullable=True)
+    replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="published")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
