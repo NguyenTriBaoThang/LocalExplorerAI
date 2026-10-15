@@ -40,3 +40,15 @@ export const adminAiApi = {
   predictFloodRisk: async (samples: FloodSample[]) =>
     (await http.post<FloodRiskResponse>('/ml/flood-risk', { samples })).data,
 }
+
+/** The API reports model status in English; show the known messages in Vietnamese and pass anything else through. */
+const MODEL_MESSAGES: Record<string, string> = {
+  'Flood artifact files are missing or incomplete.': 'Thiếu hoặc chưa đủ file model dự báo ngập.',
+  'No complete ML bundle is installed; the built-in rule baseline is active.': 'Chưa cài bộ model ML đầy đủ; đang dùng baseline theo quy tắc có sẵn.',
+  'Bootstrap pilot is disabled. Set ENABLE_BOOTSTRAP_RANKER=true only for an explicit experimental pilot.': 'Pilot bootstrap đang tắt. Chỉ đặt ENABLE_BOOTSTRAP_RANKER=true khi chạy thử nghiệm có chủ đích.',
+  'Weak-label experiment artifacts are never deployable.': 'Artifact thử nghiệm với nhãn yếu không bao giờ được triển khai.',
+  'Ranker metadata explicitly marks this artifact non-deployable.': 'Metadata của ranker đánh dấu artifact này không được triển khai.',
+  'ML requires dataset_status=verified_human_labeled and deployment_eligible=true.': 'ML yêu cầu dataset_status=verified_human_labeled và deployment_eligible=true.',
+  'The ML bundle failed to load; the built-in rule baseline is active.': 'Không nạp được bộ model ML; đang dùng baseline theo quy tắc có sẵn.',
+}
+export const modelMessage = (text: string | null | undefined) => (text ? MODEL_MESSAGES[text] ?? text : text)

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Brain, CheckCircle2, RefreshCw, Sparkles } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Select, Tabs, useToast } from '../../components/ui'
 import { errorMessage } from '../../lib/api'
-import { adminAiApi, type AiTargetSet, type MlStatus, type PromptManifest } from '../../lib/adminAi'
+import { adminAiApi, type AiTargetSet, type MlStatus, type PromptManifest, modelMessage } from '../../lib/adminAi'
 
 type ToolKey = 'tag' | 'similarity' | 'weather'
 
@@ -121,7 +121,7 @@ export function AdminAiToolsPage() {
                 <div key={name} className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs text-slate-500">{name}</p>
                   <p className="mt-1 text-base font-semibold text-slate-900">{model.deployment_allowed ? 'Sẵn sàng' : 'Chưa sẵn sàng'}</p>
-                  <p className="mt-1 text-sm text-slate-600">{model.model_version || model.block_reason || 'Chưa có artifact'}</p>
+                  <p className="mt-1 text-sm text-slate-600">{model.model_version || modelMessage(model.block_reason) || 'Chưa có artifact'}</p>
                   {model.dataset_status && <p className="mt-1 text-xs text-slate-500">Dataset: {model.dataset_status}</p>}
                 </div>
               ))}

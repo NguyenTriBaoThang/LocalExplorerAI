@@ -9,10 +9,12 @@ const ACTION_LABELS: Record<string, string> = {
   created: 'Tạo', updated: 'Cập nhật', hidden: 'Ẩn', approve: 'Duyệt', reject: 'Từ chối', suspend: 'Tạm khóa', reactivate: 'Mở lại',
   sessions_revoked: 'Thu hồi phiên', application_submitted: 'Gửi hồ sơ', application_resubmitted: 'Gửi lại hồ sơ', role_permissions_updated: 'Đổi quyền',
   publish: 'Xuất bản', draft: 'Chuyển nháp', hide: 'Ẩn', deleted: 'Xóa', replied: 'Trả lời', merged: 'Gộp',
+  staged: 'Nhập vào kho', submitted: 'Gửi', candidate_evidence_submitted: 'Gửi minh chứng', payment_checkout_created: 'Bắt đầu thanh toán',
+  connection_tested: 'Kiểm tra kết nối', settings_updated: 'Đổi cấu hình', revoked: 'Thu hồi',
 }
 const TARGETS: Record<string, string> = {
   poi: 'Địa điểm', experience: 'Trải nghiệm', experience_slot: 'Slot', slot: 'Slot', provider: 'Đối tác', user: 'Người dùng', role: 'Vai trò',
-  banner: 'Banner', article: 'Bài viết', collection: 'Bộ sưu tập', review: 'Đánh giá', evidence: 'Minh chứng', booking: 'Đặt chỗ', service_account: 'Khóa API',
+  banner: 'Banner', article: 'Bài viết', collection: 'Bộ sưu tập', review: 'Đánh giá', evidence: 'Minh chứng', booking: 'Đặt chỗ', service_account: 'Khóa API', place_import_batch: 'Lô nhập địa điểm', place: 'Địa điểm', integration: 'Tích hợp',
 }
 const TONES: Record<string, 'green' | 'red' | 'amber' | 'brand' | 'gray'> = { approve: 'green', publish: 'green', created: 'brand', reject: 'red', suspend: 'red', deleted: 'red', hidden: 'gray', hide: 'gray', updated: 'amber' }
 
