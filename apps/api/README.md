@@ -1,43 +1,48 @@
 # API — Local Explorer AI
 
-Backend FastAPI trong apps/api/app phục vụ ứng dụng web và các luồng catalog, planner, tài khoản/phân quyền, provider/admin và booking. Hợp đồng endpoint được mô tả trong [docs/api.md](../../docs/api.md).
+The FastAPI service in apps/api serves the web client and the catalog, planning, authentication, role-based access, provider/admin, and booking flows. See the [API reference](../../docs/api.md) for the endpoint contract.
 
-> **Trạng thái:** Đây là prototype trong repository. Mã adapter/cấu hình không chứng minh Goong, OAuth, LLM, email hay payment đã được nghiệm thu trên staging. Rule baseline là ranker mặc định; artifact XGBoost bootstrap dùng nhãn yếu và không phải model production. E5 và flood-risk weights chưa có trong repo. Chi tiết xem [benchmark ranking](../../docs/experience-ranker-benchmark.md) và [hướng dẫn ML](../../docs/ml-training-and-data.md).
+> **Status:** This repository contains a prototype. Adapter code and configuration do not prove that Goong, OAuth, an LLM, email, or payment has passed a live staging acceptance test. The API uses the rule baseline by default; the XGBoost bootstrap artifact is weak-label research and is not production-eligible. E5 weights and a road-flood model are not included. See the [ranker benchmark](../../docs/experience-ranker-benchmark.md) and [ML guide](../../docs/ml-training-and-data.md).
 
-## Ranh giới nghiệp vụ
+## Business boundaries
 
-- Planner kiểm tra khả thi theo thời gian, ngân sách, điểm khóa, sức chứa và tuyến đi-về.
-- Ranker chỉ sắp xếp ứng viên đã qua bộ lọc khả thi, không xác nhận slot/giá hoặc thay thế kiểm tra planner.
-- POI, experience và slot chỉ nên vận hành khi có provenance/evidence phù hợp và còn hiệu lực.
-- Payment/provider callback, OAuth, email và API bản đồ cần credential, môi trường test/staging, HTTPS callback khi áp dụng và smoke test có log riêng.
+- The planner checks time, budget, locked stops, capacity, and outbound/return routing constraints.
+- A ranker only orders candidates after feasibility checks; it does not confirm availability or price and cannot override planner constraints.
+- POIs, experiences, and slots should be used operationally only when their provenance/evidence is appropriate and current.
+- External payment/provider callbacks, OAuth, email, and map APIs require credentials, a test/staging environment, HTTPS callbacks where applicable, and separately recorded smoke tests.
 
-## Chạy local (PowerShell)
+## Run locally (PowerShell)
 
-    cd apps/api
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    python -m pip install -r requirements.txt
-    # Nếu apps/api/.env chưa có: Copy-Item ..\\..\\.env.example .env
-    alembic upgrade head
-    python -m uvicorn app.main:app --reload --port 8000
+~~~powershell
+cd apps/api
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
+python -m pip install -r requirements.txt
+# Create apps/api/.env from the root .env.example if it does not exist.
+if (-not (Test-Path .env)) { Copy-Item ../../.env.example .env }
+alembic upgrade head
+python -m uvicorn app.main:app --reload --port 8000
+~~~
 
-Không commit file môi trường chứa secret. Database và integration settings có thể cần cấu hình; xem [auth/search setup](../../docs/auth-and-search-setup.md), [integration settings](../../docs/integration-settings.md) và [data model](../../docs/data-model.md).
+Do not overwrite an existing environment file blindly, commit secrets, or place private keys in frontend variables. The database and integrations may need configuration. See [authentication and search setup](../../docs/auth-and-search-setup.md), [integration settings](../../docs/integration-settings.md), and the [data model](../../docs/data-model.md).
 
-## Kiểm thử
+## Tests
 
-    pytest -q
+~~~powershell
+pytest -q
+~~~
 
-Chạy từ thư mục apps/api. Chỉ báo suite pass khi tiến trình kết thúc tự nhiên với exit code 0. CI chạy backend tests, lint và kiểm tra Alembic history theo [workflow](../../.github/workflows/ci.yml).
+Run the command from apps/api. Claim the suite passed only if the process exits normally with code 0. CI runs backend tests, lint checks, and Alembic history validation as defined in the [workflow](../../.github/workflows/ci.yml).
 
-## Cấu trúc mã nguồn
+## Source layout
 
-- app/api/routes/: router HTTP.
-- app/services/: planner, ranking, booking, catalog và logic nghiệp vụ.
-- app/adapters/: tích hợp với dịch vụ ngoài.
-- app/models/ và app/schemas/: ORM và contract dữ liệu.
+- app/api/routes/: HTTP routers.
+- app/services/: planner, ranking, booking, catalog, and business logic.
+- app/adapters/: external-service integrations.
+- app/models/ and app/schemas/: ORM models and data contracts.
 - migrations/: Alembic revisions.
-- tests/: kiểm thử API và logic nghiệp vụ.
+- tests/: API and business-logic tests.
 
-## Tài liệu
+## Documentation
 
-[API](../../docs/api.md) · [architecture](../../docs/architecture.md) · [booking/payment](../../docs/bookings-and-payments.md) · [operations](../../docs/operations.md) · [proposal nghiên cứu](../../docs/research-proposal.md)
+[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Bookings and payments](../../docs/bookings-and-payments.md) · [Operations](../../docs/operations.md) · [ML training and data](../../docs/ml-training-and-data.md)

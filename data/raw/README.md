@@ -1,17 +1,17 @@
-# Dữ liệu nguồn thô
+# Raw source data
 
-File ở đây là nguồn hoặc candidate để đối soát, không tự động là dữ liệu vận hành.
+Files in this folder are source material or candidates for review. Their presence does not make them operational catalog records or valid training data.
 
-## Nội dung hiện có
+## Current contents
 
-- district1_osm_places.json: candidate OSM được thu thập theo polygon pilot lịch sử Quận 1. Không phải danh sách đầy đủ mọi địa điểm, cũng không xác nhận venue còn hoạt động/giá/giờ/slot.
-- district1_osm_photos_manifest.json và district1_osm_places_with_local_photos.json: metadata ảnh/candidate ảnh. Chỉ sử dụng ảnh nếu truy được trang nguồn, giấy phép và credit cho từng file; không bảo đảm mọi địa điểm có ảnh.
-- Sai_Gon_Places.xlsx: workbook do dự án cung cấp. 177 dòng cần rà soát nguồn và bằng chứng theo trường trước khi duyệt.
-- hcmc_flood_reports_2002_2026.csv: chuyển đổi báo cáo lịch sử từ DataSuds, không có negative dry windows hay road-edge labels cần thiết cho dự báo ngập.
-- flood_training.csv: không được mặc định là tập train hợp lệ. Kiểm tra schema/provenance; không tổng hợp nhãn không ngập hay thời gian quan sát.
+- district1_osm_places.json: OpenStreetMap candidates whose representative points fall inside a historical District 1 pilot polygon. Coverage may be incomplete; records do not confirm that a venue is still open or provide current prices, opening hours, or slots.
+- district1_osm_photos_manifest.json and district1_osm_places_with_local_photos.json: image-source metadata and candidate associations. Each image must be checked against its source page, license, and credit requirements; not every place has a matching image.
+- Sai_Gon_Places.xlsx: the project workbook. Its 177 rows still need field-level source evidence before approval.
+- hcmc_flood_reports_2002_2026.csv: a conversion of historical reports from DataSuds. It does not provide verified dry periods or the road-edge labels needed for road-flood prediction.
+- flood_training.csv: not presumed to be a valid training dataset. Check schema and provenance; do not synthesize no-flood labels or observation timestamps.
 
-## Xử lý và cấp phép
+## Handling and licensing
 
-Giữ nguyên bản nguồn để tái lập, ghi hash và ngày thu thập ở manifest/báo cáo. Tuân thủ điều khoản/giấy phép của nhà cung cấp. Dữ liệu OSM yêu cầu attribution và nghĩa vụ ODbL tương ứng. Ảnh Wikimedia có license riêng từng file.
+Keep source files unchanged for reproducibility. Record hashes and collection dates in a manifest or report, and follow the provider's terms. OpenStreetMap requires attribution and applicable ODbL obligations. Wikimedia images have file-specific licenses.
 
-Chi tiết về báo cáo ngập: [mô tả bộ dữ liệu](../../docs/ml-training-and-data.md). Chi tiết workflow nhập POI: [place import staging](../../docs/place-import-staging.md)
+See the [ML data guide](../../docs/ml-training-and-data.md) for flood data and [place import guide](../../docs/place-import-staging.md) for POI intake.

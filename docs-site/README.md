@@ -1,93 +1,62 @@
-# Local Explorer AI — Documentation Site
+# Local Explorer AI documentation site
 
-Trang tài liệu kỹ thuật tĩnh và showcase của **Local Explorer AI** — được xây dựng bằng React, TypeScript và Vite, triển khai lên GitHub Pages.
+This is the static technical documentation and showcase for Local Explorer AI. It is built with React, TypeScript, and Vite and published to GitHub Pages.
 
-> **Đây không phải ứng dụng sản phẩm** (`apps/web`) — không cần backend, database, API key hay biến môi trường nào.
+> This is not the product application in apps/web. The documentation site does not require the product backend, a database, API keys, or environment variables.
 
----
+## Technology
 
-## ⚙️ Công nghệ
+- Framework: React, TypeScript, and Vite.
+- Icons: lucide-react.
+- Routing: hash-based paths such as #/architecture and #/api, so deep links work on GitHub Pages without a server fallback.
+- Digital Twin page: a lightweight SVG schematic; it does not use Three.js.
+- Hosting: GitHub Pages through GitHub Actions.
 
-- **Framework**: React + TypeScript + Vite
-- **Icons**: `lucide-react`
-- **Routing**: Hash-based (`#/architecture`, `#/api`, ...) — deep links hoạt động trên GitHub Pages không cần server fallback
-- **3D**: Không dùng Three.js — trang Digital Twin là sơ đồ SVG nhẹ
-- **Hosting**: GitHub Pages via GitHub Actions
+## Develop locally
 
----
-
-## 🚀 Phát triển Cục bộ
-
-```bash
+~~~bash
 cd docs-site
 npm install
 npm run dev
-```
+~~~
 
-## 🏗️ Build
+## Build and preview
 
-```bash
+~~~bash
 npm run build
-```
-
-Output tại `docs-site/dist/`. `base: './'` đảm bảo build hoạt động đúng dưới bất kỳ GitHub Pages URL nào.
-
-## 👁️ Preview
-
-```bash
 npm run preview
-```
+~~~
 
----
+Build output is written to docs-site/dist/. The relative Vite base path is intended to support the GitHub Pages project URL.
 
-## 🌐 Triển khai GitHub Pages
+## Deploy to GitHub Pages
 
-1. Push repository lên GitHub.
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Workflow `.github/workflows/deploy-pages.yml` tự động build `docs-site` và deploy qua `configure-pages`, `upload-pages-artifact` và `deploy-pages` actions.
+1. Push the repository to GitHub.
+2. In repository Settings → Pages → Build and deployment, choose GitHub Actions as the source.
+3. The .github/workflows/deploy-pages.yml workflow builds docs-site and deploys it with the Pages actions.
 
-**Trigger**: Push đến `main` hoặc `gh-page` có thay đổi trong `docs-site/`, hoặc chạy thủ công (workflow_dispatch).
+The workflow can run on its configured branch/path changes or be started manually with workflow_dispatch. Public site: https://nguyentribaothang.github.io/LocalExplorerAI/
 
-**URL công khai**: `https://nguyentribaothang.github.io/LocalExplorerAI/`
+## Documentation sources and demo data
 
----
+The site documentation is maintained in docs-site/src and draws implementation details from the API routers, Pydantic schemas, ranker feature builder, and repository documentation. Interactive examples use clearly identified static sample data and do not call the product backend.
 
-## 📝 Nguồn Nội dung Tài liệu
+## Known boundaries
 
-Toàn bộ nội dung lấy từ mã nguồn thực tế của repository:
+- The bootstrap ranker stored in the repository is experimental, not production-eligible.
+- E5 model weights and a road-flood model are not included. The historical report-presence experiment is a separate task.
+- The documentation site's SVG Digital Twin illustration is not the Three.js view in the product app.
 
-| Nội dung | Nguồn |
-|---|---|
-| Endpoints, access levels | `@router` decorators trong `apps/api/app/api/routes/`, `require_roles` dependencies |
-| Request/Response bodies | Pydantic schemas tại `apps/api/app/schemas/` |
-| Ranker features (15) | `FEATURE_NAMES` trong `apps/api/app/services/ranker_features.py` |
-| ML caveats & safety | `docs/ml-training-and-data.md` |
-| Demo walkthrough, story, roadmap | `DEMO_SCRIPT.md`, `COMPETITION_SUBMISSION.md`, `README.md` |
-| Screenshots | `assets/screenshots/*.png`, converted to WebP in `public/img/` |
+## Directory layout
 
-Dữ liệu tương tác (concierge demo, replanning, digital twin, explainability meter) sử dụng sample data viết tay và được đánh dấu rõ ràng — không gọi backend.
-
----
-
-## ⚠️ Lưu ý Khoảng cách Tài liệu (Known Gaps)
-
-> [!WARNING]
-> - `ARCHITECTURE.md` cũ mô tả Haversine routing — đã được **cập nhật** để phản ánh Goong Directions API thực tế.
-> - Trained model weights (ranker, E5, flood) **không có trong repository** — cần huấn luyện hoặc tải về trước khi chạy ML endpoints.
-> - Trang Digital Twin trong docs-site là SVG schematic — không dùng Three.js như ứng dụng thật.
-
----
-
-## 📁 Cấu trúc Thư mục
-
-```text
+~~~text
 docs-site/
 ├── src/
-│   ├── data/        # Static JSON data cho interactive demos
-│   ├── pages/       # Trang tài liệu: architecture, api, ml, planning, demo...
+│   ├── data/        # Static JSON for interactive examples
+│   ├── pages/       # Architecture, API, ML, planning, and demo pages
 │   └── components/  # Shared UI components
 ├── public/
-│   └── img/         # Screenshots & diagrams (WebP format)
+│   └── img/         # Screenshots and diagrams
 ├── index.html
 └── vite.config.ts
-```
+~~~

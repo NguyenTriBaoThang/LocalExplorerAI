@@ -1,97 +1,78 @@
-# Local Explorer AI — Thư mục Scripts Hệ thống
+# Project scripts
 
-Thư mục `scripts/` chứa toàn bộ kịch bản tự động hóa phục vụ thu thập dữ liệu, xử lý hình ảnh, huấn luyện mô hình học máy, vận hành CSDL và kiểm thử hệ thống cho **Local Explorer AI**.
+The scripts directory contains utilities for place-source collection, image metadata, model training, data inspection, development, database backup, and smoke testing. Inspect a script's command-line help and source before running it; collection scripts contact external services and source terms apply.
 
----
+## Place and image data
 
-## 🗂️ Phân loại Scripts
+| Script | Purpose |
+|---|---|
+| crawl_district1_places.py | Collects named OpenStreetMap candidates inside the configured historical District 1 pilot boundary. This is not a complete or operationally verified venue list. |
+| download_district1_photos.py | Retrieves candidate place images and source metadata where available; it cannot guarantee an image for every place. Check each file's license and required credit. |
+| attach_district1_photos_to_catalog.py | Attaches eligible local image references to the project catalog data. |
+| generate_full_places_data.py | Generates/combines place-data files from the project data sources. Review provenance before using its output operationally. |
+| saigon_places_data_part1.py / saigon_places_data_part2.py | Place-data source modules. |
+| apply_enriched_places.py | Applies place enrichment fields to catalog data. |
+| analyze_places_excel.py / deep_check_excel.py | Inspect workbook structure and missing or invalid fields. |
+| check_places_detail.py | Checks place JSON details and consistency. |
+| dump_sheets.py / dump_indexed.py | Export workbook sheets and indexed rows for inspection. |
 
-### 1. Thu thập, Xử lý & Làm giàu Dữ liệu Địa danh Sài Gòn
+OSM discovery and image matching produce source candidates, not verified current operating facts. The supported catalog intake path is the API's admin staging queue; see [place import and verification](../docs/place-import-staging.md).
 
-| Script | Ngôn ngữ | Chức năng |
+## Model and dataset utilities
+
+| Script | Example | Purpose |
 |---|---|---|
-| `crawl_district1_places.py` | Python | Thu thập địa điểm văn hóa, lịch sử, ẩm thực Quận 1 từ nguồn mở |
-| `download_district1_photos.py` | Python | Tải hình ảnh thực địa chất lượng cao cho các địa điểm Quận 1 |
-| `attach_district1_photos_to_catalog.py` | Python | Gắn đường dẫn ảnh đã tải vào `data/sai_gon_places.json` |
-| `generate_full_places_data.py` | Python | Hợp nhất dữ liệu đa nguồn thành file JSON hoàn chỉnh |
-| `saigon_places_data_part1.py` / `part2.py` | Python | Khối dữ liệu bộ phận danh mục địa danh Sài Gòn |
-| `apply_enriched_places.py` | Python | Áp dụng trường bổ sung (rating, review, open_hours) vào danh mục |
-| `analyze_places_excel.py` | Python | Phân tích cấu trúc `Places/Sai_Gon_Places.xlsx` |
-| `deep_check_excel.py` | Python | Kiểm tra chuyên sâu tính hợp lệ và trường thiếu trong Excel |
-| `check_places_detail.py` | Python | Kiểm tra tính nhất quán danh mục JSON so với thực tế |
-| `dump_sheets.py` / `dump_indexed.py` | Python | Xuất sheet và chỉ mục bảng tính để đối soát |
+| train_experience_ranker.py | python scripts/train_experience_ranker.py --mode weak_label | Reproduce a research benchmark on weak-label ranking data. Not a production promotion path. |
+| train_verified_experience_ranker.py | python scripts/train_verified_experience_ranker.py | Validate/train from reviewed human-label data when a qualifying dataset exists. |
+| train_bootstrap_experience_ranker.py | python scripts/train_bootstrap_experience_ranker.py | Train the explicitly experimental bootstrap ranker. |
+| verify_alignment.py | python scripts/verify_alignment.py | Check the feature contract shared by the API and training pipeline. |
+| download_e5_model.py | python -m scripts.download_e5_model (from apps/api) | Download intfloat/multilingual-e5-base to the configured models/e5 location. |
 
-### 2. Huấn luyện Mô hình Học máy
+The verified training template in data/training is intentionally header-only. Do not fabricate labels, user outcomes, or operational features to make training run.
 
-| Script | Lệnh mẫu | Chức năng |
+## Flood-report research
+
+| Script | Example | Purpose |
 |---|---|---|
-| `train_experience_ranker.py` | `python scripts/train_experience_ranker.py --mode weak_label` | Huấn luyện XGBoost & LightGBM Ranker (`ranker-features-v2`) trên weak-label data |
-| `train_verified_experience_ranker.py` | `python scripts/train_verified_experience_ranker.py` | Huấn luyện Ranker trên dữ liệu gán nhãn bởi con người |
-| `train_bootstrap_experience_ranker.py` | `python scripts/train_bootstrap_experience_ranker.py` | Phiên bản bootstrap thử nghiệm ban đầu |
-| `verify_alignment.py` | `python scripts/verify_alignment.py` | Kiểm tra tính thẳng hàng feature contract giữa backend API và ML pipeline |
-| `download_e5_model.py` | `python -m scripts.download_e5_model` (từ `apps/api`) | Tải mô hình `intfloat/multilingual-e5-base` về `models/e5/` |
+| download_hcmc_flood_reports.py | python scripts/download_hcmc_flood_reports.py | Download/convert the public historical Ho Chi Minh City report dataset. |
+| build_flood_report_weak_labels.mjs | node scripts/build_flood_report_weak_labels.mjs | Rebuild an experiment about public report presence; not physical flood labels. |
+| build_flood_report_experiment_notebook.py | python scripts/build_flood_report_experiment_notebook.py | Generate the separate Colab research notebook. |
 
-### 3. Nghiên cứu Rủi ro Ngập lụt
+The historical reports and weak-label experiment are not suitable as verified no-flood observations for road-level prediction.
 
-| Script | Lệnh mẫu | Chức năng |
+## Development and operations
+
+| Script | Environment | Purpose |
 |---|---|---|
-| `download_hcmc_flood_reports.py` | `python scripts/download_hcmc_flood_reports.py` | Tải & chuyển đổi bộ dữ liệu báo cáo ngập lịch sử TP.HCM 2002–2026 sang UTF-8 CSV |
-| `build_flood_report_weak_labels.mjs` | `node scripts/build_flood_report_weak_labels.mjs` | Sinh tập 662 mẫu cân bằng cho bài toán xác suất xuất hiện báo cáo ngập công khai |
-| `build_flood_report_experiment_notebook.py` | `python scripts/build_flood_report_experiment_notebook.py` | Khởi tạo notebook Colab nghiên cứu độc lập |
+| run-dev.ps1 | Windows PowerShell | Starts the local database services and prints instructions for starting the API and web app. |
+| production-smoke.ps1 | Windows PowerShell | Runs configured API smoke checks before a release. |
+| backup-postgres.ps1 / backup-postgres.sh | PowerShell / Bash | Create a timestamped PostgreSQL backup. |
+| restore-postgres.ps1 / restore-postgres.sh | PowerShell / Bash | Restore a PostgreSQL backup. |
 
-### 4. Vận hành, Cơ sở Dữ liệu & Môi trường Phát triển
+## Common commands
 
-| Script | Môi trường | Chức năng |
-|---|---|---|
-| `run-dev.ps1` | Windows PowerShell | Khởi động đồng thời Vite frontend + FastAPI backend trong môi trường dev |
-| `production-smoke.ps1` | Windows PowerShell | Smoke test toàn diện các luồng API chính trước khi phát hành |
-| `backup-postgres.ps1` / `.sh` | PowerShell / Bash | Tạo bản sao lưu PostgreSQL với timestamp |
-| `restore-postgres.ps1` / `.sh` | PowerShell / Bash | Phục hồi PostgreSQL từ tập tin sao lưu |
+From the repository root:
 
----
-
-## 🚀 Lệnh Thường Dùng
-
-### Khởi động môi trường phát triển (cả frontend + backend):
-```powershell
-.\scripts\run-dev.ps1
-```
-
-### Smoke test trước khi deploy:
-```powershell
-.\scripts\production-smoke.ps1
-```
-
-### Sao lưu CSDL PostgreSQL:
-```powershell
-.\scripts\backup-postgres.ps1
-```
-
-### Huấn luyện Experience Ranker:
-```powershell
-pip install -r apps/api/requirements-ranking-training.txt
-python scripts/train_experience_ranker.py --mode weak_label
-```
-
-### Kiểm tra tính nhất quán feature contract ML:
-```powershell
+~~~powershell
+./scripts/run-dev.ps1
+./scripts/production-smoke.ps1
+./scripts/backup-postgres.ps1
 python scripts/verify_alignment.py
-```
+~~~
 
-### Tải và rebuild bộ dữ liệu flood weak labels:
-```powershell
-# Tải báo cáo ngập lịch sử mới nhất
-python scripts/download_hcmc_flood_reports.py
+From apps/api, install the ranker training dependencies and run the weak-label benchmark:
 
-# Sinh lại weak labels (cần --force nếu file đã tồn tại)
-node scripts/build_flood_report_weak_labels.mjs --force
-```
+~~~powershell
+python -m pip install -r requirements-ranking-training.txt
+cd ../..
+python scripts/train_experience_ranker.py --mode weak_label
+~~~
 
----
+Check each command's working-directory expectations before running it. For database recovery, verify the target database and backup before restoring.
 
-## 🔗 Liên kết Tài nguyên
+## Related resources
 
-- **Dữ liệu nguồn**: [`data/`](../data/README.md) — raw, experimental, training, ranking datasets
-- **Mô hình ML**: [`models/`](../models/README.md) — ai-ranker, e5, flood-risk artifacts
-- **API Backend**: [`apps/api/scripts/`](../apps/api/README.md) — seed_db, import_place_candidates, worker, zalo_bot_poller
-- **Notebook nghiên cứu**: [`notebooks/`](../notebooks/) — Flood Report Experiment Colab
+- [Data](../data/README.md)
+- [Model artifacts](../models/README.md)
+- [API](../apps/api/README.md)
+- [ML training guide](../docs/ml-training-and-data.md)

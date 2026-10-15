@@ -1,16 +1,16 @@
 # Model artifacts
 
-Thư mục này lưu model artifacts và metadata. Có artifact trong Git không đồng nghĩa artifact được API chấp nhận hoặc đã đánh giá production.
+This directory stores model files and metadata. The presence of an artifact in Git does not mean that the API has selected it or that it is production-approved.
 
-## Trạng thái hiện tại
+## Current status
 
-- ai-ranker/: có XGBoost ranker bootstrap và metadata đi kèm; nguồn nhãn là weak-label/bootstrap. API mặc định dùng rule baseline và chặn model không đủ điều kiện. Không promote artifact này thành production model.
-- e5/: hiện chỉ có placeholder; weights chưa được đưa vào repo.
-- flood-risk/: hiện chỉ có placeholder; chưa có model dự báo ngập tuyến đường được train từ nhãn quan trắc phù hợp.
-- Flood report experiment nếu có nằm trong data/experimental/, là bài toán riêng và không phải model flood-risk.
+- ai-ranker/: contains an XGBoost bootstrap ranker and its evaluation metadata. Its labels are weak/bootstrap labels. The API defaults to rule-baseline-v1; the bootstrap artifact is not production-eligible and requires the explicitly documented opt-in to test.
+- e5/: contains a placeholder only; model weights are not included.
+- flood-risk/: contains a placeholder only; no road-flood model trained on suitable, verified observations is included.
+- flood-report-experiment/: contains a separate experimental classifier about historical public-report presence. It is not a physical flood or road-passability model.
 
-## Nguyên tắc promotion
+## Promotion policy
 
-Kiểm tra model card, dataset provenance, schema, preprocessing, checksum, split và metrics. Ranking production cần dữ liệu có nhãn phù hợp, query-disjoint evaluation, so sánh công bằng với baseline và phê duyệt rõ ràng. Mọi model chỉ sắp xếp ứng viên đã qua hard feasibility checks của planner.
+Before promoting any model, review its model card, dataset provenance, feature schema, preprocessing, checksum, data split, and metrics. A production experience ranker requires reviewed labels from real outcomes, query-disjoint evaluation, a fair comparison against the baseline, and explicit approval. A ranker only orders candidates that have already passed the planner's hard feasibility checks.
 
-Xem [benchmark ranker](../docs/experience-ranker-benchmark.md), [hướng dẫn train](../docs/ml-training-and-data.md) và [model versioning](../MODEL_VERSIONING.md).
+See the [ranker benchmark](../docs/experience-ranker-benchmark.md), [ML training and data guide](../docs/ml-training-and-data.md), and [model versioning policy](../MODEL_VERSIONING.md).

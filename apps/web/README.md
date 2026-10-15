@@ -1,25 +1,29 @@
 # Web application — Local Explorer AI
 
-Frontend là SPA React + TypeScript chạy bằng Vite. Ứng dụng gọi API qua các đường dẫn tương đối /api; cấu hình Vite local proxy API và health checks sang http://127.0.0.1:8000.
+The frontend is a React and TypeScript single-page application built with Vite. It calls the API through relative /api paths; the local Vite configuration proxies API and health-check requests to http://127.0.0.1:8000.
 
-## Chạy local
+## Run locally
 
-    cd apps/web
-    npm ci
-    npm run dev
+~~~powershell
+cd apps/web
+npm ci
+npm run dev
+~~~
 
-Mở http://localhost:8080. Chạy backend riêng ở cổng 8000; cấu hình môi trường backend theo file .env.example ở thư mục gốc và tài liệu API. Không đưa API secret vào frontend vì giá trị phía client có thể bị người dùng xem.
+Open http://localhost:8080. Run the backend separately on port 8000 and configure it using the root .env.example and the API documentation. Never put private API credentials in frontend variables: client-side values can be read by users.
 
-## Kiểm tra và build
+## Check and build
 
-    npm run lint
-    npm run build
-    npm run preview
+~~~powershell
+npm run lint
+npm run build
+npm run preview
+~~~
 
-## Giao diện
+## Application areas
 
-Web có các luồng khám phá địa điểm, chat/trợ lý, lập lịch, chia sẻ/so sánh lịch và các khu vực theo vai trò. Tính khả dụng thực tế phụ thuộc API, dữ liệu đã được duyệt và cấu hình tích hợp. Placeholder, candidate import và dữ liệu thử nghiệm không được xem là catalog đã xác minh.
+The web application includes place discovery and details, chat/concierge, itinerary planning, itinerary sharing and comparison, and role-specific areas. Actual availability depends on the API, reviewed catalog records, and integration configuration. An imported candidate, placeholder, or experimental record is not a verified operational catalog entry.
 
-## Tài liệu liên quan
+## Related documentation
 
-[API](../../docs/api.md) · [kiến trúc](../../docs/architecture.md) · [cấu hình đăng nhập/tìm kiếm](../../docs/auth-and-search-setup.md) · [proposal nghiên cứu](../../docs/research-proposal.md)
+[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Authentication and search setup](../../docs/auth-and-search-setup.md) · [Sourced catalog](../../docs/sourced-catalog.md)
