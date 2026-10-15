@@ -7,7 +7,7 @@
     "predev": "node scripts/sync-3d-model-packs.mjs",
     "dev": "vite --host 0.0.0.0",
     "prebuild": "node scripts/sync-3d-model-packs.mjs",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit --incremental false --pretty -p tsconfig.json && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "tsc --noEmit --incremental false --pretty -p tsconfig.json"
   },

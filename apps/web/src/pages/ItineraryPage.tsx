@@ -19,8 +19,6 @@ import {
   History,
   X,
   ShieldAlert,
-  ShieldCheck,
-  Flag,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -120,7 +118,6 @@ export function ItineraryPage() {
   const [loading, setLoading] = useState(!initial)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState('')
-  const [isMapExpanded, setIsMapExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const { user } = useAuth()
   const [shareToken, setShareToken] = useState('')
