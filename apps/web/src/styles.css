@@ -9653,8 +9653,9 @@ a {
   grid-template-columns: minmax(0, 1.35fr) minmax(370px, 420px);
   align-items: stretch;
   gap: 22px;
-  height: clamp(560px, calc(100vh - 230px), 880px);
-  min-height: 560px;
+  /* Tall enough to read a good stretch of the conversation; the page scrolls and the message list scrolls inside. */
+  height: clamp(720px, calc(100vh - 80px), 1000px);
+  min-height: 720px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -9775,7 +9776,7 @@ a {
 .chat-message-feed {
   position: relative;
   flex: 1 1 0;
-  min-height: 160px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
   gap: 18px;
