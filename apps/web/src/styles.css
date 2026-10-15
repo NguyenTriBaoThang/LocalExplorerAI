@@ -350,7 +350,7 @@ a {
   pointer-events: auto;
   position: relative;
   top: 0;
-  width: min(1360px, calc(100% - 24px));
+  width: min(1480px, calc(100% - 24px));
   max-width: calc(100vw - 24px);
   margin: 0 auto;
   border-radius: var(--radius-full);
@@ -9168,16 +9168,19 @@ a {
 /* -------------------------------------------------------------------------- */
 /* Responsive Media Queries                                                   */
 /* -------------------------------------------------------------------------- */
-@media (max-width: 1240px) {
-  .brand-tagline {
-    display: none;
-  }
+/* The nav (8 links, 9 for staff) + brand + actions need ~1450px; shed the optional parts first, then collapse to the drawer. */
+@media (max-width: 1420px) {
   .header-cta-3d {
     display: none !important;
   }
 }
 
-@media (max-width: 1060px) {
+@media (max-width: 1500px) {
+  .desktop-nav-3d { gap: 2px; }
+  .nav-link-3d { padding: 6px 9px; }
+}
+
+@media (max-width: 1300px) {
   .desktop-nav-3d {
     display: none !important;
   }
@@ -11294,7 +11297,7 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 }
 .auth-oauth-hint small, .auth-oauth-hint code { font-size: 12px; }
 
-@media (max-width: 1500px) { .brand-tagline { display: none; } }
+@media (max-width: 1540px) { .brand-tagline { display: none; } }
 
 /* Title row: on narrow screens the status badge goes under the text instead of squeezing the lead paragraph. */
 .title-extra-badges > * { white-space: nowrap; }
@@ -12027,3 +12030,15 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) !important;
 }
 
+
+/* About page call to action: a long label must wrap inside the card instead of pushing the button past the viewport. */
+@media (max-width: 520px) {
+  .about-cta-inner .btn-primary-3d {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 12px 20px;
+    white-space: normal;
+    text-align: center;
+  }
+}
