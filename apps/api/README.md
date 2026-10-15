@@ -1,10 +1,10 @@
-# Local Explorer AI — Backend API Service
+# API — Local Explorer AI
 
-Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, được xây dựng trên nền tảng **FastAPI**, **Python 3.12+**, **PostgreSQL 16 + PostGIS 3.4**, **SQLAlchemy 2.0**, **Alembic**, và **Redis**. Dịch vụ cung cấp toàn bộ RESTful API phục vụ thuật toán lập lịch trình khung giờ thực (Slot-aware Planner), mô hình học máy xếp hạng cục bộ (XGBoost Ranker), tìm kiếm ngữ nghĩa (Multilingual E5), phân tích rủi ro ngập lụt Sài Gòn, định tuyến Goong Maps, giữ chỗ và thanh toán trực tuyến (VNPay & MoMo), cùng các cổng quản lý phân quyền (RBAC).
+The FastAPI backend in apps/api/app serves the web application and catalog, planner, account/access-control, provider/admin, and booking flows. Endpoint contracts are described in [docs/api.md](../../docs/api.md).
 
----
+> **Status:** This repository contains a prototype. Adapter code or configuration does not prove that Goong, OAuth, an LLM, email, or payments have passed acceptance testing in staging. The rule baseline is the default ranker; the XGBoost bootstrap artifact uses weak labels and is not a production model. E5 and flood-risk weights are not included in the repository. See the [ranking benchmark](../../docs/experience-ranker-benchmark.md) and [ML guide](../../docs/ml-training-and-data.md).
 
-## 🛠️ Ngăn xếp Công nghệ (Tech Stack)
+## Business boundaries
 
 - **Framework Web**: [FastAPI 0.142+](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) (Asynchronous ASGI)
 - **Cơ sở Dữ liệu & ORM**: PostgreSQL 16 + PostGIS 3.4, [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [GeoAlchemy2](https://geoalchemy-2.readthedocs.io/), [Alembic](https://alembic.sqlalchemy.org/)
@@ -18,67 +18,39 @@ Dịch vụ Backend trung tâm của nền tảng **Local Explorer AI**, đượ
 - **Vận hành & Hàng đợi**: Transactional Email Outbox worker (`worker.py`), Redis Rate Limiting, HTTP structured JSON logging
 - **Bot Tự Động & 3D**: Telegram Bot Webhook sync & n8n forwarding (`admin_bot.py`), 3D Digital Twin Landmark calibration service (`models_3d.py`)
 
----
+- The planner checks feasibility against time, budget, locked stops, capacity, and outbound/return routes.
+- The ranker only orders candidates that have passed feasibility filters; it does not confirm slots or prices and does not replace planner checks.
+- POIs, experiences, and slots should be used operationally only when their provenance/evidence is suitable and current.
+- Payment/provider callbacks, OAuth, email, and map APIs require credentials, a test/staging environment, HTTPS callbacks where applicable, and separately logged smoke tests.
 
-## 📁 Cấu trúc Thư mục (`apps/api`)
+## Run locally (PowerShell)
 
-```text
-apps/api/
-├── app/
-│   ├── adapters/          # LLM Provider Adapters (OpenAI, Gemini compatible)
-│   ├── api/routes/        # 14 modules định tuyến API:
-│   │   ├── admin.py       # Dashboard KPI, Moderation, Duplicates Merge, Staging Places, Integrations, Audit
-│   │   ├── admin_bot.py   # Telegram Bot Config, Webhook Sync, n8n Forwarding, Core System Settings
-│   │   ├── ai.py          # AI Prompts, Replan Advice, Tagging, Similarity, XAI
-│   │   ├── auth.py        # Đăng ký, Đăng nhập, Profile, Google OAuth 2.0 PKCE
-│   │   ├── bookings.py    # Giữ chỗ 15p, Quyết định đối tác, VNPay & MoMo checkout & IPN
-│   │   ├── catalog.py     # POI, Experience, Slots, E5 Semantic Search
-│   │   ├── chat.py        # Trợ lý AI Concierge Chatbot & Constraints Parser
-│   │   ├── health.py      # /health (Liveness) & /ready (Readiness PostGIS + Redis)
-│   │   ├── ml.py          # /status, /rank-experiences, /flood-risk
-│   │   ├── models_3d.py   # 3D Landmark Models, Toạ độ Calibrate, Cập nhật thông số 3D
-│   │   ├── ops.py         # Giám sát Outbox Email, Background Jobs, Events
-│   │   ├── planner.py     # Heuristic Planner, Itinerary CRUD, Versioning, Share, Feedback
-│   │   ├── provider.py    # Quản lý POI, Hoạt động, Khung giờ, Evidence, Slot Assistant
-│   │   └── routing.py     # Goong Routing capabilities & Forward Geocoding
-│   ├── core/              # Config (pydantic-settings), Enums, Security & Fernet Vault
-│   ├── db/                # SessionLocal, Base entity, Connection lifecycle
-│   ├── models/            # SQLAlchemy Entities (User, Provider, POI, Slot, Itinerary, PlaceImportStaging...)
-│   ├── prompts/           # Danh mục 8 prompt AI (manifest.json v3_0_0)
-│   ├── repositories/      # Data Access Layer & DB Queries
-│   ├── schemas/           # Pydantic Schemas xác thực dữ liệu vào/ra
-│   └── services/          # Business Logic (Planner, Replanner, Ranker, VNPay, MoMo, BotService...)
-├── migrations/            # Lịch sử lược đồ cơ sở dữ liệu Alembic:
-│   └── versions/          # 0001_initial -> 0010_place_import_staging
-├── scripts/               # Scripts tiện ích hệ thống:
-│   ├── seed_db.py         # Nạp dữ liệu mô phỏng demo & tài khoản dev
-│   ├── worker.py          # Background worker xử lý Email Outbox & Job nền
-│   └── download_e5_model.py # Tải trọng số mô hình Multilingual E5 về local
-├── tests/                 # Bộ kiểm thử tự động pytest (56+ test cases)
-├── alembic.ini            # Cấu hình đường dẫn migration
-├── Dockerfile             # Container build cho Backend API
-├── requirements.txt       # Thư viện ứng dụng cốt lõi
-├── requirements-ml.txt    # Thư viện mô hình Học máy (XGBoost, Scikit-learn)
-└── requirements-e5.txt    # Thư viện Vector Embedding (Sentence-Transformers)
-```
+    cd apps/api
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    python -m pip install -r requirements.txt
+    # If apps/api/.env does not exist: Copy-Item ..\..\.env.example .env
+    alembic upgrade head
+    python -m uvicorn app.main:app --reload --port 8000
 
----
+Do not commit environment files containing secrets. The database and integration settings may require configuration; see [authentication/search setup](../../docs/auth-and-search-setup.md), [integration settings](../../docs/integration-settings.md), and the [data model](../../docs/data-model.md).
 
-## 🚀 Hướng dẫn Cài đặt & Khởi chạy Cục bộ
+## Tests
 
-### Bước 1: Chuẩn bị môi trường Python (3.12+)
-```powershell
-cd apps/api
+    pytest -q
 
-# Khởi tạo môi trường ảo Python
-python -m venv .venv
+Run from apps/api. Report the suite as passing only when the process exits normally with code 0. CI runs backend tests, lint, and Alembic history checks according to the [workflow](../../.github/workflows/ci.yml).
 
-# Kích hoạt môi trường (Windows PowerShell):
-.\.venv\Scripts\Activate.ps1
+## Source layout
 
-# Hoặc trên Linux/macOS:
-# source .venv/bin/activate
-```
+- app/api/routes/: HTTP routers.
+- app/services/: planner, ranking, booking, catalog, and business logic.
+- app/adapters/: external-service integrations.
+- app/models/ and app/schemas/: ORM models and data contracts.
+- migrations/: Alembic revisions.
+- tests/: API and business-logic tests.
+
+## Documentation
 
 ### Bước 2: Cài đặt thư viện dependencies
 ```powershell
@@ -158,3 +130,6 @@ pytest -q
 1. **Khóa Giữ Chỗ (Seat Holds)**: Sử dụng cơ chế khóa mức hàng `SELECT ... FOR UPDATE` trên PostgreSQL, tạo phiên giữ chỗ 15 phút (`pending_provider`). Không cho phép đặt chỗ nếu dữ liệu mang nhãn `simulated` hoặc minh chứng chưa được xác minh (`verified`).
 2. **Cổng Thanh toán Fail-closed**: Chỉ mở URL thanh toán khi đầy đủ chữ ký, mã merchant và webhook IPN hợp lệ. VNPay sử dụng HMAC-SHA512; MoMo sử dụng HMAC-SHA256. Webhook IPN là nguồn chân lý duy nhất để chốt trạng thái `confirmed`.
 3. **Mã hóa Khóa Tích hợp (Fernet Encryption)**: Mọi thông tin nhạy cảm của cổng thanh toán và bên thứ 3 do Quản trị viên nhập vào tab `/admin` đều được mã hóa trước khi lưu vào bảng `integration_settings`.
+
+[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Bookings/payments](../../docs/bookings-and-payments.md) · [Operations](../../docs/operations.md) · [Research proposal](../../docs/research-proposal.md)
+

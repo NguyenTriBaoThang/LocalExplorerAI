@@ -74,6 +74,9 @@ class POIRead(ORMModel):
     ticket_info: str | None = None
     tags: list[str] = Field(default_factory=list)
     is_landmark: bool = False
+    details: dict[str, Any] = Field(default_factory=dict)
+    source_attribution: str | None = None
+    data_revision: int = 1
     verification_status: str
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"
@@ -138,6 +141,10 @@ class ExperienceRead(ORMModel):
     rating_count: int = 0
     provider_name: str | None = None
     provider_slug: str | None = None      # links to the public partner profile
+
+
+class POIDetailRead(POIRead):
+    experiences: list[ExperienceRead] = Field(default_factory=list)
 
 
 PartnerRead.model_rebuild()

@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-3d-model-packs.mjs",
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "prebuild": "node scripts/sync-3d-model-packs.mjs",
+    "build": "tsc --noEmit --incremental false --pretty -p tsconfig.json && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "lint": "tsc -b --pretty"
+    "lint": "tsc --noEmit --incremental false --pretty -p tsconfig.json"
   },
   "dependencies": {
     "@goongmaps/goong-js": "^1.0.9",

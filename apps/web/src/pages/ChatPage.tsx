@@ -95,12 +95,13 @@ function calculateDurationHours(start?: string | null, end?: string | null, unit
   }
 }
 
-function getChatError(reason: unknown) {
+function getChatError(reason: unknown, locale: 'vi' | 'en') {
   if (typeof reason === 'object' && reason !== null && 'response' in reason) {
     const response = (reason as { response?: unknown }).response
-    if (response) return apiErrorMessage(reason)
+    if (response) return apiErrorMessage(reason, locale)
   }
   if (reason instanceof Error && reason.message && reason.message !== 'Network Error') return reason.message
+  if (locale === 'en') return 'Could not connect to the API. Check that the server is running and try again.'
   return 'Không kết nối được API. Kiểm tra máy chủ rồi thử lại.'
 }
 
@@ -211,9 +212,9 @@ export function ChatPage() {
     let active = true
     api.get<POI[]>('/pois')
       .then(({ data }) => { if (active) setPois(data) })
-      .catch((reason: unknown) => { if (active) setPoiError(getChatError(reason)) })
+      .catch((reason: unknown) => { if (active) setPoiError(getChatError(reason, locale)) })
     return () => { active = false }
-  }, [])
+  }, [locale])
 
   useEffect(() => {
     let active = true
@@ -391,7 +392,7 @@ export function ChatPage() {
         },
       ])
     } catch (reason) {
-      setError(getChatError(reason))
+      setError(getChatError(reason, locale))
       setMessages((current) => [
         ...current,
         {
@@ -491,7 +492,7 @@ export function ChatPage() {
       })
       navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
     } catch (reason) {
-      setError(getChatError(reason))
+      setError(getChatError(reason, locale))
     } finally {
       setCreating(false)
     }

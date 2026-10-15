@@ -1,5 +1,6 @@
 from functools import lru_cache
 import ipaddress
+import os
 import re
 from typing import Literal
 from urllib.parse import urlparse
@@ -9,8 +10,25 @@ from pydantic import Field, model_validator
 
 
 from pathlib import Path
-_REPO_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
-_API_DIR_ENV = Path(__file__).resolve().parents[2] / ".env"
+
+_CONFIG_PATH = Path(__file__).resolve()
+_API_ROOT = _CONFIG_PATH.parents[2]
+_PROJECT_ROOT = next(
+    (
+        parent for parent in _CONFIG_PATH.parents
+        if (parent / "apps" / "api").is_dir() and (parent / "models").is_dir()
+    ),
+    _API_ROOT,
+)
+_REPO_ROOT_ENV = _PROJECT_ROOT / ".env"
+_API_DIR_ENV = _API_ROOT / ".env"
+
+
+def _default_ranker_model_dir() -> str:
+    mounted_model_dir = Path("/models/ai-ranker")
+    if os.name != "nt" and mounted_model_dir.is_dir():
+        return str(mounted_model_dir)
+    return str(_PROJECT_ROOT / "models" / "ai-ranker")
 
 
 class Settings(BaseSettings):
@@ -103,9 +121,9 @@ class Settings(BaseSettings):
     demo_traveler_email: str = "baothang@gmail.com"
     demo_traveler_password: str | None = None
     e5_model_path: str | None = None
-    ranker_model_dir: str | None = None
+    ranker_model_dir: str | None = Field(default_factory=_default_ranker_model_dir)
+    enable_bootstrap_ranker: bool = False
     flood_model_dir: str | None = None
-    allow_unverified_ranker: bool = False
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
 

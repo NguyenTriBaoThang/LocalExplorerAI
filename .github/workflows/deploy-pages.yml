@@ -30,9 +30,11 @@ jobs:
           cache-dependency-path: docs-site/package-lock.json
       - run: npm ci
       - run: npm run build
+      # Enable Pages once in repository Settings > Pages > Build and deployment
+      # > Source: GitHub Actions. The default GITHUB_TOKEN cannot create the
+      # Pages site; configure-pages' enablement option requires a separate
+      # admin-capable token.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs-site/dist

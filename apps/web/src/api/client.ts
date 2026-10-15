@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { t } from '../i18n'
-import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities, SessionInfo } from '../types'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -60,8 +60,9 @@ export async function registerAccount(email: string, display_name: string, passw
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {
-  const { data } = await api.get<AuthUser>('/auth/me')
-  return data
+  const { data } = await api.get<{ user: AuthUser | null }>('/auth/session')
+  if (!data.user) throw new Error('No active session')
+  return data.user
 }
 
 export async function logout(): Promise<void> {
@@ -226,6 +227,11 @@ export async function getPOIs(): Promise<POI[]> {
   return data
 }
 
+export async function getPOI(id: string): Promise<POIDetail> {
+  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}`)
+  return data
+}
+
 export async function createItinerary(payload: {
   start_at: string
   end_at: string
@@ -265,13 +271,25 @@ function weakPasswordMessage(serverMessage: string): string {
   return reasons.length ? `${t('password.weak')}: ${reasons.join('; ')}.` : t('password.weak')
 }
 
-export function apiErrorMessage(error: unknown): string {
+export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { error?: { code?: string; message?: string }; detail?: string | { message?: string } } } }).response
     if (response?.data?.error?.code === 'WEAK_PASSWORD') return weakPasswordMessage(response.data.error.message ?? '')
     const code = response?.data?.error?.code
     if (code && ERROR_CODES.has(code)) return t(`error.${code}`)
     const detail = response?.data?.detail
+    const detailCode = (error as { response?: { data?: { detail?: { code?: string } } } }).response?.data?.detail?.code
+    const planCode = code ?? detailCode
+    if (planCode === 'NO_BOOKABLE_SLOTS') {
+      return locale === 'en'
+        ? 'There are no currently bookable slots on the selected date. Choose another date or ask the provider to update availability.'
+        : 'Ngày đã chọn hiện không có ca đủ điều kiện nhận khách (có thể đã hủy, hết chỗ hoặc chưa được xác nhận mới). Hãy chọn ngày khác hoặc nhờ cơ sở cập nhật ca.'
+    }
+    if (planCode === 'NO_FEASIBLE_PLAN') {
+      return locale === 'en'
+        ? 'No itinerary fits the selected time, return route, budget, and availability. Try a wider time window, another date, or a higher budget.'
+        : 'Chưa tìm được lịch phù hợp với khung giờ, chặng về, ngân sách và tình trạng chỗ. Hãy thử ngày khác, nới khung giờ hoặc điều chỉnh ngân sách.'
+    }
     return response?.data?.error?.message ?? (typeof detail === 'string' ? detail : detail?.message) ?? 'Đang hiển thị chế độ mô phỏng trực tuyến.'
   }
   if (error instanceof Error && error.message) return error.message

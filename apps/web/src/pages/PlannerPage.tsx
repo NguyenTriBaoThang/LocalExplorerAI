@@ -134,7 +134,7 @@ export function PlannerPage() {
         setError(locale === 'en' ? 'No address matches were returned. Refine the address.' : 'Không tìm thấy địa chỉ; hãy nhập cụ thể hơn.')
       }
     } catch (reason) {
-      setError(apiErrorMessage(reason))
+      setError(apiErrorMessage(reason, locale))
     } finally {
       setGeocoding(null)
     }
@@ -187,7 +187,7 @@ export function PlannerPage() {
       })
       navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
     } catch (reason) {
-      setError(apiErrorMessage(reason))
+      setError(apiErrorMessage(reason, locale))
     } finally {
       setLoading(false)
     }
@@ -211,7 +211,7 @@ export function PlannerPage() {
         <div className="planner-badge-wrap">
           <span className="planner-city-badge">
             <MapPin size={14} className="text-emerald" />
-            {t('planner.cityBadge')}
+            {locale === 'en' ? 'Pilot area: District 1' : 'Khu vực pilot: Quận 1'}
           </span>
         </div>
       </div>

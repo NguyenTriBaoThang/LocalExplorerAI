@@ -248,12 +248,13 @@ def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Dep
         raise HTTPException(status_code=422, detail={"code": "INVALID_SLOT_RANGE", "message": "Slot end must be after start."})
     now = utc_now()
     expires_at = payload.expires_at.astimezone(now.tzinfo)
-    start_at = payload.start_at.astimezone(now.tzinfo)
+    start_at = payload.start_at.astimezone(timezone.utc)
+    end_at = payload.end_at.astimezone(timezone.utc)
     if expires_at <= now or expires_at > start_at:
         raise HTTPException(status_code=422, detail={"code": "INVALID_SLOT_EXPIRY", "message": "Slot confirmation must expire after now and no later than the slot start."})
     if payload.available_reported > payload.capacity_total:
         raise HTTPException(status_code=422, detail={"code": "CAPACITY_EXCEEDED", "message": "Available seats cannot exceed total capacity."})
-    slot = ExperienceSlot(id=str(uuid4()), experience_id=item.id, start_at=payload.start_at, end_at=payload.end_at,
+    slot = ExperienceSlot(id=str(uuid4()), experience_id=item.id, start_at=start_at, end_at=end_at,
                           capacity_total=payload.capacity_total, available_reported=payload.available_reported,
                           confirmed_at=now, expires_at=expires_at,
                           status="open" if payload.available_reported else "full", version=1)

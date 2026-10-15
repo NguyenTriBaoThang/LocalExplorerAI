@@ -143,6 +143,45 @@ def test_admin_routing_connection_test_checks_geocoding_and_directions(client, d
     assert response.json()["ok"] is True
 
 
+def test_payment_integration_check_validates_https_callbacks_without_claiming_live_payment(client, db_session, monkeypatch):
+    _admin_session(client, db_session)
+    monkeypatch.setattr(settings, "payment_provider", "vnpay")
+    monkeypatch.setattr(settings, "vnpay_environment", "sandbox")
+    monkeypatch.setattr(settings, "vnpay_tmn_code", "TESTTMN1")
+    monkeypatch.setattr(settings, "vnpay_hash_secret", "test-vnpay-secret")
+    monkeypatch.setattr(settings, "vnpay_payment_url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+    monkeypatch.setattr(settings, "vnpay_return_url", "https://api.staging.localexplorer.ai/api/payments/vnpay/return")
+    monkeypatch.setattr(settings, "vnpay_ipn_url", "https://api.staging.localexplorer.ai/api/payments/vnpay/ipn")
+
+    configured = client.post("/api/admin/integrations/payments/test")
+
+    assert configured.status_code == 200
+    assert configured.json()["status"] == "configured"
+    assert configured.json()["ok"] is True
+    assert configured.json()["check_type"] == "configuration_only"
+    assert "sandbox" in configured.json()["message_vi"].lower()
+
+    monkeypatch.setattr(settings, "vnpay_ipn_url", "http://api.staging.localexplorer.ai/api/payments/vnpay/ipn")
+    invalid_callback = client.post("/api/admin/integrations/payments/test")
+    assert invalid_callback.json()["status"] == "not_configured"
+
+
+def test_google_oauth_integration_check_validates_https_callback_without_claiming_login(client, db_session, monkeypatch):
+    _admin_session(client, db_session)
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "google_client_id", "client-id-for-test")
+    monkeypatch.setattr(settings, "google_client_secret", "client-secret-for-test")
+    monkeypatch.setattr(settings, "google_redirect_uri", "https://api.staging.localexplorer.ai/api/auth/google/callback")
+
+    configured = client.post("/api/admin/integrations/google_oauth/test")
+
+    assert configured.status_code == 200
+    assert configured.json()["status"] == "configured"
+    assert configured.json()["ok"] is True
+    assert configured.json()["check_type"] == "configuration_only"
+    assert "client-secret-for-test" not in configured.text
+
+
 def test_admin_can_promote_candidate_only_with_current_full_evidence(client, db_session):
     admin = _admin_session(client, db_session)
     batch = PlaceImportBatch(

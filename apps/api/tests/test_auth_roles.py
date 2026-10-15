@@ -20,6 +20,13 @@ def test_registration_creates_traveler_session_and_profile(client):
     assert profile.json()["email"] == "new.traveler@example.com"
 
 
+def test_anonymous_session_bootstrap_is_not_an_auth_error(client):
+    response = client.get("/api/auth/session")
+
+    assert response.status_code == 200
+    assert response.json() == {"user": None}
+
+
 def test_traveler_cannot_open_admin_routes(client):
     response = client.post("/api/auth/register", json={
         "email": "traveler@example.com",
@@ -42,6 +49,7 @@ def test_email_login_and_logout(client, db_session):
     response = client.post("/api/auth/login", json={"email": "LOGIN@example.com", "password": "long-enough-password"})
     assert response.status_code == 200
     assert client.get("/api/auth/me").status_code == 200
+    assert client.get("/api/auth/session").json()["user"]["email"] == "login@example.com"
     assert client.post("/api/auth/logout").status_code == 204
     assert client.get("/api/auth/me").status_code == 401
 

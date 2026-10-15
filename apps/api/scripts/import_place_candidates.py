@@ -20,6 +20,13 @@ import xml.etree.ElementTree as ET
 
 from sqlalchemy import select
 
+# Support both `python -m scripts.import_place_candidates` and direct
+# execution from apps/api (the latter puts only the scripts directory on
+# sys.path, so `app` would otherwise be unimportable on Windows).
+API_DIR = Path(__file__).resolve().parents[1]
+if str(API_DIR) not in sys.path:
+    sys.path.insert(0, str(API_DIR))
+
 from app.db.session import SessionLocal
 from app.models.entities import AuditLog, PlaceImportBatch, PlaceImportCandidate, User
 
@@ -95,6 +102,27 @@ def read_xlsx_sheet(path: Path, sheet_name: str) -> tuple[list[dict], int]:
             continue
         records.append((_coerce_record(record), source_row))
     return records, len(rows)
+
+
+def read_json_places(path: Path) -> tuple[list[dict], int]:
+    """Read the crawler's raw JSON as source candidates, never as verified POIs."""
+    document = json.loads(path.read_text(encoding="utf-8"))
+    source_rows = document.get("places") if isinstance(document, dict) else document
+    if not isinstance(source_rows, list):
+        raise ValueError("JSON input must be an array or an object with a 'places' array.")
+    records: list[tuple[dict, int]] = []
+    for source_row, source_record in enumerate(source_rows, start=1):
+        if not isinstance(source_record, dict):
+            continue
+        record = dict(source_record)
+        record["ext_id"] = str(record.get("ext_id") or record.get("osm_id") or "").strip()
+        raw_tags = record.get("tags")
+        if isinstance(raw_tags, dict):
+            record["tags"] = [f"{key}={value}" for key, value in sorted(raw_tags.items())]
+        records.append((record, source_row))
+    if not records:
+        raise ValueError("No place rows were found in the JSON input.")
+    return records, len(records)
 
 
 def _coerce_record(record: dict[str, str | None]) -> dict:
@@ -192,7 +220,7 @@ def make_quality_summary(records: list[tuple[dict, int]], reused_coordinates: se
 
 def stage(path: Path, sheet_name: str, dry_run: bool = False) -> dict:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    records, _ = read_xlsx_sheet(path, sheet_name)
+    records, _ = read_json_places(path) if path.suffix.lower() == ".json" else read_xlsx_sheet(path, sheet_name)
     if not records:
         raise ValueError("No place rows were found in the worksheet.")
     external_ids = [str(record.get("ext_id") or "").strip() for record, _ in records]
@@ -252,9 +280,9 @@ def stage(path: Path, sheet_name: str, dry_run: bool = False) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import a place worksheet into the admin-only enrichment queue.")
+    parser = argparse.ArgumentParser(description="Import XLSX or crawled JSON places into the admin-only enrichment queue.")
     parser.add_argument("--source", type=Path, default=ROOT / "data" / "raw" / "Sai_Gon_Places.xlsx")
-    parser.add_argument("--worksheet", default="Sai_Gon")
+    parser.add_argument("--worksheet", default="Sai_Gon", help="Worksheet name for XLSX only; JSON ignores this option.")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     if not args.source.is_file():

@@ -22,7 +22,7 @@ import {
 import { api } from '../../api/client'
 import { useAuth } from '../../auth'
 import {
-  DEFAULT_CALIBRATION,
+  getDefaultCalibration,
   NOTRE_DAME_ORIGIN,
   sanitizeCalibration,
   type ModelCalibration
@@ -47,11 +47,122 @@ function toNumber(raw: string, fallback: number): number {
   return Number.isFinite(value) ? value : fallback
 }
 
+function createProceduralCathedralModel(): THREE.Group {
+  const root = new THREE.Group()
+
+  // Authentic Toulouse terracotta red brick material
+  const brickMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc84d32,
+    roughness: 0.75,
+    metalness: 0.08,
+  })
+
+  // Off-white stone trims and Romanesque arches
+  const stoneMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe2dcd0,
+    roughness: 0.82,
+    metalness: 0.05,
+  })
+
+  // Zinc-iron slate gray roof spires
+  const roofMaterial = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    roughness: 0.45,
+    metalness: 0.35,
+  })
+
+  // Gold cross material
+  const goldMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.3,
+    metalness: 0.8,
+  })
+
+  // 1. Main Nave Body (Thân thánh đường chính)
+  const naveGeo = new THREE.BoxGeometry(22, 17, 56)
+  const nave = new THREE.Mesh(naveGeo, brickMaterial)
+  nave.position.set(0, 8.5, 6)
+  nave.castShadow = true
+  nave.receiveShadow = true
+  root.add(nave)
+
+  // 1.1 Main Sloped Roof (Mái dốc chính)
+  const roofGeo = new THREE.ConeGeometry(16, 7.5, 4)
+  const roof = new THREE.Mesh(roofGeo, roofMaterial)
+  roof.rotation.y = Math.PI / 4
+  roof.scale.set(1, 1, 3.4)
+  roof.position.set(0, 20.5, 6)
+  roof.castShadow = true
+  root.add(roof)
+
+  // 2. Twin Bell Towers (2 Tháp chuông đôi phía trước cao 60.5m)
+  const towerGeo = new THREE.BoxGeometry(7.8, 36, 7.8)
+  const spireGeo = new THREE.ConeGeometry(5.6, 24, 8)
+
+  // Left Bell Tower
+  const leftTower = new THREE.Mesh(towerGeo, brickMaterial)
+  leftTower.position.set(-8, 18, -22)
+  leftTower.castShadow = true
+  leftTower.receiveShadow = true
+  root.add(leftTower)
+
+  const leftSpire = new THREE.Mesh(spireGeo, roofMaterial)
+  leftSpire.position.set(-8, 48, -22)
+  leftSpire.castShadow = true
+  root.add(leftSpire)
+
+  // Right Bell Tower
+  const rightTower = new THREE.Mesh(towerGeo, brickMaterial)
+  rightTower.position.set(8, 18, -22)
+  rightTower.castShadow = true
+  rightTower.receiveShadow = true
+  root.add(rightTower)
+
+  const rightSpire = new THREE.Mesh(spireGeo, roofMaterial)
+  rightSpire.position.set(8, 48, -22)
+  rightSpire.castShadow = true
+  root.add(rightSpire)
+
+  // 3. Spire Crosses (Thánh giá đỉnh tháp)
+  const crossGeo = new THREE.BoxGeometry(0.5, 3.2, 0.5)
+  const crossBarGeo = new THREE.BoxGeometry(2, 0.5, 0.5)
+
+  const leftCross1 = new THREE.Mesh(crossGeo, goldMaterial)
+  leftCross1.position.set(-8, 61, -22)
+  const leftCross2 = new THREE.Mesh(crossBarGeo, goldMaterial)
+  leftCross2.position.set(-8, 61.4, -22)
+  root.add(leftCross1, leftCross2)
+
+  const rightCross1 = new THREE.Mesh(crossGeo, goldMaterial)
+  rightCross1.position.set(8, 61, -22)
+  const rightCross2 = new THREE.Mesh(crossBarGeo, goldMaterial)
+  rightCross2.position.set(8, 61.4, -22)
+  root.add(rightCross1, rightCross2)
+
+  // 4. Central Front Rose Window (Cửa sổ hoa hồng mặt tiền)
+  const roseGeo = new THREE.CylinderGeometry(3.6, 3.6, 0.8, 24)
+  const rose = new THREE.Mesh(roseGeo, stoneMaterial)
+  rose.rotation.x = Math.PI / 2
+  rose.position.set(0, 16.5, -22.2)
+  root.add(rose)
+
+  // 5. Triple Front Portals (3 Cổng vòm mặt tiền)
+  const portalGeo = new THREE.CylinderGeometry(2.4, 2.4, 4.5, 16, 1, false, 0, Math.PI)
+  const portal = new THREE.Mesh(portalGeo, stoneMaterial)
+  portal.rotation.z = Math.PI / 2
+  portal.position.set(0, 3.5, -22.4)
+  root.add(portal)
+
+  return root
+}
+
 export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
+  defaultCalibration: providedCalibration,
   className = '',
 }: {
   modelId?: string
+  defaultCalibration?: ModelCalibration
   className?: string
 }) {
   const { user } = useAuth()
@@ -59,6 +170,8 @@ export function Map3DLandmarkViewer({
     user?.role === 'admin' ||
     !user ||
     (import.meta as unknown as { env?: Record<string, unknown> }).env?.DEV === true
+
+  const fallbackCalibration = providedCalibration ?? getDefaultCalibration(modelId)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const threeCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -69,10 +182,10 @@ export function Map3DLandmarkViewer({
   const cameraRef = useRef<THREE.Camera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const modelAnchorRef = useRef<THREE.Group | null>(null)
-  const calibrationRef = useRef<ModelCalibration>(DEFAULT_CALIBRATION)
+  const calibrationRef = useRef<ModelCalibration>(fallbackCalibration)
 
-  const [calibration, setCalibration] = useState<ModelCalibration>(DEFAULT_CALIBRATION)
-  const [saved, setSaved] = useState<ModelCalibration>(DEFAULT_CALIBRATION)
+  const [calibration, setCalibration] = useState<ModelCalibration>(fallbackCalibration)
+  const [saved, setSaved] = useState<ModelCalibration>(fallbackCalibration)
   const [calibrationReady, setCalibrationReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingProgress, setLoadingProgress] = useState(0)
@@ -90,11 +203,13 @@ export function Map3DLandmarkViewer({
   useEffect(() => {
     let alive = true
     setCalibrationReady(false)
+    setCalibration(fallbackCalibration)
+    setSaved(fallbackCalibration)
     api
       .get(`/models-3d/calibration/${modelId}`)
       .then(({ data }) => {
         if (!alive) return
-        const next = sanitizeCalibration(data, DEFAULT_CALIBRATION)
+        const next = sanitizeCalibration(data, fallbackCalibration)
         setCalibration(next)
         setSaved(next)
       })
@@ -103,7 +218,7 @@ export function Map3DLandmarkViewer({
           const cached = localStorage.getItem(`calib_${modelId}`)
           if (cached) {
             try {
-              const parsed = sanitizeCalibration(JSON.parse(cached), DEFAULT_CALIBRATION)
+              const parsed = sanitizeCalibration(JSON.parse(cached), fallbackCalibration)
               setCalibration(parsed)
               setSaved(parsed)
             } catch {}
@@ -116,7 +231,7 @@ export function Map3DLandmarkViewer({
     return () => {
       alive = false
     }
-  }, [modelId])
+  }, [modelId, fallbackCalibration])
 
   // 2. Initialize the independent Three.js overlay. Goong JS 1.0.9 creates a
   // WebGL 1 map context, while current Three.js requires WebGL 2.
@@ -218,7 +333,7 @@ export function Map3DLandmarkViewer({
       container,
       style: GOONG_STYLES[styleMode],
       center: [initialLng, initialLat],
-      zoom: 17.6,
+      zoom: calibration.scale > 350 ? 14.8 : calibration.scale > 150 ? 15.8 : 17.6,
       pitch: 60,
       bearing: 0,
     })
@@ -324,9 +439,32 @@ export function Map3DLandmarkViewer({
       },
       (err) => {
         if (cancelled) return
-        console.error('Error loading 3D model:', err)
+        console.warn('3D GLB model file not present, activating procedural digital twin:', err)
+        const raw = createProceduralCathedralModel()
+        const box = new THREE.Box3().setFromObject(raw)
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
+
+        if (size.y > 0) {
+          raw.position.set(-center.x, -box.min.y, -center.z)
+          const normalizer = new THREE.Group()
+          normalizer.scale.setScalar(1 / size.y)
+          normalizer.add(raw)
+
+          const anchor = new THREE.Group()
+          anchor.add(normalizer)
+
+          if (modelAnchorRef.current) {
+            scene.remove(modelAnchorRef.current)
+          }
+
+          modelAnchorRef.current = anchor
+          scene.add(anchor)
+        }
+
         setLoading(false)
-        setLoadError('Mô hình 3D chưa sẵn sàng. Bản đồ nền vẫn dùng được; vui lòng thử lại sau.')
+        setLoadError(null)
+        mapRef.current?.triggerRepaint()
       }
     )
 
@@ -409,12 +547,13 @@ export function Map3DLandmarkViewer({
 
     const lat = calibration.latitude
     const lng = calibration.longitude
+    const zoomForScale = (zoom: number) => Math.max(13.8, zoom - Math.max(0, Math.log2(calibration.scale / 77.5)))
 
     switch (preset) {
       case 'front': // Mặt tiền chính diện nhìn từ Công xã Paris
         map.flyTo({
           center: [lng, lat - 0.00075],
-          zoom: 17.8,
+          zoom: zoomForScale(17.8),
           pitch: 60,
           bearing: 0,
           duration: 1500,
@@ -423,7 +562,7 @@ export function Map3DLandmarkViewer({
       case 'top': // Góc nhìn trên cao (Fly-over)
         map.flyTo({
           center: [lng, lat],
-          zoom: 17.2,
+          zoom: zoomForScale(17.2),
           pitch: 15,
           bearing: 0,
           duration: 1500,
@@ -432,7 +571,7 @@ export function Map3DLandmarkViewer({
       case 'park': // Góc nhìn từ công viên Bưu điện / Nhà hát
         map.flyTo({
           center: [lng - 0.0009, lat - 0.0006],
-          zoom: 17.8,
+          zoom: zoomForScale(17.8),
           pitch: 65,
           bearing: 45,
           duration: 1500,
@@ -441,7 +580,7 @@ export function Map3DLandmarkViewer({
       case 'cinematic': // Góc nhìn 3D nghệ thuật
         map.flyTo({
           center: [lng + 0.0008, lat + 0.0008],
-          zoom: 17.9,
+          zoom: zoomForScale(17.9),
           pitch: 62,
           bearing: -135,
           duration: 1500,
@@ -499,7 +638,7 @@ export function Map3DLandmarkViewer({
         <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl shadow-xl">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
-            GOONG MAPS 3D · NHÀ THỜ ĐỨC BÀ
+            GOONG MAPS 3D · {calibration.display_name.toUpperCase()}
           </span>
         </div>
 

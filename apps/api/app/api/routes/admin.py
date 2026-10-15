@@ -2,6 +2,7 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -33,9 +34,12 @@ from app.services.integration_config import (
     resolve_integration_value,
     update_integration_settings,
 )
+from app.services.momo import get_momo_config
+from app.services.place_label_suggestion_service import suggest_place_labels
 from app.services.routing_service import make_geocoding_provider, make_routing_provider
 from app.api.guards import require_user
 from app.api.permissions import P
+from app.services.vnpay import get_vnpay_config
 
 router = APIRouter(prefix="/api/admin", tags=["administration"])
 
@@ -53,6 +57,8 @@ class PlaceCandidatePromotion(BaseModel):
     longitude: float = Field(ge=-180, le=180)
     category: str = Field(min_length=2, max_length=40)
     description: str = Field(default="", max_length=4000)
+    image_urls: list[str] = Field(default_factory=list, max_length=12)
+    details: dict[str, Any] = Field(default_factory=dict)
     source_uri: str = Field(min_length=12, max_length=1000)
     source_type: str = Field(min_length=3, max_length=40)
     source_label: str = Field(min_length=2, max_length=180)
@@ -298,6 +304,7 @@ def list_place_import_candidates(
     ).all()
     return [{"id": item.id, "external_id": item.external_id, "source_row": item.source_row,
              "name": item.name, "kind": item.kind, "raw_payload": item.raw_payload,
+             "suggested_labels": suggest_place_labels(item.raw_payload, item.kind),
              "quality_flags": item.quality_flags, "review_status": item.review_status,
              "target_poi_id": item.target_poi_id, "target_poi_status": poi_status,
              "created_at": item.created_at}
@@ -336,6 +343,21 @@ def promote_place_candidate(
     if payload.observed_at > now or payload.expires_at <= now or payload.expires_at <= payload.observed_at:
         raise HTTPException(status_code=422, detail={"code": "EVIDENCE_NOT_CURRENT", "message": "Evidence must have a past observation time and a future expiry time."})
 
+    details_value = payload.details or candidate.raw_payload.get("details")
+    raw_details = dict(details_value) if isinstance(details_value, dict) else {}
+    raw_photos = raw_details.get("images") or candidate.raw_payload.get("photos") or []
+    if not isinstance(raw_photos, list):
+        raw_photos = []
+    source_photos = []
+    for photo in raw_photos:
+        if not isinstance(photo, dict) or not photo.get("url") or not photo.get("source_url") or not photo.get("license"):
+            continue
+        photo_url, credit_url = urlparse(str(photo["url"])), urlparse(str(photo["source_url"]))
+        if photo_url.scheme != "https" or credit_url.scheme != "https":
+            continue
+        source_photos.append(photo)
+    raw_details = {**raw_details, "images": source_photos}
+
     poi_id = str(uuid4())
     poi = POI(
         id=poi_id,
@@ -347,6 +369,8 @@ def promote_place_candidate(
         category=payload.category.strip(),
         address=payload.address.strip(),
         source_attribution=payload.source_label.strip(),
+        image_urls=payload.image_urls or [str(image.get("local_url") or image["url"]) for image in source_photos],
+        details=raw_details,
         verification_status="pending",
         data_revision=1,
     )
@@ -660,8 +684,8 @@ def test_integration_connection(
         if provider_name == "vnpay":
             tmn = resolve_integration_value(db, "payments", "vnpay_tmn_code")
             secret = resolve_integration_value(db, "payments", "vnpay_hash_secret")
-            if tmn and secret:
-                status = "connected"
+            if get_vnpay_config(db).vnpay_checkout_enabled:
+                status = "configured"
                 detail_vi = f"Cấu hình VNPay hợp lệ (TMN Code: {tmn}, Hash Secret: đã thiết lập)."
             else:
                 status = "not_configured"
@@ -670,17 +694,19 @@ def test_integration_connection(
             partner = resolve_integration_value(db, "payments", "momo_partner_code")
             access = resolve_integration_value(db, "payments", "momo_access_key")
             secret = resolve_integration_value(db, "payments", "momo_secret_key")
-            if partner and access and secret:
-                status = "connected"
+            if get_momo_config(db).checkout_enabled:
+                status = "configured"
                 detail_vi = f"Cấu hình MoMo hợp lệ (Partner Code: {partner}, Access Key: đã thiết lập)."
             else:
                 status = "not_configured"
                 detail_vi = "Chưa cấu hình đầy đủ MoMo Partner Code, Access Key hoặc Secret Key."
     elif service == "google_oauth":
+        from app.api.routes.auth import _google_configuration_issue
+
         client_id = resolve_integration_value(db, "google_oauth", "client_id")
         client_secret = resolve_integration_value(db, "google_oauth", "client_secret")
-        if client_id and client_secret:
-            status = "connected"
+        if client_id and client_secret and not _google_configuration_issue(db):
+            status = "configured"
             detail_vi = f"Cấu hình Google OAuth hợp lệ (Client ID: {client_id[:16]}...)."
         else:
             status = "not_configured"
@@ -688,6 +714,11 @@ def test_integration_connection(
     else:
         status = "not_configured"
         detail_vi = "Dịch vụ không hỗ trợ kiểm tra trực tiếp."
+
+    if service == "payments" and status == "configured":
+        detail_vi = "Merchant credentials and public HTTPS callbacks pass configuration checks; complete a sandbox checkout to verify gateway/IPN behavior."
+    elif service == "google_oauth" and status == "configured":
+        detail_vi = "Client credentials and HTTPS callback pass configuration checks; complete a browser sign-in in staging."
 
     _audit(db, actor, "integration.connection_tested", "integration", service, {"status": status})
     db.commit()
@@ -698,10 +729,12 @@ def test_integration_connection(
         "no_results": "Kết nối được nhưng dịch vụ không trả kết quả kiểm tra.",
         "failed": "Không thể kết nối tới dịch vụ.",
     }
+    messages["configured"] = "Configuration checks passed; complete the sandbox transaction or browser OAuth flow on staging."
     return {
         "service": service,
         "status": status,
-        "ok": status == "connected",
+        "ok": status in {"connected", "configured"},
+        "check_type": "external_request" if service in {"ai", "routing"} else "configuration_only",
         "message_vi": messages[status],
         "detail_vi": detail_vi,
     }

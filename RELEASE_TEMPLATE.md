@@ -1,12 +1,12 @@
-# Mẫu Thông Báo Phát Hành (Release Notes Template)
+# Release Notes Template
 
-## Phiên bản [X.Y.Z] - YYYY-MM-DD
+## Version [X.Y.Z] - YYYY-MM-DD
 
-### 🌟 Tính năng mới (Features)
+### 🌟 Features
 - 
 
-### 🐛 Sửa lỗi (Bug Fixes)
+### 🐛 Bug Fixes
 - 
 
-### 📑 Tài liệu (Documentation)
+### 📑 Documentation
 - 

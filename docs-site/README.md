@@ -1,57 +1,93 @@
-# LocalExplorerAI documentation site
+# Local Explorer AI — Documentation site
 
-A static technical documentation and showcase site for LocalExplorerAI. It is **not** the product app (`apps/web`) and needs no backend, database, API key or environment variable.
+The static technical documentation and showcase for **Local Explorer AI** is built with React, TypeScript, and Vite and deployed to GitHub Pages.
 
-Built with React, TypeScript and Vite, plus `lucide-react` for icons. Routing is hash-based (`#/architecture`), so deep links work on GitHub Pages without a server fallback. No Three.js is loaded; the digital twin page is a lightweight SVG schematic.
+> **This is not the product application** (apps/web). It does not require a backend, database, API key, or environment variables.
 
-## Development
+---
 
-```bash
+## ⚙️ Technology
+
+- **Framework:** React + TypeScript + Vite
+- **Icons:** lucide-react
+- **Routing:** Hash-based (#/architecture, #/api, etc.); deep links work on GitHub Pages without server fallback.
+- **3D:** Does not use Three.js; the Digital Twin page is a lightweight SVG diagram.
+- **Hosting:** GitHub Pages through GitHub Actions
+
+---
+
+## 🚀 Local development
+
+~~~bash
 cd docs-site
 npm install
 npm run dev
-```
+~~~
 
-## Build
+## 🏗️ Build
 
-```bash
+~~~bash
 npm run build
-```
+~~~
 
-The output is written to `docs-site/dist`. `base` is `./`, so the build works under `https://<user>.github.io/<repo>/` without hardcoding either name.
+Output is written to docs-site/dist/. The base: './' setting is intended to make the build work under GitHub Pages project URLs.
 
-## Preview
+## 👁️ Preview
 
-```bash
+~~~bash
 npm run preview
-```
+~~~
 
-## GitHub Pages
+---
+
+## 🌐 GitHub Pages deployment
 
 1. Push the repository to GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, set **Source: GitHub Actions**.
+2. Go to **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. The .github/workflows/deploy-pages.yml workflow builds docs-site and deploys it with the configure-pages, upload-pages-artifact, and deploy-pages actions.
 
-`.github/workflows/deploy-pages.yml` then builds `docs-site` and deploys it with the official `configure-pages`, `upload-pages-artifact` and `deploy-pages` actions. It runs on pushes to `main` or `gh-page` that touch `docs-site/`, and can be started manually. Expected URL: `https://<username>.github.io/LocalExplorerAI/`.
+**Triggers:** Pushes to main or gh-page that include changes under docs-site/, or a manual run (workflow_dispatch).
 
-## Where the content comes from
+**Public URL:** https://nguyentribaothang.github.io/LocalExplorerAI/
 
-All claims are taken from the repository and marked with their source file:
+---
+
+## 📝 Documentation content sources
+
+The content is derived from the repository's implementation:
 
 | Content | Source |
-| --- | --- |
-| Endpoints, access levels | `@router` decorators in `apps/api/app/api/routes/`, dependencies such as `require_roles` |
-| Request bodies | Pydantic schemas in `apps/api/app/schemas/` |
-| Ranker features | `FEATURE_NAMES` in `apps/api/app/services/ranker_features.py` |
-| ML caveats | `docs/ml-training-and-data.md` |
-| Demo walkthrough, story, roadmap | `DEMO_SCRIPT.md`, `COMPETITION_SUBMISSION.md`, `README.md` |
-| Screenshots | `assets/screenshots/*.png`, converted to WebP in `public/img/` |
+|---|---|
+| Endpoints and access levels | @router decorators in apps/api/app/api/routes/ and require_roles dependencies |
+| Request/response bodies | Pydantic schemas in apps/api/app/schemas/ |
+| Ranker features (15) | FEATURE_NAMES in apps/api/app/services/ranker_features.py |
+| ML caveats and safety | docs/ml-training-and-data.md |
+| Demo walkthrough, story, roadmap | DEMO_SCRIPT.md, COMPETITION_SUBMISSION.md, README.md |
+| Screenshots | assets/screenshots/*.png, converted to WebP in public/img/ |
 
-Data lives in `src/data/`. Interactive demos (concierge, replanning, digital twin, explainability meter) use hand-written sample data and are labelled as such; nothing on the site calls a backend.
+Interactive data (concierge demo, replanning, Digital Twin, explainability meter) uses hand-written sample data and is clearly marked; it does not call the backend.
 
-## Known gaps in the source material
+---
 
-- Three diagram PNGs in `assets/diagrams/` and `assets/screenshots/itinerary.png` are blank placeholders and were not used.
-- `ARCHITECTURE.md` describes Haversine routing and no LLM, while the code and README use Goong routing with a mock provider for tests. The site follows the code.
-- The README mentions itinerary rollback; no rollback code was found.
-- Trained model weights (ranker, E5, flood) are not in the repository.
+## ⚠️ Known documentation gaps
+
+> [!WARNING]
+> - The older ARCHITECTURE.md describes Haversine routing; it has since been **updated** to reflect the Goong Directions API.
+> - The repository does not include the E5 or flood-risk model weights. The ranker artifact that is present is a bootstrap/weak-label experiment, not a production-eligible model. See the model cards and [ML guide](../docs/ml-training-and-data.md).
+> - The Digital Twin page in docs-site is an SVG schematic, not the Three.js experience in the product application.
+
+---
+
+## 📁 Directory structure
+
+~~~text
+docs-site/
+├── src/
+│   ├── data/        # Static JSON for interactive demos
+│   ├── pages/       # Documentation pages: architecture, API, ML, planning, demo...
+│   └── components/  # Shared UI components
+├── public/
+│   └── img/         # Screenshots and diagrams (WebP format)
+├── index.html
+└── vite.config.ts
+~~~

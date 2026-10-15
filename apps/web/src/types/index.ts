@@ -97,8 +97,44 @@ export interface POI {
   ticket_info?: string | null
   tags?: string[]
   is_landmark?: boolean
+  details?: {
+    contact_phone?: string | null
+    contact_email?: string | null
+    website?: string | null
+    opening_hours?: string | null
+    fee?: string | null
+    wheelchair?: string | null
+    osm_type?: string | null
+    osm_id?: number | null
+    osm_url?: string | null
+    osm_version?: number | null
+    osm_timestamp?: string | null
+    observed_at?: string | null
+    osm_tags?: Record<string, string>
+    images?: SourcePhoto[]
+    photo_status?: string
+    [key: string]: unknown
+  }
+  source_attribution?: string | null
+  data_revision?: number
   data_mode?: DataMode
   data_status?: 'verified' | 'stale' | 'simulated' | 'unverified'
+}
+
+export interface SourcePhoto {
+  url: string
+  local_url?: string | null
+  local_path?: string | null
+  source_url: string
+  title: string
+  license: string
+  license_url?: string | null
+  attribution?: string | null
+  credit_line?: string | null
+}
+
+export interface POIDetail extends POI {
+  experiences: Experience[]
 }
 
 export interface SourceEvidence {
@@ -258,6 +294,7 @@ export interface Itinerary {
     evidence_refs: string[]
     uncertainty: string[]
     ranking_model_version?: string | null
+    ranking_source?: 'rule_baseline' | 'ml_model' | 'bootstrap_ml_model' | null
   }
 }
 

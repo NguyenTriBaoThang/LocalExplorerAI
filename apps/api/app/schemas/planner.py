@@ -101,6 +101,7 @@ class Explanation(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     uncertainty: list[str] = Field(default_factory=list)
     ranking_model_version: str | None = None
+    ranking_source: Literal["rule_baseline", "ml_model", "bootstrap_ml_model"] | None = None
 
 
 class PlanResponse(BaseModel):

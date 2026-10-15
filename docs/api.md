@@ -1,6 +1,8 @@
-# API MVP
+# MVP API
 
-Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601 có timezone offset và tiền VND nhận integer.
+The API accepts ISO 8601 timestamps with a timezone offset (for example, Vietnam time `+07:00`); slots are normalized and stored in UTC. SQLite does not store timezone information, so the model converts offsets to UTC when writing and restores UTC when reading.
+
+Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetimes must use ISO 8601 with a timezone offset; VND amounts must be integers.
 
 ## Health
 
@@ -8,23 +10,26 @@ Base URL: `http://localhost:8000`. Swagger UI: `/docs`. Datetime nhận ISO 8601
 
 ## Local ML inference
 
-Optional local supervised models are separate from the prompt-backed LLM workflows and the existing E5 semantic-search model. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
+Local ranker inference is separate from prompt-backed LLM workflows and the E5 semantic-search model. The active ranker defaults to `rule-baseline-v1`. The explicitly marked bootstrap bundle can run only as an opt-in pilot; it is not production-eligible. See [training, data provenance, artifact placement, and model safety](ml-training-and-data.md).
 
-- `GET /api/ml/status` reports local ranker/flood bundle configuration and metadata.
-- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same local ranker can break ties among earliest feasible candidates in `POST /api/itineraries/plan` and rank re-plan replacements. Planning hard constraints remain authoritative, and responses expose `explanation.ranking_model_version` when ML ranking was used.
+- `GET /api/ml/status` reports active ranker, ML bundle eligibility, and whether the rule baseline is serving as fallback.
+- Experience-ranker bundles with a model SHA-256 are integrity-checked before loading. The verified trainer emits that checksum and explicit human-label/deployment metadata. Generic weak-label bundles remain blocked; only the exact `bootstrap_pilot` artifact can be enabled with `ENABLE_BOOTSTRAP_RANKER=true` for a controlled experiment.
+- `POST /api/ml/rank-experiences` ranks feasible candidates; rank scores are not probabilities. The same ranker breaks ties among earliest feasible candidates in `POST /api/itineraries/plan` and orders re-plan replacements. Planning hard constraints remain authoritative. Planner explanations expose `ranking_source` and `ranking_model_version`; bootstrap plans also display an experimental weak-label warning.
 - `POST /api/ml/flood-risk` returns advisory flood-risk probabilities; it does not confirm a closure and does not alter routing. It returns 503 until a real-label flood bundle is installed; demo-mode bundles are rejected.
 
 ## Catalog
 
-- `GET /api/pois` — danh sách POI.
-- `GET /api/pois/{id}` — một POI.
-- `GET /api/experiences` — danh sách có query filters: `intent`, `start_at`, `end_at`, `group_size`, `max_price`.
-- `GET /api/experiences/{id}` — hoạt động, POI và slot.
-- `GET /api/experiences/{id}/slots?start_at=...&end_at=...` — slot theo thời gian.
+- `GET /api/pois` — list POIs.
+- `GET /api/pois/{id}` — one POI.
+- `GET /api/experiences` — list with query filters: `intent`, `start_at`, `end_at`, `group_size`, `max_price`.
+- `GET /api/experiences/{id}` — experience, POI, and slots.
+- `GET /api/experiences/{id}/slots?start_at=...&end_at=...` — slots within a time range.
 
-Catalog trả `verification_status` và `data_mode`. Dữ liệu seed là `simulated`; `available_reported: null` không có nghĩa là hết chỗ.
+The catalog returns `verification_status` and `data_mode`. Seed data is `simulated`; `available_reported: null` does not mean sold out.
 
 ## Planner
+
+`GET /api/pois/{id}` returns the POI detail fields (including source-backed `details`, image/license metadata, current evidence, and linked experience summaries). The crawler workflow is documented in [District 1 catalog crawl and display](district1-place-catalog.md).
 
 `POST /api/itineraries/plan`
 
@@ -40,16 +45,16 @@ Catalog trả `verification_status` và `data_mode`. Dữ liệu seed là `simul
 }
 ```
 
-Response gồm `request_id`, `itinerary_id`, `data_mode`, `data_as_of`, `feasibility_status`, tổng chi phí, stops, route legs và explanation. `data_mode` là `real`, `simulated` hoặc `mixed` theo catalog được chọn; mỗi stop có `data_status`, nguồn POI/trải nghiệm/slot, `slot_confirmed_at` và `slot_expires_at`. `explanation.evidence_refs` liệt kê ID evidence được dùng. `feasibility_status` có thể là `feasible` hoặc `tentative`; no-plan trả HTTP 422 với code `NO_FEASIBLE_PLAN`. Mỗi route leg trả `distance_m`, `duration_min`, `provider`, `eta_source`, `eta_source_uri`, `eta_calculated_at`, `eta_age_seconds`, `eta_valid_until`, `is_realtime` và (khi Goong trả geometry hợp lệ) tọa độ tuyến đã giải mã. `is_realtime` hiện luôn false: ETA không phải traffic trực tiếp. Nếu gửi điểm đi thì phải gửi cả điểm về; planner tính cả đoạn cuối và áp giờ về lên chặng này.
+The response includes `request_id`, `itinerary_id`, `data_mode`, `data_as_of`, `feasibility_status`, total cost, stops, route legs, and an explanation. `data_mode` is `real`, `simulated`, or `mixed` according to the selected catalog; each stop has `data_status`, POI/experience/slot sources, `slot_confirmed_at`, and `slot_expires_at`. `explanation.evidence_refs` lists the evidence IDs used. `feasibility_status` can be `feasible` or `tentative`; if no plan exists, the API returns HTTP 422 with code `NO_FEASIBLE_PLAN`. Each route leg returns `distance_m`, `duration_min`, `provider`, `eta_source`, `eta_source_uri`, `eta_calculated_at`, `eta_age_seconds`, `eta_valid_until`, `is_realtime`, and (when Goong returns valid geometry) decoded route coordinates. `is_realtime` is currently always false: the ETA is not live traffic. If an origin is supplied, a destination is required too; the planner computes the final leg and applies the return deadline to it.
 
-`ROUTING_PROVIDER=goong` và `GEOCODING_PROVIDER=goong` là mặc định. Cấu hình `GOONG_API_KEY` trong file `.env` tại root hoặc trong màn hình tích hợp admin; key chỉ được gửi từ API server tới Goong, không đưa xuống trình duyệt. `GOONG_ETA_TTL_SECONDS` mặc định 300 giây và `GEOCODE_CACHE_TTL_SECONDS` mặc định 86400 giây.
+`ROUTING_PROVIDER=goong` and `GEOCODING_PROVIDER=goong` are the defaults. Configure `GOONG_API_KEY` in the root `.env` file or the admin integrations screen; the key is sent only from the API server to Goong, never to the browser. `GOONG_ETA_TTL_SECONDS` defaults to 300 seconds and `GEOCODE_CACHE_TTL_SECONDS` to 86400 seconds.
 
-- `GET /api/routing/capabilities` — nhà cung cấp đã chọn, trạng thái key, phương tiện UI/API cho phép và thông tin ETA có phải realtime không. Goong hiện bật xe máy/đi bộ/ô tô; phương tiện công cộng và xe đạp bị từ chối rõ ràng, không quy đổi sang profile khác.
-- `GET /api/geocoding/forward?address=...` — trả về các địa chỉ khớp, tọa độ, `place_id`, nguồn tài liệu nhà cung cấp, `resolved_at`, `valid_until` và `age_seconds`. UI yêu cầu người dùng chọn một kết quả trước khi lập lịch.
+- `GET /api/routing/capabilities` — selected provider, key status, UI/API-supported travel modes, and whether the ETA is real-time. Goong currently enables motorcycle/walking/car; public transit and bicycle requests are explicitly rejected rather than remapped to another profile.
+- `GET /api/geocoding/forward?address=...` — returns matching addresses, coordinates, `place_id`, provider source, `resolved_at`, `valid_until`, and `age_seconds`. The UI requires the user to select a result before planning.
 
-Trong Goong adapter hiện tại, mode xe máy/đi bộ/ô tô được ánh xạ lần lượt sang tham số `bike`/`foot`/`car`. Tổng quan Directions V2 nói hỗ trợ xe máy và đi bộ, nhưng bảng tham số trên tài liệu chỉ liệt kê car/bike; cần smoke-test bằng key hợp lệ với Goong trước triển khai pilot. Thiếu key trả HTTP 503; lỗi/time-out nhà cung cấp trả 502; adapter không âm thầm chuyển sang mock.
+In the current Goong adapter, motorcycle/walking/car modes map respectively to `bike`/`foot`/`car`. The Directions V2 overview says it supports motorcycle and walking, but the parameter table in the documentation lists only car/bike; smoke-test using a valid Goong key before a pilot. A missing key returns HTTP 503; provider errors/timeouts return 502; the adapter does not silently switch to a mock.
 
-`GET /api/itineraries/{id}` tải lại kế hoạch đã lưu.
+`GET /api/itineraries/{id}` reloads a saved plan.
 
 ## Prompt-backed AI workflows
 
@@ -94,7 +99,7 @@ The current booking flow supports verified-data seat holds and explicit provider
 
 VNPay/MoMo checkout and IPN settlement are implemented but activate only after merchant credentials and public HTTPS callback URLs are configured. Refund execution remains disabled; paid cancellation and late-capture cases require manual reconciliation. See [booking and payment workflow](bookings-and-payments.md) and [integration settings](integration-settings.md) for setup and constraints.
 
-## Lỗi
+## Errors
 
 ```json
 {

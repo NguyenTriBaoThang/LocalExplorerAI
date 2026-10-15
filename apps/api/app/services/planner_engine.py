@@ -1,11 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Protocol, Sequence
 
-from datetime import timezone
-
-
 def as_aware(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    # SQLAlchemy's SQLite test/dev backend strips tzinfo from DateTime(timezone=True)
+    # values. Persisted naive timestamps follow the application's UTC storage convention.
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 class PlannerEngine(Protocol):

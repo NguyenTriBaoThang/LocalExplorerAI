@@ -36,6 +36,7 @@ export function AppLayout() {
   // Staff browse the same public site as everyone else; chat and planner are traveler features. A Portal link leads back to work.
   const links = loading ? [] : [
     ...(isStaff ? [] : [{ to: '/chat', label: t('nav.chat') }]),
+    { to: '/places', label: t('nav.places') },
     { to: '/explore', label: t('nav.explore') },
     ...(isStaff ? [] : [{ to: '/planner', label: t('nav.planner') }]),
     { to: '/map-3d', label: t('nav.map3d') },

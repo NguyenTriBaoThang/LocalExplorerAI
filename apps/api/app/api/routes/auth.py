@@ -192,6 +192,12 @@ def get_profile(user: User = Depends(require_user(P.ACCOUNT_READ)), db: Session 
     return profile
 
 
+@router.get("/session")
+def get_session(user: User | None = Depends(require_user(P.ACCOUNT_READ, optional=True))):
+    """Bootstrap the UI without treating an anonymous visitor as an API error."""
+    return {"user": UserRead.model_validate(user) if user is not None else None}
+
+
 @router.patch("/me", response_model=UserRead)
 def update_profile(payload: ProfileUpdateRequest, user: User = Depends(require_user(P.ACCOUNT_UPDATE)), db: Session = Depends(get_db)):
     user.display_name = payload.display_name.strip()

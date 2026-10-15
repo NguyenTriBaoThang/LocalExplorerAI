@@ -24,7 +24,7 @@ def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: Us
     try:
         return PlannerService(db).plan(payload, user.id if user else None)
     except NoFeasiblePlan as error:
-        raise HTTPException(status_code=422, detail={"code": "NO_FEASIBLE_PLAN", "message": str(error)}) from error
+        raise HTTPException(status_code=422, detail={"code": error.code, "message": str(error)}) from error
     except UnsupportedTravelMode as error:
         raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
     except RoutingConfigurationError as error:
