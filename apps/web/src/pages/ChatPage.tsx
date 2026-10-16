@@ -28,7 +28,7 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
 import type { ChatConstraints, ChatServiceStatus, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
@@ -158,7 +158,9 @@ export function ChatPage() {
   const [messages, setMessages] = useState<ChatLine[]>([initialMessage])
   const [userTurns, setUserTurns] = useState<string[]>([])
   const [constraints, setConstraints] = useState<ChatConstraints | null>(null)
-  const [draft, setDraft] = useState('')
+  // Place and experience pages link here with ?q=<question> to start the conversation about that place.
+  const [searchParams] = useSearchParams()
+  const [draft, setDraft] = useState(() => (searchParams.get('q') ?? '').slice(0, 500))
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')

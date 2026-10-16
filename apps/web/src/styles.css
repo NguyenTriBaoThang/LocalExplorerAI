@@ -12100,3 +12100,8 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 }
 .site-notice svg { flex-shrink: 0; margin-top: 2px; }
 .site-notice-warn { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.14); }
+
+/* Call-to-action row on place and experience detail pages */
+.place-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.place-actions > a { display: inline-flex; align-items: center; gap: 8px; }
+.home-showcase-links { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }

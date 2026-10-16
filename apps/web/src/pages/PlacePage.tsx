@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Clock, ExternalLink, MapPin, Ticket } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, Clock, ExternalLink, MapPin, MessageCircle, Ticket } from 'lucide-react'
 import { useEntityView } from '../analytics'
 import { getExperiences } from '../api/client'
 import { getPOI } from '../api/content'
@@ -28,7 +28,7 @@ export function PlacePage() {
 
   return (
     <div className="content-page">
-      <Link to="/explore" className="content-back"><ArrowLeft size={15} /> {vi ? 'Khám phá' : 'Explore'}</Link>
+      <Link to="/places" className="content-back"><ArrowLeft size={15} /> {vi ? 'Địa điểm' : 'Places'}</Link>
       {missing && <p className="review-text" style={{ marginTop: 24 }}>{vi ? 'Địa điểm không tồn tại hoặc chưa được công bố.' : 'This place does not exist or is not published.'}</p>}
       {!place && !missing && <div className="loading-state-3d"><span className="loader-orbit" /></div>}
       {place && (
@@ -37,6 +37,10 @@ export function PlacePage() {
           <div className="content-meta">
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><MapPin size={14} />{place.address}</span>
             {place.is_landmark && <span className="tag-chip">{vi ? 'Danh lam thắng cảnh' : 'Landmark'}</span>}
+          </div>
+          <div className="place-actions">
+            <Link className="btn-primary-3d" to={`/planner?poi=${encodeURIComponent(place.id)}`}><CalendarPlus size={16} />{vi ? 'Thêm vào lịch trình' : 'Add to itinerary'}</Link>
+            <Link className="btn-secondary-3d" to={`/chat?q=${encodeURIComponent(vi ? `Gợi ý cách tham quan ${place.name} và các nơi nên đi cùng` : `How should I visit ${place.name}, and what is worth pairing it with?`)}`}><MessageCircle size={16} />{vi ? 'Hỏi AI về nơi này' : 'Ask the AI about it'}</Link>
           </div>
           {place.image_urls?.[0] && <img className="content-cover" src={place.image_urls[0]} alt={place.name} />}
           <div className="info-chips">
