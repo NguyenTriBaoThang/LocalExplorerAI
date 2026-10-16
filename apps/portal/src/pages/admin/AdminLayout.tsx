@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { Activity, Bot, Building2, CloudRain, FileText, History, KeyRound, LayoutDashboard, MapPinned, PlugZap, UserCog, Users } from 'lucide-react'
+import { Activity, Bot, Building2, CloudRain, FileText, History, KeyRound, LayoutDashboard, MapPinned, PlugZap, Settings2, UserCog, Users } from 'lucide-react'
 import { FileInput } from 'lucide-react'
 import { BrandLogo } from '../../components/Brand'
 import { MfaCard } from '../../components/MfaCard'
@@ -60,6 +60,7 @@ export function AdminLayout() {
           { title: 'Hệ thống', items: [
             { to: '/admin/operations', label: 'Vận hành', icon: Activity, perm: 'ops:read' },
             { to: '/admin/integrations', label: 'Tích hợp & API keys', icon: PlugZap, perm: 'admin:integrations' },
+            { to: '/admin/site-settings', label: 'Cài đặt website', icon: Settings2, perm: 'admin:system' },
             { to: '/admin/ai-tools', label: 'Công cụ AI', icon: Bot, perm: 'admin:ai_tools' },
             { to: '/admin/flood-risk', label: 'Rủi ro ngập', icon: CloudRain },
             { to: '/admin/audit', label: 'Nhật ký hệ thống', icon: History, perm: 'admin:audit' },

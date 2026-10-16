@@ -20,6 +20,7 @@ import { logout } from '../api/client'
 import { setTheme, useTheme } from '../theme'
 import { useTranslation } from '../i18n'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
+import { SiteNotice } from '../components/common/SiteNotice'
 import { usePageViewTracking } from '../analytics'
 
 export function AppLayout() {
@@ -318,6 +319,7 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <main className="main-content-3d">
+        <SiteNotice />
         <EmailVerificationBanner />
         <Outlet />
       </main>

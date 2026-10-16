@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios'
 import type {
   AdminDashboard, AdminProvider, AdminProviderDetail, AdminUser, AdminUserDetail, AuthUser, Booking, Experience,
   AdminAnalytics, AdminPlace, Article, AuditLog, Banner, Collection, ExperienceDraft, ModerationQueue, PartnerAnalytics, PlaceDraft, Review, Page, PartnerApplication, Poi, PoiDraft, ProviderProfile, RbacMatrix, Role,
-  MfaChallenge, MfaSetup, MfaStatus, ServiceAccount, SessionInfo,
+  MfaChallenge, MfaSetup, MfaStatus, ServiceAccount, SessionInfo, SiteSettings,
 } from './types'
 
 export const http = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
@@ -148,6 +148,8 @@ export const adminApi = {
   saveCollection: async ({ id, ...payload }: Collection) =>
     (id ? await http.put<Collection>(`/admin/content/collections/${id}`, payload) : await http.post<Collection>('/admin/content/collections', payload)).data,
   deleteCollection: async (id: string) => { await http.delete(`/admin/content/collections/${id}`) },
+  siteSettings: async () => (await http.get<SiteSettings>('/admin/site-settings')).data,
+  saveSiteSettings: async (payload: SiteSettings) => (await http.put<SiteSettings>('/admin/site-settings', payload)).data,
   rbac: async () => (await http.get<RbacMatrix>('/admin/rbac')).data,
   setRolePermissions: async (role: string, permissions: string[]) =>
     (await http.put<{ role: string; added: string[]; removed: string[] }>(`/admin/rbac/roles/${role}/permissions`, { permissions })).data,

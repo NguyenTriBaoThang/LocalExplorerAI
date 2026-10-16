@@ -28,10 +28,11 @@ import {
   type ModelCalibration
 } from './landmark/types'
 import { offsetGeo } from './landmark/geo'
+import { loadSiteConfig } from '../../api/siteConfig'
 
 export type { ModelCalibration } from './landmark/types'
 
-const GOONG_MAPTILES_KEY =
+const FALLBACK_MAPTILES_KEY =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOONG_MAPTILES_KEY ||
   '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU'
 
@@ -319,12 +320,16 @@ export function Map3DLandmarkViewer({
     renderer.render(scene, camera)
   }, [])
 
+  // The tile key is managed in the admin portal; the build-time key is only a fallback.
+  const [mapKey, setMapKey] = useState<string | null>(null)
+  useEffect(() => { loadSiteConfig().then((config) => setMapKey(config.maptiles_key || FALLBACK_MAPTILES_KEY)) }, [])
+
   // 4. Initialize Goong Map
   useEffect(() => {
     const container = mapContainerRef.current
-    if (!container || !calibrationReady) return
+    if (!container || !calibrationReady || mapKey === null) return
 
-    goongjs.accessToken = GOONG_MAPTILES_KEY
+    goongjs.accessToken = mapKey
 
     const initialLat = calibration.latitude || NOTRE_DAME_ORIGIN.lat
     const initialLng = calibration.longitude || NOTRE_DAME_ORIGIN.lng
@@ -366,7 +371,7 @@ export function Map3DLandmarkViewer({
       map.remove()
       mapRef.current = null
     }
-  }, [calibrationReady, styleMode, renderFrame])
+  }, [calibrationReady, styleMode, renderFrame, mapKey])
 
   // 5. Load 3D GLB Model of Notre Dame Cathedral
   useEffect(() => {

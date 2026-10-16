@@ -14,7 +14,7 @@ const ACTION_LABELS: Record<string, string> = {
 }
 const TARGETS: Record<string, string> = {
   poi: 'Địa điểm', experience: 'Trải nghiệm', experience_slot: 'Slot', slot: 'Slot', provider: 'Đối tác', user: 'Người dùng', role: 'Vai trò',
-  banner: 'Banner', article: 'Bài viết', collection: 'Bộ sưu tập', review: 'Đánh giá', evidence: 'Minh chứng', booking: 'Đặt chỗ', service_account: 'Khóa API', place_import_batch: 'Lô nhập địa điểm', place: 'Địa điểm', integration: 'Tích hợp',
+  banner: 'Banner', article: 'Bài viết', collection: 'Bộ sưu tập', review: 'Đánh giá', evidence: 'Minh chứng', booking: 'Đặt chỗ', service_account: 'Khóa API', place_import_batch: 'Lô nhập địa điểm', place: 'Địa điểm', integration: 'Tích hợp', site_settings: 'Cài đặt website',
 }
 const TONES: Record<string, 'green' | 'red' | 'amber' | 'brand' | 'gray'> = { approve: 'green', publish: 'green', created: 'brand', reject: 'red', suspend: 'red', deleted: 'red', hidden: 'gray', hide: 'gray', updated: 'amber' }
 
