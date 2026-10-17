@@ -307,6 +307,9 @@ export type AdminAnalytics = {
   devices: Array<{ label: string; value: number }>
   sources: Array<{ label: string; value: number }>
   hours: number[]
+  booking_heatmap: number[][]
+  booking_heatmap_max: number
+  timezone: string
 }
 
 export type PartnerAnalytics = {

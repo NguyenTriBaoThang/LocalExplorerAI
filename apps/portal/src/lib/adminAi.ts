@@ -19,6 +19,19 @@ export type WeatherAdvisoryPayload = {
   children_in_group: boolean
   observed_at: string
 }
+export type CurrentWeatherData = {
+  rain_mm_per_hour: number
+  aqi_pm25: number
+  pm25_ug_m3: number | null
+  temperature_c: number
+  observed_at: string
+  timezone: string
+  source: string
+  weather_source_url: string
+  air_quality_source_url: string
+  attribution: string
+  location: { name: string; latitude: number; longitude: number }
+}
 
 export type FloodSample = { edge_id: string; decision_time: string; horizon_min: number; region: string; road_class: string; [key: string]: string | number }
 export type FloodPrediction = {
@@ -37,6 +50,8 @@ export const adminAiApi = {
     (await http.post<unknown>('/ai/intent-similarity', { experience_a_id, experience_b_id })).data,
   weatherAdvisory: async (itineraryId: string, payload: WeatherAdvisoryPayload) =>
     (await http.post<unknown>(`/itineraries/${itineraryId}/weather-advisory`, payload)).data,
+  itineraryWeatherData: async (itineraryId: string) =>
+    (await http.get<CurrentWeatherData>(`/itineraries/${itineraryId}/weather-data`)).data,
   predictFloodRisk: async (samples: FloodSample[]) =>
     (await http.post<FloodRiskResponse>('/ml/flood-risk', { samples })).data,
 }

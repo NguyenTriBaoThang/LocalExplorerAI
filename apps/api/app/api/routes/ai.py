@@ -9,7 +9,7 @@ from typing import Any
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from sqlalchemy import select
@@ -39,6 +39,7 @@ from app.schemas.ai import (
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.services.replanning_service import ReplanningService, aware
 from app.services.evidence_service import REQUIRED_FIELDS, utc_now
+from app.services.open_meteo_service import OpenMeteoUnavailable, current_conditions
 from app.api.guards import public, require, require_user
 from app.api.permissions import P
 
@@ -493,3 +494,47 @@ def weather_advisory(
                                          if (stop.experience.title or stop.experience.name) in impacted_names],
             "source_data_unverified": True,
             "flood_status_inferred": False}
+
+
+@router.get("/api/itineraries/{itinerary_id}/weather-data", dependencies=[Depends(require(P.ADMIN_AI_TOOLS))])
+def itinerary_weather_data(
+    itinerary_id: str,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Fetch live model context for the first outdoor stop without treating it as a flood observation."""
+    response.headers["Cache-Control"] = "private, no-store"
+    itinerary = db.scalar(select(Itinerary).where(Itinerary.id == itinerary_id).options(
+        selectinload(Itinerary.stops).joinedload(ItineraryStop.poi),
+        selectinload(Itinerary.stops).joinedload(ItineraryStop.experience),
+    ))
+    if itinerary is None:
+        raise HTTPException(status_code=404, detail={"code": "ITINERARY_NOT_FOUND", "message": "Itinerary not found."})
+
+    location_name = itinerary.city or "Ho Chi Minh City"
+    latitude = longitude = None
+    if itinerary.stops:
+        outdoor_stops = [stop for stop in itinerary.stops if stop.experience and not stop.experience.is_indoor]
+        stop = (outdoor_stops or itinerary.stops)[0]
+        poi = stop.poi
+        if poi is not None:
+            latitude, longitude, location_name = poi.latitude, poi.longitude, poi.name
+    if latitude is None or longitude is None:
+        if itinerary.destination_latitude is not None and itinerary.destination_longitude is not None:
+            latitude, longitude = itinerary.destination_latitude, itinerary.destination_longitude
+        elif itinerary.origin_latitude is not None and itinerary.origin_longitude is not None:
+            latitude, longitude = itinerary.origin_latitude, itinerary.origin_longitude
+    if latitude is None or longitude is None:
+        raise HTTPException(status_code=422, detail={
+            "code": "ITINERARY_LOCATION_UNAVAILABLE",
+            "message": "This itinerary has no stop or origin/destination coordinates for live weather.",
+        })
+
+    try:
+        weather = current_conditions(latitude, longitude)
+    except OpenMeteoUnavailable as error:
+        raise HTTPException(status_code=502, detail={
+            "code": "WEATHER_PROVIDER_UNAVAILABLE",
+            "message": "Live weather data is temporarily unavailable. You can retry or enter a documented observation manually.",
+        }) from error
+    return {**weather, "location": {"name": location_name, "latitude": latitude, "longitude": longitude}}

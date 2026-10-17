@@ -25,12 +25,24 @@ import { usePageViewTracking } from '../analytics'
 export function AppLayout() {
   const [open, setOpen] = useState(false)
   const [userDropdown, setUserDropdown] = useState(false)
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
   const { user, loading, setUser } = useAuth()
   const navigate = useNavigate()
   const theme = useTheme()
   const { t } = useTranslation()
   const dropdownRef = useRef<HTMLDivElement>(null)
   usePageViewTracking()
+
+  useEffect(() => {
+    const online = () => setIsOnline(true)
+    const offline = () => setIsOnline(false)
+    window.addEventListener('online', online)
+    window.addEventListener('offline', offline)
+    return () => {
+      window.removeEventListener('online', online)
+      window.removeEventListener('offline', offline)
+    }
+  }, [])
 
   const isStaff = user?.role === 'admin' || user?.role === 'provider'
   // Staff browse the same public site as everyone else; chat and planner are traveler features. A Portal link leads back to work.
@@ -82,6 +94,9 @@ export function AppLayout() {
 
   return (
     <div className="app-frame-3d">
+      {!isOnline && <div role="status" aria-live="polite" style={{ position: 'sticky', top: 0, zIndex: 2000, padding: '8px 16px', textAlign: 'center', background: '#fff4d6', color: '#654a00', fontSize: 13 }}>
+        Đang ngoại tuyến. Nội dung đã lưu có thể cũ; lịch trống và đặt chỗ cần kết nối để xác nhận.
+      </div>}
       {/* Floating Glass Navigation Header with Scroll Mask */}
       <div className="header-outer-sticky">
         <header className="site-header-3d">

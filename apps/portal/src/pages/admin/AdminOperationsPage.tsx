@@ -65,11 +65,12 @@ export function AdminOperationsPage() {
       {error && <div className="mb-5"><Alert tone="red">{error}</Alert></div>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Worker email outbox" value={status?.worker.status || '—'} icon={Server} />
+        <StatCard label="Worker thông báo" value={status?.worker.status || '—'} icon={Server} />
         <StatCard label="Sự kiện đang hoạt động" value={status ? String(status.active_events) : '—'} icon={Waves} tone="violet" />
         <StatCard label="Thông báo đang chờ" value={String(counts.queued ?? '—')} icon={Bell} tone="amber" />
         <StatCard label="Thông báo lỗi" value={status ? String((counts.failed ?? 0) + (counts.retry ?? 0)) : '—'} icon={AlertTriangle} tone="red" />
         <StatCard label="Email đã cấu hình" value={status ? (status.channels.email_enabled ? 'Có' : 'Chưa') : '—'} icon={Mail} tone="green" />
+        <StatCard label="Web Push đã cấu hình" value={status ? (status.channels.webpush_enabled ? 'Có' : 'Chưa') : '—'} icon={Bell} tone="violet" />
         <StatCard label="Rate limit" value={status ? (status.rate_limit_enabled ? 'Bật' : 'Tắt') : '—'} icon={ShieldCheck} tone="gray" />
       </div>
 
