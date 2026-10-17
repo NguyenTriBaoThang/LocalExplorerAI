@@ -11,34 +11,14 @@ from app.adapters.routing.provider import RoutingConfigurationError, RoutingProv
 from app.db.session import get_db
 from app.models.entities import Event, Experience, ExperienceSlot, Feedback, Itinerary, ItineraryStop, ItineraryVersion, User
 from app.schemas.ai import FeedbackLabelRequest
-from app.schemas.planner import PlanConfirmationRequest, PlanPreviewResponse, PlanRequest, PlanResponse
+from app.schemas.planner import ItinerarySuggestionsResponse, PlanConfirmationRequest, PlanPreviewResponse, PlanRequest, PlanResponse
+from app.services.itinerary_suggestions import rank_suggestions_with_gemini, suggest_itineraries
 from app.services.plan_preview_token import InvalidPlanPreviewToken, issue_plan_preview_token, request_fingerprint, verify_plan_preview_token
 from app.services.planner_service import NoFeasiblePlan, PlanPreviewChanged, PlannerService
-from app.schemas.planner import ItinerarySuggestionsResponse
-from app.services.itinerary_suggestions import rank_suggestions_with_gemini, suggest_itineraries
 from app.api.guards import public, require_user
 from app.api.permissions import P
 
 router = APIRouter(prefix="/api", tags=["planner"])
-
-
-@router.post('/itineraries/suggestions', response_model=ItinerarySuggestionsResponse)
-def itinerary_suggestions(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True)), provider: StructuredOutputProvider = Depends(get_llm_provider)):
-    if user is not None and user.role != 'traveler':
-        raise HTTPException(status_code=403, detail={'code': 'ROLE_FORBIDDEN', 'message': 'Only traveler accounts can request itineraries.'})
-    if payload.origin_latitude is None:
-        raise HTTPException(status_code=422, detail={'code': 'TRIP_ENDPOINTS_REQUIRED', 'message': 'Choose both departure and return points.'})
-    try:
-        result = suggest_itineraries(db, payload)
-        return rank_suggestions_with_gemini(db, payload, result, provider)
-    except NoFeasiblePlan as error:
-        raise HTTPException(status_code=422, detail={'code': error.code, 'message': str(error), 'diagnostics': error.diagnostics}) from error
-    except UnsupportedTravelMode as error:
-        raise HTTPException(status_code=422, detail={'code': 'UNSUPPORTED_TRAVEL_MODE', 'message': str(error)}) from error
-    except RoutingConfigurationError as error:
-        raise HTTPException(status_code=503, detail={'code': 'ROUTING_NOT_CONFIGURED', 'message': str(error)}) from error
-    except RoutingProviderError as error:
-        raise HTTPException(status_code=502, detail={'code': 'ROUTING_PROVIDER_ERROR', 'message': str(error)}) from error
 
 
 def _create_preview(payload: PlanRequest, db: Session, user: User | None) -> dict:
@@ -50,6 +30,24 @@ def _create_preview(payload: PlanRequest, db: Session, user: User | None) -> dic
 def _check_traveler(user: User | None) -> None:
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Only traveler accounts can create itineraries."})
+
+
+@router.post("/itineraries/suggestions", response_model=ItinerarySuggestionsResponse)
+def itinerary_suggestions(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True)), provider: StructuredOutputProvider = Depends(get_llm_provider)):
+    _check_traveler(user)
+    if payload.origin_latitude is None:
+        raise HTTPException(status_code=422, detail={"code": "TRIP_ENDPOINTS_REQUIRED", "message": "Choose both departure and return points."})
+    try:
+        result = suggest_itineraries(db, payload)
+        return rank_suggestions_with_gemini(db, payload, result, provider)
+    except NoFeasiblePlan as error:
+        raise HTTPException(status_code=422, detail={"code": error.code, "message": str(error), "diagnostics": error.diagnostics}) from error
+    except UnsupportedTravelMode as error:
+        raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
+    except RoutingConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "ROUTING_NOT_CONFIGURED", "message": str(error)}) from error
+    except RoutingProviderError as error:
+        raise HTTPException(status_code=502, detail={"code": "ROUTING_PROVIDER_ERROR", "message": str(error)}) from error
 
 
 @router.post("/itineraries/plan", response_model=PlanResponse)

@@ -225,9 +225,17 @@ class ChatMessage(StrictModel):
     language: Literal["vi", "en"] = "vi"
     prior_user_messages: list[str] = Field(default_factory=list, max_length=30)
     conversation_id: str | None = Field(default=None, max_length=128)
+    trip_context: ChatTripContext | None = None
+    # Earlier clients send the parsed constraints back instead of a trip context; treat them as the planner constraints.
     previous_constraints: StructuredConstraints | None = None
     model_id: str | None = Field(default=None, max_length=100)
-    trip_context: ChatTripContext | None = None
+
+    @model_validator(mode="after")
+    def adopt_previous_constraints(self):
+        if self.previous_constraints is not None and (self.trip_context is None or self.trip_context.planner_constraints is None):
+            context = self.trip_context or ChatTripContext()
+            self.trip_context = context.model_copy(update={"has_planning_context": True, "planner_constraints": self.previous_constraints})
+        return self
 
     @model_validator(mode="after")
     def bound_conversation_context(self):

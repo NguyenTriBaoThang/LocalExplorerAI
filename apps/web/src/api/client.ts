@@ -352,37 +352,15 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export type PlanPayload = {
-  planning_style?: string
-  excluded_experience_ids?: string[]
-  preferred_slot_ids?: string[]
-  require_verified?: boolean
-  routing_mode?: 'configured' | 'demo'
-  start_at: string
-  end_at: string
-  group_size: number
-  budget_vnd: number
-  transport_mode: string
-  intent_weights: Record<string, number>
-  locked_experience_ids: string[]
-  locked_poi_ids?: string[]
-  origin_latitude?: number
-  origin_longitude?: number
-  origin_label?: string
-  destination_latitude?: number
-  destination_longitude?: number
-  destination_label?: string
-}
-
-export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanPayload; preview: Itinerary }
+export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanRequest; preview: Itinerary }
 export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' }
 
-export async function getItinerarySuggestions(payload: PlanPayload): Promise<ItinerarySuggestions> {
+export async function getItinerarySuggestions(payload: PlanRequest): Promise<ItinerarySuggestions> {
   const { data } = await api.post<ItinerarySuggestions>('/itineraries/suggestions', payload, { timeout: 180000 })
   return data
 }
 
-export async function createItinerary(payload: PlanPayload): Promise<Itinerary> {
+export async function createItinerary(payload: PlanRequest): Promise<Itinerary> {
   const { data } = await api.post<Itinerary>('/itineraries/plan', payload, { timeout: 120000 })
   return data
 }
@@ -507,4 +485,3 @@ export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): str
   if (error instanceof Error && error.message) return error.message
   return 'Đang hiển thị chế độ mô phỏng trực tuyến.'
 }
-

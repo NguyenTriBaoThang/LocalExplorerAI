@@ -5,7 +5,7 @@ export type SelectedExperience = { id: string; name: string; poiId: string }
 export type ChatLine = {
   id: string; role: 'assistant' | 'user'; text: string; time?: string
   snapshot?: Partial<ChatConstraints>
-  assistantMode?: 'openai_compatible' | 'gemini_compatible' | 'local_fallback'
+  assistantMode?: 'openai_compatible' | 'gemini_compatible' | 'local_fallback' | 'unavailable'
 }
 export type TripDraft = {
   date: string; startTime: string; endTime: string; groupSize: number; budget: number

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { categoryLabel } from '../../lib/catalog'
 import { MapPin, Pencil, Plus } from 'lucide-react'
 import { Alert, Button, Card, EmptyState, Field, IconButton, Input, Modal, PageHeader, Spinner, StatusBadge, Textarea, useToast } from '../../components/ui'
 import { errorMessage, partnerApi } from '../../lib/api'
@@ -87,7 +88,7 @@ export function PartnerPlacesPage() {
                   </div>
                   <IconButton icon={Pencil} label="Sửa" disabled={!profile.can_publish} onClick={() => { setError(''); setEvidence(blankInlineEvidence()); setEditing({ id: poi.id, draft: { name: poi.name, description: poi.description, district: poi.district ?? '', latitude: poi.latitude, longitude: poi.longitude, category: poi.category, address: poi.address } }) }} />
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>{poi.category}{poi.district && ` · ${poi.district}`}</span><StatusBadge status={poi.verification_status} /></div>
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>{categoryLabel(poi.category)}{poi.district && ` · ${poi.district}`}</span><StatusBadge status={poi.verification_status} /></div>
               </div>
             </Card>
           ))}

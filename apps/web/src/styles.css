@@ -927,8 +927,10 @@ a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 48px;
-  padding: 0 26px;
+  min-height: 48px;
+  padding: 10px 26px;
+  line-height: 1.25;
+  text-align: center;
   border-radius: var(--radius-full);
   background: linear-gradient(180deg, #34d399 0%, #10b981 40%, #059669 100%);
   color: #04271d;
@@ -976,8 +978,10 @@ a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 48px;
-  padding: 0 24px;
+  min-height: 48px;
+  padding: 10px 24px;
+  line-height: 1.25;
+  text-align: center;
   border-radius: var(--radius-full);
   background: linear-gradient(180deg, rgba(var(--surface-rgb), 0.85) 0%, rgba(var(--card-rgb), 0.95) 100%);
   border: 1px solid rgba(var(--fg-rgb), 0.14);
@@ -12986,6 +12990,7 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
   }
 }
 
+<<<<<<< HEAD
 .trip-print { display: none; }
 
 @media print {
@@ -13031,3 +13036,35 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 .trip-place-popup > button { position: absolute; right: 6px; top: 6px; z-index: 1; background: var(--bg-surface); border-radius: 50%; padding: 4px 9px; }
 @media (prefers-reduced-motion: reduce) { .trip-pin--searching { animation: none; } }
 @media print { body:has(.trip-print) nav, body:has(.trip-print) .app-header, body:has(.trip-print) footer { display: none !important; } }
+=======
+/* Signed-in phones: brand text + language + avatar + theme + menu together are wider than the pill and push the menu out. */
+@media (max-width: 440px) {
+  .header-inner:has(.user-dropdown-container) .brand-text {
+    display: none;
+  }
+}
+
+/* Home hero: stack the two calls to action on phones so each label fits on one line. */
+@media (max-width: 520px) {
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Site announcement / maintenance notice (set in the admin portal) */
+.site-notice-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.site-notice {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--emerald) 35%, transparent);
+  background: color-mix(in srgb, var(--emerald) 12%, transparent);
+  color: var(--text-main, inherit); font-size: 13.5px; line-height: 1.45;
+}
+.site-notice svg { flex-shrink: 0; margin-top: 2px; }
+.site-notice-warn { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.14); }
+
+/* Call-to-action row on place and experience detail pages */
+.place-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.place-actions > a { display: inline-flex; align-items: center; gap: 8px; }
+.home-showcase-links { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+>>>>>>> origin/uat

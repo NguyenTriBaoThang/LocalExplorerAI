@@ -63,8 +63,12 @@ export function Map3DGuidePanel({ landmark, modelId }: { landmark: ModelCalibrat
     setBusy(true)
 
     try {
-      const result = await sendChatMessage(text, conversationId, { previous_constraints: chatContext(trip, constraints), model_id: modelId })
-      if (result.structured_constraints) applyConstraints(result.structured_constraints)
+      const planning = chatContext(trip, constraints)
+      const result = await sendChatMessage({
+        message: text, language: 'vi', prior_user_messages: [], conversation_id: conversationId, model_id: modelId,
+        trip_context: { has_planning_context: Boolean(planning), planner_constraints: planning },
+      })
+      if (result.intent === 'planning' && result.structured_constraints) applyConstraints(result.structured_constraints)
       const reply = result.reply || result.structured_constraints?.clarification_question_vi || 'Bạn cho mình biết thêm thời gian và ngân sách để mình gợi ý phù hợp nhé.'
       setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: 'assistant', text: reply, assistantMode: result.assistant_mode === 'unavailable' ? undefined : result.assistant_mode }])
     } catch (reason) {

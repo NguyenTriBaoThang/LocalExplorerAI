@@ -52,6 +52,17 @@ Markdown hỗ trợ: `#`/`##`/`###`, đoạn văn, `- ` danh sách, `> ` trích 
 | Đối tác xem & trả lời | `GET /api/provider/me/reviews`, `POST /api/provider/me/reviews/{id}/reply` | ✅ portal `Đánh giá` |
 | Mọi người xem đánh giá + phản hồi | `GET /api/experiences/{id}/reviews` (tên tác giả rút gọn, VD "Anh N.") | ✅ panel dưới bản đồ ở Khám phá, `/experiences/:id` · ✅ điểm sao trên thẻ trải nghiệm (`rating_average`, `rating_count` trong `ExperienceRead`) |
 
+#### Đánh giá địa điểm (du khách + Google Maps, hai khối tách riêng)
+
+| Bước | API | Màn hình |
+|---|---|---|
+| Xem đánh giá địa điểm | `GET /api/pois/{id}/reviews` → `community` (đánh giá của du khách) và `google` (điểm sao, số lượt, liên kết Google Maps; chỉ cho danh thắng hoặc địa điểm đã gắn `google_place_id`) | ✅ `/places/:id` |
+| Viết / sửa / xóa đánh giá | `PUT/DELETE /api/pois/{id}/review`, `GET /api/pois/{id}/reviews/mine`. Điều kiện: đã đăng nhập **và có lịch trình chứa địa điểm này**; mỗi người một đánh giá | ✅ `/places/:id`, `Đánh giá của tôi` ở `/profile` |
+| Kiểm duyệt | `GET /api/admin/reviews`, `POST /api/admin/reviews/{kind}/{id}/status` (ẩn cần lý do, có nhật ký) | ✅ portal Quản trị → Đánh giá |
+| Gắn địa điểm với Google | Trường "Google Place ID" ở trình soạn thảo địa điểm; khóa API ở Tích hợp & API keys → Đánh giá Google Maps | ✅ portal |
+
+Google chỉ cung cấp điểm sao, số lượt và liên kết (không lấy nội dung chữ), lưu đệm `GOOGLE_PLACES_CACHE_HOURS` giờ, dừng khi đạt `GOOGLE_PLACES_MONTHLY_CALL_CAP` lượt/tháng.
+
 ### 1.5 Lượt truy cập (web gửi → portal thống kê)
 
 | Web gửi | Khi nào | Portal dùng ở |

@@ -28,10 +28,11 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, apiErrorMessage, confirmItinerary, getChatServiceStatus, getRoutingCapabilities, previewItinerary, sendChatMessage } from '../api/client'
 import type { ChatConstraints, ChatServiceStatus, PlanPreview, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
+import { useJourney, useTripField, useAssistantField, chatContext } from '../journey'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { LEG_COLORS, MapAdapter, type MapPoint, type MapRoute } from '../components/map/MapAdapter'
 
@@ -147,6 +148,7 @@ function FormattedChatMessage({ content }: { content: string }) {
 export function ChatPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const { trip, applyConstraints } = useJourney()
 
   const initialMessage = useMemo<ChatLine>(() => ({
     id: 'welcome',
@@ -155,13 +157,16 @@ export function ChatPage() {
     time: t('chat.justNow'),
   }), [t])
 
-  const [conversationId, setConversationId] = useState(makeConversationId)
-  const [messages, setMessages] = useState<ChatLine[]>([initialMessage])
-  const [userTurns, setUserTurns] = useState<string[]>([])
+  const [conversationId, setConversationId] = useAssistantField('conversationId')
+  const [messages, setMessages] = useAssistantField('messages')
+  const userTurns = messages.filter((message) => message.role === 'user').map((message) => message.text)
   const [planningTurns, setPlanningTurns] = useState<string[]>([])
-  const [constraints, setConstraints] = useState<ChatConstraints | null>(null)
-  const [draft, setDraft] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [storedConstraints, setConstraints] = useAssistantField('constraints')
+  const constraints = chatContext(trip, storedConstraints)
+  const [busy, setBusy] = useAssistantField('busy')
+  // Place and experience pages link here with ?q=<question> to start the conversation about that place.
+  const [searchParams] = useSearchParams()
+  const [draft, setDraft] = useState(() => (searchParams.get('q') ?? '').slice(0, 500))
   const [creating, setCreating] = useState(false)
   const [savingPreview, setSavingPreview] = useState(false)
   const [error, setError] = useState('')
@@ -169,9 +174,9 @@ export function ChatPage() {
   const [poiError, setPoiError] = useState('')
   const [routingCapabilities, setRoutingCapabilities] = useState<RoutingCapabilities | null>(null)
   const [chatServiceStatus, setChatServiceStatus] = useState<ChatServiceStatus | null>(null)
-  const [date, setDate] = useState('')
-  const [originId, setOriginId] = useState('')
-  const [destinationId, setDestinationId] = useState('')
+  const [date, setDate] = useTripField('date')
+  const [originId, setOriginId] = useTripField('originId')
+  const [destinationId, setDestinationId] = useTripField('destinationId')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
   const [mobileTab, setMobileTab] = useState<'chat' | 'preview' | 'hud'>('chat')
   const [planPreview, setPlanPreview] = useState<PlanPreview | null>(null)
@@ -430,7 +435,6 @@ export function ChatPage() {
     const nowStr = formatTimeOnly(new Date(), locale)
     setDraft('')
     setError('')
-    setUserTurns(nextTurns)
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: 'user', text, time: nowStr }])
     setBusy(true)
 
@@ -441,6 +445,7 @@ export function ChatPage() {
         language: locale,
         prior_user_messages: planningTurns.slice(-30),
         conversation_id: conversationId,
+        model_id: trip.modelId || undefined,
         trip_context: {
           trip_date: date || null,
           has_planning_context: Boolean(constraints),
@@ -456,7 +461,7 @@ export function ChatPage() {
       const planningConstraints = result.intent === 'planning' ? result.structured_constraints : null
       const effectiveDate = planningConstraints?.trip_date || date
       if (planningConstraints) {
-        setConstraints(planningConstraints)
+        applyConstraints(planningConstraints)
         if (planningConstraints.trip_date) setDate(planningConstraints.trip_date)
         setPlanPreview(null)
         setPreviewRequest(null)
@@ -518,7 +523,6 @@ export function ChatPage() {
   function startNewConversation() {
     setConversationId(makeConversationId())
     setMessages([initialMessage])
-    setUserTurns([])
     setPlanningTurns([])
     setConstraints(null)
     setDraft('')

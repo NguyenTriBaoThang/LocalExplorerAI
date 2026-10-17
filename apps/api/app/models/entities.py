@@ -156,6 +156,8 @@ class POI(Base):
     tags: Mapped[list[str]] = mapped_column(JSON_DOCUMENT, default=list)
     is_landmark: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Google Maps place id, set by an administrator or matched automatically; only used to read the public rating.
+    google_place_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Untouched, source-backed place facts (e.g. OSM tags and image credits).
     # These are descriptive catalog metadata, not proof of operational verification.
     details: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
@@ -717,6 +719,63 @@ class ItineraryClaimToken(Base):
 
 
 # Register the auth tables on Base (they live in their own module to keep the auth package independent).
+
+class PlaceReview(Base):
+    """A signed-in traveler's review of a place. One per user and place, editable; only people who planned the place may write one."""
+
+    __tablename__ = "place_reviews"
+    __table_args__ = (
+        UniqueConstraint("poi_id", "user_id", name="uq_place_reviews_poi_user"),
+        CheckConstraint("rating BETWEEN 1 AND 5", name="ck_place_reviews_rating"),
+        CheckConstraint("status IN ('published', 'hidden')", name="ck_place_reviews_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    poi_id: Mapped[str] = mapped_column(ForeignKey("pois.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    visited_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="published")
+    moderation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    moderated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PlaceExternalRating(Base):
+    """The last public rating read from an external source (Google Maps) for a place, kept briefly and refreshed lazily."""
+
+    __tablename__ = "place_external_ratings"
+    __table_args__ = (
+        UniqueConstraint("poi_id", "source", name="uq_place_external_ratings_poi_source"),
+        CheckConstraint("status IN ('ok', 'not_found', 'error')", name="ck_place_external_ratings_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    poi_id: Mapped[str] = mapped_column(ForeignKey("pois.id", ondelete="CASCADE"), index=True)
+    source: Mapped[str] = mapped_column(String(24), default="google")
+    external_place_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    matched_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rating_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    maps_uri: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="ok")
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ExternalApiUsage(Base):
+    """Billable calls made to a third-party API in one calendar month, so a hard monthly cap can be enforced."""
+
+    __tablename__ = "external_api_usage"
+    __table_args__ = (UniqueConstraint("service", "period", name="uq_external_api_usage_service_period"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    service: Mapped[str] = mapped_column(String(40))
+    period: Mapped[str] = mapped_column(String(7))   # YYYY-MM
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+
+
 from app.models import auth_entities  # noqa: E402,F401
 from app.models import trip_entities  # noqa: E402,F401
 
@@ -815,7 +874,11 @@ class ExperienceReview(Base):
     reply: Mapped[str | None] = mapped_column(Text, nullable=True)
     replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="published")
+    moderation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    moderated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # set when the author edits
+
 
 class MeshyJob(Base):
     __tablename__ = "meshy_jobs"

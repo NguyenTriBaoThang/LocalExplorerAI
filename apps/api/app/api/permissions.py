@@ -72,6 +72,7 @@ class P:
     ADMIN_PLACES = _p("admin:places", "Create, edit, publish and hide places and landmarks")
     ADMIN_CONTENT = _p("admin:content", "Manage banners, articles and collections on the traveler web")
     ADMIN_ANALYTICS = _p("admin:analytics", "Read traffic analytics")
+    ADMIN_REVIEWS = _p("admin:reviews", "Hide and restore traveler reviews of places and experiences")
     OPS_READ = _p("ops:read", "Read operational status (also grantable to service accounts)")
 
 

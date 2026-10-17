@@ -68,7 +68,11 @@ export function ExperiencePage() {
                 ))}
               </ul>
             )}
-            <Link to={`/explore?focus=${experience.id}`} className="btn-primary-3d" style={{ display: 'inline-flex', marginTop: 16 }}>{vi ? 'Chọn giờ và đặt chỗ' : 'Choose a time and book'}</Link>
+            <div className="place-actions">
+              <Link to={`/planner?poi=${encodeURIComponent(experience.poi_id)}`} className="btn-primary-3d">{vi ? 'Thêm vào lịch trình để đặt chỗ' : 'Add to an itinerary to book'}</Link>
+              <Link to={`/chat?q=${encodeURIComponent(vi ? `Xếp lịch trình có "${experience.name}"` : `Plan a day that includes "${experience.name}"`)}`} className="btn-secondary-3d">{vi ? 'Nhờ AI xếp lịch' : 'Ask the AI to plan'}</Link>
+            </div>
+            <p className="review-text" style={{ marginTop: 8, fontSize: 13 }}>{vi ? 'Đặt chỗ được thực hiện trong lịch trình của bạn, sau khi hệ thống chọn khung giờ phù hợp.' : 'Booking happens inside your itinerary, once a suitable time slot is picked.'}</p>
           </section>
 
           <ReviewsPanel experienceId={experience.id} />

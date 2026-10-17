@@ -25,18 +25,21 @@ def chat_message(
 ):
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "AI chat is a traveler feature."})
+    context = landmark_context(db, payload.model_id) if payload.model_id else None
     try:
-        result = route_chat_message(payload, provider, db).model_dump()
-        if payload.model_id:
-            context = landmark_context(db, payload.model_id)
-            if context:
-                result["reply"] = "\n\n".join(filter(None, [context["description"], context["notice"], result["reply"]]))
-                result["landmark_context"] = context
-        return result
+        response = route_chat_message(payload, provider, db).model_dump()
     except LLMNotConfigured as error:
         raise HTTPException(status_code=503, detail={"code": "LLM_NOT_CONFIGURED", "message": "Configure an AI provider or enable LLM_FALLBACK_ENABLED."}) from error
     except LLMProviderError as error:
         raise HTTPException(status_code=502, detail={"code": "LLM_PROVIDER_ERROR", "message": "The external LLM is unavailable and the local fallback is disabled."}) from error
+    return _with_context(response, context)
+
+
+def _with_context(response: dict, context: dict | None) -> dict:
+    if context:
+        response["reply"] = "\n\n".join(filter(None, [context["description"], context["notice"], response["reply"]]))
+        response["landmark_context"] = context
+    return response
 
 
 @router.get("/status", dependencies=[Depends(public('reports whether the concierge is LLM-backed or on the fallback'))])

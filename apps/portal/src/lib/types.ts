@@ -248,6 +248,7 @@ export type PlaceDraft = {
   tags: string[]
   is_landmark: boolean
   source_url: string | null
+  google_place_id?: string | null
 }
 
 export type AdminPlace = PlaceDraft & {
@@ -388,3 +389,5 @@ export type AdminCustomerHistory = {
   behavior_history_visible: boolean
   limit: number
 }
+
+export type SiteSettings = { site_announcement: string; maintenance_mode: boolean }

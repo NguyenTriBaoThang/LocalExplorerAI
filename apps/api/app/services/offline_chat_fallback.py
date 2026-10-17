@@ -261,6 +261,10 @@ def build_offline_constraints(
     intent_weights = _parse_intents(folded) if has_explicit_intent or prior_constraints is None else prior_constraints.intent_weights
     locked_pois = _parse_locked_pois(message) or (prior_constraints.locked_pois if prior_constraints else [])
 
+    if prior_constraints:
+        budget_vnd = budget_vnd if budget_vnd is not None else prior_constraints.budget_vnd
+        locked_pois = list(dict.fromkeys([*prior_constraints.locked_pois, *locked_pois]))[:10]
+
     missing_fields = [
         field for field, value in (
             ("group_size", group_size),
