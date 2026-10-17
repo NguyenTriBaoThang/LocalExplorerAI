@@ -42,6 +42,12 @@ def guarded(db: Session, events):
     """Chạy generator chuỗi SSE của một việc; lỗi → event error tiếng Việt."""
     try:
         yield from events
+    except openai.APITimeoutError:
+        db.rollback()
+        yield sse({"type": "error", "message": "AI mất quá nhiều thời gian lập lịch trình. Bạn thử lại hoặc giảm số ngày nhé."})
+    except openai.RateLimitError:
+        db.rollback()
+        yield sse({"type": "error", "message": "AI đang đạt hạn mức. Vui lòng thử lại sau; lịch trình đã lưu vẫn được giữ."})
     except (openai.OpenAIError, LLMProviderError):
         db.rollback()
         logger.exception("Lỗi gọi AI khi lập lịch trình")

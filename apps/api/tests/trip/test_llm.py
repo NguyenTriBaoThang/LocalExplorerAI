@@ -4,6 +4,21 @@ import openai
 from app.services.trip import llm
 
 
+def test_timeout_is_reported_without_losing_saved_trip(db_session):
+    import json
+    from app.services.trip.flow import guarded
+
+    def timed_out():
+        raise openai.APITimeoutError(request=httpx.Request("POST", "https://example.test"))
+        yield
+
+    events = list(guarded(db_session, timed_out()))
+    event = json.loads(events[0].removeprefix("data: "))
+    assert event["type"] == "error"
+    assert "quá nhiều thời gian" in event["message"]
+    assert "kiểm tra mạng" not in event["message"]
+
+
 def test_embed_returns_none_without_sleeping_on_rate_limit(db_session, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("must not sleep on the live path")

@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     gemini_embed_model: str = "gemini-embedding-001"
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
+    trip_ai_timeout_seconds: float = 90.0
     llm_fallback_enabled: bool = False
     app_signing_secret: str | None = None
     # New auth (see docs/auth-design.md). RS256 keys are base64-encoded PEM in the environment, in every
