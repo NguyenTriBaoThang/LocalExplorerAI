@@ -13166,7 +13166,6 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
   }
 }
 
-<<<<<<< HEAD
 .trip-print { display: none; }
 
 @media print {
@@ -13212,7 +13211,6 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 .trip-place-popup > button { position: absolute; right: 6px; top: 6px; z-index: 1; background: var(--bg-surface); border-radius: 50%; padding: 4px 9px; }
 @media (prefers-reduced-motion: reduce) { .trip-pin--searching { animation: none; } }
 @media print { body:has(.trip-print) nav, body:has(.trip-print) .app-header, body:has(.trip-print) footer { display: none !important; } }
-=======
 /* Signed-in phones: brand text + language + avatar + theme + menu together are wider than the pill and push the menu out. */
 @media (max-width: 440px) {
   .header-inner:has(.user-dropdown-container) .brand-text {
@@ -13243,4 +13241,3 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 .place-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
 .place-actions > a { display: inline-flex; align-items: center; gap: 8px; }
 .home-showcase-links { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
->>>>>>> origin/uat
