@@ -9,7 +9,8 @@
     "prebuild": "node scripts/sync-3d-model-packs.mjs",
     "build": "tsc --noEmit --incremental false --pretty -p tsconfig.json && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "lint": "tsc --noEmit --incremental false --pretty -p tsconfig.json"
+    "lint": "tsc --noEmit --incremental false --pretty -p tsconfig.json",
+    "test": "node scripts/test-trip.mjs"
   },
   "dependencies": {
     "@goongmaps/goong-js": "^1.0.9",

@@ -17,7 +17,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities, getItinerarySuggestions, type ItinerarySuggestion, type ItinerarySuggestions } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
-import type { GeocodeResponse, POI, RoutingCapabilities } from '../types'
+import type { GeocodeResponse, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
 import { useJourney, useTripField } from '../journey'
 import { ItinerarySuggestions as SuggestionsPanel } from '../components/journey/ItinerarySuggestions'
@@ -206,7 +206,7 @@ export function PlannerPage() {
         end_at: toIso(endTime),
         group_size: groupSize,
         budget_vnd: budget,
-        transport_mode: transport,
+        transport_mode: transport as PlanRequest['transport_mode'],
         intent_weights: Object.fromEntries(selectedIntents.map((intent) => [intent, 1])),
         require_verified: !trip.demo,
         routing_mode: 'configured',

@@ -13,4 +13,4 @@ RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir -r requiremen
 COPY . .
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--ws-max-size", "65536"]

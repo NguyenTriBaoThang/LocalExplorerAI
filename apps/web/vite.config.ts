@@ -11,7 +11,10 @@ export default defineConfig({
       clientPort: 8080,
     },
     proxy: {
-      '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+      '/api': {
+        target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+        ws: true,
+      },
       '/health': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
     },
   },

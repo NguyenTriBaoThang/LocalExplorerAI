@@ -10,8 +10,9 @@ import { AboutPage } from './pages/AboutPage'
 import { AuthPage } from './pages/AuthPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SharedItineraryPage } from './pages/SharedItineraryPage'
+import { CollaborativeItineraryPage } from './pages/CollaborativeItineraryPage'
 import { ComparePage } from './pages/ComparePage'
-import { ChatPage } from './pages/ChatPage'
+import ChatPage from './pages/TripChatPage'
 import { Map3DPage } from './pages/Map3DPage'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/RecoveryPages'
 import { GuidePage, GuidesPage } from './pages/GuidesPage'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([{
       { path: '/itinerary/:id', element: <ItineraryPage /> },
     ] },
     { path: '/shared/:token', element: <SharedItineraryPage /> },
+    { path: '/collaborate/:token', element: <CollaborativeItineraryPage /> },
     { path: '/forgot-password', element: <ForgotPasswordPage /> },
     { path: '/reset-password', element: <ResetPasswordPage /> },
     { path: '/verify-email', element: <VerifyEmailPage /> },

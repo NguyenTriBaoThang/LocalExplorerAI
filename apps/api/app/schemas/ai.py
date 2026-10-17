@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -14,11 +14,13 @@ class StrictModel(BaseModel):
 
 
 class StructuredConstraints(StrictModel):
+    trip_date: date | None = None
     group_size: int | None = Field(default=None, ge=1, le=50)
     start_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     return_deadline: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     budget_vnd: int | None = Field(default=None, ge=0)
     travel_mode: TravelMode
+    travel_mode_confirmed: bool = False
     intent_weights: dict[IntentName, float]
     locked_pois: list[str]
     is_complete: bool
@@ -167,11 +169,84 @@ class WeatherAdjustment(StrictModel):
     advisory_message_vi: str
 
 
+ChatRoute = Literal["planning", "travel_information", "out_of_scope"]
+ChatTopic = Literal["weather", "place", "activity", "opening_hours", "food", "transport", "other"]
+
+
+class ChatIntentDecision(StrictModel):
+    intent: ChatRoute
+    topic: ChatTopic | None = None
+
+
+class TravelQuestionAnswer(StrictModel):
+    reply: str = Field(min_length=1, max_length=2000)
+
+
+class ChatDestinationContext(StrictModel):
+    name: str = Field(min_length=1, max_length=180)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class ChatTripContext(StrictModel):
+    trip_date: date | None = None
+    destination: ChatDestinationContext | None = None
+    has_planning_context: bool = False
+    planner_constraints: StructuredConstraints | None = None
+
+
+class ChatWeatherForecast(StrictModel):
+    location: str
+    forecast_date: date
+    precipitation_probability_pct: int = Field(ge=0, le=100)
+    precipitation_sum_mm: float = Field(ge=0)
+    retrieved_at: datetime
+    source: Literal["Open-Meteo"] = "Open-Meteo"
+    source_url: str
+    attribution: str
+
+
+class ChatReply(StrictModel):
+    status: Literal["parsed", "fallback"]
+    assistant_mode: Literal["openai_compatible", "gemini_compatible", "local_fallback", "unavailable"]
+    conversation_id: str | None = None
+    prompt_version: str | None = None
+    fallback_version: str | None = None
+    fallback_reason: Literal["llm_not_configured", "llm_unavailable", "invalid_model_output"] | None = None
+    intent: ChatRoute
+    reply: str = Field(min_length=1, max_length=4000)
+    structured_constraints: StructuredConstraints | None = None
+    weather_forecast: ChatWeatherForecast | None = None
+    landmark_context: dict | None = None
+
+
 class ChatMessage(StrictModel):
-    message: str = Field(min_length=1, max_length=4000)
+    message: str = Field(min_length=1, max_length=1000)
+    language: Literal["vi", "en"] = "vi"
+    prior_user_messages: list[str] = Field(default_factory=list, max_length=30)
     conversation_id: str | None = Field(default=None, max_length=128)
+    trip_context: ChatTripContext | None = None
+    # Earlier clients send the parsed constraints back instead of a trip context; treat them as the planner constraints.
     previous_constraints: StructuredConstraints | None = None
     model_id: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def adopt_previous_constraints(self):
+        if self.previous_constraints is not None and (self.trip_context is None or self.trip_context.planner_constraints is None):
+            context = self.trip_context or ChatTripContext()
+            self.trip_context = context.model_copy(update={"has_planning_context": True, "planner_constraints": self.previous_constraints})
+        return self
+
+    @model_validator(mode="after")
+    def bound_conversation_context(self):
+        if self.previous_constraints is not None and self.trip_context is None:
+            self.trip_context = ChatTripContext(
+                has_planning_context=True, planner_constraints=self.previous_constraints,
+                trip_date=self.previous_constraints.trip_date,
+            )
+        if len(self.message) + sum(len(message) for message in self.prior_user_messages) > 3900:
+            raise ValueError("The current and prior user messages must fit within 3,900 characters")
+        return self
 
 
 class ExperienceTagRequest(StrictModel):

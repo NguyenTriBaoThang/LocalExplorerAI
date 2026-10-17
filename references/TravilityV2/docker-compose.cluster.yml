@@ -1,0 +1,139 @@
+# Cụm phân tán (spec scale §4). T5: nginx + 2 api + 2 planner + 3 planner-agent + llm-gateway + places + redis
+# + pg-catalog và bản sao + 2 shard = 15 container.
+# Dùng chung cổng 5432/6379/8000 với docker-compose.yml → `docker compose down` trước khi bật cụm.
+name: travility-cluster
+x-pg: &pg
+  image: pgvector/pgvector:pg17
+  environment: &pg_env
+    POSTGRES_USER: travility
+    POSTGRES_PASSWORD: travility
+    POSTGRES_DB: travility
+  healthcheck:
+    # -h 127.0.0.1: chỉ báo sẵn sàng khi server thật đã nghe TCP, không phải server tạm lúc initdb
+    test: ["CMD-SHELL", "pg_isready -U travility -h 127.0.0.1"]
+    interval: 2s
+    retries: 30
+services:
+  pg-catalog:  # database chung, node chính: users, destinations, places
+    <<: *pg
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pgcatalog:/var/lib/postgresql/data
+      - ./docker/initdb-catalog:/docker-entrypoint-initdb.d
+  pg-catalog-replica:  # bản sao đọc (streaming replication bất đồng bộ); chỉ service places đọc
+    <<: *pg
+    environment:
+      <<: *pg_env
+      PGPASSWORD: travility
+    entrypoint: ["/bin/sh", "/replica.sh"]
+    volumes:
+      - pgreplica:/var/lib/postgresql/data
+      - ./docker/replica.sh:/replica.sh:ro
+    depends_on:
+      pg-catalog:
+        condition: service_healthy
+  pg-shard-0:  # trips, itineraries, proposals, messages của User có user_id % 2 == 0
+    <<: *pg
+    volumes:
+      - pgshard0:/var/lib/postgresql/data
+  pg-shard-1:
+    <<: *pg
+    volumes:
+      - pgshard1:/var/lib/postgresql/data
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+  llm-gateway:
+    build: ./server
+    command: ["uv", "run", "--no-dev", "uvicorn", "app.gateway:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file: ./server/.env  # LLM_* / EMBED_* ở đây là provider thật
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      GATEWAY_CACHE: ${GATEWAY_CACHE:-on}
+      GATEWAY_CHAT_TTL: ${GATEWAY_CHAT_TTL:-86400}
+    ports: ["127.0.0.1:8001:8000"]
+    depends_on:
+      redis:
+        condition: service_healthy
+  places:  # tìm Place bằng vector, Place tương tự, Destination, km Goong; đọc bản sao, bản sao chết thì đọc node chính
+    build: ./server
+    command: ["uv", "run", "--no-dev", "uvicorn", "app.places_service:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file: ./server/.env
+    environment:
+      DATABASE_URL: postgresql://travility:travility@pg-catalog:5432/travility
+      CATALOG_REPLICA_URL: postgresql://travility:travility@pg-catalog-replica:5432/travility
+      REDIS_URL: redis://redis:6379/0
+      EMBED_BASE_URL: http://llm-gateway:8000/v1
+      PLACES_URL: ""  # service này không bao giờ gọi chính nó
+    ports: ["127.0.0.1:8002:8000"]
+    depends_on:
+      pg-catalog:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-gateway:
+        condition: service_started
+  api:
+    build: ./server
+    env_file: ./server/.env
+    environment: &app_env
+      DATABASE_URL: postgresql://travility:travility@pg-catalog:5432/travility
+      CATALOG_REPLICA_URL: postgresql://travility:travility@pg-catalog-replica:5432/travility  # đăng nhập khi node chính chết
+      SHARD_URLS: postgresql://travility:travility@pg-shard-0:5432/travility,postgresql://travility:travility@pg-shard-1:5432/travility
+      PLACES_URL: http://places:8000
+      REDIS_URL: redis://redis:6379/0
+      LLM_BASE_URL: http://llm-gateway:8000/v1
+      EMBED_BASE_URL: http://llm-gateway:8000/v1
+      DEMO_TODAY: ${DEMO_TODAY:-}
+      PLAN_RPM: ${PLAN_RPM:-5}
+      PLANNER_MODE: ${PLANNER_MODE:-single}
+    deploy:
+      replicas: 2
+    depends_on: &app_deps
+      pg-catalog:
+        condition: service_healthy
+      pg-shard-0:
+        condition: service_healthy
+      pg-shard-1:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-gateway:
+        condition: service_started
+      places:
+        condition: service_started
+  planner:
+    build: ./server
+    command: ["uv", "run", "--no-dev", "python", "-m", "app.worker"]
+    env_file: ./server/.env
+    environment: *app_env
+    deploy:
+      replicas: 2
+    depends_on: *app_deps
+  planner-agent:  # agent chuyên gia của lập lịch đa agent (PLANNER_MODE=multi); đọc stream agent_jobs
+    build: ./server
+    command: ["uv", "run", "--no-dev", "python", "-m", "app.worker", "--stream", "agent_jobs"]
+    env_file: ./server/.env
+    environment: *app_env
+    deploy:
+      replicas: 3
+    depends_on: *app_deps
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports: ["127.0.0.1:8000:80"]
+    depends_on: [api]
+volumes:
+  pgcatalog: {}
+  pgreplica: {}
+  pgshard0: {}
+  pgshard1: {}
+  redisdata: {}

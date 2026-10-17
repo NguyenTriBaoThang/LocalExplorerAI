@@ -63,12 +63,16 @@ def suggest_itineraries(db, request: PlanRequest):
         try:
             planner.engine = SuggestionPlanner(candidate.planning_style) if candidate.planning_style != 'balanced' else HeuristicPlanner()
             preview = planner.plan(candidate, persist=False)
+            # Unsaved previews have no stored itinerary; the request id identifies the option until one is confirmed.
+            preview['itinerary_id'] = preview['request_id']
         except NoFeasiblePlan as error:
             # Report diagnostics from the most relaxed attempt. Returning the
             # first error can falsely blame a pin even after it was released.
             last_error = error
             continue
 
+        # Suggestions use an ephemeral option identifier; this is not a saved itinerary.
+        preview['itinerary_id'] = preview['request_id']
         signature = tuple(stop['experience_id'] for stop in preview['stops'])
         if signature not in seen_routes:
             seen_routes.add(signature)

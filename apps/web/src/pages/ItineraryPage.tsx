@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,19 +27,24 @@ import {
   apiErrorMessage,
   beginBookingCheckout,
   cancelBooking,
+  createCollaborationInvite,
   createShareLink,
+  getOwnerCollaborationProposals,
   getItinerary,
   getItineraryVersions,
   getMyBookings,
   getNotifications,
   requestReplanAdvice,
   requestBooking,
+  revokeCollaborationInvite,
   submitFeedback,
 } from '../api/client'
 import { MapAdapter, LEG_COLORS, type MapPoint, type MapRoute } from '../components/map/MapAdapter'
 import { SimulatedBadge } from '../components/common/StatusBadge'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
-import type { Booking, Itinerary } from '../types'
+import { CollaborationPanel } from '../components/itinerary/CollaborationPanel'
+import { useItineraryCollaboration } from '../hooks/useItineraryCollaboration'
+import type { Booking, Itinerary, ItineraryCollaborationEvent, ItineraryEditProposal } from '../types'
 import { useAuth } from '../auth'
 import { useTranslation } from '../i18n'
 
@@ -120,6 +125,12 @@ export function ItineraryPage() {
   const [selectedId, setSelectedId] = useState('')
   const [copied, setCopied] = useState(false)
   const { user } = useAuth()
+  const [canManageCollaboration, setCanManageCollaboration] = useState(false)
+  const [inviteActive, setInviteActive] = useState(false)
+  const [collaborationInviteUrl, setCollaborationInviteUrl] = useState('')
+  const [collaborationProposals, setCollaborationProposals] = useState<ItineraryEditProposal[]>([])
+  const [presenceCount, setPresenceCount] = useState(0)
+  const [collaborationVersion, setCollaborationVersion] = useState(1)
   const [shareToken, setShareToken] = useState('')
   const [shareUrl, setShareUrl] = useState('')
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now())
@@ -168,6 +179,65 @@ export function ItineraryPage() {
     >
   >({})
 
+  const onCollaborationEvent = useCallback((event: ItineraryCollaborationEvent) => {
+    if (event.type === 'presence') {
+      setPresenceCount(event.count)
+    } else if (event.type === 'proposal_created') {
+      setCollaborationProposals((items) => [event.proposal, ...items.filter((item) => item.id !== event.proposal.id)])
+    } else if (event.type === 'proposal_reviewed') {
+      setCollaborationVersion(event.current_version)
+      setCollaborationProposals((items) => items.map((item) => item.id === event.proposal.id ? event.proposal : item))
+      if (event.error) setNotice(event.error)
+    } else if (event.type === 'itinerary_updated') {
+      setCollaborationVersion(event.current_version)
+      if (event.itinerary) setItinerary(event.itinerary)
+      else void getItinerary(id).then(setItinerary).catch(() => undefined)
+      void getItineraryVersions(id).then((rows) => {
+        setVersions(rows)
+        setCollaborationVersion(rows[rows.length - 1]?.version ?? event.current_version)
+      }).catch(() => undefined)
+    } else if (event.type === 'error') {
+      const key = `collaboration.error.${event.code}`
+      const translated = t(key)
+      setNotice(translated === key ? event.message : translated)
+    }
+  }, [id, t])
+
+  const ownerCollaborationSocket = useItineraryCollaboration({
+    url: canManageCollaboration && user?.role === 'traveler' && id ? `/api/itineraries/${encodeURIComponent(id)}/collaboration/ws` : null,
+    onEvent: onCollaborationEvent,
+    identityKey: user?.id,
+  })
+
+  async function handleCreateCollaborationInvite() {
+    try {
+      const response = await createCollaborationInvite(id)
+      const absoluteUrl = new URL(response.invite_url, window.location.origin).toString()
+      setInviteActive(true)
+      setCollaborationInviteUrl(absoluteUrl)
+      setNotice(locale === 'en' ? 'Collaboration invite created. Copy and send this link to your group.' : 'Đã tạo link mời cộng tác. Hãy sao chép và gửi link cho mọi người.')
+    } catch (reason) {
+      setNotice(apiErrorMessage(reason, locale))
+    }
+  }
+
+  async function handleRevokeCollaborationInvite() {
+    try {
+      await revokeCollaborationInvite(id)
+      setInviteActive(false)
+      setCollaborationInviteUrl('')
+      setNotice(locale === 'en' ? 'Collaboration invite revoked.' : 'Đã thu hồi link mời cộng tác.')
+    } catch (reason) {
+      setNotice(apiErrorMessage(reason, locale))
+    }
+  }
+
+  function handleReviewCollaborationProposal(proposalId: string, decision: 'approve' | 'reject') {
+    const sent = ownerCollaborationSocket.send({ type: 'review_proposal', proposal_id: proposalId, decision })
+    if (!sent) setNotice(t('collaboration.waitForConnection'))
+    return sent
+  }
+
   useEffect(() => {
     if (!id) return
     getItinerary(id)
@@ -187,8 +257,52 @@ export function ItineraryPage() {
 
   useEffect(() => {
     if (!user || !id) return
-    getItineraryVersions(id).then(setVersions).catch(() => setVersions([]))
+    getItineraryVersions(id).then((rows) => {
+      setVersions(rows)
+      setCollaborationVersion(rows[rows.length - 1]?.version ?? 1)
+    }).catch(() => setVersions([]))
   }, [id, user?.id])
+
+  useEffect(() => {
+    if (!user || user.role !== 'traveler' || !id) {
+      setCanManageCollaboration(false)
+      setInviteActive(false)
+      setCollaborationProposals([])
+      return
+    }
+    let active = true
+    getOwnerCollaborationProposals(id)
+      .then((result) => {
+        if (!active) return
+        setCanManageCollaboration(true)
+        setInviteActive(result.invite_active)
+        setCollaborationVersion(result.current_version)
+        setCollaborationProposals(result.proposals)
+      })
+      .catch(() => {
+        if (active) setCanManageCollaboration(false)
+      })
+    return () => { active = false }
+  }, [id, user?.id, user?.role])
+
+  useEffect(() => {
+    if (ownerCollaborationSocket.state !== 'connected' || !canManageCollaboration || !id) return
+    let active = true
+    void getItinerary(id).then((snapshot) => {
+      if (active) setItinerary(snapshot)
+    }).catch(() => undefined)
+    void getOwnerCollaborationProposals(id).then((result) => {
+      if (!active) return
+      setInviteActive(result.invite_active)
+      setCollaborationVersion(result.current_version)
+      setCollaborationProposals(result.proposals)
+    }).catch(() => undefined)
+    void getItineraryVersions(id).then((rows) => {
+      if (!active) return
+      setVersions(rows)
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [ownerCollaborationSocket.state, canManageCollaboration, id])
 
   useEffect(() => {
     if (!user || user.role !== 'traveler' || !id) {
@@ -527,6 +641,21 @@ export function ItineraryPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {canManageCollaboration && (
+        <CollaborationPanel
+          itinerary={itinerary}
+          currentVersion={collaborationVersion}
+          proposals={collaborationProposals}
+          inviteActive={inviteActive}
+          inviteUrl={collaborationInviteUrl}
+          connectionState={ownerCollaborationSocket.state}
+          presenceCount={presenceCount}
+          onCreateInvite={handleCreateCollaborationInvite}
+          onRevokeInvite={handleRevokeCollaborationInvite}
+          onReview={handleReviewCollaborationProposal}
+        />
       )}
 
       {/* Cancelled Slot Alerts & Replan Advice */}

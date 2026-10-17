@@ -20,6 +20,20 @@ NEW_PASSWORD = "a-brand-new-passphrase"
 SHADOW_EMAIL = "zalo_555@localexplorer.site"
 
 
+def test_auto_verify_registration_without_email(client, db_session, monkeypatch):
+    monkeypatch.setattr(auth_routes.settings, 'auto_verify_email', True)
+    def no_mail(*args, **kwargs):
+        raise AssertionError('Automatic verification must not send an email')
+    monkeypatch.setattr(auth_routes, 'queue_account_link', no_mail)
+    response = client.post('/api/auth/register', json={
+        'email': 'automatic@example.test', 'password': PASSWORD, 'display_name': 'Automatic',
+    })
+    assert response.status_code == 201
+    user = db_session.scalar(select(User).where(User.email == 'automatic@example.test'))
+    assert user.email_verified_at is not None
+    assert user.role == 'traveler'
+
+
 @pytest.fixture
 def mailbox(monkeypatch):
     """Capture the raw single-use tokens that would be emailed (the outbox only stores rows when SMTP is configured)."""

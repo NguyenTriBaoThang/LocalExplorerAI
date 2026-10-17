@@ -4,6 +4,11 @@ import httpx
 from pydantic import BaseModel, Field, ConfigDict
 from app.services.integration_config import resolve_integration_value
 
+class AssistantProviderError(RuntimeError):
+    def __init__(self, message: str, status_code: int = 502):
+        super().__init__(message)
+        self.status_code = status_code
+
 class Brief(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reply: str = Field(min_length=1, max_length=4000)
@@ -63,6 +68,7 @@ def prepare(db, messages, images, place_name):
             message = 'Model Gemini đã chọn không khả dụng cho tài khoản này.'
         else:
             message = f'Gemini không nhận được yêu cầu (HTTP {status}).'
-        raise RuntimeError(message + ' Chưa gửi tác vụ nào sang Meshy.') from exc
+        raise AssistantProviderError(message + ' Chưa gửi tác vụ nào sang Meshy.',
+                                     429 if status == 429 else 503) from exc
     except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
         raise RuntimeError('Gemini chưa trả được bản mô tả hoàn chỉnh. Hãy thử lại. Chưa gửi tác vụ nào sang Meshy.') from exc

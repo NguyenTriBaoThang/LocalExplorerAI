@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     meshy_daily_credits: int = 120
     meshy_storage_dir: str = ""
     app_env: str = "development"
+    auto_verify_email: bool = False
     real_data_only: bool = True
     database_url: str = "sqlite:///./local_explorer.sqlite3"
     redis_url: str = "redis://localhost:6379/0"
@@ -80,8 +81,10 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     gemini_model: str = "gemini-2.5-flash"
+    gemini_embed_model: str = "gemini-embedding-001"
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
+    trip_ai_timeout_seconds: float = 90.0
     llm_fallback_enabled: bool = False
     app_signing_secret: str | None = None
     # New auth (see docs/auth-design.md). RS256 keys are base64-encoded PEM in the environment, in every
@@ -141,7 +144,8 @@ class Settings(BaseSettings):
     enable_bootstrap_ranker: bool = False
     flood_model_dir: str | None = None
 
-    model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
+    # Tests must never pick up machine credentials or contact configured live integrations.
+    model_config = SettingsConfigDict(env_file=None if os.environ.get("APP_ENV") == "test" else (str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
 
     @model_validator(mode="after")
     def production_defaults(self):
