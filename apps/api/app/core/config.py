@@ -105,6 +105,10 @@ class Settings(BaseSettings):
     # Administrators must pass a second factor. None means "on in production, off elsewhere" (handy for demos and local work).
     admin_mfa_required: bool | None = None
     google_client_id: str | None = None
+    # Google Maps ratings for places (Places API, New). The monthly cap keeps a demo inside the free allowance.
+    google_places_api_key: str | None = None
+    google_places_monthly_call_cap: int = Field(default=900, ge=0)
+    google_places_cache_hours: int = Field(default=24, ge=1, le=720)
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
     web_app_url: str = "http://localhost:5173"

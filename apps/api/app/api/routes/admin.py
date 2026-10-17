@@ -22,6 +22,7 @@ from app.api.routes.provider import provider_profile_payload
 from app.models.auth_entities import AuthSession
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
 from app.schemas.partner import ProviderDecisionRequest
+from app.services import external_ratings
 from app.services.notifications import enqueue_email
 from app.auth import hash_password
 from app.services.auth_runtime import invalidate_user_state
@@ -616,7 +617,7 @@ def test_integration_connection(
     db: Session = Depends(get_db),
 ):
     """Run a small, non-customer-data health check and never return provider payloads or secrets."""
-    if service not in {"ai", "routing", "payments", "google_oauth"}:
+    if service not in {"ai", "routing", "payments", "google_oauth", "google_places"}:
         raise HTTPException(
             status_code=404,
             detail={"code": "INTEGRATION_TEST_UNSUPPORTED", "message": "Connection tests are available for AI, routing, payments, and Google OAuth integrations."},
@@ -624,7 +625,9 @@ def test_integration_connection(
 
     status = "failed"
     detail_vi = None
-    if service == "ai":
+    if service == "google_places":
+        status, detail_vi = external_ratings.test_connection(db)
+    elif service == "ai":
         provider = get_llm_provider(db)
         if provider.model_name == "not-configured":
             status = "not_configured"
@@ -747,7 +750,7 @@ def test_integration_connection(
         "service": service,
         "status": status,
         "ok": status in {"connected", "configured"},
-        "check_type": "external_request" if service in {"ai", "routing"} else "configuration_only",
+        "check_type": "external_request" if service in {"ai", "routing", "google_places"} else "configuration_only",
         "message_vi": messages[status],
         "detail_vi": detail_vi,
     }

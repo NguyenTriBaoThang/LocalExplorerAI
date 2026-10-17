@@ -248,6 +248,7 @@ export type PlaceDraft = {
   tags: string[]
   is_landmark: boolean
   source_url: string | null
+  google_place_id?: string | null
 }
 
 export type AdminPlace = PlaceDraft & {
