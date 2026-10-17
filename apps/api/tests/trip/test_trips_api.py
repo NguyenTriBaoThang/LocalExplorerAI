@@ -239,11 +239,65 @@ def test_follow_up_on_other_users_trip_is_404(client, db_session, trip_places, m
     assert r.status_code == 404
 
 
-def test_message_after_itinerary_is_not_supported_yet(client, db_session, trip_places, monkeypatch):
+def test_question_after_itinerary_is_answered_without_new_version(client, db_session, trip_places, monkeypatch):
     h, trip_id, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    fake = use_llm(monkeypatch, [reply(("answer", {"text": "Tổng quãng đường 0.0 km."}))])
+    evs = events_of(client, "/api/trips", {"message": "tổng quãng đường bao nhiêu", "trip_id": trip_id}, h)
+    assert [e["type"] for e in evs] == ["thinking", "answer"]
+    assert evs[-1]["text"] == "Tổng quãng đường 0.0 km."
+    assert "Cà Phê Chung Cư" in fake.calls[0]["messages"][1]["content"]  # LLM nhận lịch trình hiện tại
+    assert client.get(f"/api/trips/{trip_id}", headers=h).json()["versions"] == [1]
+    row = db_session.get(TripRow, trip_id)
+    assert row.user_messages == ["x"]  # câu hỏi không thành yêu cầu cho lần lập sau
+    logged = db_session.scalars(select(TripMessage).where(TripMessage.trip_id == trip_id).order_by(TripMessage.id)).all()
+    assert [(m.role, m.text) for m in logged[-2:]] == [("user", "tổng quãng đường bao nhiêu"), ("ai", evs[-1]["text"])]
+
+
+def test_edit_changes_only_the_named_stop(client, db_session, trip_places, monkeypatch):
+    h, trip_id, pid = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    other = trip_places["cf-2"].id
+    use_llm(monkeypatch, [reply(("search_places", {"query": "cafe", "kind": "cafe"})),
+                          reply(("edit_itinerary", {"summary": "Đổi sang quán khác", "ops": [
+                              {"op": "replace_stop", "day": 1, "stop": 1, "place_id": other, "reason": "rẻ hơn"}]}))])
     evs = events_of(client, "/api/trips", {"message": "đổi quán cafe", "trip_id": trip_id}, h)
-    assert evs[-1] == {"type": "error", "message": "Sửa lịch bằng hội thoại chưa sẵn sàng."}
-    assert count(db_session, TripItinerary) == 1
+    assert [e["type"] for e in evs] == ["thinking", "tool_call", "itinerary"]
+    assert evs[-1]["version"] == 2 and evs[-1]["changed"] == [[0, 0]]
+    stop = evs[-1]["itinerary"]["days"][0]["stops"][0]
+    assert (stop["place_id"], stop["start_time"]) == (other, "09:00")
+    assert evs[-1]["itinerary"]["summary"] == "Đổi sang quán khác"
+    db_session.refresh(db_session.get(TripRow, trip_id))
+    assert db_session.get(TripRow, trip_id).user_messages == ["x", "đổi quán cafe"]
+
+
+def test_edit_of_pinned_stop_is_rejected(client, db_session, trip_places, monkeypatch):
+    h, trip_id, pid = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    db_session.get(TripRow, trip_id).pinned_place_ids = [pid]
+    db_session.commit()
+    bad = reply(("edit_itinerary", {"summary": "", "ops": [{"op": "remove_stop", "day": 1, "stop": 1}]}))
+    fake = use_llm(monkeypatch, [bad, bad])
+    evs = events_of(client, "/api/trips", {"message": "bỏ quán này", "trip_id": trip_id}, h)
+    assert evs[-1]["type"] == "error"
+    assert any("đã ghim" in m.get("content", "") for m in fake.calls[1]["messages"] if m["role"] == "tool")
+    assert client.get(f"/api/trips/{trip_id}", headers=h).json()["versions"] == [1]
+
+
+def test_bad_edit_twice_is_error_and_no_new_version(client, db_session, trip_places, monkeypatch):
+    h, trip_id, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    bad = reply(("edit_itinerary", {"summary": "", "ops": [{"op": "replace_stop", "day": 0, "stop": 0, "place_id": 999}]}))
+    use_llm(monkeypatch, [bad, bad])
+    evs = events_of(client, "/api/trips", {"message": "đổi", "trip_id": trip_id}, h)
+    assert evs[-1]["type"] == "error"
+    assert client.get(f"/api/trips/{trip_id}", headers=h).json()["versions"] == [1]
+
+
+def test_trip_change_asks_to_confirm_before_replanning(client, db_session, trip_places, monkeypatch):
+    h, trip_id, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    use_llm(monkeypatch, [reply(("change_trip", {"changes": {"budget": 3_000_000}, "text": "Tăng Budget lên 3 triệu?"}))])
+    evs = events_of(client, "/api/trips", {"message": "cho 3 triệu", "trip_id": trip_id}, h)
+    assert evs[-1] == {"type": "confirm_replan", "trip_id": trip_id, "text": "Tăng Budget lên 3 triệu?",
+                       "changes": {"budget": 3_000_000}, "message": "cho 3 triệu"}
+    body = client.get(f"/api/trips/{trip_id}", headers=h).json()
+    assert body["versions"] == [1] and body["trip"]["budget"] == 2_000_000
 
 
 def test_replan_applies_changes_and_reuses_old_places(client, db_session, trip_places, monkeypatch):
@@ -265,6 +319,34 @@ def test_replan_bad_changes_422_other_user_404(client, db_session, trip_places, 
                        json={"changes": {"days": 0}, "message": "0 ngày"}).status_code == 422
     assert client.post(f"/api/trips/{trip_id}/replan", headers=auth(db_session),
                        json={"changes": {"budget": 1}, "message": "x"}).status_code == 404
+
+
+def test_typing_ok_after_confirm_replans(client, db_session, trip_places, monkeypatch):
+    h, trip_id, pid = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    use_llm(monkeypatch, [reply(("change_trip", {"changes": {"budget": 3_000_000}, "text": "Đổi 3 triệu?"}))])
+    events_of(client, "/api/trips", {"message": "cho 3 triệu", "trip_id": trip_id}, h)
+    fake = use_llm(monkeypatch, [reply(("confirm_replan", {})),
+                                 reply(("submit_itinerary", {"summary": "mới", "days": [{"stops": [
+                                     {"place_id": pid, "start_time": "10:00", "duration_min": 60, "reason": "giữ"}]}]}))])
+    evs = events_of(client, "/api/trips", {"message": "oke", "trip_id": trip_id}, h)
+    assert "Đổi 3 triệu?" in fake.calls[0]["messages"][1]["content"]  # AI biết đang chờ xác nhận gì
+    assert [e["type"] for e in evs] == ["thinking", "trip", "itinerary"]
+    assert evs[1]["trip"]["budget"] == 3_000_000 and evs[-1]["version"] == 2
+    row = db_session.get(TripRow, trip_id)
+    db_session.refresh(row)
+    assert row.pending_replan is None and row.user_messages == ["x", "cho 3 triệu"]
+
+
+def test_other_reply_drops_pending_confirm(client, db_session, trip_places, monkeypatch):
+    h, trip_id, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
+    use_llm(monkeypatch, [reply(("change_trip", {"changes": {"budget": 3_000_000}, "text": "Đổi 3 triệu?"}))])
+    events_of(client, "/api/trips", {"message": "cho 3 triệu", "trip_id": trip_id}, h)
+    assert db_session.get(TripRow, trip_id).pending_replan["changes"] == {"budget": 3_000_000}
+    use_llm(monkeypatch, [reply(("answer", {"text": "Vâng, giữ nguyên."}))])
+    events_of(client, "/api/trips", {"message": "thôi khỏi", "trip_id": trip_id}, h)
+    row = db_session.get(TripRow, trip_id)
+    db_session.refresh(row)
+    assert row.pending_replan is None
 
 
 def test_out_of_scope_does_not_create_trip(client, db_session, trip_places, monkeypatch):

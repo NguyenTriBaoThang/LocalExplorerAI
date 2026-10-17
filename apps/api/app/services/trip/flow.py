@@ -19,7 +19,7 @@ from app.services.trip import forecast, llm, store
 from app.services.trip.agent import (TripParseError, UnsupportedDestination, apply_answers, merge_trip, missing_questions,
                                      parse_trip, plan)
 from app.services.trip.domain import Trip, TripAnswers
-from app.services.trip.followup import changed_trip
+from app.services.trip.followup import changed_trip, followup
 from app.services.trip.places import list_destinations, search_places
 
 logger = logging.getLogger(__name__)
@@ -105,14 +105,44 @@ def _replan(db, client, model, trip_id: int, trip: Trip, user_messages: list[str
     yield from _plan_and_save(db, client, model, trip_id, trip, dest, user_messages, previous)
 
 
+def _follow_up(db, client, model, prev: TripRow, itin, dest: dict, message: str):
+    """Trip đã có lịch trình: trả lời / sửa, không lập lại từ đầu (#22)."""
+    trip = Trip.model_validate(prev.spec)
+    rain = [d.rain_chance for d in itin.days]
+    pending = prev.pending_replan
+    prev.pending_replan = None  # chỉ sống 1 lượt
+    db.commit()
+    for ev in followup(db, client, model, trip, itin, store.itinerary_places(db, itin), message, rain,
+                       store.hub_for(dest, trip), lambda texts: llm.embed(db, texts), pending):
+        if ev["type"] == "replan_confirmed":
+            yield from _replan(db, client, model, prev.id, trip, prev.user_messages, pending["changes"],
+                               pending["message"])
+            return
+        if ev["type"] == "confirm_replan":
+            prev.pending_replan = {k: ev[k] for k in ("changes", "message", "text")}
+            db.commit()
+            store.log_message(db, prev.id, "ai", ev["text"])
+            ev = {**ev, "trip_id": prev.id}
+        elif ev["type"] == "itinerary":
+            version = store.save_itinerary(db, prev.id, ev["itinerary"], ev["places"])
+            store.log_message(db, prev.id, "ai", ev["itinerary"]["summary"], version)
+            prev.user_messages = [*prev.user_messages, message]  # reassign: JSON columns are not mutation-tracked
+            db.commit()
+            ev = {**ev, "trip_id": prev.id, "version": version}
+        elif ev["type"] == "answer":
+            store.log_message(db, prev.id, "ai", ev["text"])
+        yield sse(ev)
+
+
 def _run(db: Session, user: User, message: str, prev: TripRow | None = None):
     dests = {d["slug"]: d for d in list_destinations(db)}
     client, model = _ai(db)
     user_messages = [*(prev.user_messages if prev else []), message]
     yield sse({"type": "thinking", "text": "Đang đọc yêu cầu của bạn…"})
-    if prev and store.latest_itinerary(db, prev.id):
-        # Editing an existing itinerary by chat (followup) is not wired yet.
-        yield sse({"type": "error", "message": "Sửa lịch bằng hội thoại chưa sẵn sàng."})
+    latest = store.latest_itinerary(db, prev.id) if prev else None
+    if latest:
+        store.log_message(db, prev.id, "user", message)
+        yield from _follow_up(db, client, model, prev, latest[1], dests[prev.spec["destination"]], message)
         return
     try:
         trip = parse_trip(client, model, _parse_input(user_messages), {slug: d["name"] for slug, d in dests.items()},
