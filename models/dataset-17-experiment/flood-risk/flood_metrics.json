@@ -17,7 +17,7 @@
   },
   "test": {
     "average_precision": 1.0,
-    "brier_score": 0.0001364320226310189,
+    "brier_score": 0.0001109013768474111,
     "recall_at_threshold": 1.0,
     "roc_auc": 1.0,
     "threshold": 0.4
