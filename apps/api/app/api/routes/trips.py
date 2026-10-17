@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.adapters.llm.provider import StructuredOutputProvider
@@ -46,6 +47,23 @@ class ApplyIn(BaseModel):
 class Replan(BaseModel):
     changes: dict
     message: str = Field(min_length=1, max_length=2000)
+
+
+class GroupReviewIn(BaseModel):
+    source_version: int = Field(ge=1)
+    feedback: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("feedback", mode="before")
+    @classmethod
+    def trim_feedback(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("feedback")
+    @classmethod
+    def non_blank_feedback(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Góp ý không được chỉ có khoảng trắng")
+        return value
 
 
 def _owned(db: Session, user: User, trip_id: int) -> TripRow:
@@ -236,3 +254,54 @@ def apply_proposal(trip_id: int, proposal_id: int, body: ApplyIn, db: Session = 
     opt = p.options[body.option]
     return {"type": "itinerary", "itinerary": opt["itinerary"], "places": opt["places"],
             "trip_id": trip_id, "version": version}
+
+
+@router.post("/trips/{trip_id}/group-reviews")
+def create_group_review(trip_id: int, body: GroupReviewIn, db: Session = Depends(get_db),
+                        user: User = Depends(require_user(P.TRIP_USE))):
+    _owned(db, user, trip_id)
+    if not store.load_itinerary(db, trip_id, body.source_version):
+        raise HTTPException(404, "Không tìm thấy phiên bản lịch trình")
+    return _stream(flow.run_group_review(db, user, trip_id, body.source_version, body.feedback))
+
+
+@router.post("/trips/{trip_id}/group-reviews/{review_id}/apply")
+def apply_group_review(trip_id: int, review_id: int, db: Session = Depends(get_db),
+                       user: User = Depends(require_user(P.TRIP_USE))):
+    row = _owned(db, user, trip_id)
+    db.refresh(row, with_for_update=True)  # serialise with other saves before the stale check
+    review = store.locked_review(db, trip_id, review_id)
+    if review is None:
+        raise HTTPException(404, "Không tìm thấy góp ý nhóm")
+    candidate = review.candidate
+    if review.status == "applied":
+        version = review.applied_version
+    elif review.status == "cancelled":
+        raise HTTPException(409, "Góp ý nhóm đã bị huỷ")
+    else:
+        if review.base_version != store.versions(db, trip_id)[-1]:
+            raise HTTPException(409, STALE)
+        try:
+            version = store.save_itinerary(db, trip_id, candidate["itinerary"], candidate["places"], commit=False)
+            review.status, review.applied_version = "applied", version
+            store.log_message(db, trip_id, "ai", candidate["summary"], version)  # commits all three together
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(409, STALE) from None
+    return {"type": "itinerary", "itinerary": candidate["itinerary"], "places": candidate["places"],
+            "trip_id": trip_id, "version": version}
+
+
+@router.post("/trips/{trip_id}/group-reviews/{review_id}/cancel")
+def cancel_group_review(trip_id: int, review_id: int, db: Session = Depends(get_db),
+                        user: User = Depends(require_user(P.TRIP_USE))):
+    _owned(db, user, trip_id)
+    review = store.locked_review(db, trip_id, review_id)
+    if review is None:
+        raise HTTPException(404, "Không tìm thấy góp ý nhóm")
+    if review.status == "applied":
+        raise HTTPException(409, "Góp ý nhóm đã được áp dụng")
+    if review.status == "pending":
+        review.status = "cancelled"
+    db.commit()
+    return {"review_id": review_id, "status": "cancelled"}

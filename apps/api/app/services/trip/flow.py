@@ -19,8 +19,9 @@ from app.services.trip import forecast, llm, store
 from app.services.trip.agent import (TripParseError, UnsupportedDestination, apply_answers, merge_trip, missing_questions,
                                      parse_trip, plan)
 from app.services.trip.domain import Trip, TripAnswers
-from app.services.trip.followup import changed_trip, followup
+from app.services.trip.followup import InvalidEdit, changed_trip, followup, review_group_feedback
 from app.services.trip.places import list_destinations, search_places
+from app.services.trip.rules import InvalidDraft
 
 logger = logging.getLogger(__name__)
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -245,3 +246,50 @@ def _replan_job(db: Session, user: User, trip_id: int, changes: dict, message: s
 
 def run_replan(db: Session, user: User, trip_id: int, changes: dict, message: str) -> Iterator[str]:
     return guarded(db, _replan_job(db, user, trip_id, changes, message))
+
+
+GROUP_REVIEW_ERRORS = {
+    "stale_base": "Lịch trình đã có bản mới, hãy tạo lại góp ý trên bản mới nhất.",
+    "review_pending": "Đang có một góp ý nhóm chờ xử lý, hãy áp dụng hoặc huỷ nó trước khi tạo góp ý mới.",
+}
+
+
+def _group_review(db: Session, user: User, trip_id: int, source_version: int, feedback: str):
+    row = store.trip_row(db, user.id, trip_id)
+    source = store.load_itinerary(db, trip_id, source_version)
+    base = store.load_itinerary(db, trip_id)
+    if not row or not source or not base:
+        yield sse({"type": "error", "message": "Không tìm thấy chuyến đi hoặc phiên bản lịch trình"})
+        return
+    client, model = _ai(db)
+    source_number, source_itinerary, _ = source
+    base_number, base_itinerary, _ = base
+    trip = Trip.model_validate(row.spec)
+    places = store.itinerary_places(db, source_itinerary) | store.itinerary_places(db, base_itinerary)
+    rain = [day.rain_chance for day in base_itinerary.days]
+    yield sse({"type": "thinking", "text": "Đang đọc góp ý của nhóm…"})
+    try:
+        for event in review_group_feedback(db, client, model, trip, source_number, source_itinerary, base_number,
+                                           base_itinerary, places, feedback, rain,
+                                           store.hub_for(_dest(db, trip.destination), trip),
+                                           lambda texts: llm.embed(db, texts)):
+            if event["type"] != "group_review_candidate":
+                yield sse(event)
+                continue
+            candidate = event["candidate"]
+            saved = store.add_group_review(db, trip_id, source_number, base_number, feedback, candidate)
+            if isinstance(saved, str):
+                yield sse({"type": "error", "code": saved, "status": 409, "message": GROUP_REVIEW_ERRORS[saved]})
+                return
+            db.commit()
+            review = {"review_id": saved.id, "source_version": source_number, "base_version": base_number,
+                      "source_is_old": source_number != base_number, "feedback": feedback, **candidate}
+            yield sse({"type": "group_review_preview", "review": review})
+            return
+    except (InvalidEdit, InvalidDraft) as exc:
+        db.rollback()
+        yield sse({"type": "error", "message": f"Không tạo được bản xem trước: {exc}"})
+
+
+def run_group_review(db: Session, user: User, trip_id: int, source_version: int, feedback: str) -> Iterator[str]:
+    return guarded(db, _group_review(db, user, trip_id, source_version, feedback))

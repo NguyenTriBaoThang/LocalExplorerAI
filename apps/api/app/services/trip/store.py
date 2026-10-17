@@ -2,7 +2,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.trip_entities import Trip as TripRow, TripItinerary, TripMessage, TripProposal
+from app.models.trip_entities import Trip as TripRow, TripGroupReview, TripItinerary, TripMessage, TripProposal
 from app.services.trip.domain import Hub, Itinerary, Trip
 from app.services.trip.places import get_places, list_destinations
 
@@ -85,3 +85,33 @@ def messages(db: Session, trip_id: int) -> list[dict]:
 def locked_proposal(db: Session, trip_id: int, proposal_id: int) -> TripProposal | None:
     return db.scalar(select(TripProposal).where(TripProposal.id == proposal_id, TripProposal.trip_id == trip_id)
                      .with_for_update())
+
+
+def locked_review(db: Session, trip_id: int, review_id: int) -> TripGroupReview | None:
+    return db.scalar(select(TripGroupReview).where(TripGroupReview.id == review_id, TripGroupReview.trip_id == trip_id)
+                     .with_for_update())
+
+
+def add_group_review(db: Session, trip_id: int, source_version: int, base_version: int, feedback: str,
+                     candidate: dict) -> TripGroupReview | str:
+    """Stage a pending review and the feedback message (the caller commits); returns an error code instead when the
+    base is no longer the latest version ("stale_base") or the trip already has a pending review ("review_pending").
+    The trip row lock plays the part of Travility's partial unique index (one pending review per trip)."""
+    db.execute(select(TripRow.id).where(TripRow.id == trip_id).with_for_update())
+    latest = db.scalar(select(func.max(TripItinerary.version)).where(TripItinerary.trip_id == trip_id))
+    pending = list(db.scalars(select(TripGroupReview).where(TripGroupReview.trip_id == trip_id,
+                                                            TripGroupReview.status == "pending")))
+    if latest != base_version:
+        db.rollback()
+        return "stale_base"
+    if any(r.base_version == base_version for r in pending):
+        db.rollback()
+        return "review_pending"
+    for r in pending:  # built on an older version, so it can never be applied: don't let it block new feedback
+        r.status = "cancelled"
+    review = TripGroupReview(trip_id=trip_id, source_version=source_version, base_version=base_version,
+                             feedback=feedback, candidate=candidate)
+    db.add(review)
+    db.flush()
+    log_message(db, trip_id, "user", feedback, source_version, commit=False)
+    return review
