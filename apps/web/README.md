@@ -2,6 +2,8 @@
 
 The frontend is a React and TypeScript single-page application built with Vite. It calls the API through relative /api paths; the local Vite configuration proxies API and health-check requests to http://127.0.0.1:8000.
 
+The web build includes a PWA manifest and service worker. It caches the app shell/static assets and public catalog GET responses for offline browsing. It does not cache signed-in API responses, availability, or booking/payment writes; booking actions still require online confirmation. Install over HTTPS (localhost is accepted for development). Users can opt in to booking Web Push from their profile after the API has VAPID keys configured.
+
 ## Run locally
 
     cd apps/web

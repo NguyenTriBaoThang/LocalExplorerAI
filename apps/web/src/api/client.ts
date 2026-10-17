@@ -4,6 +4,24 @@ import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, C
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
+export type WebPushStatus = { configured: boolean; enabled: boolean; device_count: number }
+
+export async function getWebPushStatus(): Promise<WebPushStatus> {
+  return (await api.get<WebPushStatus>('/notifications/push/status')).data
+}
+
+export async function getWebPushPublicKey(): Promise<string> {
+  return (await api.get<{ public_key: string }>('/notifications/push/vapid-public-key')).data.public_key
+}
+
+export async function saveWebPushSubscription(payload: { endpoint: string; keys: { p256dh: string; auth: string } }): Promise<void> {
+  await api.post('/notifications/push/subscriptions', payload)
+}
+
+export async function deleteWebPushSubscription(endpoint: string): Promise<void> {
+  await api.delete('/notifications/push/subscriptions', { data: { endpoint } })
+}
+
 /** Fired when the server says the session is over (the access token is refreshed transparently, so a 401 here is final). */
 export const AUTH_EXPIRED_EVENT = 'auth:expired'
 api.interceptors.response.use(
@@ -310,7 +328,7 @@ export async function getPOIs(scope: 'pilot' | 'citywide' = 'pilot', verifiedOnl
 }
 
 export async function getPOI(id: string): Promise<POIDetail> {
-  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}`)
+  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}?scope=citywide`)
   return data
 }
 

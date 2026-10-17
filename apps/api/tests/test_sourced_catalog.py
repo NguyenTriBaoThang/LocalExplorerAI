@@ -17,14 +17,14 @@ def test_citywide_listing_has_detail_outside_pilot(client, db_session, sample_ex
     poi.details = {'venue_facts': {'public_admission_fee_vnd': 0}}
     db_session.commit()
     assert poi.id in {row['id'] for row in client.get('/api/pois?scope=citywide').json()}
-    detail = client.get(f'/api/pois/{poi.id}')
+    detail = client.get(f'/api/pois/{poi.id}?scope=citywide')
     assert detail.status_code == 200
     assert detail.json()['source_url'] == poi.source_url
     assert detail.json()['opening_hours'] == poi.opening_hours
     assert detail.json()['details']['venue_facts']['public_admission_fee_vnd'] == 0
     poi.verification_status = 'unverified'
     db_session.commit()
-    assert client.get(f'/api/pois/{poi.id}').status_code == 404
+    assert client.get(f'/api/pois/{poi.id}?scope=citywide').status_code == 404
 
 
 def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session, monkeypatch):

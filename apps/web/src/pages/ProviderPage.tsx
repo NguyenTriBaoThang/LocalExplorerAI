@@ -11,7 +11,6 @@ const CATEGORY_KEYS: Record<string, string> = {
   food: 'explore.intentFood', handicraft: 'explore.intentCraft', culture: 'explore.intentCulture', nature: 'explore.intentNature', relaxation: 'explore.intentRelax',
 }
 
-
 export function ProviderPage() {
   const { t, locale } = useTranslation()
   const vi = locale === 'vi'

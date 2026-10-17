@@ -734,7 +734,7 @@ Create apps/api/.env from the root .env.example if it does not already exist:
 | `VNPAY_TMN_CODE` | *(tùy chọn)* | Mã Terminal ID do VNPay cấp |
 | `VNPAY_HASH_SECRET` | *(tùy chọn)* | Khóa bí mật tạo chữ ký số HMAC-SHA512 VNPay |
 | `VNPAY_PAYMENT_URL` | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` | Endpoint thanh toán VNPay |
-| `VNPAY_RETURN_URL` | `http://localhost:5173/itinerary/` | URL điều hướng hiển thị kết quả sau thanh toán |
+| `VNPAY_RETURN_URL` | `http://localhost:8080/itinerary/` | URL điều hướng hiển thị kết quả sau thanh toán |
 | `VNPAY_IPN_URL` | `http://localhost:8000/api/payments/vnpay/ipn` | Webhook IPN tiếp nhận xác nhận thanh toán |
 | `MOMO_ENVIRONMENT` | `sandbox` | Môi trường Ví MoMo (`sandbox` hoặc `production`) |
 | `MOMO_PARTNER_CODE` | *(tùy chọn)* | Mã đối tác do MoMo cấp |
@@ -848,11 +848,11 @@ LoaclExplorerAI/
 - ✅ Vietnamese/English UI and dual themes
 
 ### Short term (v1.1)
-- 🔲 Integrate Open-Meteo or another live weather API for Weather AQI Advisor
-- 🔲 Train a flood-risk model with sufficient verified negative observations
-- 🔲 Mobile PWA: service worker and offline-first caching
-- 🔲 Web Push notifications for booking updates
-- 🔲 Booking-by-hour heatmap in the Admin Dashboard
+- ✅ Integrate Open-Meteo or another live weather API for Weather AQI Advisor
+- 🔲 Train a flood-risk model with sufficient verified negative observations (training pipeline is prepared; verified negative observations are still required)
+- ✅ Mobile PWA: service worker and offline-first caching
+- ✅ Web Push notifications for booking updates (configure VAPID keys and HTTPS in the deployment environment)
+- ✅ Booking-by-hour heatmap in the Admin Dashboard
 
 ### Medium term (v2.0)
 - 🔲 Expand to multiple cities (Da Nang, Hanoi, Hoi An)
@@ -890,3 +890,28 @@ Flood report data (data/raw/hcmc_flood_reports_2002_2026.csv): CC BY-NC 4.0 — 
 ## Local integration from MLAI_DA
 
 The journey flow, consent-based recommendations, and customer history have been integrated with the separate portal and RBAC. See [the integration notes](docs/mlai-da-integration.md) for scope, validation, and migration details.
+## v1.1 — Các chức năng đã triển khai
+
+### Thời tiết và chất lượng không khí
+
+Weather AQI Advisor lấy dữ liệu thời tiết hiện tại và PM2.5/AQI từ Open-Meteo, hiển thị nguồn cùng thời điểm cập nhật và dùng bộ nhớ đệm ngắn hạn để giảm số lần gọi dịch vụ. Đây là thông tin hỗ trợ lập kế hoạch, không phải cảnh báo thời tiết khẩn cấp.
+
+### Rủi ro ngập
+
+Đã bổ sung quy trình huấn luyện có kiểm tra bằng chứng, thời điểm quan sát, dữ liệu dương/âm đã xác minh, chia tập theo thời gian và tiêu chí chất lượng trước khi cho phép triển khai. Mẫu dữ liệu nằm tại `data/training/flood_risk_verified_template.csv`; công cụ huấn luyện tại `scripts/train_verified_flood_risk.py`. Chưa huấn luyện hoặc bật mô hình dự đoán cho đến khi có đủ quan sát khô (âm) đã xác minh và dữ liệu đạt các điều kiện kiểm định. Không xem việc thiếu báo cáo ngập là bằng chứng địa điểm không bị ngập.
+
+### PWA và truy cập ngoại tuyến
+
+Ứng dụng web có manifest, service worker, trang ngoại tuyến và thông báo trạng thái mất kết nối. Service worker lưu bộ khung giao diện và một số tài nguyên công khai để dùng lại khi ngoại tuyến; không lưu thông tin cá nhân, đặt chỗ, thanh toán hoặc dữ liệu ca/sức chứa.
+
+### Thông báo web push cho đặt chỗ
+
+Người dùng có thể bật/tắt nhận thông báo trên trình duyệt. Backend lưu subscription, gửi cập nhật đặt chỗ qua hàng đợi/outbox và dùng nội dung thông báo tối thiểu. Môi trường triển khai cần cấu hình khóa VAPID và chạy trên HTTPS; cần kiểm thử bằng cấu hình staging trước khi phát hành.
+
+### Heatmap giờ đặt chỗ trong Admin
+
+Dashboard quản trị hiển thị phân bố đặt chỗ theo 7 ngày trong tuần và 24 khung giờ, theo múi giờ `Asia/Ho_Chi_Minh`, trong khoảng ngày đang chọn.
+
+### Trạng thái triển khai
+
+Các tích hợp thời tiết, PWA, push và heatmap đã có trong mã nguồn. Push cần khóa VAPID/HTTPS ở môi trường chạy thực tế. Mô hình ngập vẫn chờ dữ liệu âm đã xác minh; không tạo nhãn âm tổng hợp để thay thế dữ liệu thực.

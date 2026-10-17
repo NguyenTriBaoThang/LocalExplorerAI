@@ -69,6 +69,7 @@ See [data/experimental/README.md](./experimental/README.md).
 | data/dataset_ranking_tphcm.csv | Query/candidate scenarios with context features (time, cost, weather, preferences) |
 | data/dataset_ranking_tphcm.jsonl | JSON Lines format for a quick training pipeline |
 | data/training/experience_ranker_verified_template.csv | Template for collecting expert-reviewed ranking labels (verified human preferences) |
+| data/training/flood_risk_verified_template.csv | Header-only template for directly verified road-edge flood and no-flood observation windows |
 
 **Historical model result:** XGBoost/LightGBM Ranker ranker-features-v2 — **NDCG@5 = 0.9516**. This is a historical result on weak/unverified data and must not be presented as proof of production recommendation quality.
 
@@ -130,6 +131,10 @@ python -m scripts.quarantine_simulated_data --apply
 ~~~
 
 All actions are recorded in the audit_logs table.
+
+## 9. Verified flood-risk training
+
+`data/training/flood_risk_verified_template.csv` is header-only by design. It requires direct evidence and reviewer provenance for every label; negative labels require at least 95% observed coverage for the road-edge interval. Run `scripts/train_verified_flood_risk.py` only after collecting an authorized dataset that meets the documented counts and chronological-split requirements. The raw 425 flood-report rows and report-absence weak labels are not valid negative observations.
 
 ---
 

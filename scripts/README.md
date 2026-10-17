@@ -29,6 +29,7 @@ Crawled places and image matches are source candidates, not proof of current ope
 |---|---|---|
 | train_experience_ranker.py | python scripts/train_experience_ranker.py --mode weak_label | Trains/benchmarks XGBoost and LightGBM rankers (ranker-features-v2) on weak-label data |
 | train_verified_experience_ranker.py | python scripts/train_verified_experience_ranker.py | Trains a ranker on human-reviewed data when a qualifying dataset is available |
+| train_verified_flood_risk.py | python scripts/train_verified_flood_risk.py --input <verified.csv> --output models/flood-risk-candidate | Fits a chronological-group-split flood model only from directly verified flood and no-flood observations; requires explicit approval to mark it deployable |
 | train_bootstrap_experience_ranker.py | python scripts/train_bootstrap_experience_ranker.py | Early experimental bootstrap version |
 | verify_alignment.py | python scripts/verify_alignment.py | Checks feature-contract alignment between the backend API and ML pipeline |
 | download_e5_model.py | python -m scripts.download_e5_model (from apps/api) | Downloads intfloat/multilingual-e5-base into models/e5/ |
@@ -42,6 +43,7 @@ Crawled places and image matches are source candidates, not proof of current ope
 | build_flood_report_experiment_notebook.py | python scripts/build_flood_report_experiment_notebook.py | Creates a standalone research Colab notebook |
 
 The flood-report experiment measures the presence of a source report; it does not label physical road flooding or verified dry conditions.
+The verified flood template is `data/training/flood_risk_verified_template.csv`. The current raw reports do not meet its requirements; do not use the report-presence pseudo-negatives as dry observations.
 
 ### 4. Operations, databases, and development environments
 

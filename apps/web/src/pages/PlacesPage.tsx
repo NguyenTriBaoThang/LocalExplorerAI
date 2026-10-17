@@ -279,7 +279,7 @@ export function PlacesPage() {
                   </h3>
 
                   <p className="place-card-address">
-                    <MapPin size={12} className="place-address-icon shrink-0 mt-0.5" />
+                    <MapPin size={12} className="place-address-icon shrink-0 text-emerald-400 mt-0.5" />
                     <span>{place.address || t('places.defaultAddress')}</span>
                   </p>
 

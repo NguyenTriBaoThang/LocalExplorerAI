@@ -13,6 +13,7 @@ from tests.route_inventory import inventory
 PUBLIC_ROUTES = {
     ("meshy", "GET", "/api/meshy/jobs/{job_id}/asset"),
     ("landmark_stories", "GET", "/api/landmark-stories/{model_id}"),
+    ("push_notifications", "GET", "/api/notifications/push/vapid-public-key"),
     ("admin_bot", "GET", "/api/bot/webhook"), ("admin_bot", "POST", "/api/bot/webhook"),
     ("ai", "GET", "/api/ai/prompts"),
     ("auth", "GET", "/api/auth/google/callback"), ("auth", "GET", "/api/auth/google/start"), ("auth", "GET", "/api/auth/google/status"),

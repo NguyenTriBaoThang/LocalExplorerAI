@@ -37,9 +37,15 @@ def list_pois(scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"),
 
 
 @router.get("/pois/{poi_id}", response_model=POIDetailRead, dependencies=[Depends(public('public catalogue'))])
-def get_poi(poi_id: str, db: Session = Depends(get_db)):
+def get_poi(
+    poi_id: str,
+    scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"),
+    db: Session = Depends(get_db),
+):
     repository = ExperienceRepository(db)
     poi = repository.get_poi(poi_id)
+    if poi and scope == "pilot" and not is_pilot_location(poi.latitude, poi.longitude):
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "POI not found"})
     # Every public citywide listing must have a reachable detail page.
     # Repository visibility checks still enforce publication/evidence rules.
     if not poi or poi.name.startswith("Điểm demo "):

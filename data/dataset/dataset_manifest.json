@@ -1,0 +1,55 @@
+{
+  "dataset_name": "LocalExploreAI Ranker & Flood Risk Training Dataset",
+  "version": "1.0.0",
+  "release_date_utc": "2026-10-17T03:00:00Z",
+  "language": "vi",
+  "license": "CC-BY-4.0",
+  "coordinate_system": "EPSG:4326 (WGS84)",
+  "monetary_unit": "VND",
+  "precipitation_unit": "mm",
+  "distance_elevation_unit": "meter",
+  "duration_unit": "minute",
+  "pii_compliance": {
+    "status": "fully_compliant",
+    "details": "All user identifiers are pseudonymized (user_key, session_key, reviewer_key). No names, phone numbers, email addresses, or physical home addresses are included."
+  },
+  "modules": {
+    "ranker": {
+      "purpose": "Rank points of interest (POI) and local experiences tailored to user context and intent.",
+      "primary_file": "ranker_impressions.csv",
+      "auxiliary_file": "ranker_items.csv",
+      "row_unit": "One row per displayed item within a recommendation request list",
+      "grouping_key": "request_id",
+      "ranking_position_field": "position",
+      "total_requests": 200,
+      "total_impressions": 1400,
+      "total_items": 60,
+      "viewability_tracked": true,
+      "funnel_events": ["clicked", "saved", "booking_created", "experience_completed", "booking_cancelled"],
+      "outcome_window_hours": 72
+    },
+    "flood_risk": {
+      "purpose": "Predict future flood occurrence within a specified target window given antecedent features cut off before the event.",
+      "primary_file": "flood_observations.csv",
+      "features_file": "flood_features.csv",
+      "row_unit": "One row per location_key and time window (feature_cutoff_utc to target_end_utc)",
+      "target_window": "target_start_utc to target_end_utc",
+      "total_observations": 750,
+      "verified_positive_count": 241,
+      "verified_negative_count": 452,
+      "unknown_count": 34,
+      "disputed_count": 23,
+      "positive_group_count": 25,
+      "negative_group_count": 50,
+      "pipeline_thresholds": {
+        "min_verified_positive": 100,
+        "min_verified_negative": 200,
+        "min_groups_per_class": 20,
+        "min_average_precision": 0.50,
+        "max_brier_score": 0.20,
+        "min_recall": 0.80
+      },
+      "split_strategy": "GroupKFold by group_id and temporal split to eliminate spatial-temporal leakage."
+    }
+  }
+}
