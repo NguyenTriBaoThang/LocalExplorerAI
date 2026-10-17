@@ -515,8 +515,13 @@ export function AdminPage() {
     const formData = new FormData(event.currentTarget)
     const observedAt = new Date(String(formData.get('observed_at') || ''))
     const expiresAt = new Date(String(formData.get('expires_at') || ''))
+    const fieldsCovered = formData.getAll('fields_covered').map(String)
     if (Number.isNaN(observedAt.getTime()) || Number.isNaN(expiresAt.getTime())) {
       notifyError('Vui lòng nhập ngày quan sát và hạn dùng bằng chứng hợp lệ.')
+      return
+    }
+    if (fieldsCovered.length === 0) {
+      notifyError('Hãy chọn ít nhất một trường mà URL nguồn xác nhận trực tiếp.')
       return
     }
     try {
@@ -529,13 +534,13 @@ export function AdminPage() {
         source_type: String(formData.get('source_type') || ''),
         source_label: String(formData.get('source_label') || ''),
         license: String(formData.get('license') || '') || null,
-        fields_covered: ['name', 'address', 'latitude', 'longitude', 'category'],
+        fields_covered: fieldsCovered,
         observed_at: observedAt.toISOString(),
         expires_at: expiresAt.toISOString(),
       })
-      notifySuccess(
-        `Đã gửi ${candidate.name} vào hàng chờ duyệt bằng chứng. Địa điểm sẽ hiển thị công khai sau khi duyệt.`
-      )
+      notifySuccess(candidate.target_poi_id
+        ? `Đã bổ sung nguồn cho ${candidate.name}. POI vẫn chờ duyệt đủ bằng chứng.`
+        : `Đã gửi ${candidate.name} vào hàng chờ duyệt. POI chưa xuất hiện công khai.`)
       const rows = (await adminApi.placeImportCandidates(
         selectedImportId
       )) as PlaceImportCandidate[]
@@ -609,6 +614,11 @@ export function AdminPage() {
   const selectedImport = placeImports.find((batch) => batch.id === selectedImportId)
   const importFlagLabels: Record<string, string> = {
     source_url_missing: 'Thiếu URL nguồn',
+    source_url_insecure: 'URL nguồn chưa dùng HTTPS',
+    source_type_missing: 'Thiếu loại nguồn',
+    source_license_missing: 'Thiếu điều khoản/giấy phép nguồn',
+    source_license_review_pending: 'Điều khoản nguồn chưa được kiểm tra',
+    photo_rights_review_pending: 'Ảnh cần rà quyền sử dụng riêng',
     address_missing: 'Thiếu địa chỉ',
     address_geocode_needs_confirmation: 'Địa chỉ tra ngược, chưa xác nhận đúng POI',
     opening_hours_missing: 'Thiếu giờ mở cửa',
@@ -618,7 +628,16 @@ export function AdminPage() {
     coordinates_missing: 'Thiếu tọa độ',
     coordinates_reused: 'Tọa độ bị lặp',
     verified_flag_unsubstantiated: 'Cờ verified chưa có bằng chứng',
+    verified_claim_pending_review: 'Nhãn verified trong file chưa được duyệt',
+    field_coverage_incomplete: 'Nguồn chưa khai báo đủ trường POI bắt buộc',
     field_level_evidence_pending: 'Chưa duyệt bằng chứng theo từng trường',
+    observed_at_missing: 'Thiếu thời điểm quan sát nguồn',
+    observed_at_invalid_or_timezone_missing: 'Thời điểm nguồn thiếu múi giờ hoặc sai định dạng',
+    observed_at_in_future: 'Thời điểm quan sát đang ở tương lai',
+    expires_at_missing: 'Thiếu hạn rà soát nguồn',
+    expires_at_invalid_or_timezone_missing: 'Hạn nguồn thiếu múi giờ hoặc sai định dạng',
+    evidence_expired: 'Bằng chứng đã hết hạn',
+    evidence_expiry_before_observation: 'Hạn nguồn trước thời điểm quan sát',
   }
 
   // Display metrics mapping
@@ -965,10 +984,19 @@ export function AdminPage() {
                         ['Tọa độ dùng lại', 'coordinates_reused'],
                         ['Thiếu giờ mở cửa', 'opening_hours_missing'],
                         ['Thiếu URL nguồn', 'source_url_missing'],
+                        ['Thiếu giấy phép/điều khoản nguồn', 'source_license_missing'],
+                        ['Điều khoản nguồn cần duyệt', 'source_license_review_pending'],
                         ['Thiếu cơ sở giá', 'price_basis_missing'],
                         ['Giá chưa xác minh', 'price_amount_unverified'],
                         ['Địa chỉ cần đối chiếu', 'address_geocode_needs_confirmation'],
                         ['Bằng chứng theo trường còn thiếu', 'field_level_evidence_pending'],
+                        ['Nguồn khai báo thiếu trường POI', 'field_coverage_incomplete'],
+                        ['Quyền ảnh cần rà soát', 'photo_rights_review_pending'],
+                        ['Nhãn verified chưa được duyệt', 'verified_claim_pending_review'],
+                        ['Thiếu observed_at', 'observed_at_missing'],
+                        ['Thiếu expires_at', 'expires_at_missing'],
+                        ['Mốc nguồn sai định dạng/múi giờ', 'observed_at_invalid_or_timezone_missing'],
+                        ['Bằng chứng hết hạn', 'evidence_expired'],
                         ['Cờ verified thiếu chứng cứ', 'verified_flag_unsubstantiated'],
                         ['Cờ verified trong file', 'source_verified_true'],
                       ] as const
@@ -1012,6 +1040,12 @@ export function AdminPage() {
                         ? sourceDetails.osm_tags as Record<string, unknown>
                         : {}
                       const suggested = candidate.suggested_labels
+                      const rawSourceType = String(raw.source_type || '')
+                      const sourceTypes = ['official', 'provider', 'website', 'dataset', 'field_check']
+                      const rawSourceUrl = String(raw.source_url || raw.source || '')
+                      const sourceUrlDefault = rawSourceUrl.startsWith('https://') ? rawSourceUrl : ''
+                      const rawAddress = String(raw.address || raw.full_address || '')
+                      const addressDefault = rawAddress.trim().toLowerCase() === 'unknown' ? '' : rawAddress
                       const tags = Array.isArray(raw.tags)
                         ? raw.tags.map(String).join(', ')
                         : String(raw.tags || '')
@@ -1114,20 +1148,20 @@ export function AdminPage() {
                               </small>
                             </div>
                           )}
-                          {candidate.review_status === 'needs_enrichment' && (
+                          {(candidate.review_status === 'needs_enrichment' || candidate.target_poi_status === 'pending') && (
                             <form
                               className="form-fields-grid-2"
                               style={{ marginTop: 18 }}
                               onSubmit={(event) => void promotePlaceCandidate(candidate, event)}
                             >
                               <h4 style={{ gridColumn: '1 / -1' }}>
-                                Enrich and submit POI evidence for review
+                                {candidate.target_poi_id ? 'Add a source for selected POI fields' : 'Create a pending POI and submit source evidence'}
                               </h4>
                               <label className="field-group-3d">
                                 <span>Address suggestion (verify against source)</span>
                                 <input
                                   name="address"
-                                  defaultValue={String(raw.address || '')}
+                                  defaultValue={addressDefault}
                                   required
                                   minLength={5}
                                   maxLength={300}
@@ -1142,7 +1176,7 @@ export function AdminPage() {
                                   max={90}
                                   step="any"
                                   required
-                                  defaultValue={String(raw.lat ?? '')}
+                                  defaultValue={String(raw.latitude ?? raw.lat ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
@@ -1154,14 +1188,14 @@ export function AdminPage() {
                                   max={180}
                                   step="any"
                                   required
-                                  defaultValue={String(raw.lon ?? '')}
+                                  defaultValue={String(raw.longitude ?? raw.lon ?? '')}
                                 />
                               </label>
                               <label className="field-group-3d">
-                                <span>Verified category</span>
+                                <span>Category (review against source)</span>
                                 <input
                                   name="category"
-                                  defaultValue={candidate.kind}
+                                  defaultValue={String(raw.category || candidate.kind)}
                                   required
                                   minLength={2}
                                   maxLength={40}
@@ -1174,17 +1208,21 @@ export function AdminPage() {
                                   type="url"
                                   required
                                   placeholder="https://..."
-                                  defaultValue={String(raw.source || '')}
+                                  defaultValue={sourceUrlDefault}
                                 />
                               </label>
                               <label className="field-group-3d">
                                 <span>Source type</span>
-                                <select name="source_type" defaultValue={String(raw.source_type || 'dataset')}>
+                                <select name="source_type" required defaultValue={rawSourceType}>
+                                  <option value="" disabled>Select the source type</option>
                                   <option value="official">Official</option>
                                   <option value="provider">Provider</option>
                                   <option value="website">Website</option>
                                   <option value="dataset">Sourced dataset</option>
                                   <option value="field_check">Field check</option>
+                                  {rawSourceType && !sourceTypes.includes(rawSourceType) && (
+                                    <option value={rawSourceType}>{rawSourceType} (as listed in source file)</option>
+                                  )}
                                 </select>
                               </label>
                               <label className="field-group-3d">
@@ -1194,29 +1232,42 @@ export function AdminPage() {
                                   required
                                   minLength={2}
                                   maxLength={180}
-                                  defaultValue={String(raw.source_label || 'OpenStreetMap contributors')}
+                                  defaultValue={String(raw.source_label || '')}
                                 />
                               </label>
                               <label className="field-group-3d">
-                                <span>License (optional)</span>
-                                <input name="license" maxLength={120} defaultValue={String(raw.license || 'ODbL-1.0')} />
+                                <span>Source license / terms</span>
+                                <input name="license" required minLength={2} maxLength={120} placeholder="Điều khoản sử dụng thực tế của nguồn" />
                               </label>
                               <label className="field-group-3d">
-                                <span>Observed at</span>
-                                <input name="observed_at" type="datetime-local" required defaultValue={toDateTimeLocal(raw.source_observed_at)} />
+                                  <span>Observed at</span>
+                                <input name="observed_at" type="datetime-local" required defaultValue={toDateTimeLocal(raw.observed_at || raw.source_observed_at)} />
                               </label>
                               <label className="field-group-3d">
                                 <span>Evidence expires at</span>
-                                <input name="expires_at" type="datetime-local" required />
+                                <input name="expires_at" type="datetime-local" required defaultValue={toDateTimeLocal(raw.expires_at)} />
                               </label>
+                              <fieldset className="field-group-3d" style={{ gridColumn: '1 / -1' }}>
+                                <legend>Trường URL này xác nhận trực tiếp</legend>
+                                {([
+                                  ['name', 'Tên POI'],
+                                  ['address', 'Địa chỉ'],
+                                  ['latitude', 'Vĩ độ'],
+                                  ['longitude', 'Kinh độ'],
+                                  ['category', 'Danh mục'],
+                                ] as const).map(([field, label]) => (
+                                  <label key={field} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: 16 }}>
+                                    <input type="checkbox" name="fields_covered" value={field} /> {label}
+                                  </label>
+                                ))}
+                                <small>Chỉ chọn trường có thể đối chiếu trực tiếp tại URL này. Các nguồn bổ sung có thể gửi riêng.</small>
+                              </fieldset>
                               <label
                                 className="field-group-3d"
                                 style={{ gridColumn: '1 / -1' }}
                               >
                                 <span>
-                                  <input type="checkbox" name="source_confirmed" required /> I
-                                  checked that this source supports the POI name, address,
-                                  coordinates, and category.
+                                  <input type="checkbox" name="source_confirmed" required /> Tôi đã mở URL và kiểm tra các trường vừa chọn.
                                 </span>
                               </label>
                               <button
@@ -1224,7 +1275,7 @@ export function AdminPage() {
                                 type="submit"
                                 style={{ gridColumn: '1 / -1' }}
                               >
-                                <Check size={14} /> Submit for moderation
+                                <Check size={14} /> Submit source for moderation
                               </button>
                             </form>
                           )}
@@ -1235,7 +1286,7 @@ export function AdminPage() {
                               {String(raw.lon ?? 'trống')}
                             </span>
                             <span>
-                              Giá trong file: {String(raw.price_vnd ?? 'trống')} VND · cơ sở:{' '}
+                              Giá ghi trong file (không nhập vào POI): {String(raw.price_vnd ?? 'trống')} VND · cơ sở:{' '}
                               {String(raw.price_basis || 'chưa có')} · đơn vị:{' '}
                               {String(raw.price_unit || 'chưa rõ')}
                             </span>
@@ -1257,8 +1308,24 @@ export function AdminPage() {
                             {Boolean(raw.evidence_status) && (
                               <span>Bằng chứng: {String(raw.evidence_status)}</span>
                             )}
-                            <span>Cờ verified gốc trong Excel: {String(raw.verified ?? false)}</span>
-                            <span>Nguồn ghi trong file: {String(raw.source || 'không có')}</span>
+                            <span>Trạng thái nguồn: {String(raw.verification_status || raw.verified || 'không có')}</span>
+                            <span>URL nguồn trong file: {String(raw.source_url || raw.source || 'không có')}</span>
+                            {rawSourceUrl.startsWith('https://') && (
+                              <a href={rawSourceUrl} target="_blank" rel="noreferrer">Mở trang nguồn để đối chiếu</a>
+                            )}
+                            <span>Loại nguồn trong file: {String(raw.source_type || 'không có')}</span>
+                            <span>Giấy phép ghi trong file: {String(raw.license || 'không có; cần rà soát')}</span>
+                            <span>Trường nguồn tự khai: {String(raw.fields_covered || 'không có; cần đối chiếu URL')}</span>
+                            <span>Thời điểm nguồn: {String(raw.observed_at || 'không có')}</span>
+                            <span>Hạn nguồn: {String(raw.expires_at || 'không có')}</span>
+                            {Boolean(raw.photo_url) && (
+                              <span>
+                                Ảnh trong file: {String(raw.photo_url)} · credit: {String(raw.photo_credit || 'chưa có')}
+                                {String(raw.photo_url).startsWith('https://') && (
+                                  <> · <a href={String(raw.photo_url)} target="_blank" rel="noreferrer">Mở ảnh</a></>
+                                )}
+                              </span>
+                            )}
                             <span>Tags: {tags || 'không có'}</span>
                             {Boolean(raw.description) && <span>{String(raw.description)}</span>}
                             {Boolean(sourceDetails.opening_hours) && <span>opening_hours (OSM): {String(sourceDetails.opening_hours)}</span>}
