@@ -15,7 +15,7 @@
   "dependencies": {
     "@goongmaps/goong-js": "^1.0.9",
     "@types/three": "^0.186.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "axios": "^1.7.9",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.49.0",
