@@ -1,3 +1,4 @@
+import { ModelLocationSearch } from './ModelLocationSearch'
 import { LandmarkDiscoveryPanel } from './LandmarkDiscoveryPanel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -850,6 +851,12 @@ export function Map3DLandmarkViewer({
               <span />
             </div>
           </div>
+
+          <ModelLocationSearch key={modelId} onSelect={place => {
+            patch({ latitude: place.latitude, longitude: place.longitude })
+            mapRef.current?.flyTo({ center: [place.longitude, place.latitude], zoom: 17.2, duration: 1400 })
+            setStatusMessage({ kind: 'info', text: 'Đã chọn vị trí từ Goong. Bấm Lưu để cập nhật mô hình.' })
+          }} />
 
           {/* Coordinate Inputs */}
           <div className="space-y-2.5">
