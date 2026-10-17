@@ -70,7 +70,8 @@ class ExperienceService:
             if (start_at or end_at) and not slots:
                 continue
             result.append(self.serialize(item, slots, item.verification_status == "verified"))
-        return result
+        stats = self.repository.review_stats([item.id for item in result])
+        return [item.model_copy(update={"rating_count": stats[item.id][0], "rating_average": stats[item.id][1]}) if item.id in stats else item for item in result]
 
     def get(self, experience_id: str) -> ExperienceRead | None:
         item = self.repository.get_experience(experience_id)
@@ -82,7 +83,11 @@ class ExperienceService:
         if item.verification_status == "verified":
             slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                      and self.repository.is_fresh_slot(slot)]
-        return self.serialize(item, slots, item.verification_status == "verified")
+        experience = self.serialize(item, slots, item.verification_status == "verified")
+        stats = self.repository.review_stats([item.id])
+        if item.id in stats:
+            experience = experience.model_copy(update={"rating_count": stats[item.id][0], "rating_average": stats[item.id][1]})
+        return experience
 
     def serialize(self, item, slots, is_real: bool) -> ExperienceRead:
         poi = POIRead.model_validate(item.poi)
@@ -94,6 +99,8 @@ class ExperienceService:
         experience = ExperienceRead.model_validate({
             **ExperienceRead.model_validate(item).model_dump(),
             "poi": poi.model_dump(),
+            "provider_name": item.provider.name if item.provider else None,
+            "provider_slug": item.provider.slug if item.provider else None,
             "data_mode": "real" if is_real else "simulated",
             "source_evidence": self.repository.source_evidence("experience", item.id, item.data_revision) if is_real else [],
         })

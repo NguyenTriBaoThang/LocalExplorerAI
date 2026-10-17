@@ -9,11 +9,12 @@ from app.api.dependencies import get_db
 from app.core.config import settings
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.services.routing_service import make_geocoding_provider
+from app.api.guards import public
 
 router = APIRouter(prefix="/api", tags=["routing and geocoding"])
 
 
-@router.get("/routing/capabilities")
+@router.get("/routing/capabilities", dependencies=[Depends(public('routing provider capabilities'))])
 def routing_capabilities(db: Session = Depends(get_db)):
     try:
         routing_provider = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
@@ -41,7 +42,7 @@ def routing_capabilities(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/geocoding/forward", response_model=GeocodeResponse)
+@router.get("/geocoding/forward", response_model=GeocodeResponse, dependencies=[Depends(public('address lookup; relies on rate limiting'))])
 def forward_geocode(address: str = Query(min_length=3, max_length=300), db: Session = Depends(get_db)):
     try:
         result = make_geocoding_provider(db).forward(address)

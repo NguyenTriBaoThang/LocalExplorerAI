@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { getSharedItinerary, claimTicket } from '../api/client'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { apiErrorMessage, getSharedItinerary, claimTicket } from '../api/client'
 import { useAuth } from '../auth'
 import { MapAdapter, LEG_COLORS, type MapPoint } from '../components/map/MapAdapter'
 import type { Itinerary } from '../types'
@@ -10,13 +10,16 @@ export function SharedItineraryPage() {
   const token = rawToken.split('[')[0].split('(')[0].replace(/[\]\)]+$/, '').trim()
 
   const { user, setUser, refresh } = useAuth()
+  // The chat bot's link carries a single-use ?claim= secret. The public share token alone can only be *viewed*.
+  const [searchParams] = useSearchParams()
+  const claimToken = searchParams.get('claim') ?? ''
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedStopId, setSelectedStopId] = useState<string | undefined>()
 
   // Claim form state
-  const [claimEmail, setClaimEmail] = useState('')
+  const [claimEmail, setClaimEmail] = useState(user?.email ?? '')
   const [claimPassword, setClaimPassword] = useState('')
   const [claimName, setClaimName] = useState('')
   const [claimLoading, setClaimLoading] = useState(false)
@@ -58,8 +61,12 @@ export function SharedItineraryPage() {
       setClaimError('Vui lòng điền đầy đủ email và mật khẩu.')
       return
     }
-    if (claimPassword.length < 8) {
-      setClaimError('Mật khẩu tối thiểu 8 ký tự.')
+    if (!claimToken) {
+      setClaimError('Liên kết nhận vé không hợp lệ. Hãy mở lại liên kết từ tin nhắn của bot.')
+      return
+    }
+    if (claimPassword.length < 12) {
+      setClaimError('Mật khẩu tối thiểu 12 ký tự (nếu email đã có tài khoản, nhập mật khẩu hiện tại của bạn).')
       return
     }
 
@@ -67,7 +74,7 @@ export function SharedItineraryPage() {
       setClaimLoading(true)
       setClaimError('')
       const claimedUser = await claimTicket({
-        share_token: token,
+        claim_token: claimToken,
         email: claimEmail,
         password: claimPassword,
         display_name: claimName || undefined,
@@ -75,9 +82,8 @@ export function SharedItineraryPage() {
       setUser(claimedUser)
       await refresh()
       setClaimSuccess(true)
-    } catch (err: any) {
-      const msg = err.response?.data?.detail?.message || err.response?.data?.detail || 'Không thể liên kết tài khoản. Vui lòng thử lại.'
-      setClaimError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    } catch (err) {
+      setClaimError(apiErrorMessage(err))
     } finally {
       setClaimLoading(false)
     }
@@ -250,7 +256,7 @@ export function SharedItineraryPage() {
       </div>
 
       {/* Claim / Account Conversion Card */}
-      {!user && !claimSuccess ? (
+      {claimToken && !claimSuccess ? (
         <div
           style={{
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
@@ -268,7 +274,7 @@ export function SharedItineraryPage() {
             </h3>
           </div>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
-            Vé này đang ở chế độ xem trực tiếp. Tạo mật khẩu nhanh (không cần xác minh rườm rà) để lưu vĩnh viễn vào tài khoản của bạn, cập nhật thời gian thực và lưu lại kỉ niệm sau chuyến đi!
+            Nhập email và mật khẩu để lưu vé này vào tài khoản. Nếu email đã có tài khoản, hãy nhập mật khẩu hiện tại của bạn. Với tài khoản mới, bạn sẽ nhận email xác minh để có thể giữ chỗ và thanh toán.
           </p>
 
           {claimError && (
@@ -291,11 +297,11 @@ export function SharedItineraryPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>Mật khẩu mong muốn * (≥ 8 ký tự)</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>Mật khẩu * (≥ 12 ký tự cho tài khoản mới)</label>
               <input
                 type="password"
                 required
-                placeholder="Tối thiểu 8 ký tự"
+                placeholder="Tối thiểu 12 ký tự"
                 value={claimPassword}
                 onChange={(e) => setClaimPassword(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13 }}
@@ -339,7 +345,7 @@ export function SharedItineraryPage() {
             </div>
           </form>
         </div>
-      ) : (
+      ) : claimSuccess ? (
         <div
           style={{
             background: 'rgba(16, 185, 129, 0.1)',
@@ -369,7 +375,7 @@ export function SharedItineraryPage() {
             Xem danh sách hành trình →
           </Link>
         </div>
-      )}
+      ) : null}
 
       {/* Embedded Map Section Dedicated to this Ticket */}
       <div id="ticket-map" style={{ marginBottom: 36 }}>

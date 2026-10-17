@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom'
 import { CityHero3D } from '../components/3d/CityHero3D'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { useTranslation } from '../i18n'
+import { HomeContentSections } from '../components/content/HomeContentSections'
 
 export function HomePage() {
   const { t, locale } = useTranslation()
@@ -125,7 +126,7 @@ export function HomePage() {
 
           <h1 className="hero-heading-3d">
             {t('home.heading1')} <br />
-            <span className="gradient-text-emerald">{t('home.headingHighlight')}</span> {t('home.heading2')}
+            <span className="gradient-text-emerald">{t('home.headingHighlight')}</span> <span className="nowrap">{t('home.heading2')}</span>
           </h1>
 
           <p className="hero-description-3d">
@@ -164,6 +165,9 @@ export function HomePage() {
           <CityHero3D />
         </div>
       </section>
+
+      {/* Banners, collections and guides published from the admin portal */}
+      <HomeContentSections />
 
       {/* Quick Vibe Categories */}
       <section className="vibe-section-3d">

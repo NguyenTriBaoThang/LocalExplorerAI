@@ -62,7 +62,7 @@ The versioned prompt catalog lives under `apps/api/app/prompts/`; the active ver
 
 `GET /api/ai/prompts` returns the active manifest/version and the eight prompt IDs.
 
-Legacy AI admin routes accept a valid `X-Admin-Key: $ADMIN_API_KEY` or an authenticated admin session:
+Administrator AI tools require an authenticated admin session with the `admin:ai_tools` permission (the old shared `X-Admin-Key` was removed):
 
 - `POST /api/experiences/{id}/ai-tag` — run EXPERIENCE_TAGGER, persist tags, hands-on, indoor, primary intent, weather sensitivity, and prompt version.
 - `POST /api/ai/intent-similarity` — run INTENT_SIMILARITY for two experience IDs and upsert the canonical pair into `intent_similarities`.
@@ -78,7 +78,7 @@ Traveler and provider workflows:
 - `POST /api/providers/{provider_id}/slot-assistant/preview` — send `X-Provider-Access-Key`, a short message, and exact selected `slot_ids`. Runs PROVIDER_ASSISTANT and returns a five-minute signed confirmation token; it does not mutate availability. `PAUSE_DAY` is accepted only when the selection covers every not-yet-cancelled slot for that provider today.
 - `POST /api/providers/{provider_id}/slot-assistant/confirm` — send the preview token and provider key to apply the scoped change. The provider's access key is provisioned out of band in `providers.portal_access_key`. Cancellation changes slots and emits `SLOT_CANCELLED` events for re-planning.
 
-Provider confirmation uses `APP_SIGNING_SECRET`; production must set both `APP_SIGNING_SECRET` and `ADMIN_API_KEY`. Never expose the model key, signing secret, admin key, provider access key, or confirmation tokens in browser logs or public responses.
+Provider confirmation uses `APP_SIGNING_SECRET`; production must set `APP_SIGNING_SECRET`. Never expose the model key, signing secret, service-account keys, provider access key, or confirmation tokens in browser logs or public responses.
 
 ## Booking and payment boundary
 
@@ -116,7 +116,17 @@ Current error codes also include `LLM_NOT_CONFIGURED`, `LLM_PROVIDER_ERROR`, `IN
 
 ## Accounts and role-managed workflows
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET/PATCH /api/auth/me`, `POST /api/auth/password` — email account lifecycle; sessions use an HTTP-only cookie. Public registration always creates a traveler.
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET/PATCH /api/auth/me`, `POST /api/auth/password` — email account lifecycle. Sign-in sets an HTTP-only access cookie (15 minutes) and a refresh cookie scoped to `/api`; the API renews both transparently while the user is active, so clients never handle tokens. Public registration always creates a traveler. Passwords must be at least 12 characters and not a commonly used password (`422 WEAK_PASSWORD`).
+- `POST /api/auth/password/forgot` `{email}` — always `202 {"accepted": true}`, whether or not the account exists; emails a single-use link valid for 30 minutes (at most one a minute per account). Needs SMTP and `WEB_APP_URL`.
+- `POST /api/auth/password/reset` `{token, new_password}` — sets the new password, signs every device out and clears the cookies. A weak password is refused without using up the link; a used, expired or foreign link returns `400 TOKEN_INVALID`.
+- `POST /api/auth/email/verify` `{token}` and `POST /api/auth/email/verify/resend` — verify the email address (link valid 24 hours). Until the email is verified, `POST /api/bookings` and checkout return `403 EMAIL_NOT_VERIFIED`; browsing and planning are unaffected. Resending twice within a minute returns `429 VERIFICATION_RECENTLY_SENT`.
+- `GET /api/partners/{slug}` — public profile of an approved, active partner (name, description, address, website, contact, rating, open experiences). `404` for pending, rejected, suspended or unknown partners. Experiences now include `rating_average`, `rating_count` (published reviews only), `provider_name` and `provider_slug`.
+- `GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`, `POST /api/auth/logout-all` — list signed-in devices (`current` marks the caller), sign one out, or sign out everywhere. Revoking a device ends its access token immediately. Someone else's session id returns `404`.
+- `POST /api/auth/login` returns `{"mfa_required": true, "mfa_ticket", "expires_in"}` instead of a user when the account has two-factor authentication; no session exists yet. Finish with `POST /api/auth/login/mfa` `{mfa_ticket, code}` (a 6-digit authenticator code or a recovery code). The ticket lives 5 minutes and is single use; 5 wrong codes in 15 minutes lock the account for the rest of the window (`429 MFA_LOCKED`).
+- `GET /api/auth/mfa` (status), `POST /api/auth/mfa/setup` (returns `secret`, `otpauth_uri`, QR `data:` URI), `POST /api/auth/mfa/enable` `{code}` (returns 10 single-use recovery codes, shown once), `POST /api/auth/mfa/recovery-codes` `{code}` (regenerate), `POST /api/auth/mfa/disable` `{code, password}`. All need `account:mfa`. Enabling or disabling signs out the other devices.
+- With `ADMIN_MFA_REQUIRED` on, an administrator whose session did not pass a second factor gets `403 MFA_REQUIRED` everywhere except `account:read` and `account:mfa`, cannot turn MFA off (`403 MFA_REQUIRED_FOR_ROLE`) and cannot reset the password by e-mail (`403 ADMIN_RESET_FORBIDDEN`).
+- Wrong passwords are throttled per e-mail+IP (5), per e-mail (20) and per IP (50) within `AUTH_LOGIN_WINDOW_SECONDS` (default 15 minutes): `429 LOGIN_THROTTLED` with `Retry-After`. Unknown e-mails are counted the same way. Responses under `/api/auth` carry `Cache-Control: no-store`.
+- `POST /api/auth/claim-ticket` `{claim_token, email, password, display_name?}` — attach a chat-bot ticket itinerary to an account. `claim_token` is the single-use secret from the bot's `?claim=` link (valid 7 days), **not** the public share token (the old `share_token` body is rejected with 422). Only itineraries that nobody owns, or that still belong to the bot's placeholder account, can be claimed (`409 TICKET_ALREADY_CLAIMED`). An existing traveler account is only signed in to with its password and never modified; a new email creates a traveler and sends a verification email. Staff accounts get `403 CLAIM_ROLE_FORBIDDEN`.
 - `GET /api/auth/google/start` — starts Google authorization-code + PKCE sign-in. Requires OAuth client settings and a registered callback URL.
 - `GET /api/me/itineraries`, `POST/DELETE /api/itineraries/{id}/share`, `GET /api/shared/itineraries/{token}`, `POST /api/itineraries/{id}/feedback` — private itinerary history, revocable share URLs, and submitted traveler reviews.
 - `GET /api/notifications` — active cancellation alerts for the signed-in traveler.

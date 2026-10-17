@@ -1,9 +1,10 @@
-import { ArrowUpRight, Clock3, MapPin, Users, Sparkles, Compass } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, Clock3, MapPin, Users, Sparkles, Compass, Star } from 'lucide-react'
 import type { Experience } from '../../types'
 import { VerificationBadge } from '../common/StatusBadge'
 import { TiltCard3D } from '../3d/TiltCard3D'
 import { useTranslation } from '../../i18n'
-import { Link } from 'react-router-dom'
+import { tagLabel } from '../../tags'
 
 export function ExperienceCard({
   experience,
@@ -110,6 +111,19 @@ export function ExperienceCard({
 
         <div className="card-body-content">
           <h3 className="card-title">{experience.name}</h3>
+          <div className="card-rating-row" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5 }}>
+            {experience.rating_average != null && (experience.rating_count ?? 0) > 0 ? (
+              <span className="card-rating" title={locale === 'vi' ? `${experience.rating_count} đánh giá` : `${experience.rating_count} reviews`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--amber)', fontWeight: 600 }}>
+                <Star size={13} fill="currentColor" />{experience.rating_average.toFixed(1)}
+                <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>({experience.rating_count})</span>
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-dim)' }}>{locale === 'vi' ? 'Chưa có đánh giá' : 'No reviews yet'}</span>
+            )}
+            <Link to={`/experiences/${experience.id}`} onClick={(event) => event.stopPropagation()} className="source-evidence-link">
+              {locale === 'vi' ? 'Xem chi tiết' : 'Details'}
+            </Link>
+          </div>
           <p className="card-desc">{experience.description}</p>
           <Link
             className="card-place-detail-link"
@@ -123,7 +137,7 @@ export function ExperienceCard({
           <div className="card-tags-row">
             {experience.intent_tags.slice(0, 3).map((tag) => (
               <span key={tag} className="intent-pill">
-                #{tag.replaceAll('_', ' ')}
+                #{tagLabel(tag, locale)}
               </span>
             ))}
           </div>

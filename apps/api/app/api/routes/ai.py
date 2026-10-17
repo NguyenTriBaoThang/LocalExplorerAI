@@ -1,4 +1,5 @@
 import base64
+import logging
 import hashlib
 import hmac
 import json
@@ -15,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.adapters.llm.provider import StructuredOutputProvider
-from app.api.dependencies import get_llm_provider, get_db, get_optional_user, require_admin
+from app.api.dependencies import get_llm_provider, get_db
 from app.core.config import settings
 from app.core.enums import normalize_intent_tag
 from app.models.entities import Event, Evidence, Experience, ExperienceSlot, Feedback, IntentSimilarity, Itinerary, ItineraryStop, Provider, User
@@ -38,14 +39,17 @@ from app.schemas.ai import (
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.services.replanning_service import ReplanningService, aware
 from app.services.evidence_service import REQUIRED_FIELDS, utc_now
+from app.api.guards import public, require, require_user
+from app.api.permissions import P
 
 
+log = logging.getLogger(__name__)
 router = APIRouter(tags=["AI workflows"])
 LOCAL_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 _DEVELOPMENT_SIGNING_SECRET = secrets.token_urlsafe(48)
 
 
-@router.get("/api/ai/prompts")
+@router.get("/api/ai/prompts", dependencies=[Depends(public('prompt manifest contains no secrets or user data'))])
 def list_prompt_catalog():
     return {key: value for key, value in catalog.manifest.items() if key != "prompt_ids"} | {
         "prompt_ids": list(catalog.prompt_ids),
@@ -76,8 +80,12 @@ def _provider_auth(db: Session, provider_id: str, access_key: str | None, user: 
         if user.role == "provider" and user.provider_id == provider.id:
             return provider
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_FORBIDDEN", "message": "This account cannot manage the selected provider."})
+    if not settings.allow_provider_access_key:
+        raise HTTPException(status_code=401, detail={"code": "PROVIDER_KEY_DISABLED", "message": "Provider access keys are disabled. Sign in as a provider user."})
     if not access_key or not provider.portal_access_key or not secrets.compare_digest(access_key, provider.portal_access_key):
         raise HTTPException(status_code=401, detail={"code": "PROVIDER_UNAUTHORIZED", "message": "A valid provider access key is required."})
+    # Deprecated: providers should sign in. Kept for compatibility; every use is logged so callers can be found and migrated.
+    log.warning("deprecated X-Provider-Access-Key used for provider %s; sign in as a provider user instead", provider.id)
     return provider
 
 
@@ -113,7 +121,7 @@ def _verify_confirmation_token(token: str) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail={"code": "INVALID_CONFIRMATION_TOKEN", "message": "The confirmation token is invalid or expired; preview the action again."}) from error
 
 
-@router.post("/api/experiences/{experience_id}/ai-tag", dependencies=[Depends(require_admin)])
+@router.post("/api/experiences/{experience_id}/ai-tag", dependencies=[Depends(require(P.ADMIN_AI_TOOLS))])
 def tag_experience(
     experience_id: str,
     payload: ExperienceTagRequest,
@@ -146,7 +154,7 @@ def tag_experience(
     return {"experience_id": experience.id, "metadata": result.model_dump(), "prompt_version": catalog.version}
 
 
-@router.post("/api/ai/intent-similarity", dependencies=[Depends(require_admin)])
+@router.post("/api/ai/intent-similarity", dependencies=[Depends(require(P.ADMIN_AI_TOOLS))])
 def calculate_intent_similarity(
     payload: IntentSimilarityRequest,
     db: Session = Depends(get_db),
@@ -201,7 +209,7 @@ def get_replan_advice(
     payload: ReplanAdviceRequest,
     db: Session = Depends(get_db),
     provider: StructuredOutputProvider = Depends(get_llm_provider),
-    user: User | None = Depends(get_optional_user),
+    user: User | None = Depends(require_user(P.REPLAN_ADVISE, optional=True)),
 ):
     itinerary = db.get(Itinerary, itinerary_id)
     if user is not None and user.role != "traveler":
@@ -225,7 +233,7 @@ def accept_replan(
     itinerary_id: str,
     payload: ReplanAcceptRequest,
     db: Session = Depends(get_db),
-    user: User | None = Depends(get_optional_user),
+    user: User | None = Depends(require_user(P.REPLAN_ACCEPT, optional=True)),
 ):
     itinerary = db.get(Itinerary, itinerary_id)
     if itinerary is None:
@@ -259,7 +267,7 @@ def preview_provider_slot_action(
     x_provider_access_key: str | None = Header(default=None),
     db: Session = Depends(get_db),
     provider: StructuredOutputProvider = Depends(get_llm_provider),
-    user: User | None = Depends(get_optional_user),
+    user: User | None = Depends(require_user(P.PROVIDER_SLOT_ASSIST, optional=True)),
 ):
     owner = _provider_auth(db, provider_id, x_provider_access_key, user)
     slots = _load_slots(db, payload.slot_ids)
@@ -330,7 +338,7 @@ def confirm_provider_slot_action(
     payload: ProviderActionConfirmRequest,
     x_provider_access_key: str | None = Header(default=None),
     db: Session = Depends(get_db),
-    user: User | None = Depends(get_optional_user),
+    user: User | None = Depends(require_user(P.PROVIDER_SLOT_ASSIST, optional=True)),
 ):
     owner = _provider_auth(db, provider_id, x_provider_access_key, user)
     claims = _verify_confirmation_token(payload.confirmation_token)
@@ -387,7 +395,7 @@ def confirm_provider_slot_action(
             "event_ids": [event.id for event in created_events]}
 
 
-@router.post("/api/itineraries/{itinerary_id}/feedback/label", dependencies=[Depends(require_admin)])
+@router.post("/api/itineraries/{itinerary_id}/feedback/label", dependencies=[Depends(require(P.ADMIN_AI_TOOLS))])
 def label_feedback(
     itinerary_id: str,
     payload: FeedbackLabelRequest,
@@ -429,7 +437,7 @@ def label_feedback(
     return {"feedback_id": feedback.id, "label": result.model_dump(), "prompt_version": catalog.version}
 
 
-@router.post("/api/itineraries/{itinerary_id}/weather-advisory", dependencies=[Depends(require_admin)])
+@router.post("/api/itineraries/{itinerary_id}/weather-advisory", dependencies=[Depends(require(P.ADMIN_AI_TOOLS))])
 def weather_advisory(
     itinerary_id: str,
     payload: WeatherAdviceRequest,

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.config import settings
 from app.core.pilot_area import PILOT_DISTRICT
-from app.models.entities import POI, Evidence, Experience, ExperienceSlot
+from app.models.entities import POI, Evidence, Experience, ExperienceReview, ExperienceSlot, Provider
 from app.services.evidence_service import (
     current_verified_evidence,
     entity_is_operationally_verified,
@@ -41,7 +41,14 @@ class ExperienceRepository:
             slot_criteria.append(ExperienceSlot.end_at <= slot_end_at)
         slot_loader = selectinload(Experience.slots.and_(*slot_criteria)) if slot_criteria else selectinload(Experience.slots)
 
-        query = select(Experience).join(POI).options(joinedload(Experience.poi), slot_loader)
+        # A suspended partner's experiences disappear from the public catalog until it is reactivated.
+        query = (
+            select(Experience)
+            .join(POI)
+            .join(Provider, Experience.provider_id == Provider.id)
+            .where(Provider.is_active.is_(True))
+            .options(joinedload(Experience.poi), slot_loader)
+        )
         allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]
         query = query.where(Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
         if max_price is not None:
@@ -57,12 +64,22 @@ class ExperienceRepository:
             items = [item for item in items if intent in (item.intent_tags or [])]
         return items
 
+    def review_stats(self, experience_ids: list[str]) -> dict[str, tuple[int, float]]:
+        """Published-review count and average rating per experience, in one query."""
+        if not experience_ids:
+            return {}
+        rows = self.db.execute(select(ExperienceReview.experience_id, func.count(ExperienceReview.id), func.avg(ExperienceReview.rating)).where(
+            ExperienceReview.experience_id.in_(experience_ids), ExperienceReview.status == "published",
+        ).group_by(ExperienceReview.experience_id)).all()
+        return {experience_id: (count, round(float(average), 1)) for experience_id, count, average in rows}
+
     def get_experience(self, experience_id: str) -> Experience | None:
         allowed_statuses = ["verified"] if settings.real_data_only else ["verified", "simulated"]
         item = self.db.scalar(
             select(Experience)
             .join(POI)
-            .where(Experience.id == experience_id, Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
+            .join(Provider, Experience.provider_id == Provider.id)
+            .where(Provider.is_active.is_(True), Experience.id == experience_id, Experience.verification_status.in_(allowed_statuses), POI.verification_status.in_(allowed_statuses))
             .options(joinedload(Experience.poi), selectinload(Experience.slots))
         )
         if item is None:

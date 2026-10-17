@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_db, require_admin
+from app.api.dependencies import get_db
 from app.core.config import settings
 from app.models.entities import Event, NotificationDelivery, OpsJobRun
 from app.services.rate_limit import _redis
+from app.api.guards import require
+from app.api.permissions import P
 
-router = APIRouter(prefix="/api/ops", tags=["operations"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/ops", tags=["operations"], dependencies=[Depends(require(P.OPS_READ))])
 
 
 @router.get("/status")

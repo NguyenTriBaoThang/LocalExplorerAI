@@ -4,7 +4,8 @@ from uuid import uuid4
 from app.adapters.routing.goong import GoongDirectionsProvider
 from app.core.config import settings
 from app.models.entities import ExperienceSlot, POI, Provider, User
-from app.services.auth_service import create_session_token, hash_password
+from app.auth.passwords import hash_password
+from tests.helpers import sign_in
 
 
 def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session, monkeypatch):
@@ -17,12 +18,12 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     )
     admin = User(id=str(uuid4()), email="source-admin@example.com", display_name="Admin", role="admin", is_active=True)
     traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler",
-                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True)
+                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True,
+                    email_verified_at=datetime.now(timezone.utc))
     db_session.add_all([provider_user, admin, traveler])
     db_session.commit()
 
-    client.cookies.clear()
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     poi_response = client.post("/api/provider/pois", json={
         "name": "Verified craft studio",
         "description": "A small workshop",
@@ -61,7 +62,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     poi_evidence_id = poi_evidence.json()["id"]
 
     # Evidence must be reviewed before a catalog row can be approved.
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
     blocked = client.patch(f"/api/admin/moderation/poi/{poi_id}", json={"action": "approve"})
     assert blocked.status_code == 409
     assert blocked.json()["error"]["code"] == "CATALOG_EVIDENCE_INCOMPLETE"
@@ -70,7 +71,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     approved_poi = client.patch(f"/api/admin/moderation/poi/{poi_id}", json={"action": "approve"})
     assert approved_poi.status_code == 200, approved_poi.text
 
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     experience_response = client.post("/api/provider/experiences", json={
         "poi_id": poi_id, "title": "Hands-on wheel pottery", "description": "Guests shape a clay cup.",
         "primary_intent": "thủ_công",
@@ -90,11 +91,11 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert experience_evidence.status_code == 201, experience_evidence.text
     experience_evidence_id = experience_evidence.json()["id"]
 
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
     assert client.patch(f"/api/admin/moderation/evidence/{experience_evidence_id}", json={"action": "approve"}).status_code == 200
     assert client.patch(f"/api/admin/moderation/experience/{experience_id}", json={"action": "approve"}).status_code == 200
 
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     slot_start = datetime.now(timezone.utc) + timedelta(days=1)
     slot_response = client.post(f"/api/provider/experiences/{experience_id}/slots", json={
         "start_at": slot_start.isoformat(), "end_at": (slot_start + timedelta(minutes=90)).isoformat(),
@@ -139,11 +140,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     monkeypatch.setattr(GoongDirectionsProvider, "_request_json", fake_goong_request)
 
     trip_start = slot_start - timedelta(hours=1)
-    login = client.post("/api/auth/login", json={
-        "email": traveler.email, "password": "long-enough-password",
-    })
-    assert login.status_code == 200, login.text
-    assert client.get("/api/auth/me").json()["role"] == "traveler"
+    sign_in(client, traveler)
     planned = client.post("/api/itineraries/plan", json={
         "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=110)).isoformat(),
         "group_size": 2, "budget_vnd": 1000000, "transport_mode": "walking",
@@ -180,7 +177,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert hold.json()["amount_vnd"] == 500000
 
     client.cookies.clear()
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     confirmation = client.post(
         f"/api/provider/me/bookings/{hold.json()['id']}/decision",
         json={"action": "accept", "note": "Capacity checked by provider"},
@@ -189,7 +186,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert confirmation.json()["status"] == "awaiting_payment"
 
     client.cookies.clear()
-    client.cookies.set("le_session", create_session_token(traveler.id))
+    sign_in(client, traveler)
     reread = client.get(f"/api/itineraries/{planned.json()['itinerary_id']}")
     assert reread.status_code == 200, reread.text
     assert reread.json()["data_mode"] == "real"
@@ -209,7 +206,7 @@ def test_provider_edit_invalidates_previously_submitted_evidence(client, db_sess
     user = User(id=str(uuid4()), email="edit-provider@example.com", display_name="Provider", role="provider", provider_id=provider.id)
     db_session.add(user)
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(user.id))
+    sign_in(client, user)
     revision = sample_experience.data_revision
     response = client.patch(f"/api/provider/experiences/{sample_experience.id}", json={
         "poi_id": sample_experience.poi_id, "title": "Updated workshop", "description": "Updated detail",
