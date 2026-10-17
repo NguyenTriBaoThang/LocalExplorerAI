@@ -14,11 +14,11 @@ NOT_FOUND = "Không tìm thấy chuyến đi"
 
 def test_other_users_trip_is_404_everywhere(client, db_session, trip_places, monkeypatch):
     h, tid, pid = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
-    assert pin(client, h, tid, pid).status_code == 200  # a pin B could undo if PATCH leaked
     proposal = client.post(f"/api/trips/{tid}/disruptions", headers=h,
                            json={"version": 1, "kind": "closed", "day_index": 0, "stop_index": 0}).json()
     assert proposal["options"], proposal  # a real option, so only ownership can explain B's 404
     review = create_pending_review(client, h, tid, monkeypatch)
+    assert pin(client, h, tid, pid).status_code == 200  # pin after generating valid pending previews
 
     def snapshot():
         db_session.expire_all()

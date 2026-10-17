@@ -239,6 +239,11 @@ class ChatMessage(StrictModel):
 
     @model_validator(mode="after")
     def bound_conversation_context(self):
+        if self.previous_constraints is not None and self.trip_context is None:
+            self.trip_context = ChatTripContext(
+                has_planning_context=True, planner_constraints=self.previous_constraints,
+                trip_date=self.previous_constraints.trip_date,
+            )
         if len(self.message) + sum(len(message) for message in self.prior_user_messages) > 3900:
             raise ValueError("The current and prior user messages must fit within 3,900 characters")
         return self

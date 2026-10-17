@@ -915,3 +915,17 @@ Dashboard quản trị hiển thị phân bố đặt chỗ theo 7 ngày trong t
 ### Trạng thái triển khai
 
 Các tích hợp thời tiết, PWA, push và heatmap đã có trong mã nguồn. Push cần khóa VAPID/HTTPS ở môi trường chạy thực tế. Mô hình ngập vẫn chờ dữ liệu âm đã xác minh; không tạo nhãn âm tổng hợp để thay thế dữ liệu thực.
+
+
+### AI Chat nhiều ngày (UAT / Travility)
+
+Sau khi sao lưu database, chạy `alembic upgrade head` từ `apps/api`, rồi import danh mục riêng cho AI Chat:
+
+```sh
+python -m scripts.import_trip_places ../../data/sai_gon_places.json
+# Docker: docker compose exec api python -m scripts.import_trip_places /data/sai_gon_places.json
+```
+
+Import upsert 177 địa điểm vào `trip_places`, không thay POI, booking hoặc model Meshy. Gemini embedding dùng cấu hình AI hiện có; nếu không khả dụng, tìm kiếm dùng từ khóa. Giờ mở cửa/giá là dữ liệu tham khảo, không xác nhận vận hành thực tế. Đăng nhập bằng tài khoản du khách tại `/chat` để tạo lịch nhiều ngày, sửa bằng chat, ghim điểm, khôi phục phiên bản, góp ý nhóm, xử lý sự cố và xuất bản đang xem qua hộp thoại in/PDF. Các đường nét đứt trên bản đồ nối thứ tự điểm, không phải chỉ dẫn đường bộ; khoảng cách Goong có thể lùi về ước lượng khi provider lỗi.
+
+Kiểm tra: `npm test` và `npm run build` trong `apps/web`; `APP_ENV=test DATABASE_URL=sqlite:// python -m pytest tests` trong `apps/api`. Môi trường test không đọc `.env` runtime.

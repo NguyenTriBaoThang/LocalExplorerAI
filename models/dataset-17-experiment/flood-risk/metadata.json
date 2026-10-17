@@ -3,7 +3,7 @@
   "demo_mode": true,
   "dataset_status": "synthetic_simulated",
   "deployment_eligible": false,
-  "source_dataset_sha256": "ab90b7fc0698ae683098f54d768ececcc3b227b9cbd4e7f06c052aa147d6b490",
+  "source_dataset_sha256": "f5c502b00a56276272d75a62ee59582a4b3de1f1548d14a332e790a1a470f772",
   "observation_rows_used": 693,
   "simulated_status_counts": {
     "verified_negative": 452,
@@ -12,12 +12,12 @@
   "metrics": {
     "test": {
       "average_precision": 1.0,
-      "brier_score": 0.0001364320226310189,
+      "brier_score": 0.0001109013768474111,
       "recall_at_threshold": 1.0,
       "roc_auc": 1.0,
       "threshold": 0.4
     }
   },
-  "created_at_utc": "2026-10-17T17:56:56.892725+00:00",
+  "created_at_utc": "2026-10-17T05:30:40.881405+00:00",
   "warning": "Offline experiment only. The supplied generator creates simulated impressions, synthetic flood labels, placeholder evidence URLs, and fabricated verification metadata. Metrics measure imitation of that generator, not real user preference, real flood risk, or operational readiness. Do not deploy or use for decisions."
 }

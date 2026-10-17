@@ -70,7 +70,7 @@ export function Map3DGuidePanel({ landmark, modelId }: { landmark: ModelCalibrat
       })
       if (result.intent === 'planning' && result.structured_constraints) applyConstraints(result.structured_constraints)
       const reply = result.reply || result.structured_constraints?.clarification_question_vi || 'Bạn cho mình biết thêm thời gian và ngân sách để mình gợi ý phù hợp nhé.'
-      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: 'assistant', text: reply, assistantMode: result.assistant_mode }])
+      setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: 'assistant', text: reply, assistantMode: result.assistant_mode === 'unavailable' ? undefined : result.assistant_mode }])
     } catch (reason) {
       setError(apiErrorMessage(reason) || 'Chưa kết nối được trợ lý. Bạn thử lại sau nhé.')
     } finally {

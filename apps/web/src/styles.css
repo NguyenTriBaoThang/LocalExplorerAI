@@ -12990,6 +12990,53 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
   }
 }
 
+<<<<<<< HEAD
+.trip-print { display: none; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  html, body, #root { width: auto !important; height: auto !important; overflow: visible !important; }
+  body { background: #fff !important; color: #111 !important; }
+  .app-shell { display: none !important; }
+  .trip-print {
+    display: block !important;
+    color: #111 !important;
+    background: #fff !important;
+    font-family: "Be Vietnam Pro", system-ui, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+  }
+  .trip-print * { color: #111 !important; box-shadow: none !important; }
+  .print-trip-header { border-bottom: 2px solid #333; margin-bottom: 1rem; padding-bottom: 0.75rem; }
+  .print-trip-header h1 { font-size: 22pt; margin: 0.25rem 0; }
+  .print-trip-overview, .print-trip-conflicts { margin: 0 0 1rem; }
+  .print-trip-conflicts { border: 1px solid #777; padding: 0.5rem 0.75rem; }
+  .print-trip-day { margin: 0 0 1rem; }
+  .print-trip-day-title { break-after: avoid-page; page-break-after: avoid; margin: 0 0 0.5rem; }
+  .print-trip-stops { break-before: avoid-page; page-break-before: avoid; margin: 0; padding-left: 1.5rem; }
+  .print-trip-stop { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0.5rem; }
+  .print-trip-stop-heading { display: flex; justify-content: space-between; gap: 1rem; }
+  .print-trip-stop p { margin: 0.15rem 0 0; }
+  .print-trip-legs { margin: 0.5rem 0 0; padding-left: 1.5rem; }
+  .print-trip-legs li { break-inside: avoid; page-break-inside: avoid; }
+}
+
+.trip-workspace { --border: var(--border-subtle); --bg-elevated: var(--bg-surface-elevated); position: relative; height: calc(100dvh - 180px); min-height: 540px; width: 100%; overflow: hidden; isolation: isolate; font-family: 'Be Vietnam Pro', sans-serif; }
+.trip-workspace button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+/* Override Goong's relative positioning so its canvas fills the workspace. */
+.trip-workspace .trip-map-surface { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.trip-pin { color: white; border: 2px solid white; border-radius: 999px; min-width: 32px; height: 32px; padding: 0 6px; font-weight: 700; box-shadow: 0 2px 8px #0004; cursor: pointer; }
+.trip-pin--searching { background: #f59e0b; animation: trip-pulse 1s infinite alternate; }
+@keyframes trip-pulse { to { opacity: .4; } }
+.trip-map-controls { position: absolute; z-index: 5; bottom: 12px; left: 80px; right: 16px; display: flex; align-items: center; flex-direction: column; gap: 6px; pointer-events: none; }
+.trip-map-controls > * { pointer-events: auto; background: var(--bg-surface); color: var(--text-main); padding: 6px 10px; border-radius: 10px; max-width: 540px; text-align: center; }
+.trip-map-notice { position: absolute; left: 80px; right: 16px; top: 0; z-index: 6; background: var(--bg-surface); padding: 8px; }
+.trip-place-popup { position: absolute; z-index: 25; bottom: 90px; left: 50%; transform: translateX(-50%); border-radius: 16px; overflow: hidden; background: var(--bg-surface); box-shadow: 0 8px 40px #0004; }
+.trip-place-popup > button { position: absolute; right: 6px; top: 6px; z-index: 1; background: var(--bg-surface); border-radius: 50%; padding: 4px 9px; }
+@media (prefers-reduced-motion: reduce) { .trip-pin--searching { animation: none; } }
+@media print { body:has(.trip-print) nav, body:has(.trip-print) .app-header, body:has(.trip-print) footer { display: none !important; } }
+=======
 /* Signed-in phones: brand text + language + avatar + theme + menu together are wider than the pill and push the menu out. */
 @media (max-width: 440px) {
   .header-inner:has(.user-dropdown-container) .brand-text {
@@ -13020,3 +13067,4 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 .place-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
 .place-actions > a { display: inline-flex; align-items: center; gap: 8px; }
 .home-showcase-links { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+>>>>>>> origin/uat

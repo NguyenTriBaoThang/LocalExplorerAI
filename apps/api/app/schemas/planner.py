@@ -148,6 +148,29 @@ class PlanResponse(BaseModel):
         return value
 
 
+class ItinerarySuggestion(BaseModel):
+    style: str
+    relaxed_experience_names: list[str] = Field(default_factory=list)
+    relaxed_poi_names: list[str] = Field(default_factory=list)
+    recommendation_reason: str | None = Field(default=None, max_length=400)
+    request: PlanRequest
+    preview: PlanResponse
+
+
+class ItinerarySuggestionsResponse(BaseModel):
+    options: list[ItinerarySuggestion]
+    requested_count: int
+    returned_count: int
+    ranking_source: Literal['gemini', 'heuristic'] = 'heuristic'
+
+
+class ItineraryOptionRank(BaseModel):
+    option_id: str = Field(min_length=1, max_length=100)
+    reason_vi: str = Field(min_length=1, max_length=400)
+
+
+class ItineraryRankingResponse(BaseModel):
+    ranked_options: list[ItineraryOptionRank] = Field(min_length=1, max_length=5)
 class PlanPreviewResponse(BaseModel):
     preview_id: str
     confirmation_token: str
@@ -181,28 +204,3 @@ class PlanPreviewResponse(BaseModel):
 class PlanConfirmationRequest(BaseModel):
     plan: PlanRequest
     confirmation_token: str = Field(min_length=20, max_length=4096)
-
-
-class ItinerarySuggestion(BaseModel):
-    style: str
-    relaxed_experience_names: list[str] = Field(default_factory=list)
-    relaxed_poi_names: list[str] = Field(default_factory=list)
-    recommendation_reason: str | None = Field(default=None, max_length=400)
-    request: PlanRequest
-    preview: PlanResponse
-
-
-class ItinerarySuggestionsResponse(BaseModel):
-    options: list[ItinerarySuggestion]
-    requested_count: int
-    returned_count: int
-    ranking_source: Literal['gemini', 'heuristic'] = 'heuristic'
-
-
-class ItineraryOptionRank(BaseModel):
-    option_id: str = Field(min_length=1, max_length=100)
-    reason_vi: str = Field(min_length=1, max_length=400)
-
-
-class ItineraryRankingResponse(BaseModel):
-    ranked_options: list[ItineraryOptionRank] = Field(min_length=1, max_length=5)

@@ -71,6 +71,8 @@ def suggest_itineraries(db, request: PlanRequest):
             last_error = error
             continue
 
+        # Suggestions use an ephemeral option identifier; this is not a saved itinerary.
+        preview['itinerary_id'] = preview['request_id']
         signature = tuple(stop['experience_id'] for stop in preview['stops'])
         if signature not in seen_routes:
             seen_routes.add(signature)

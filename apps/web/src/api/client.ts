@@ -87,7 +87,8 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-export async function sendChatMessage(request: ChatMessageRequest): Promise<ChatReply> {
+export async function sendChatMessage(message: string | ChatMessageRequest, conversation_id?: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
+  const request = typeof message === 'string' ? { message, conversation_id, ...context } : message
   const { data } = await api.post<ChatReply>('/chat/message', request, { timeout: 65000 })
   return data
 }
@@ -484,4 +485,3 @@ export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): str
   if (error instanceof Error && error.message) return error.message
   return 'Đang hiển thị chế độ mô phỏng trực tuyến.'
 }
-

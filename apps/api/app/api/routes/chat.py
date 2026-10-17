@@ -6,12 +6,12 @@ from app.core.config import settings
 from app.prompts.registry import catalog
 from app.schemas.ai import ChatMessage, ChatReply
 from app.services.chat_response_service import route_chat_message
+from app.services.journey_service import landmark_context
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from sqlalchemy.orm import Session
 from app.models.entities import User
 from app.api.guards import public, require_user
 from app.api.permissions import P
-from app.services.journey_service import landmark_context
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -55,5 +55,3 @@ def chat_status(provider: StructuredOutputProvider = Depends(get_llm_provider), 
         "fallback_available": settings.llm_fallback_enabled,
         "fallback_version": "1.0.0" if settings.llm_fallback_enabled else None,
     }
-
-

@@ -502,7 +502,7 @@ class PlannerService:
                          "origin_latitude": request.origin_latitude, "origin_longitude": request.origin_longitude,
                          "destination_latitude": request.destination_latitude, "destination_longitude": request.destination_longitude,
                          "origin_label": request.origin_label, "destination_label": request.destination_label,
-                         "route_snapshot": json.loads(json.dumps(routes, default=str))},
+                         "route_snapshot": json.loads(json.dumps(routes, default=str)) if request.routing_mode != "demo" else None},
             estimated_cost_vnd=total_cost, data_mode="real" if itinerary_data_mode == "verified" else "simulated" if itinerary_data_mode == "simulated" else "mixed",
         )
         response_stops = []

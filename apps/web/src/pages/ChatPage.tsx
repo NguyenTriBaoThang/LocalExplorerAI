@@ -217,11 +217,11 @@ export function ChatPage() {
 
   useEffect(() => {
     let active = true
-    api.get<POI[]>('/pois', { params: { verified_only: !trip.demo } })
+    api.get<POI[]>('/pois')
       .then(({ data }) => { if (active) setPois(data) })
       .catch((reason: unknown) => { if (active) setPoiError(getChatError(reason, locale)) })
     return () => { active = false }
-  }, [locale, trip.demo])
+  }, [locale])
 
   useEffect(() => {
     let active = true
@@ -326,7 +326,7 @@ export function ChatPage() {
   const criteriaStatus = useMemo(() => {
     const hasGroup = Boolean(constraints?.group_size)
     const hasTime = Boolean(constraints?.start_time && constraints?.return_deadline)
-    const hasBudget = constraints?.budget_vnd != null
+    const hasBudget = Boolean(constraints?.budget_vnd)
     const hasIntents = Boolean(
       constraints?.intent_weights &&
       Object.values(constraints.intent_weights).some((w) => w > 0)
@@ -398,7 +398,7 @@ export function ChatPage() {
       list.push({ label: '⏰ 14:00 - 21:30', text: locale === 'en' ? 'We want to travel from 14:00 to 21:30.' : 'Tụi mình muốn đi từ 14:00 đến 21:30.' })
     }
     if (!criteriaStatus.hasBudget) {
-      list.push({ label: '💰 500k tổng', text: locale === 'en' ? 'Total budget is 500,000 VND.' : 'Tổng ngân sách 500.000 đồng.' })
+      list.push({ label: '💰 500k/người', text: locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.' })
       list.push({ label: '💰 1.200.000₫ tổng', text: locale === 'en' ? 'Total group budget is 1,200,000 VND.' : 'Tổng ngân sách của nhóm là 1.200.000₫.' })
     }
     if (!constraints?.travel_mode_confirmed || unsupportedTravelMode) {
@@ -580,8 +580,8 @@ export function ChatPage() {
       }
       if (routingCapabilities && !routingCapabilities.supported_modes.includes(constraints.travel_mode)) {
         throw new Error(locale === 'en'
-          ? `${constraints.travel_mode} routing is not supported by ${routingCapabilities.provider}. Supported modes: ${routingCapabilities.supported_modes.join(', ')}.`
-          : `${routingCapabilities.provider} chưa hỗ trợ phương tiện “${constraints.travel_mode}”. Hãy chọn phương tiện được hỗ trợ: ${routingCapabilities.supported_modes.join(', ')}.`)
+          ? `${constraints.travel_mode} routing is not supported by ${routingCapabilities.provider}. Choose motorcycle, walking, or car in the chat.`
+          : `${routingCapabilities.provider} chưa hỗ trợ phương tiện “${constraints.travel_mode}”. Hãy nhắn lại để chọn xe máy, đi bộ hoặc ô tô.`)
       }
       if (routingUnavailable) {
         throw new Error(locale === 'en'
@@ -596,10 +596,8 @@ export function ChatPage() {
         budget_vnd: constraints.budget_vnd!,
         transport_mode: constraints.travel_mode,
         intent_weights: constraints.intent_weights,
-        require_verified: !trip.demo,
-        routing_mode: 'configured',
-        locked_experience_ids: trip.selected.map((item) => item.id),
-        locked_poi_ids: [...new Set([...trip.lockedPois, ...lockedPlaces.map((place) => place.poiId)])],
+        locked_experience_ids: [],
+        locked_poi_ids: lockedPlaces.map((place) => place.poiId),
         origin_latitude: origin.latitude,
         origin_longitude: origin.longitude,
         origin_label: origin.name,
@@ -1217,7 +1215,7 @@ export function ChatPage() {
                     : routingUnavailable
                     ? (locale === 'en' ? `API key missing for ${routingCapabilities?.provider}.` : `Thiếu khóa API ${routingCapabilities?.provider}.`)
                     : unsupportedTravelMode
-                      ? (locale === 'en' ? `Unsupported by ${routingCapabilities?.provider}. Supported: ${routingCapabilities?.supported_modes.join(', ')}.` : `Nhà cung cấp ${routingCapabilities?.provider} chưa hỗ trợ. Hỗ trợ: ${routingCapabilities?.supported_modes.map((mode) => modeLabels[mode as keyof typeof modeLabels] || mode).join(', ')}.`)
+                      ? (locale === 'en' ? `Unsupported by ${routingCapabilities?.provider}; choose motorcycle, walking, or car.` : `Nhà cung cấp ${routingCapabilities?.provider} chưa hỗ trợ; hãy chọn xe máy, đi bộ hoặc ô tô.`)
                       : t('chat.autoEta')}
                 </div>
               </div>

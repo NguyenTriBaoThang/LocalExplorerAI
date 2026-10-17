@@ -19,7 +19,7 @@ def chat_client(db: Session) -> tuple[openai.OpenAI, str] | None:
     if config is None:
         return None
     api_key, base_url, model = config
-    return openai.OpenAI(api_key=api_key, base_url=base_url, timeout=settings.openai_timeout_seconds), model
+    return openai.OpenAI(api_key=api_key, base_url=base_url, timeout=settings.trip_ai_timeout_seconds, max_retries=0), model
 
 
 def embed(db: Session, texts: list[str], wait_on_rate_limit: bool = False) -> list[list[float]] | None:

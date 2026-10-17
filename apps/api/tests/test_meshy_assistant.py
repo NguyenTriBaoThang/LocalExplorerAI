@@ -8,6 +8,16 @@ from tests.helpers import bearer_for, make_user
 
 URL='/api/admin/meshy/chat'
 
+def test_quota_error_reaches_portal_without_gateway_masking(client, db_session, monkeypatch):
+    admin = bearer_for(make_user(db_session, 'admin'))
+    def fail(*args):
+        raise meshy_assistant.AssistantProviderError('Gemini quota HTTP 429. Chưa gửi Meshy.', 429)
+    monkeypatch.setattr(meshy_assistant, 'prepare', fail)
+    result = client.post(URL, json={'messages': [{'role': 'user', 'content': 'A building'}]}, headers=admin)
+    assert result.status_code == 429
+    assert 'quota' in result.json()['error']['message']
+    assert db_session.scalar(select(func.count()).select_from(MeshyJob)) == 0
+
 def test_chat_permissions_validation_and_no_generation(client, db_session, monkeypatch):
     body={'messages':[{'role':'user','content':'Tạo mô hình tòa nhà này'}]}
     assert client.post(URL,json=body).status_code == 401

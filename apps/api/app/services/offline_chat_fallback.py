@@ -213,12 +213,14 @@ def _parse_standalone_money(value: str) -> int | None:
 def build_offline_constraints(
     message: str,
     reason: str,
+    previous: StructuredConstraints | None = None,
     *,
     trip_date_context: date | None = None,
     latest_message: str | None = None,
     prior_constraints: StructuredConstraints | None = None,
 ) -> tuple[StructuredConstraints, str]:
     """Extract only values matching explicit simple patterns; never invent prices or availability."""
+    prior_constraints = prior_constraints or previous
     folded = _fold(message)
     trip_date = _parse_trip_date(folded, trip_date_context or (prior_constraints.trip_date if prior_constraints else None), latest_message)
     group_size = _parse_group_size(folded)
