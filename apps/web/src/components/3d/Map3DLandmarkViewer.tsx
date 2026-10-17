@@ -29,10 +29,11 @@ import {
   type ModelCalibration
 } from './landmark/types'
 import { offsetGeo } from './landmark/geo'
+import { loadSiteConfig } from '../../api/siteConfig'
 
 export type { ModelCalibration } from './landmark/types'
 
-const GOONG_MAPTILES_KEY =
+const FALLBACK_MAPTILES_KEY =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOONG_MAPTILES_KEY ||
   '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU'
 
@@ -346,12 +347,16 @@ export function Map3DLandmarkViewer({
     renderer.render(scene, camera)
   }, [])
 
+  // The tile key is managed in the admin portal; the build-time key is only a fallback.
+  const [mapKey, setMapKey] = useState<string | null>(null)
+  useEffect(() => { loadSiteConfig().then((config) => setMapKey(config.maptiles_key || FALLBACK_MAPTILES_KEY)) }, [])
+
   // 4. Initialize Goong Map
   useEffect(() => {
     const container = mapContainerRef.current
-    if (!container || !calibrationReady) return
+    if (!container || !calibrationReady || mapKey === null) return
 
-    goongjs.accessToken = GOONG_MAPTILES_KEY
+    goongjs.accessToken = mapKey
 
     const initialLat = calibration.latitude || NOTRE_DAME_ORIGIN.lat
     const initialLng = calibration.longitude || NOTRE_DAME_ORIGIN.lng
@@ -418,7 +423,7 @@ export function Map3DLandmarkViewer({
       map.remove()
       mapRef.current = null
     }
-  }, [calibrationReady, styleMode, renderFrame])
+  }, [calibrationReady, styleMode, renderFrame, mapKey])
 
   // 5. Load 3D GLB Model of Notre Dame Cathedral
   useEffect(() => {
@@ -747,11 +752,29 @@ export function Map3DLandmarkViewer({
           <Layers size={13} />
           <span>{styleMode === 'streets' ? 'Goong Sáng' : 'Goong Đêm'}</span>
         </button>
+
+        {/* On phones the admin toggle joins this wrapping toolbar; on wider screens it sits top-right. */}
+        {canEdit && (
+          <div className="sm:hidden">
+            <button
+              type="button"
+              onClick={() => setEditMode((v) => !v)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold backdrop-blur-md border transition-all ${
+                editMode
+                  ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/10'
+                  : 'bg-slate-900/80 border-slate-700/60 text-slate-300 hover:text-white'
+              }`}
+            >
+              <Settings size={14} />
+              <span>{editMode ? 'Đang Căn Chỉnh (Admin)' : 'Căn Chỉnh Vị Trí'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Top-Right Admin HUD Toggle */}
       {canEdit && (
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <div className="absolute top-4 right-4 z-20 hidden items-center gap-2 sm:flex">
           <button
             type="button"
             onClick={() => setEditMode((v) => !v)}

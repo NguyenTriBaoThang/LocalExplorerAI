@@ -31,9 +31,9 @@ export function EmailVerificationBanner() {
   }
 
   return (
-    <div className="inline-alert-3d" role="status" style={{ margin: '12px auto', maxWidth: 1280, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div className="inline-alert-3d" role="status" style={{ margin: '12px auto', maxWidth: 1280, display: 'flex', alignItems: 'center', gap: '8px 12px', flexWrap: 'wrap', padding: '10px 16px' }}>
       <AlertCircle size={16} className="text-amber" />
-      <span>{message || t('verify.banner')}</span>
+      <span style={{ flex: '1 1 220px' }}>{message || t('verify.banner')}</span>
       <button type="button" className="btn-secondary-3d btn-sm" disabled={busy} onClick={() => void resend()}>
         {t('verify.resend')}
       </button>

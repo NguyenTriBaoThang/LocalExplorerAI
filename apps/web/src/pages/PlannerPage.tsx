@@ -14,7 +14,7 @@ import {
   Lock,
   Search,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities, getItinerarySuggestions, type ItinerarySuggestion, type ItinerarySuggestions } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import type { GeocodeResponse, POI, RoutingCapabilities } from '../types'
@@ -60,7 +60,9 @@ export function PlannerPage() {
   const [transport, setTransport] = useTripField('transport')
   const [selectedIntents, setSelectedIntents] = useTripField('intents')
   const [pois, setPois] = useState<POI[]>([])
-  const [lockedPois, setLockedPois] = useTripField('lockedPois')
+  // Place and experience pages link here with ?poi=<id> so the chosen place is already on the list.
+  const [searchParams] = useSearchParams()
+  const [lockedPois, setLockedPois] = useState<string[]>(() => searchParams.getAll('poi'))
   const [poiSearch, setPoiSearch] = useState('')
   const [originId, setOriginId] = useTripField('originId')
   const [destinationId, setDestinationId] = useTripField('destinationId')

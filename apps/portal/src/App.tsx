@@ -11,6 +11,7 @@ import { AdminUsersPage } from './pages/admin/AdminUsersPage'
 import { AdminContentPage } from './pages/admin/AdminContentPage'
 import { AdminPlaceEditorPage } from './pages/admin/AdminPlaceEditorPage'
 import { AdminPlacesPage } from './pages/admin/AdminPlacesPage'
+import { AdminSiteSettingsPage } from './pages/admin/AdminSiteSettingsPage'
 import { AdminRbacPage } from './pages/admin/AdminRbacPage'
 import { AdminImportsPage } from './pages/admin/AdminImportsPage'
 import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage'
@@ -125,6 +126,9 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="ops:read" />}>
                     <Route path="operations" element={<AdminOperationsPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="admin:system" />}>
+                    <Route path="site-settings" element={<AdminSiteSettingsPage />} />
                   </Route>
                   <Route element={<RequirePermission permission="admin:ai_tools" />}>
                     <Route path="ai-tools" element={<AdminAiToolsPage />} />

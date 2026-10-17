@@ -28,7 +28,7 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
 import type { ChatConstraints, ChatServiceStatus, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
