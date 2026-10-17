@@ -1,0 +1,129 @@
+{
+  "overview": {
+    "text": "Nhà hát Thành phố là một công trình biểu diễn nghệ thuật tại trung tâm TP.HCM, được xây dựng trong giai đoạn 1898–1900.",
+    "source_ids": [
+      "official"
+    ],
+    "status": "sourced"
+  },
+  "image": {
+    "url": "/images/places/hcmc/sai-gon-nha-hat-thanh-pho-ho-chi-minh.jpg",
+    "caption": "Ảnh tư liệu địa điểm; không đại diện cho từng mốc lịch sử.",
+    "credit": "Ngô Trung · CC BY-SA 3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Nh%C3%A0_h%C3%A1t_l%E1%BB%9Bn_Th%C3%A0nh_ph%E1%BB%91_H%E1%BB%93_Ch%C3%AD_Minh.JPG"
+  },
+  "sources": [
+    {
+      "id": "official",
+      "title": "Cục Du lịch Quốc gia — Nhà hát Thành phố",
+      "url": "https://csdl.vietnamtourism.gov.vn/dest/?item=381",
+      "accessed_on": "2026-10-17"
+    }
+  ],
+  "timeline": [
+    {
+      "text": "Công trình được xây dựng với phong cách Gothic flamboyant.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1898",
+      "year_start": 1898,
+      "year_end": null,
+      "period": "1898–1900",
+      "title": "Xây dựng nhà hát",
+      "image": null
+    },
+    {
+      "text": "Nhà hát được sửa chữa để làm trụ sở Quốc hội, sau là Hạ nghị viện của Việt Nam Cộng hòa.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1955",
+      "year_start": 1955,
+      "year_end": null,
+      "period": "1955",
+      "title": "Chuyển công năng",
+      "image": null
+    },
+    {
+      "text": "Công trình hoạt động trở lại với chức năng nhà hát.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1975",
+      "year_start": 1975,
+      "year_end": null,
+      "period": "Sau 30/04/1975",
+      "title": "Trở lại chức năng biểu diễn",
+      "image": null
+    },
+    {
+      "text": "Mặt tiền được trùng tu theo thiết kế ban đầu.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1998",
+      "year_start": 1998,
+      "year_end": null,
+      "period": "1998",
+      "title": "Phục hồi mặt tiền",
+      "image": null
+    },
+    {
+      "text": "Nhà hát được công nhận là Di tích kiến trúc nghệ thuật cấp quốc gia.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "2012",
+      "year_start": 2012,
+      "year_end": null,
+      "period": "29/03/2012",
+      "title": "Công nhận di tích",
+      "image": null
+    }
+  ],
+  "architecture": [
+    {
+      "text": "Hoa văn và phù điêu mặt tiền thể hiện phong cách trang trí của các nhà hát Pháp cuối thế kỷ XIX.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "title": "Điểm nhấn kiến trúc",
+      "view": "front"
+    }
+  ],
+  "visit": {
+    "address": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "duration": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "hours": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "admission": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "notes": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "checked_on": null
+  }
+}

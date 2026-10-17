@@ -32,6 +32,9 @@ def _default_ranker_model_dir() -> str:
 
 
 class Settings(BaseSettings):
+    meshy_api_key: str = ""
+    meshy_daily_credits: int = 120
+    meshy_storage_dir: str = ""
     app_env: str = "development"
     real_data_only: bool = True
     database_url: str = "sqlite:///./local_explorer.sqlite3"

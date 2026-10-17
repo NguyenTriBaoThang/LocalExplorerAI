@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   CalendarDays,
@@ -15,24 +15,23 @@ import {
   Search,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities } from '../api/client'
+import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities, getItinerarySuggestions, type ItinerarySuggestion, type ItinerarySuggestions } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import type { GeocodeResponse, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
+import { useJourney, useTripField } from '../journey'
+import { ItinerarySuggestions as SuggestionsPanel } from '../components/journey/ItinerarySuggestions'
 
 const budgetPresets = [500000, 1000000, 2000000, 3500000]
 
 const today = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
-const tomorrow = () => {
-  const date = new Date(`${today()}T12:00:00+07:00`)
-  date.setUTCDate(date.getUTCDate() + 1)
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(date)
-}
+
 
 export function PlannerPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const { trip, setTrip } = useJourney()
 
   const intents = useMemo(() => [
     { id: 'food', label: t('home.catFood'), glyph: '🍜', desc: t('home.catFoodDesc') },
@@ -53,18 +52,18 @@ export function PlannerPage() {
     { id: 'walking', label: locale === 'en' ? 'Walking' : 'Đi bộ', icon: '🚶', note: locale === 'en' ? 'Goong walking profile' : 'Tuyến đi bộ từ Goong' },
   ], [locale])
 
-  const [date, setDate] = useState(tomorrow())
-  const [startTime, setStartTime] = useState('09:00')
-  const [endTime, setEndTime] = useState('16:00')
-  const [groupSize, setGroupSize] = useState(2)
-  const [budget, setBudget] = useState(1200000)
-  const [transport, setTransport] = useState('motorcycle')
-  const [selectedIntents, setSelectedIntents] = useState<string[]>(['food', 'handicraft'])
+  const [date, setDate] = useTripField('date')
+  const [startTime, setStartTime] = useTripField('startTime')
+  const [endTime, setEndTime] = useTripField('endTime')
+  const [groupSize, setGroupSize] = useTripField('groupSize')
+  const [budget, setBudget] = useTripField('budget')
+  const [transport, setTransport] = useTripField('transport')
+  const [selectedIntents, setSelectedIntents] = useTripField('intents')
   const [pois, setPois] = useState<POI[]>([])
-  const [lockedPois, setLockedPois] = useState<string[]>([])
+  const [lockedPois, setLockedPois] = useTripField('lockedPois')
   const [poiSearch, setPoiSearch] = useState('')
-  const [originId, setOriginId] = useState('')
-  const [destinationId, setDestinationId] = useState('')
+  const [originId, setOriginId] = useTripField('originId')
+  const [destinationId, setDestinationId] = useTripField('destinationId')
   const [originAddress, setOriginAddress] = useState('')
   const [destinationAddress, setDestinationAddress] = useState('')
   const [originGeocode, setOriginGeocode] = useState<GeocodeResponse | null>(null)
@@ -75,16 +74,50 @@ export function PlannerPage() {
   const [routingCapabilities, setRoutingCapabilities] = useState<RoutingCapabilities | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [suggestions, setSuggestions] = useState<{ key: string; data: ItinerarySuggestions } | null>(null)
+  const [customizing, setCustomizing] = useState(false)
+  const suggestionsRef = useRef<HTMLElement>(null)
+  const inputKey = JSON.stringify([trip, originAddress, destinationAddress, originResolved, destinationResolved])
+  const currentSuggestions = suggestions?.key === inputKey ? suggestions.data : null
+  useEffect(() => {
+    if (currentSuggestions) suggestionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [suggestions])
+
+  async function chooseSuggestion(option: ItinerarySuggestion) {
+    setLoading(true)
+    setError('')
+    try {
+      const chosenStops = option.preview.stops
+      const result = await createItinerary({
+        ...option.request,
+        excluded_experience_ids: [],
+        locked_experience_ids: chosenStops.map((stop) => stop.experience_id),
+        locked_poi_ids: [...new Set(chosenStops.map((stop) => stop.poi.id))],
+        preferred_slot_ids: chosenStops.map((stop) => stop.slot_id),
+      })
+      navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
+    } catch (reason) {
+      setError(apiErrorMessage(reason, locale))
+    } finally { setLoading(false) }
+  }
+
+  function customizeSuggestion(option: ItinerarySuggestion) {
+    setTrip((current) => ({ ...current, selected: option.preview.stops.map((stop) => ({ id: stop.experience_id, name: stop.name, poiId: stop.poi.id })) }))
+    setCustomizing(true)
+    setSuggestions(null)
+    document.querySelector('.planner-form-3d')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
 
   useEffect(() => {
-    void getPOIs().then(setPois).catch(() => setPois([]))
+    void getPOIs('pilot', !trip.demo).then(setPois).catch(() => setPois([]))
     void getRoutingCapabilities().then((capabilities) => {
       setRoutingCapabilities(capabilities)
       setTransport((current) => capabilities.supported_modes.includes(current)
         ? current
         : capabilities.supported_modes[0] || current)
     }).catch(() => undefined)
-  }, [])
+  }, [trip.demo])
 
   const visibleTransportModes = transportModes.filter((mode) =>
     !routingCapabilities || routingCapabilities.supported_modes.includes(mode.id)
@@ -144,6 +177,7 @@ export function PlannerPage() {
     event.preventDefault()
     setLoading(true)
     setError('')
+    setSuggestions(null)
     try {
       const toIso = (value: string) => new Date(`${date}T${value}:00+07:00`).toISOString()
       const origin = pois.find((poi) => poi.id === originId)
@@ -161,14 +195,16 @@ export function PlannerPage() {
           ? 'Choose both a departure point and a return destination so the route and return deadline can be checked.'
           : 'Hãy chọn cả điểm xuất phát và điểm về để kiểm tra đủ lộ trình và giờ về.')
       }
-      const result = await createItinerary({
+      const result = await getItinerarySuggestions({
         start_at: toIso(startTime),
         end_at: toIso(endTime),
         group_size: groupSize,
         budget_vnd: budget,
         transport_mode: transport,
         intent_weights: Object.fromEntries(selectedIntents.map((intent) => [intent, 1])),
-        locked_experience_ids: [],
+        require_verified: !trip.demo,
+        routing_mode: 'configured',
+        locked_experience_ids: trip.selected.map((item) => item.id),
         locked_poi_ids: lockedPois,
         ...(originPoint
           ? {
@@ -185,7 +221,8 @@ export function PlannerPage() {
             }
           : {}),
       })
-      navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
+      setSuggestions({ key: inputKey, data: result })
+      setCustomizing(false)
     } catch (reason) {
       setError(apiErrorMessage(reason, locale))
     } finally {
@@ -216,9 +253,24 @@ export function PlannerPage() {
         </div>
       </div>
 
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-slate-800">
+        <div>
+          <strong>{locale === 'en' ? 'Start with your saved choices' : 'Bắt đầu từ những lựa chọn của bạn'}</strong>
+          <p className="mt-1 text-sm">{date} · {startTime}–{endTime} · {groupSize} {locale === 'en' ? 'people' : 'người'} · {budget.toLocaleString('vi-VN')} ₫</p>
+          <p className="mt-1 text-sm">{locale === 'en' ? 'Compare suggested itineraries, then adjust the one you like.' : 'Xem các lịch trình gợi ý, rồi tùy chỉnh phương án bạn thích.'}</p>
+        </div>
+        {(originResolved || originId) && (destinationResolved || destinationId)
+          ? <button form="planner-form" type="submit" disabled={loading} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white disabled:opacity-50">{loading ? (locale === 'en' ? 'Finding options…' : 'Đang tìm phương án…') : (locale === 'en' ? 'Suggest 5 itineraries' : 'Gợi ý 5 lịch trình')}</button>
+          : <button type="button" onClick={() => document.getElementById('planner-endpoints')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white">{locale === 'en' ? 'Choose departure and return first' : 'Chọn điểm xuất phát và điểm về trước'}</button>}
+      </div>
+      {currentSuggestions && <section ref={suggestionsRef} aria-label={locale === 'en' ? 'Suggested itineraries' : 'Lịch trình gợi ý'} className="mb-8 scroll-mt-24">
+        <SuggestionsPanel data={currentSuggestions} locale={locale} busy={loading} onChoose={(option) => void chooseSuggestion(option)} onCustomize={customizeSuggestion} />
+        {error && <p role="alert" className="form-alert-3d">{error}</p>}
+      </section>}
       <div className="planner-grid-3d">
         {/* Main Form */}
-        <form className="planner-form-3d" onSubmit={submit}>
+        <form id="planner-form" className="planner-form-3d" onSubmit={submit}>
+          {customizing && <p className="form-alert-3d" role="status">{locale === 'en' ? 'Stops from your chosen option are selected. Remove any in the journey bar above, change your criteria, then request new suggestions.' : 'Đã chọn các trải nghiệm của phương án này. Bạn có thể bỏ từng trải nghiệm trên thanh Hành trình phía trên, sửa thời gian/ngân sách rồi tìm gợi ý lại.'}</p>}
           {/* Section 01: Thời gian & Nhóm */}
           <div className="form-card-3d">
             <div className="form-card-header">
@@ -396,6 +448,7 @@ export function PlannerPage() {
                 </button>
               ))}
             </div>
+            {trip.demo && <p className="routing-provider-note">{locale === 'en' ? 'Demo experiences and availability are simulated. Routes still come from the configured map routing API; ETAs are estimates, not live traffic.' : 'Trải nghiệm và tình trạng chỗ đang mô phỏng. Tuyến đường vẫn lấy từ API chỉ đường đã cấu hình; ETA là ước tính, không phải giao thông thời gian thực.'}</p>}
             {routingCapabilities && (
               <p className="routing-provider-note">
                 {locale === 'en' ? 'Routing provider' : 'Nhà cung cấp tuyến đường'}: {routingCapabilities.provider}. {routingCapabilities.eta_is_realtime ? (locale === 'en' ? 'Live traffic ETA.' : 'ETA giao thông thời gian thực.') : (locale === 'en' ? 'ETAs are estimates, not live traffic.' : 'ETA là ước tính, không phải giao thông thời gian thực.')}
@@ -406,7 +459,7 @@ export function PlannerPage() {
           </div>
 
           {/* Section 04: Điểm xuất phát, Điểm về & Khóa POI */}
-          <div className="form-card-3d">
+          <div id="planner-endpoints" className="form-card-3d scroll-mt-24">
             <div className="form-card-header">
               <span className="step-num">{t('planner.step4Num')}</span>
               <div>
@@ -551,7 +604,7 @@ export function PlannerPage() {
               <small>{t('planner.submitEngine')}</small>
             </div>
             <button className="btn-planner-submit" type="submit" disabled={loading}>
-              <span>{loading ? t('planner.planning') : t('planner.submitBtn')}</span>
+              <span>{loading ? (locale === 'en' ? 'Finding feasible options…' : 'Đang tìm phương án phù hợp…') : (locale === 'en' ? 'Suggest 5 itineraries' : 'Gợi ý 5 lịch trình')}</span>
               <ArrowRight size={18} />
             </button>
           </div>

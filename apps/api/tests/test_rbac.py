@@ -11,6 +11,8 @@ from tests.route_inventory import inventory
 
 # Adding a public route must be a conscious, reviewed change to this list.
 PUBLIC_ROUTES = {
+    ("meshy", "GET", "/api/meshy/jobs/{job_id}/asset"),
+    ("landmark_stories", "GET", "/api/landmark-stories/{model_id}"),
     ("push_notifications", "GET", "/api/notifications/push/vapid-public-key"),
     ("admin_bot", "GET", "/api/bot/webhook"), ("admin_bot", "POST", "/api/bot/webhook"),
     ("ai", "GET", "/api/ai/prompts"),
@@ -27,6 +29,8 @@ PUBLIC_ROUTES = {
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
     ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"),
     ("chat", "GET", "/api/chat/status"),
+    # Journey reads public catalog readiness and model-to-place links, without account data.
+    ("journey", "GET", "/api/journey/pilot"), ("journey", "GET", "/api/journey/landmarks/{model_id}"),
     ("health", "GET", "/health"), ("health", "GET", "/ready"),
     ("main", "GET", "/"),
     ("ml", "GET", "/api/ml/status"), ("ml", "POST", "/api/ml/flood-risk"), ("ml", "POST", "/api/ml/rank-experiences"),
@@ -215,7 +219,8 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     m0016 = _load_migration("m0016", "migrations/versions/0016_portal_platform.py")
     later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py"),
              # 0016 also changes the schema; only its permission seed applies to this bare RBAC database.
-             type("PermissionsOnly", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)})]
+             type("PermissionsOnly", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)}),
+             _load_migration("m0018", "migrations/versions/0018_merge_behavior_portal.py")]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE roles (name VARCHAR(40) PRIMARY KEY, description VARCHAR(255), is_system BOOLEAN, created_at DATETIME)"))

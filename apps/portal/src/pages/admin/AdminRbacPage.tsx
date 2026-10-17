@@ -6,10 +6,12 @@ import { formatDateTime, ROLES, timeAgo } from '../../lib/format'
 import type { RbacMatrix, ServiceAccount } from '../../lib/types'
 
 const GROUPS: Record<string, string> = {
+  recommendations: 'Gợi ý cá nhân hóa',
   account: 'Tài khoản', itinerary: 'Lịch trình', notification: 'Thông báo', chat: 'AI Concierge', replan: 'Điều chỉnh lịch trình',
   booking: 'Đặt chỗ', review: 'Đánh giá', provider: 'Đối tác', admin: 'Quản trị', ops: 'Vận hành',
 }
 const LABELS: Record<string, string> = {
+  'recommendations:use': 'Quản lý đồng ý và tương tác gợi ý của mình',
   'account:read': 'Xem hồ sơ cá nhân', 'account:update': 'Sửa hồ sơ cá nhân', 'account:password': 'Đổi mật khẩu', 'account:sessions': 'Xem & đăng xuất thiết bị',
   'itinerary:plan': 'Tạo lịch trình', 'itinerary:read': 'Xem lịch trình', 'itinerary:list': 'Danh sách lịch trình của mình', 'itinerary:compare': 'So sánh lịch trình',
   'itinerary:versions': 'Lịch sử phiên bản lịch trình', 'itinerary:share': 'Chia sẻ lịch trình', 'itinerary:feedback': 'Gửi đánh giá lịch trình',
@@ -24,7 +26,7 @@ const LABELS: Record<string, string> = {
   'provider:reviews': 'Xem & trả lời đánh giá', 'provider:analytics': 'Xem thống kê trải nghiệm', 'review:write': 'Viết đánh giá trải nghiệm', 'admin:service_accounts': 'Quản lý khóa API', 'ops:read': 'Xem trạng thái vận hành',
 }
 const ROLE_ORDER = ['admin', 'provider', 'traveler']
-const GROUP_ORDER = ['account', 'itinerary', 'booking', 'review', 'chat', 'replan', 'notification', 'provider', 'admin', 'ops']
+const GROUP_ORDER = ['account', 'itinerary', 'booking', 'review', 'chat', 'recommendations', 'replan', 'notification', 'provider', 'admin', 'ops']
 // Kept in sync with ADMIN_REQUIRED on the server: the admin role can never lose these.
 const ADMIN_LOCKED = new Set(['admin:rbac', 'admin:users', 'admin:service_accounts'])
 

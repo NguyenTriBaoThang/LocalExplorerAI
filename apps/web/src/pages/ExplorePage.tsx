@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useJourney, useTripField } from '../journey'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight,
   Search,
@@ -13,7 +14,18 @@ import {
   Zap,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { apiErrorMessage, getExperiences, searchExperiences } from '../api/client'
+import {
+  api,
+  apiErrorMessage,
+  getExperiences,
+  getBehaviorExperimentStatus,
+  getRecommendationConsent,
+  rankBehaviorExperiences,
+  recordRecommendationInteractions,
+  searchExperiences,
+  type RecommendationInteraction,
+} from '../api/client'
+import { useAuth } from '../auth'
 import { ExperienceCard } from '../components/experience/ExperienceCard'
 import { MapAdapter } from '../components/map/MapAdapter'
 import { SimulatedBadge, VerificationBadge } from '../components/common/StatusBadge'
@@ -40,10 +52,41 @@ const localTomorrow = () => {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(date)
 }
 
+function simulatedPlaceKey(name: string) {
+  return name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLocaleLowerCase('vi').replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+function uniqueSimulatedPlaces(items: Experience[]) {
+  const unique: Experience[] = []
+  for (const item of items) {
+    const key = simulatedPlaceKey(item.poi.name)
+    const duplicateIndex = unique.findIndex((existing) => {
+      if (simulatedPlaceKey(existing.poi.name) !== key) return false
+      const meanLatitude = (existing.poi.latitude + item.poi.latitude) / 2
+      const distanceM = Math.hypot(
+        (existing.poi.latitude - item.poi.latitude) * 111_320,
+        (existing.poi.longitude - item.poi.longitude) * 111_320 * Math.cos(meanLatitude * Math.PI / 180),
+      )
+      return distanceM <= 150
+    })
+    if (duplicateIndex < 0) {
+      unique.push(item)
+      continue
+    }
+    const existing = unique[duplicateIndex]
+    if (existing.poi.details?.catalog_mode !== 'hcmc_catalog_candidate' && item.poi.details?.catalog_mode === 'hcmc_catalog_candidate') {
+      unique[duplicateIndex] = item
+    }
+  }
+  return unique
+}
+
 export function ExplorePage() {
   const { t, locale } = useTranslation()
+  const { user, loading: authLoading } = useAuth()
   const [searchParams] = useSearchParams()
-  const initialIntent = searchParams.get('intent') || ''
+  const { trip, setTrip } = useJourney()
+  const poiId = searchParams.get('poi_id') || ''
 
   const categories = useMemo(() => [
     { value: '', label: t('explore.allIntents'), icon: '✨' },
@@ -56,13 +99,19 @@ export function ExplorePage() {
 
   const [items, setItems] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
+  const [demoAvailable, setDemoAvailable] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [intent, setIntent] = useState(initialIntent)
-  const [date, setDate] = useState(localTomorrow())
-  const [time, setTime] = useState('09:00')
-  const [groupSize, setGroupSize] = useState(2)
-  const [budget, setBudget] = useState(2000000)
+  const intent = trip.intents.length === 1 ? trip.intents[0] : ''
+  const setIntent = (value: string) => setTrip((current) => ({ ...current, intents: value ? [value] : [] }))
+  useEffect(() => {
+    const requested = searchParams.get('intent')
+    if (requested && ['food', 'handicraft', 'culture', 'nature', 'relaxation'].includes(requested)) setTrip((current) => ({ ...current, intents: [requested] }))
+  }, [searchParams, setTrip])
+  const [date, setDate] = useTripField('date')
+  const [time, setTime] = useTripField('startTime')
+  const [groupSize, setGroupSize] = useTripField('groupSize')
+  const [budget, setBudget] = useTripField('budget')
   const [indoor, setIndoor] = useState('all')
   const [topic, setTopic] = useState('')
   const [radiusKm, setRadiusKm] = useState(15)
@@ -72,32 +121,68 @@ export function ExplorePage() {
   const [landmarkOnly, setLandmarkOnly] = useState(false)
   const [placeTag, setPlaceTag] = useState('')
   const [selectedId, setSelectedId] = useState(searchParams.get('focus') || '')
-  // A deliberate pick counts as a view of that experience (partner statistics); the automatic first pick does not.
-  const selectExperience = (id: string) => {
-    setSelectedId(id)
-    trackPageView('/explore', { entity_type: 'experience', entity_id: id })
-  }
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [recommendationTrackingEnabled, setRecommendationTrackingEnabled] = useState(false)
+  const [recommendationPersonalizationEnabled, setRecommendationPersonalizationEnabled] = useState(false)
+  const [behaviorRankerAvailable, setBehaviorRankerAvailable] = useState(false)
+  const [behaviorRankerEnabled, setBehaviorRankerEnabled] = useState(false)
+  const [behaviorRankerApplied, setBehaviorRankerApplied] = useState(false)
+  const [behaviorRankerWarning, setBehaviorRankerWarning] = useState('')
+  const [behaviorRankerError, setBehaviorRankerError] = useState('')
+  const [listRequestId, setListRequestId] = useState('')
+  const sentImpressions = useRef(new Set<string>())
+  const interactionWriteQueue = useRef<Promise<void>>(Promise.resolve())
+
+  useEffect(() => {
+    let active = true
+    api.get<{ demo_available: boolean }>('/journey/pilot')
+      .then(({ data }) => {
+        if (active) setDemoAvailable(data.demo_available)
+      })
+      .catch(() => {
+        if (active) setDemoAvailable(false)
+      })
+    return () => { active = false }
+  }, [])
+
+  const queueInteractionWrite = useCallback((events: RecommendationInteraction[]) => {
+    if (!events.length) return interactionWriteQueue.current
+    const nextWrite = interactionWriteQueue.current
+      .catch(() => undefined)
+      .then(() => recordRecommendationInteractions(events))
+    interactionWriteQueue.current = nextWrite
+    return nextWrite
+  }, [])
 
   useEffect(() => {
     let active = true
     setLoading(true)
     setError('')
-    const from = new Date(`${date}T${time}:00+07:00`).toISOString()
-    const to = new Date(`${date}T23:59:59+07:00`).toISOString()
+    const requestId = globalThis.crypto.randomUUID()
 
+    if (!trip.demo && (!date || !time || !trip.endTime || time >= trip.endTime)) {
+      setItems([])
+      setLoading(false)
+      setError('Chọn ngày và khung giờ hợp lệ; giờ về phải sau giờ bắt đầu.')
+      return
+    }
     const params = {
+      scope: trip.demo ? 'citywide' : 'pilot',
+      verified_only: !trip.demo,
+      ...(!trip.demo ? {
+        start_at: new Date(`${date}T${time}:00+07:00`).toISOString(),
+        end_at: new Date(`${date}T${trip.endTime}:00+07:00`).toISOString(),
+        group_size: groupSize,
+        total_budget_vnd: budget,
+        max_distance_km: radiusKm,
+        center_latitude: 10.779785,
+        center_longitude: 106.699018,
+        ...(slotId ? { slot_id: slotId } : {}),
+        ...(indoor !== 'all' ? { is_indoor: indoor === 'indoor' } : {}),
+      } : {}),
+      ...(poiId ? { poi_id: poiId } : {}),
       ...(intent ? { intent } : {}),
       ...(topic ? { topic } : {}),
-      ...(indoor !== 'all' ? { is_indoor: indoor === 'indoor' } : {}),
-      start_at: from,
-      end_at: to,
-      group_size: groupSize,
-      max_price: Math.floor(budget / groupSize),
-      max_distance_km: radiusKm,
-      center_latitude: 10.7769,
-      center_longitude: 106.7009,
-      ...(slotId ? { slot_id: slotId } : {}),
     }
     const timer = window.setTimeout(() => {
       const request =
@@ -105,11 +190,61 @@ export function ExplorePage() {
           ? searchExperiences(search.trim(), params, true)
           : getExperiences({ ...params, ...(search.trim() ? { query: search.trim() } : {}) })
       request
-        .then((data) => {
+        .then(async (response) => {
+          const data = trip.demo
+            ? uniqueSimulatedPlaces(response.filter((item) => item.data_mode === 'simulated'))
+            : response
+          let ordered = data
+          setBehaviorRankerApplied(false)
+          setBehaviorRankerError('')
+          setBehaviorRankerWarning('')
+          if (
+            behaviorRankerEnabled &&
+            behaviorRankerAvailable &&
+            recommendationPersonalizationEnabled &&
+            !trip.demo &&
+            user?.role === 'traveler' &&
+            data.some((item) => item.poi.details?.catalog_mode !== 'hcmc_catalog_candidate')
+          ) {
+            try {
+              const budgetBand = budget < 500000
+                ? 'under_500k'
+                : budget < 1000000
+                  ? '500k_1m'
+                  : budget <= 2000000
+                    ? '1m_2m'
+                    : 'over_2m'
+              const response = await rankBehaviorExperiences({
+                experience_ids: data
+                  .filter((item) => item.poi.details?.catalog_mode !== 'hcmc_catalog_candidate')
+                  .slice(0, 100)
+                  .map((item) => item.id),
+                intent_tags: intent ? [intent] : [],
+                budget_band: budgetBand,
+                group_size: groupSize,
+                center_latitude: 10.7769,
+                center_longitude: 106.7009,
+              })
+              if (!active) return
+              const rankedPositions = new Map(
+                response.ranked_candidates.map((candidate, index) => [candidate.experience_id, index]),
+              )
+              ordered = [...data].sort((left, right) =>
+                (rankedPositions.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+                (rankedPositions.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+              )
+              setBehaviorRankerApplied(true)
+              setBehaviorRankerWarning(response.warning)
+            } catch (reason: unknown) {
+              if (!active) return
+              setBehaviorRankerError(apiErrorMessage(reason))
+            }
+          }
           if (active) {
-            setItems(data)
+            setItems(ordered)
+            setListRequestId(requestId)
             setSelectedId((current) =>
-              data.some((item) => item.id === current) ? current : data[0]?.id || ''
+              ordered.some((item) => item.id === current) ? current : ordered[0]?.id || ''
             )
           }
         })
@@ -125,7 +260,48 @@ export function ExplorePage() {
       active = false
       window.clearTimeout(timer)
     }
-  }, [intent, date, time, groupSize, budget, indoor, topic, radiusKm, slotId, semantic, search])
+  }, [intent, date, time, groupSize, budget, indoor, topic, radiusKm, slotId, semantic, search,
+    behaviorRankerEnabled, behaviorRankerAvailable, recommendationPersonalizationEnabled, user?.role, trip.demo, trip.endTime, poiId])
+
+  useEffect(() => {
+    let active = true
+    if (authLoading) return () => { active = false }
+    if (user?.role !== 'traveler') {
+      setRecommendationTrackingEnabled(false)
+      setRecommendationPersonalizationEnabled(false)
+      setBehaviorRankerAvailable(false)
+      setBehaviorRankerEnabled(false)
+      return () => { active = false }
+    }
+    getRecommendationConsent()
+      .then((consent) => {
+        if (active) {
+          setRecommendationPersonalizationEnabled(consent.personalization_enabled)
+          if (!consent.personalization_enabled) setBehaviorRankerEnabled(false)
+          setRecommendationTrackingEnabled(
+            consent.personalization_enabled || consent.model_training_enabled || consent.admin_history_enabled,
+          )
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setRecommendationTrackingEnabled(false)
+          setRecommendationPersonalizationEnabled(false)
+        }
+      })
+    getBehaviorExperimentStatus()
+      .then((status) => {
+        if (active) {
+          setBehaviorRankerAvailable(status.available)
+          if (!status.available) setBehaviorRankerEnabled(false)
+          if (status.warning) setBehaviorRankerWarning(status.warning)
+        }
+      })
+      .catch(() => {
+        if (active) setBehaviorRankerAvailable(false)
+      })
+    return () => { active = false }
+  }, [authLoading, user?.id, user?.role])
 
   const visible = useMemo(
     () =>
@@ -148,6 +324,63 @@ export function ExplorePage() {
     items.forEach((item) => (item.poi.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)))
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag)
   }, [items])
+  const interactionContext = useMemo(() => {
+    const supportedIntents = new Set(['food', 'handicraft', 'culture', 'nature', 'relaxation'])
+    const hour = Number(time.split(':')[0] || 9)
+    const budgetBand = budget < 500000
+      ? 'under_500k'
+      : budget < 1000000
+        ? '500k_1m'
+        : budget <= 2000000
+          ? '1m_2m'
+          : 'over_2m'
+    return {
+      intent_tags: supportedIntents.has(intent) ? [intent] : [],
+      budget_band: budgetBand as RecommendationInteraction['context']['budget_band'],
+      group_size: groupSize,
+      indoor_preference: indoor as RecommendationInteraction['context']['indoor_preference'],
+      time_bucket: hour < 12 ? 'morning' as const : hour < 17 ? 'afternoon' as const : 'evening' as const,
+    }
+  }, [intent, budget, groupSize, indoor, time])
+
+  useEffect(() => {
+    if (!recommendationTrackingEnabled || trip.demo || !listRequestId || visible.length === 0) return
+    const events: RecommendationInteraction[] = []
+    visible
+      .filter((experience) => experience.poi.details?.catalog_mode !== 'hcmc_catalog_candidate')
+      .slice(0, 100)
+      .forEach((experience, position) => {
+      const impressionKey = `${listRequestId}:${experience.id}`
+      if (sentImpressions.current.has(impressionKey)) return
+      sentImpressions.current.add(impressionKey)
+      events.push({
+        event_id: globalThis.crypto.randomUUID(),
+        request_id: listRequestId,
+        experience_id: experience.id,
+        event_type: 'impression',
+        position,
+        context: interactionContext,
+      })
+    })
+    if (events.length) void queueInteractionWrite(events).catch(() => undefined)
+  }, [recommendationTrackingEnabled, trip.demo, listRequestId, visible, interactionContext, queueInteractionWrite])
+
+  const selectExperience = (experienceId: string) => {
+    setSelectedId(experienceId)
+    trackPageView('/explore', { entity_type: 'experience', entity_id: experienceId })
+    if (!recommendationTrackingEnabled || trip.demo || !listRequestId) return
+    const selectedExperience = visible.find((item) => item.id === experienceId)
+    if (selectedExperience?.poi.details?.catalog_mode === 'hcmc_catalog_candidate') return
+    const position = visible.findIndex((item) => item.id === experienceId)
+    void queueInteractionWrite([{
+      event_id: globalThis.crypto.randomUUID(),
+      request_id: listRequestId,
+      experience_id: experienceId,
+      event_type: 'selected',
+      position: position >= 0 ? position : undefined,
+      context: interactionContext,
+    }]).catch(() => undefined)
+  }
 
   const points = useMemo(() => {
     const uniquePois = new Map<string, Experience>()
@@ -166,10 +399,10 @@ export function ExplorePage() {
       number: index + 1,
       imageUrl: item.poi.details?.images?.find((photo) => (photo.local_url || photo.url) && photo.source_url && photo.license)?.local_url
         || item.poi.details?.images?.find((photo) => photo.url && photo.source_url && photo.license)?.url,
-      priceVnd: item.price_vnd,
+      priceVnd: trip.demo ? undefined : item.price_vnd,
       district: item.poi.district,
     }))
-  }, [visible])
+  }, [visible, trip.demo])
 
   const resetFilters = () => {
     setSearch('')
@@ -210,14 +443,30 @@ export function ExplorePage() {
           <p className="page-subtext-3d">
             {t('explore.headingLead')}
           </p>
+          <p className="page-subtext-3d" role="note">
+            {trip.demo
+              ? (locale === 'en'
+                ? 'Simulation: browsing Ho Chi Minh City places from the previous project. Location, details, prices and hours are unverified; time, schedule, group, distance, budget and indoor/outdoor filters are not applied. These listings cannot be booked.'
+                : 'Chế độ mô phỏng: xem địa điểm TP.HCM từ dự án cũ. Vị trí, thông tin, giá và giờ mở cửa chưa được xác minh; bộ lọc giờ, lịch, số người, khoảng cách, ngân sách và trong/ngoài trời không áp dụng. Các mục này không đặt chỗ được.')
+              : (locale === 'en'
+                ? 'District 1 pilot. Filters use your shared trip time, group and total budget. The planner also checks travel and the return leg.'
+                : 'Pilot Quận 1. Bộ lọc dùng thời gian, số người và tổng ngân sách của hành trình. Planner sẽ kiểm tra thêm thời gian di chuyển và chặng về.')}
+          </p>
         </div>
         <div className="title-extra-badges">
-          <span className="pilot-scope-badge"><MapPin size={13} /> {locale === 'en' ? 'Pilot area: District 1' : 'Khu vực pilot: Quận 1'}</span>
+          <span className="pilot-scope-badge"><MapPin size={13} /> {trip.demo
+            ? (locale === 'en' ? 'Ho Chi Minh City · simulated places' : 'TP.HCM · địa điểm mô phỏng')
+            : (locale === 'en' ? 'District 1 · heritage pilot' : 'Quận 1 · pilot di sản')}</span>
           {items.some((item) => item.data_mode !== 'real') && <SimulatedBadge />}
           {items.some((item) => item.data_mode === 'real') && <VerificationBadge status="verified" />}
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
+        <label>Giờ về <input type="time" value={trip.endTime} onChange={(event) => setTrip((current) => ({ ...current, endTime: event.target.value }))} /></label>
+        {poiId && <Link to="/explore" className="underline">Bỏ lọc địa danh · Xem toàn pilot</Link>}
+        <Link to="/planner" className="font-semibold text-emerald-700 underline">Tạo lịch trình với {trip.selected.length} trải nghiệm đã chọn →</Link>
+      </div>
       {/* Category Pills Strip */}
       <div className="category-pills-strip">
         {categories.map((cat) => (
@@ -322,6 +571,18 @@ export function ExplorePage() {
           </div>
 
           <div className="toolbar-actions-pair">
+            {behaviorRankerAvailable && user?.role === 'traveler' && (
+              <button
+                type="button"
+                className={`advanced-toggle-btn ${behaviorRankerEnabled ? 'advanced-btn-active' : ''}`}
+                disabled={!recommendationPersonalizationEnabled || loading}
+                onClick={() => setBehaviorRankerEnabled((enabled) => !enabled)}
+                title={t('explore.behaviorModelTitle')}
+              >
+                <Sparkles size={15} />
+                <span>{behaviorRankerEnabled ? t('explore.behaviorModelOn') : t('explore.behaviorModelOff')}</span>
+              </button>
+            )}
             <button
               type="button"
               className={`advanced-toggle-btn ${showAdvanced || activeAdvancedCount > 0 ? 'advanced-btn-active' : ''}`}
@@ -345,6 +606,17 @@ export function ExplorePage() {
             </button>
           </div>
         </div>
+
+        {behaviorRankerAvailable && user?.role === 'traveler' && (behaviorRankerEnabled || !recommendationPersonalizationEnabled) && (
+          <div role="status" className="behavior-model-note" style={{ marginTop: 10, fontSize: 12 }}>
+            {behaviorRankerEnabled && (behaviorRankerApplied
+              ? t('explore.behaviorModelActive')
+              : behaviorRankerError || behaviorRankerWarning || t('explore.behaviorModelPreparing'))}
+            {!recommendationPersonalizationEnabled && (
+              <> {' '}<Link to="/profile">{t('explore.behaviorModelConsentLink')}</Link></>
+            )}
+          </div>
+        )}
 
         {/* Expandable Advanced Filters Drawer */}
         {showAdvanced && (
@@ -408,7 +680,7 @@ export function ExplorePage() {
               {/* Distance Radius */}
               <div className="advanced-field-col">
                 <label className="adv-label">
-                  <span>{t('explore.radiusText', { radius: radiusKm })}</span>
+                  <span>{t('explore.radiusText', { radius: radiusKm })} · từ Nhà thờ Đức Bà</span>
                   <input
                     type="range"
                     min={1}
@@ -485,7 +757,9 @@ export function ExplorePage() {
               </strong>
             </div>
             <span className="budget-per-person">
-              {t('explore.estPerPerson', { cost: Math.floor(budget / groupSize).toLocaleString('vi-VN') })}
+              {trip.demo
+                ? (locale === 'en' ? 'Price and budget unverified' : 'Giá và ngân sách chưa xác minh')
+                : t('explore.estPerPerson', { cost: Math.floor(budget / groupSize).toLocaleString('vi-VN') })}
             </span>
           </div>
 
@@ -508,9 +782,23 @@ export function ExplorePage() {
               <div className="empty-state-3d">
                 <div className="empty-icon-box">🧭</div>
                 <h3>{t('explore.emptyTitle')}</h3>
-                <p>
-                  {t('explore.emptyDesc')}
-                </p>
+                <p>{demoAvailable && !trip.demo ? t('explore.demoEmptyDesc') : t('explore.emptyDesc')}</p>
+                {demoAvailable && !trip.demo && (
+                  <button
+                    type="button"
+                    className="btn-secondary-3d btn-sm"
+                    onClick={() => setTrip((current) => ({
+                      ...current,
+                      demo: true,
+                      selected: [],
+                      lockedPois: [],
+                      originId: '',
+                      destinationId: '',
+                    }))}
+                  >
+                    <Sparkles size={14} /> {t('explore.enableDemo')}
+                  </button>
+                )}
                 <button type="button" className="btn-secondary-3d btn-sm" onClick={resetFilters}>
                   <RotateCcw size={14} /> {t('explore.resetAllFilters')}
                 </button>
@@ -543,7 +831,9 @@ export function ExplorePage() {
           <div className="map-footer-caption">
             <span className="live-dot-glow" />
             <span>
-              {t('explore.mapHint')}
+              {trip.demo
+                ? (locale === 'en' ? 'Map points are simulated and are not confirmed for visits or booking.' : 'Điểm trên bản đồ dùng để mô phỏng, chưa xác nhận để tham quan hoặc đặt chỗ.')
+                : t('explore.mapHint')}
             </span>
           </div>
         </section>

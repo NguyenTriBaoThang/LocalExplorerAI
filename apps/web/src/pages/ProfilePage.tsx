@@ -10,9 +10,23 @@ import {
   AlertCircle,
   Route,
   Shield,
+  Brain,
   Bell,
 } from 'lucide-react'
-import { apiErrorMessage, changePassword, deleteWebPushSubscription, getMyItineraries, getWebPushPublicKey, getWebPushStatus, saveWebPushSubscription, updateProfile, type WebPushStatus } from '../api/client'
+import {
+  apiErrorMessage,
+  changePassword,
+  deleteWebPushSubscription,
+  getMyItineraries,
+  getWebPushPublicKey,
+  getWebPushStatus,
+  getRecommendationConsent,
+  saveWebPushSubscription,
+  updateProfile,
+  updateRecommendationConsent,
+  type RecommendationConsent,
+  type WebPushStatus,
+} from '../api/client'
 import { useAuth } from '../auth'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { SessionsCard } from '../components/account/SessionsCard'
@@ -34,6 +48,9 @@ export function ProfilePage() {
   const [error, setError] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [recommendationConsent, setRecommendationConsent] = useState<RecommendationConsent | null>(null)
+  const [loadingRecommendationConsent, setLoadingRecommendationConsent] = useState(false)
+  const [savingRecommendationConsent, setSavingRecommendationConsent] = useState(false)
   const [pushStatus, setPushStatus] = useState<WebPushStatus | null>(null)
   const [pushSupported, setPushSupported] = useState(false)
   const [pushCurrentDevice, setPushCurrentDevice] = useState(false)
@@ -126,6 +143,34 @@ export function ProfilePage() {
       .catch(() => setTrips([]))
   }, [user?.role])
 
+  useEffect(() => {
+    let active = true
+    if (user?.role !== 'traveler') {
+      setRecommendationConsent(null)
+      return
+    }
+    setLoadingRecommendationConsent(true)
+    getRecommendationConsent()
+      .then((consent) => {
+        if (active) setRecommendationConsent(consent)
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setError(apiErrorMessage(reason))
+          setRecommendationConsent({
+            personalization_enabled: false,
+            model_training_enabled: false,
+            admin_history_enabled: false,
+            consent_version: 'behavior-v2',
+          })
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingRecommendationConsent(false)
+      })
+    return () => { active = false }
+  }, [user?.id, user?.role])
+
   async function save(event: FormEvent) {
     event.preventDefault()
     setError('')
@@ -155,6 +200,28 @@ export function ProfilePage() {
       setError(apiErrorMessage(reason))
     } finally {
       setSavingPassword(false)
+    }
+  }
+
+  async function saveRecommendationConsent(
+    changes: Partial<Pick<RecommendationConsent, 'personalization_enabled' | 'model_training_enabled' | 'admin_history_enabled'>>,
+  ) {
+    if (!recommendationConsent) return
+    setError('')
+    setNotice('')
+    setSavingRecommendationConsent(true)
+    try {
+      const updated = await updateRecommendationConsent(
+        changes.personalization_enabled ?? recommendationConsent.personalization_enabled,
+        changes.model_training_enabled ?? recommendationConsent.model_training_enabled,
+        changes.admin_history_enabled ?? recommendationConsent.admin_history_enabled,
+      )
+      setRecommendationConsent(updated)
+      setNotice(locale === 'en' ? 'Recommendation data settings updated.' : 'Đã cập nhật lựa chọn dữ liệu gợi ý.')
+    } catch (reason) {
+      setError(apiErrorMessage(reason))
+    } finally {
+      setSavingRecommendationConsent(false)
     }
   }
 
@@ -255,6 +322,85 @@ export function ProfilePage() {
             </form>
           </section>
 
+          {user?.role === 'traveler' && (
+            <section className="profile-card-3d">
+              <div className="profile-card-title-row">
+                <div className="profile-title-icon-box text-emerald">
+                  <Brain size={18} />
+                </div>
+                <div>
+                  <h2>{locale === 'en' ? 'Recommendation data' : 'Dữ liệu gợi ý cá nhân'}</h2>
+                  <p>{locale === 'en' ? 'Choose separately how your Explore activity may be used.' : 'Bạn chọn riêng cách sử dụng hoạt động trên trang Khám phá.'}</p>
+                </div>
+              </div>
+
+              {loadingRecommendationConsent || !recommendationConsent ? (
+                <p>{locale === 'en' ? 'Loading settings…' : 'Đang tải lựa chọn…'}</p>
+              ) : (
+                <div className="profile-form">
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={recommendationConsent.personalization_enabled}
+                      disabled={savingRecommendationConsent}
+                      onChange={(event) => void saveRecommendationConsent({ personalization_enabled: event.target.checked })}
+                      style={{ width: 18, marginTop: 3 }}
+                    />
+                    <span>
+                      <strong>{locale === 'en' ? 'Use my activity for personal recommendations' : 'Dùng hoạt động của tôi để cá nhân hóa gợi ý'}</strong>
+                      <small style={{ display: 'block' }}>
+                        {locale === 'en'
+                          ? 'Allow your Explore selections to shape future rankings. You can turn this off at any time.'
+                          : 'Cho phép dùng các lượt bạn chọn trong Khám phá để xếp lại gợi ý. Bạn có thể tắt lựa chọn này bất cứ lúc nào.'}
+                      </small>
+                    </span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={recommendationConsent.model_training_enabled}
+                      disabled={savingRecommendationConsent}
+                      onChange={(event) => void saveRecommendationConsent({ model_training_enabled: event.target.checked })}
+                      style={{ width: 18, marginTop: 3 }}
+                    />
+                    <span>
+                      <strong>{locale === 'en' ? 'Allow de-identified activity for model training' : 'Cho phép dùng dữ liệu đã giảm nhận diện để huấn luyện mô hình'}</strong>
+                      <small style={{ display: 'block' }}>
+                        {locale === 'en'
+                          ? 'Eligible interaction records may be included in future recommendation-model datasets. Turning this off excludes them from future exports; earlier local exports are not changed automatically.'
+                          : 'Các tương tác đủ điều kiện có thể được đưa vào tập huấn luyện mô hình gợi ý. Tắt lựa chọn này sẽ loại lịch sử khỏi lần xuất sau; file đã xuất trước đó không tự thay đổi.'}
+                      </small>
+                    </span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={recommendationConsent.admin_history_enabled}
+                      disabled={savingRecommendationConsent}
+                      onChange={(event) => void saveRecommendationConsent({ admin_history_enabled: event.target.checked })}
+                      style={{ width: 18, marginTop: 3 }}
+                    />
+                    <span>
+                      <strong>{locale === 'en' ? 'Allow administrators to view my Explore activity' : 'Cho phép quản trị viên xem lịch sử Khám phá của tôi'}</strong>
+                      <small style={{ display: 'block' }}>
+                        {locale === 'en'
+                          ? 'When enabled, administrators can see the experiences shown, selected, or dismissed in your Explore history. You can revoke this at any time.'
+                          : 'Khi bật, quản trị viên có thể xem trải nghiệm đã hiển thị, được chọn hoặc bị bỏ qua trong Khám phá. Bạn có thể tắt quyền này bất cứ lúc nào.'}
+                      </small>
+                    </span>
+                  </label>
+
+                  <small>
+                    {locale === 'en'
+                      ? 'Turn all three options off to delete interaction history kept by the app. Any previously exported local dataset must be removed separately.'
+                      : 'Tắt cả ba lựa chọn sẽ xóa lịch sử tương tác còn lưu trong ứng dụng. Dataset đã xuất trước đó cần được xóa riêng.'}
+                  </small>
+                </div>
+              )}
+            </section>
+          )}
           {/* Booking notifications */}
           <section className="profile-card-3d">
             <div className="profile-card-title-row">

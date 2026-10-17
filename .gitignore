@@ -448,6 +448,7 @@ dist/
 postgres_data/
 redis_data/
 # Model artifacts are intentionally tracked so they can be versioned with the project.
+data/derived/behavior-ranking/
 
 # Notebooks / Google Colab training files
 notebooks/
@@ -460,6 +461,7 @@ notebooks/*
 .ipynb_checkpoints/
 
 # Bot runtime store
+apps/api/.meshy-assets/
 apps/api/app/bot_store.json
 apps/api/.local-secrets/
 

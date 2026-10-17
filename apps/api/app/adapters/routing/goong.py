@@ -67,7 +67,6 @@ class GoongDirectionsProvider:
         "car": "car",
         "driving": "car",
         "motorcycle": "bike",
-        "walking": "foot",
     }
 
     def __init__(self, api_key: str | None, base_url: str = "https://rsapi.goong.io",
@@ -112,7 +111,7 @@ class GoongDirectionsProvider:
         vehicle = self._vehicles.get(mode)
         if vehicle is None:
             raise UnsupportedTravelMode(
-                f"Goong routing does not support '{mode}'. Choose motorcycle, walking, or car; public transit and bicycle routing are not configured."
+                f"Goong Directions v2 does not support the configured '{mode}' profile. Choose motorcycle or car; walking requires a supported routing provider."
             )
         origin = (float(origin[0]), float(origin[1]))
         destination = (float(destination[0]), float(destination[1]))

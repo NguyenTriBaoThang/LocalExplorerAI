@@ -1,0 +1,72 @@
+{
+  "overview": {
+    "text": "Chợ Bến Thành là một địa điểm giao thương gắn với lịch sử trung tâm Sài Gòn.",
+    "source_ids": [
+      "official"
+    ],
+    "status": "sourced"
+  },
+  "image": null,
+  "sources": [
+    {
+      "id": "official",
+      "title": "Cục Du lịch Quốc gia — Ben Thanh Market",
+      "url": "https://vietnamtourism.vn/en/index.php/tourism/items/511",
+      "accessed_on": "2026-10-17"
+    }
+  ],
+  "timeline": [
+    {
+      "text": "Lễ khai trương chợ mới được tổ chức vào tháng 3 năm 1914.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1914",
+      "year_start": 1914,
+      "year_end": null,
+      "period": "Tháng 03/1914",
+      "title": "Khai trương chợ",
+      "image": null
+    }
+  ],
+  "architecture": [
+    {
+      "text": "Tên Bến Thành gắn với vị trí bến gần thành cũ.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "title": "Câu chuyện tên gọi",
+      "view": null
+    }
+  ],
+  "visit": {
+    "address": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "duration": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "hours": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "admission": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "notes": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "checked_on": null
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "model_version": "v1.0.0",
+  "model_family": "xgboost",
+  "model_file": "xgb_ranker.json",
+  "dataset_status": "synthetic_demo",
+  "deployment_eligible": false,
+  "warning": "Trained on generated demo data, not consented real-user activity. Use only for local experimentation; do not use for production decisions.",
+  "dataset_version": "ranking_train_dataset.parquet",
+  "feature_version": "fv_2026_v1",
+  "features": [
+    "feat_tag_jaccard",
+    "feat_tag_overlap",
+    "feat_target_budget",
+    "feat_price_ratio",
+    "feat_price_abs_diff",
+    "feat_log_price",
+    "feat_history_tag_affinity",
+    "feat_history_price_affinity",
+    "feat_history_count_log",
+    "feat_distance_or_eta",
+    "feat_duration_min",
+    "feat_group_size",
+    "feat_is_indoor",
+    "feat_is_verified",
+    "feat_is_available",
+    "feat_hard_feasible",
+    "feat_budget_band_code"
+  ],
+  "feature_importance_lgbm": {
+    "feat_price_abs_diff": 7.0,
+    "feat_price_ratio": 6.0,
+    "feat_history_tag_affinity": 6.0,
+    "feat_log_price": 2.0,
+    "feat_duration_min": 2.0,
+    "feat_is_verified": 2.0,
+    "feat_is_available": 2.0,
+    "feat_tag_jaccard": 1.0,
+    "feat_tag_overlap": 1.0,
+    "feat_history_price_affinity": 1.0,
+    "feat_target_budget": 0.0,
+    "feat_history_count_log": 0.0,
+    "feat_distance_or_eta": 0.0,
+    "feat_group_size": 0.0,
+    "feat_is_indoor": 0.0,
+    "feat_hard_feasible": 0.0,
+    "feat_budget_band_code": 0.0
+  },
+  "labeling_strategy": {
+    "scale": "0-3",
+    "grades": {
+      "0": "Dismissed / Removed or Uninteracted (Weak Negative)",
+      "1": "View details",
+      "2": "Save or add to itinerary",
+      "3": "Booked or high rating (>= 4 stars)"
+    }
+  },
+  "consent_requirement": "consent_status == 'CONSENTED_ANALYTICS_AI'",
+  "split_strategy": "Chronological time-based split (70% train, 15% val, 15% test) preserving request_id groups",
+  "evaluation_results": {
+    "Baseline_Heuristic": {
+      "NDCG@3": 0.7781,
+      "NDCG@5": 0.8288,
+      "NDCG@10": 0.8479,
+      "Recall@3 (Relevant >= 2)": 0.8132,
+      "Recall@5 (Relevant >= 2)": 0.9447,
+      "total_test_queries": 457,
+      "evaluated_positive_queries": 392,
+      "zero_feedback_queries": 65,
+      "evaluated_relevant_queries": 223
+    },
+    "LightGBM_LambdaRank": {
+      "NDCG@3": 0.783,
+      "NDCG@5": 0.8279,
+      "NDCG@10": 0.8488,
+      "Recall@3 (Relevant >= 2)": 0.8132,
+      "Recall@5 (Relevant >= 2)": 0.9402,
+      "total_test_queries": 457,
+      "evaluated_positive_queries": 392,
+      "zero_feedback_queries": 65,
+      "evaluated_relevant_queries": 223
+    },
+    "XGBoost_Ranker": {
+      "NDCG@3": 0.8276,
+      "NDCG@5": 0.8716,
+      "NDCG@10": 0.8867,
+      "Recall@3 (Relevant >= 2)": 0.843,
+      "Recall@5 (Relevant >= 2)": 0.9634,
+      "total_test_queries": 457,
+      "evaluated_positive_queries": 392,
+      "zero_feedback_queries": 65,
+      "evaluated_relevant_queries": 223
+    }
+  }
+}

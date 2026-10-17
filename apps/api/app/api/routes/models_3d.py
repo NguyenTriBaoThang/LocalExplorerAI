@@ -11,6 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.entities import User
+from app.db.session import get_db
+from sqlalchemy.orm import Session
 from app.api.guards import public, require_user
 from app.api.permissions import P
 
@@ -237,7 +239,7 @@ def _discover_folder_models() -> Dict[str, Dict[str, Any]]:
     return discovered
 
 
-def _read_calibrations() -> Dict[str, Any]:
+def _read_calibrations(db: Session | None = None) -> Dict[str, Any]:
     stored: Dict[str, Any] = {}
     target = _resolve_read_path()
     if target.exists():
@@ -247,6 +249,12 @@ def _read_calibrations() -> Dict[str, Any]:
             stored = {}
     merged = {key: {**value} for key, value in DEFAULT_MODELS.items()}
     merged.update(_discover_folder_models())
+    from app.models.entities import MeshyJob
+    from app.services.meshy import calibration
+    from sqlalchemy import select
+    if db is not None:
+        for row in db.scalars(select(MeshyJob).where(MeshyJob.published.is_(True))):
+            merged["meshy-" + row.id] = calibration(row)
     for key, value in stored.items():
         if isinstance(value, dict) and key in merged:
             merged[key] = {**merged.get(key, {}), **value}
@@ -279,15 +287,15 @@ class CalibrationPayload(BaseModel):
 
 
 @router.get("/calibration", dependencies=[Depends(public('3D landmark calibration is display data'))])
-def get_all_calibrations():
+def get_all_calibrations(db: Session = Depends(get_db)):
     """Lấy thông số hiệu chỉnh của tất cả mô hình 3D."""
-    return _read_calibrations()
+    return _read_calibrations(db)
 
 
 @router.get("/calibration/{model_id}", dependencies=[Depends(public('3D landmark calibration is display data'))])
-def get_model_calibration(model_id: str):
+def get_model_calibration(model_id: str, db: Session = Depends(get_db)):
     """Lấy thông số hiệu chỉnh của một mô hình (ví dụ: nhathoducba)."""
-    return _get_known_model(model_id, _read_calibrations())
+    return _get_known_model(model_id, _read_calibrations(db))
 
 
 @router.post("/calibration/{model_id}")
@@ -295,9 +303,10 @@ def save_model_calibration(
     model_id: str,
     payload: CalibrationPayload,
     actor: User = Depends(require_user(P.ADMIN_MODELS_3D)),
+    db: Session = Depends(get_db),
 ):
     """Admin lưu vị trí, góc xoay và tỉ lệ đã căn chỉnh của mô hình 3D."""
-    data = _read_calibrations()
+    data = _read_calibrations(db)
     item = {
         **_get_known_model(model_id, data),
         **payload.model_dump(),

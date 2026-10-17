@@ -107,17 +107,17 @@ const TILE_PRESETS: Record<string, { name: string; url: string; attribution: str
   goong_streets: {
     name: 'Đường phố Sài Gòn (HD)',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Goong Directions V2 · Sài Gòn &copy; OpenStreetMap contributors',
+    attribution: 'Tiles &copy; Esri',
   },
   google: {
     name: 'Google Maps VN',
     url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google Maps &copy; Goong Directions',
+    attribution: '&copy; Google Maps',
   },
   dark: {
     name: 'Đêm Huyền Ảo (Carto Dark)',
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; CARTO &copy; OpenStreetMap &copy; Goong Directions',
+    attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
     subdomains: 'abcd',
   },
 }
@@ -467,13 +467,13 @@ export function MapAdapter({
         <div className="map-floating-top-left">
           <div className="map-provider-pill">
             <span className="badge-live-pulse" />
-            <span>Goong Maps & Directions · Sài Gòn</span>
+            <span>Bản đồ hành trình · TP.HCM</span>
           </div>
         </div>
 
         {/* Bottom Route Legend Overlay */}
         <div className="map-3d-bottom-info">
-          <span>{mapFooterLabel || 'Tọa độ & lộ trình chính xác từ Goong Directions API · Cập nhật theo thời gian thực'}</span>
+          <span>{mapFooterLabel || 'Vị trí theo danh mục · Kiểm tra nguồn thông tin trước chuyến đi'}</span>
         </div>
       </div>
     </div>

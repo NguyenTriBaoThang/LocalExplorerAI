@@ -1,3 +1,4 @@
+import { LandmarkDiscoveryPanel } from './LandmarkDiscoveryPanel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -9,7 +10,6 @@ import {
   AlertCircle,
   Compass,
   Layers,
-  MapPin,
   RotateCcw,
   Save,
   Settings,
@@ -17,7 +17,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  Crosshair
+  Crosshair,
 } from 'lucide-react'
 import { api } from '../../api/client'
 import { useAuth } from '../../auth'
@@ -158,10 +158,12 @@ function createProceduralCathedralModel(): THREE.Group {
 
 export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
+  previewJobId,
   defaultCalibration: providedCalibration,
   className = '',
 }: {
   modelId?: string
+  previewJobId?: string
   defaultCalibration?: ModelCalibration
   className?: string
 }) {
@@ -182,6 +184,7 @@ export function Map3DLandmarkViewer({
   const cameraRef = useRef<THREE.Camera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const modelAnchorRef = useRef<THREE.Group | null>(null)
+  const modelRaycasterRef = useRef(new THREE.Raycaster())
   const calibrationRef = useRef<ModelCalibration>(fallbackCalibration)
 
   const [calibration, setCalibration] = useState<ModelCalibration>(fallbackCalibration)
@@ -195,6 +198,27 @@ export function Map3DLandmarkViewer({
   const [styleMode, setStyleMode] = useState<'streets' | 'dark'>('streets')
   const [saving, setSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const [modelCardVisible, setModelCardVisible] = useState(false)
+
+  useEffect(() => {
+    if (!modelCardVisible || loading) return
+    const originals = new Map<THREE.MeshStandardMaterial, { color: THREE.Color; intensity: number }>()
+    modelAnchorRef.current?.traverse(node => {
+      if (!(node instanceof THREE.Mesh)) return
+      const materials = Array.isArray(node.material) ? node.material : [node.material]
+      for (const material of materials) {
+        if (!(material instanceof THREE.MeshStandardMaterial) || originals.has(material)) continue
+        originals.set(material, { color: material.emissive.clone(), intensity: material.emissiveIntensity })
+        material.emissive.set('#b88a4c')
+        material.emissiveIntensity = 0.12
+      }
+    })
+    mapRef.current?.triggerRepaint()
+    return () => {
+      originals.forEach((value, material) => { material.emissive.copy(value.color); material.emissiveIntensity = value.intensity })
+      mapRef.current?.triggerRepaint()
+    }
+  }, [modelCardVisible, loading, modelId])
 
   calibrationRef.current = calibration
   const dirty = JSON.stringify(calibration) !== JSON.stringify(saved)
@@ -206,7 +230,7 @@ export function Map3DLandmarkViewer({
     setCalibration(fallbackCalibration)
     setSaved(fallbackCalibration)
     api
-      .get(`/models-3d/calibration/${modelId}`)
+      .get(previewJobId ? `/admin/meshy/jobs/${previewJobId}/calibration` : `/models-3d/calibration/${modelId}`)
       .then(({ data }) => {
         if (!alive) return
         const next = sanitizeCalibration(data, fallbackCalibration)
@@ -245,7 +269,9 @@ export function Map3DLandmarkViewer({
       powerPreference: 'high-performance',
     })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight)
+    // CSS owns layout; writing fixed inline pixels here breaks map alignment
+    // after the viewport or parent resizes.
+    renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.15
@@ -344,6 +370,30 @@ export function Map3DLandmarkViewer({
     map.on('zoom', renderFrame)
     map.on('pitch', renderFrame)
     map.on('rotate', renderFrame)
+    const handleMapClick = (event: { point?: { x: number; y: number } }) => {
+      const model = modelAnchorRef.current
+      const camera = cameraRef.current
+      const canvas = threeCanvasRef.current
+      if (!model || !camera || !canvas || !event.point) {
+        setModelCardVisible(false)
+        return
+      }
+
+      const bounds = canvas.getBoundingClientRect()
+      const pointer = new THREE.Vector2(
+        (event.point.x / bounds.width) * 2 - 1,
+        -(event.point.y / bounds.height) * 2 + 1,
+      )
+      const raycaster = modelRaycasterRef.current
+      // The overlay uses a base THREE.Camera with Goong's combined view/model
+      // matrix, so build the ray from its inverse clip matrix directly.
+      const nearPoint = new THREE.Vector3(pointer.x, pointer.y, -1).applyMatrix4(camera.projectionMatrixInverse)
+      const farPoint = new THREE.Vector3(pointer.x, pointer.y, 1).applyMatrix4(camera.projectionMatrixInverse)
+      raycaster.set(nearPoint, farPoint.sub(nearPoint).normalize())
+      const hit = raycaster.intersectObject(model, true).length > 0
+      setModelCardVisible(hit)
+    }
+    map.on('click', handleMapClick)
     const resizeOverlay = () => {
       const canvas = threeCanvasRef.current
       const renderer = rendererRef.current
@@ -363,6 +413,7 @@ export function Map3DLandmarkViewer({
       map.off('zoom', renderFrame)
       map.off('pitch', renderFrame)
       map.off('rotate', renderFrame)
+      map.off('click', handleMapClick)
       map.remove()
       mapRef.current = null
     }
@@ -379,6 +430,7 @@ export function Map3DLandmarkViewer({
     setLoadingProgress(0)
 
     const loader = new GLTFLoader()
+    loader.setWithCredentials(true)
     loader.load(
       calibrationRef.current.file_url,
       (gltf) => {
@@ -428,6 +480,7 @@ export function Map3DLandmarkViewer({
         }
 
         setLoading(false)
+        if (previewJobId) void api.post(`/admin/meshy/jobs/${previewJobId}/previewed`).catch(() => {})
         mapRef.current?.triggerRepaint()
       },
       (xhr) => {
@@ -439,7 +492,12 @@ export function Map3DLandmarkViewer({
       },
       (err) => {
         if (cancelled) return
-        console.warn('3D GLB model file not present, activating procedural digital twin:', err)
+        console.warn('3D GLB model file could not be loaded:', err)
+        if (modelId !== 'nhathoducba') {
+          setLoading(false)
+          setLoadError('Không tải được mô hình của địa danh này. Hãy kiểm tra tệp GLB; hệ thống không thay bằng mô hình của địa danh khác.')
+          return
+        }
         const raw = createProceduralCathedralModel()
         const box = new THREE.Box3().setFromObject(raw)
         const size = box.getSize(new THREE.Vector3())
@@ -463,7 +521,7 @@ export function Map3DLandmarkViewer({
         }
 
         setLoading(false)
-        setLoadError(null)
+        setLoadError('Không tải được tệp GLB. Đang hiển thị hình học minh họa Nhà thờ Đức Bà, chưa được kiểm chứng về kiến trúc.')
         mapRef.current?.triggerRepaint()
       }
     )
@@ -506,7 +564,7 @@ export function Map3DLandmarkViewer({
         scale: calibration.scale,
       }
 
-      const { data } = await api.post(`/models-3d/calibration/${modelId}`, payload)
+      const { data } = await api.post(previewJobId ? `/admin/meshy/jobs/${previewJobId}/calibration` : `/models-3d/calibration/${modelId}`, payload)
       const next = sanitizeCalibration(data.calibration, calibration)
       setCalibration(next)
       setSaved(next)
@@ -601,7 +659,7 @@ export function Map3DLandmarkViewer({
       />
 
       {/* Three.js WebGL2 overlay, aligned to Goong's camera matrix */}
-      <canvas ref={threeCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <canvas ref={threeCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '100%', height: '100%' }} />
 
       {/* Loading Overlay */}
       {loading && !loadError && (
@@ -956,35 +1014,8 @@ export function Map3DLandmarkViewer({
         </div>
       )}
 
-      {/* Bottom Landmark Information Card */}
-      <div className="absolute bottom-4 left-4 z-20 max-w-sm bg-slate-900/90 border border-slate-800 backdrop-blur-md p-3.5 rounded-2xl shadow-xl text-slate-200">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-xl shrink-0 mt-0.5">
-            <MapPin size={18} />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-white">{calibration.display_name}</h4>
-              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
-                GOONG 3D VERIFIED
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              {calibration.description ||
-                'Vương cung thánh đường Chính tòa Đức Mẹ Vô nhiễm Nguyên tội tại Công xã Paris, Quận 1.'}
-            </p>
-            <div className="mt-2 flex items-center gap-3 text-xs text-slate-400 font-mono">
-              <span>
-                GPS: {calibration.latitude.toFixed(6)}, {calibration.longitude.toFixed(6)}
-              </span>
-              <span>•</span>
-              <span>Góc xoay: {calibration.heading.toFixed(1)}°</span>
-              <span>•</span>
-              <span>Cao: {calibration.scale.toFixed(0)}m</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {!previewJobId && <LandmarkDiscoveryPanel key={modelId} modelId={modelId} landmark={calibration}
+        open={modelCardVisible} onOpen={() => setModelCardVisible(true)} onClose={() => setModelCardVisible(false)} onView={setCameraPreset} />}
     </div>
   )
 }

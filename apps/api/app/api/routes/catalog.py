@@ -22,16 +22,33 @@ router = APIRouter(prefix="/api", tags=["catalog"])
 
 
 @router.get("/pois", response_model=list[POIRead], dependencies=[Depends(public('public catalogue'))])
-def list_pois(db: Session = Depends(get_db)):
+def list_pois(scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"), verified_only: bool = False, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
-    return [read_poi(repository, item) for item in repository.list_pois(district=PILOT_DISTRICT)]
+    if scope == "citywide":
+        # Citywide directory includes public catalog rows and the explicitly
+        # source-tagged local HCMC candidates; fictional seed fixtures stay out.
+        items = [
+            item for item in repository.list_pois()
+            if not item.name.startswith("Điểm demo ")
+        ]
+    else:
+        items = repository.list_pois(district=PILOT_DISTRICT)
+    return [read_poi(repository, item) for item in items if not verified_only or item.verification_status == "verified"]
 
 
 @router.get("/pois/{poi_id}", response_model=POIDetailRead, dependencies=[Depends(public('public catalogue'))])
-def get_poi(poi_id: str, db: Session = Depends(get_db)):
+def get_poi(
+    poi_id: str,
+    scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"),
+    db: Session = Depends(get_db),
+):
     repository = ExperienceRepository(db)
     poi = repository.get_poi(poi_id)
-    if not poi or not is_pilot_location(poi.latitude, poi.longitude):
+    if poi and scope == "pilot" and not is_pilot_location(poi.latitude, poi.longitude):
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "POI not found"})
+    # Every public citywide listing must have a reachable detail page.
+    # Repository visibility checks still enforce publication/evidence rules.
+    if not poi or poi.name.startswith("Điểm demo "):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "POI not found"})
     place = read_poi(repository, poi)
     experiences = db.scalars(
@@ -59,6 +76,10 @@ def read_poi(repository: ExperienceRepository, poi) -> POIRead:
 
 @router.get("/experiences", response_model=list[ExperienceRead], dependencies=[Depends(public('public catalogue'))])
 def list_experiences(
+    verified_only: bool = False,
+    poi_id: str | None = None,
+    total_budget_vnd: int | None = Query(default=None, ge=0),
+    scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"),
     intent: str | None = None,
     start_at: datetime | None = None,
     end_at: datetime | None = None,
@@ -77,16 +98,25 @@ def list_experiences(
         raise HTTPException(status_code=422, detail={"code": "CENTER_COORDINATES_REQUIRED", "message": "Provide both center latitude and longitude."})
     if max_distance_km is not None and center_latitude is None:
         raise HTTPException(status_code=422, detail={"code": "CENTER_COORDINATES_REQUIRED", "message": "Distance filtering requires center coordinates."})
+    if scope == "citywide":
+        # Citywide discovery includes unverified candidate cards, which have
+        # no real prices, opening hours, visit durations, or bookable slots.
+        # Do not silently apply those constraints to them.
+        return ExperienceService(ExperienceRepository(db)).list(
+            intent=intent, topic=topic, query=query, district=None, verified_only=verified_only, poi_id=poi_id,
+        )
     return ExperienceService(ExperienceRepository(db)).list(
         intent, start_at, end_at, group_size, max_price, topic, is_indoor, query,
         max_distance_km, center_latitude, center_longitude, slot_id, district=PILOT_DISTRICT,
+        verified_only=verified_only, poi_id=poi_id, total_budget_vnd=total_budget_vnd,
     )
 
 
 @router.get("/experiences/{experience_id}", response_model=ExperienceRead, dependencies=[Depends(public('public catalogue'))])
 def get_experience(experience_id: str, db: Session = Depends(get_db)):
     experience = ExperienceService(ExperienceRepository(db)).get(experience_id)
-    if experience is not None and not is_pilot_location(experience.poi.latitude, experience.poi.longitude):
+    is_candidate = experience is not None and (experience.poi.details or {}).get("catalog_mode") == "hcmc_catalog_candidate"
+    if experience is not None and not is_pilot_location(experience.poi.latitude, experience.poi.longitude) and not is_candidate:
         experience = None
     if not experience:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
@@ -139,8 +169,12 @@ def get_partner(slug: str, db: Session = Depends(get_db)):
 
 @router.get("/experience-search", dependencies=[Depends(public('public catalogue'))])
 def search_experiences(
+    verified_only: bool = False,
+    poi_id: str | None = None,
+    total_budget_vnd: int | None = Query(default=None, ge=0),
     q: str = Query(min_length=2, max_length=200),
     semantic: bool = False,
+    scope: str = Query(default="pilot", pattern="^(pilot|citywide)$"),
     intent: str | None = None,
     topic: str | None = None,
     is_indoor: bool | None = None,
@@ -158,12 +192,19 @@ def search_experiences(
         raise HTTPException(status_code=422, detail={"code": "CENTER_COORDINATES_REQUIRED", "message": "Provide both center latitude and longitude."})
     if max_distance_km is not None and center_latitude is None:
         raise HTTPException(status_code=422, detail={"code": "CENTER_COORDINATES_REQUIRED", "message": "Distance filtering requires center coordinates."})
-    items = ExperienceService(ExperienceRepository(db)).list(
-        intent=intent, start_at=start_at, end_at=end_at, group_size=group_size,
-        max_price=max_price, topic=topic, is_indoor=is_indoor, query=None if semantic else q,
-        max_distance_km=max_distance_km, center_latitude=center_latitude,
-        center_longitude=center_longitude, slot_id=slot_id, district=PILOT_DISTRICT,
-    )
+    if scope == "citywide":
+        items = ExperienceService(ExperienceRepository(db)).list(
+            intent=intent, topic=topic,
+            query=None if semantic else q, district=None, verified_only=verified_only, poi_id=poi_id,
+        )
+    else:
+        items = ExperienceService(ExperienceRepository(db)).list(
+            intent=intent, start_at=start_at, end_at=end_at, group_size=group_size,
+            max_price=max_price, topic=topic, is_indoor=is_indoor, query=None if semantic else q,
+            max_distance_km=max_distance_km, center_latitude=center_latitude,
+            center_longitude=center_longitude, slot_id=slot_id, district=PILOT_DISTRICT,
+            verified_only=verified_only, poi_id=poi_id, total_budget_vnd=total_budget_vnd,
+        )
     if not semantic:
         return {"mode": "keyword", "items": items}
     passages = [" ".join((item.name, item.description, item.poi.name, item.poi.description, " ".join(item.intent_tags))) for item in items]
@@ -181,7 +222,8 @@ def search_experiences(
 def get_slots(experience_id: str, start_at: datetime | None = None, end_at: datetime | None = None, db: Session = Depends(get_db)):
     repository = ExperienceRepository(db)
     experience = repository.get_experience(experience_id)
-    if not experience or not is_pilot_location(experience.poi.latitude, experience.poi.longitude):
+    is_candidate = experience is not None and (experience.poi.details or {}).get("catalog_mode") == "hcmc_catalog_candidate"
+    if not experience or (not is_pilot_location(experience.poi.latitude, experience.poi.longitude) and not is_candidate):
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Experience not found"})
     is_real = experience.verification_status == "verified"
     result = []

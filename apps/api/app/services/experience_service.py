@@ -25,6 +25,9 @@ class ExperienceService:
         center_longitude: float | None = None,
         slot_id: str | None = None,
         district: str | None = None,
+        verified_only: bool = False,
+        poi_id: str | None = None,
+        total_budget_vnd: int | None = None,
     ):
         items = self.repository.list_experiences(
             intent=intent,
@@ -35,6 +38,14 @@ class ExperienceService:
         )
         result: list[ExperienceRead] = []
         for item in items:
+            if verified_only and item.verification_status != "verified":
+                continue
+            if poi_id and item.poi_id != poi_id:
+                continue
+            if total_budget_vnd is not None:
+                cost = item.price_vnd * (group_size or 1) if item.price_basis == "per_person" else item.price_vnd
+                if cost > total_budget_vnd:
+                    continue
             if topic and topic.casefold() not in " ".join(item.intent_tags or []).casefold() and topic.casefold() not in item.poi.category.casefold():
                 continue
             if is_indoor is not None and item.is_indoor != is_indoor:
@@ -67,7 +78,7 @@ class ExperienceService:
                 slots = [slot for slot in slots if slot.available_reported is None or slot.available_reported >= group_size]
             if slot_id:
                 slots = [slot for slot in slots if slot.id == slot_id]
-            if (start_at or end_at) and not slots:
+            if (start_at or end_at or group_size or slot_id) and not slots:
                 continue
             result.append(self.serialize(item, slots, item.verification_status == "verified"))
         stats = self.repository.review_stats([item.id for item in result])
