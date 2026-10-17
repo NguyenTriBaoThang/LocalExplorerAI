@@ -328,7 +328,7 @@ function TripWorkspace() {
   const right = itinerary && panels.timeline ? 384 + 32 : 16
   return (
     <>
-      <div className="trip-workspace app-shell relative h-[calc(100dvh-96px)] min-h-[540px] overflow-hidden bg-stone-200 font-sans text-[var(--text-main)]">
+      <div className="trip-workspace app-shell bg-stone-200 font-sans text-[var(--text-main)]">
         <MapView center={center} searchPins={searchPins} itinerary={itinerary} places={places}
           selected={selected} onSelect={setSelected} padding={{ left, right }} pins={pins}
           onPin={tripId != null && version != null && !proposal && !busy && !viewingOld(version, latest) ? pin : undefined} />
