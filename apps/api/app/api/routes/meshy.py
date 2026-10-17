@@ -130,8 +130,10 @@ def reserve(db, actor, request_key, cost, maximum, kind, metadata, parent=None):
     today = meshy.now().replace(hour=0, minute=0, second=0, microsecond=0)
     used = db.scalar(select(func.coalesce(func.sum(MeshyJob.credits), 0)).where(MeshyJob.actor_id == actor.id, MeshyJob.created_at >= today))
     active = db.scalar(select(func.count()).select_from(MeshyJob).where(MeshyJob.actor_id == actor.id, MeshyJob.status.in_({"submitting", "pending", "running", "uncertain"})))
-    if used + cost > settings.meshy_daily_credits or active >= 2:
-        raise HTTPException(429, "Đã đạt hạn mức ngày hoặc đang có 2 tác vụ chưa hoàn tất")
+    if used + cost > settings.meshy_daily_credits:
+        raise HTTPException(429, f"Đã dùng {used}/{settings.meshy_daily_credits} credit trong ngày (UTC). Tác vụ cần {cost} credit. Đây là hạn mức của website, không phải số dư Meshy. Hạn mức đặt lại lúc 07:00 giờ Việt Nam.")
+    if active >= 2:
+        raise HTTPException(429, "Đang có 2 tác vụ chưa hoàn tất. Chờ tác vụ hoàn thành trước khi gửi thêm.")
     row = MeshyJob(id=str(uuid4()), actor_id=actor.id, request_key=str(request_key), parent_id=parent,
                   kind=kind, credits=cost, metadata_json=metadata, status="submitting", progress=0)
     db.add(row)
@@ -157,8 +159,11 @@ def submit(db, row, payload):
 
 @router.get("/admin/meshy/jobs")
 def jobs(actor: User = Depends(require_user(P.ADMIN_MODELS_3D)), db: Session = Depends(get_db)):
+    today = meshy.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    used = db.scalar(select(func.coalesce(func.sum(MeshyJob.credits), 0)).where(MeshyJob.actor_id == actor.id, MeshyJob.created_at >= today))
+    active = db.scalar(select(func.count()).select_from(MeshyJob).where(MeshyJob.actor_id == actor.id, MeshyJob.status.in_({"submitting", "pending", "running", "uncertain"})))
     rows = db.scalars(select(MeshyJob).order_by(MeshyJob.created_at.desc()).limit(100))
-    return {"configured": bool(meshy.key(db)), "daily_limit": settings.meshy_daily_credits, "jobs": [view(r) for r in rows], "places": [{"id": p.id, "name": p.name, "latitude": p.latitude, "longitude": p.longitude} for p in db.scalars(select(POI).order_by(POI.name).limit(500))]}
+    return {"configured": bool(meshy.key(db)), "daily_limit": settings.meshy_daily_credits, "daily_used": used, "active_jobs": active, "jobs": [view(r) for r in rows], "places": [{"id": p.id, "name": p.name, "latitude": p.latitude, "longitude": p.longitude} for p in db.scalars(select(POI).order_by(POI.name).limit(500))]}
 
 @router.post("/admin/meshy/jobs")
 def generate(body: Generate, actor: User = Depends(require_user(P.ADMIN_MODELS_3D)), db: Session = Depends(get_db)):

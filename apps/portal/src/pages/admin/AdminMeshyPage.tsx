@@ -17,6 +17,9 @@ export function AdminMeshyPage() {
   const [places, setPlaces] = useState<Place[]>([])
   const [configured, setConfigured] = useState(false)
   const [limit, setLimit] = useState(120)
+  const [used, setUsed] = useState(0)
+  const [active, setActive] = useState(0)
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [kind, setKind] = useState<'text' | 'image'>('text')
@@ -32,7 +35,7 @@ export function AdminMeshyPage() {
   const refineKeys = useRef<Record<string, string>>({})
   async function refresh() {
     const { data } = await http.get('/admin/meshy/jobs')
-    setJobs(data.jobs); setConfigured(data.configured); setLimit(data.daily_limit); setPlaces(data.places)
+    setJobs(data.jobs); setConfigured(data.configured); setLimit(data.daily_limit); setUsed(data.daily_used ?? 0); setActive(data.active_jobs ?? 0); setPlaces(data.places)
   }
   useEffect(() => {
     void refresh().catch(e => setError(errorMessage(e)))
@@ -40,7 +43,7 @@ export function AdminMeshyPage() {
     return () => clearInterval(timer)
   }, [])
   async function run(fn: () => Promise<unknown>) {
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setNotice('')
     try { await fn(); await refresh() } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
   }
   async function readImages(files: FileList | null) {
@@ -62,7 +65,7 @@ export function AdminMeshyPage() {
       onBrief={brief => { setPrompt(brief.prompt); setBriefReady(brief.ready); setConfirmed(false); setKind(images.length ? 'image' : 'text'); if (!placement.display_name && brief.display_name) setPlacement(current => current.display_name ? current : ({ ...current, display_name: brief.display_name })) }} />
     <h2 className="text-lg font-semibold">Bản mô tả và yêu cầu gửi Meshy</h2>
     {!briefReady && <p className="text-sm text-slate-600">Trao đổi với Gemini để hoàn thiện bản mô tả trước khi tạo model.</p>}
-    <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2" onSubmit={e => { e.preventDefault(); void run(async () => { await http.post('/admin/meshy/jobs', { ...placement, kind, prompt, images: kind === 'image' ? images : [], request_key: requestKey.current, max_credits: cost }); requestKey.current = crypto.randomUUID(); setConfirmed(false) }) }}>
+    <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2" onSubmit={e => { e.preventDefault(); void run(async () => { const { data } = await http.post<Job>('/admin/meshy/jobs', { ...placement, kind, prompt, images: kind === 'image' ? images : [], request_key: requestKey.current, max_credits: cost }); requestKey.current = crypto.randomUUID(); setConfirmed(false); setJobs(current => [data, ...current.filter(job => job.id !== data.id)]); setNotice(`Tác vụ ${data.task_id || data.id}: ${states[data.status] || data.status}. Theo dõi tại mục Tác vụ và mô hình bên dưới.`) }) }}>
       <label>Địa điểm<select className={field} value={placement.poi_id || ''} onChange={e => { const p = places.find(x => x.id === e.target.value); setPlacement(p ? { ...placement, poi_id: p.id, display_name: p.name, latitude: p.latitude, longitude: p.longitude } : { ...placement, poi_id: undefined }) }}><option value="">Nhập vị trí thủ công</option>{places.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Tên mô hình<input className={field} required minLength={2} maxLength={120} value={placement.display_name} onChange={e => setPlacement({ ...placement, display_name: e.target.value })} /></label>
       <label>Cách tạo<select className={field} value={kind} onChange={e => { setKind(e.target.value as 'text' | 'image'); setConfirmed(false) }}><option value="text">Từ mô tả — hình học</option><option value="image">Từ 1–4 ảnh — có texture</option></select></label>
@@ -71,7 +74,14 @@ export function AdminMeshyPage() {
       {kind === 'image' && <p className="text-sm text-amber-900 md:col-span-2">Meshy sẽ nhận {images.length} ảnh gốc đã gửi Gemini. Chế độ ảnh không áp dụng thay đổi hình học từ mô tả; chọn “Từ mô tả” nếu muốn tạo theo nội dung đã chỉnh.</p>}
       {([['latitude', 'Vĩ độ', -90, 90], ['longitude', 'Kinh độ', -180, 180], ['scale', 'Chiều cao mô hình (m)', 0.51, 1000], ['heading', 'Hướng xoay (độ)', 0, 359.99], ['altitude', 'Độ cao nền (m)', -50, 200]] as const).map(([key, label, min, max]) => <label key={key}>{label}<input className={field} type="number" step="any" min={min} max={max} required value={placement[key]} onChange={e => setPlacement({ ...placement, [key]: Number(e.target.value) })} /></label>)}
       <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />Tôi đồng ý gửi {kind === 'text' ? 'mô tả' : 'các ảnh đã chọn'} tới Meshy và sử dụng khoảng {cost} API credit.</label>
-      <button className={button} disabled={busy || !briefReady || !configured || !confirmed || reading || (kind === 'image' && !images.length)}>{busy ? 'Đang gửi…' : `Gửi sang Meshy · ${cost} credit`}</button>
+      <div className="md:col-span-2 space-y-2" aria-live="polite">
+        <p className="text-sm text-slate-700">Hạn mức website hôm nay: {used}/{limit} credit · Còn {Math.max(0, limit - used)} credit · {active}/2 tác vụ đang xử lý. Đặt lại lúc 07:00 giờ Việt Nam; độc lập với số dư Meshy.</p>
+        {used + cost > limit && <p className="rounded-lg bg-amber-50 p-3 text-amber-900">Chưa thể gửi: tác vụ cần {cost} credit nhưng hạn mức hôm nay chỉ còn {Math.max(0, limit - used)}. Chờ hạn mức đặt lại hoặc yêu cầu quản trị viên điều chỉnh.</p>}
+        {active >= 2 && <p className="text-amber-900">Chờ tác vụ đang xử lý hoàn thành trước khi gửi thêm.</p>}
+        {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}
+        {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-emerald-900">{notice}</p>}
+      </div>
+      <button className={button} disabled={used + cost > limit || active >= 2 || busy || !briefReady || !configured || !confirmed || reading || (kind === 'image' && !images.length)}>{busy ? 'Đang gửi…' : `Gửi sang Meshy · ${cost} credit`}</button>
     </form>
     <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Tác vụ và mô hình</h2><button className={button} disabled={busy} onClick={() => void run(refresh)}>Cập nhật</button></div>
     {!jobs.length && <p className="rounded-xl bg-slate-50 p-5">Chưa có tác vụ. Tạo mô hình đầu tiên sau khi cấu hình key.</p>}
