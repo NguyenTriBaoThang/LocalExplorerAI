@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { t } from '../i18n'
-import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatMessageRequest, ChatReply, ChatServiceStatus, CollaborationInviteSnapshot, CreateCollaborationInviteResponse, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, OwnerCollaborationProposals, PlanPreview, PlanRequest, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -87,8 +87,9 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-export async function sendChatMessage(message: string, conversation_id: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
-  const { data } = await api.post<ChatReply>('/chat/message', { message, conversation_id, ...context }, { timeout: 65000 })
+export async function sendChatMessage(message: string | ChatMessageRequest, conversation_id?: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
+  const request = typeof message === 'string' ? { message, conversation_id, ...context } : message
+  const { data } = await api.post<ChatReply>('/chat/message', request, { timeout: 65000 })
   return data
 }
 
@@ -205,6 +206,25 @@ export async function createShareLink(itineraryId: string): Promise<{ share_url:
 
 export async function getSharedItinerary(token: string): Promise<Itinerary> {
   const { data } = await api.get<Itinerary>(`/shared/itineraries/${token}`)
+  return data
+}
+
+export async function createCollaborationInvite(itineraryId: string): Promise<CreateCollaborationInviteResponse> {
+  const { data } = await api.post<CreateCollaborationInviteResponse>(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-invite`)
+  return data
+}
+
+export async function revokeCollaborationInvite(itineraryId: string): Promise<void> {
+  await api.delete(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-invite`)
+}
+
+export async function getCollaborationInvite(token: string): Promise<CollaborationInviteSnapshot> {
+  const { data } = await api.get<CollaborationInviteSnapshot>(`/collaborations/${encodeURIComponent(token)}`)
+  return data
+}
+
+export async function getOwnerCollaborationProposals(itineraryId: string): Promise<OwnerCollaborationProposals> {
+  const { data } = await api.get<OwnerCollaborationProposals>(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-proposals`)
   return data
 }
 
@@ -332,38 +352,26 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export type PlanPayload = {
-  planning_style?: string
-  excluded_experience_ids?: string[]
-  preferred_slot_ids?: string[]
-  require_verified?: boolean
-  routing_mode?: 'configured' | 'demo'
-  start_at: string
-  end_at: string
-  group_size: number
-  budget_vnd: number
-  transport_mode: string
-  intent_weights: Record<string, number>
-  locked_experience_ids: string[]
-  locked_poi_ids?: string[]
-  origin_latitude?: number
-  origin_longitude?: number
-  origin_label?: string
-  destination_latitude?: number
-  destination_longitude?: number
-  destination_label?: string
-}
-
-export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanPayload; preview: Itinerary }
+export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanRequest; preview: Itinerary }
 export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' }
 
-export async function getItinerarySuggestions(payload: PlanPayload): Promise<ItinerarySuggestions> {
+export async function getItinerarySuggestions(payload: PlanRequest): Promise<ItinerarySuggestions> {
   const { data } = await api.post<ItinerarySuggestions>('/itineraries/suggestions', payload, { timeout: 180000 })
   return data
 }
 
-export async function createItinerary(payload: PlanPayload): Promise<Itinerary> {
+export async function createItinerary(payload: PlanRequest): Promise<Itinerary> {
   const { data } = await api.post<Itinerary>('/itineraries/plan', payload, { timeout: 120000 })
+  return data
+}
+
+export async function previewItinerary(payload: PlanRequest): Promise<PlanPreview> {
+  const { data } = await api.post<PlanPreview>('/itineraries/preview', payload)
+  return data
+}
+
+export async function confirmItinerary(payload: PlanRequest, confirmation_token: string): Promise<Itinerary> {
+  const { data } = await api.post<Itinerary>('/itineraries/confirm', { plan: payload, confirmation_token })
   return data
 }
 
@@ -477,4 +485,3 @@ export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): str
   if (error instanceof Error && error.message) return error.message
   return 'Đang hiển thị chế độ mô phỏng trực tuyến.'
 }
-

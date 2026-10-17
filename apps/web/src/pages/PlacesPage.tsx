@@ -90,7 +90,7 @@ export function PlacesPage() {
           <span className="eyebrow-3d">
             <span className="eyebrow-dot" /> {t('places.eyebrow')}
           </span>
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+          <span className="whitespace-nowrap text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
             {t('places.pilot')}
           </span>
         </div>

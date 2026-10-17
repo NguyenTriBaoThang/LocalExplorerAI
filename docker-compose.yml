@@ -78,6 +78,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8000/api/auth/google/callback}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GOOGLE_PLACES_MONTHLY_CALL_CAP: ${GOOGLE_PLACES_MONTHLY_CALL_CAP:-900}
+      GOOGLE_PLACES_CACHE_HOURS: ${GOOGLE_PLACES_CACHE_HOURS:-24}
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
       PORTAL_APP_URL: ${PORTAL_APP_URL:-http://localhost:${PORTAL_PORT:-8081}}
       VNPAY_ENVIRONMENT: ${VNPAY_ENVIRONMENT:-sandbox}
@@ -104,6 +107,7 @@ services:
       ENABLE_BOOTSTRAP_RANKER: ${ENABLE_BOOTSTRAP_RANKER:-false}
       FLOOD_MODEL_DIR: ${FLOOD_MODEL_DIR:-/models/flood-risk}
       ALLOW_UNVERIFIED_RANKER: ${ALLOW_UNVERIFIED_RANKER:-false}
+      APP_DATA_DIR: /app-data
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -113,7 +117,9 @@ services:
         condition: service_healthy
     volumes:
       - ./models:/models:ro
-    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+      - ./data:/data:ro
+      - app_data:/app-data
+    command: ["sh", "-c", "alembic upgrade head && if [ \"$$REAL_DATA_ONLY\" != \"true\" ]; then python -m scripts.seed_db; fi && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
       interval: 20s
@@ -168,3 +174,4 @@ services:
 
 volumes:
   postgres_data:
+  app_data:

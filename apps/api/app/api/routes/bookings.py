@@ -441,7 +441,11 @@ def _require_verified_email(user: User) -> None:
 def request_booking(payload: BookingHoldRequest, user: User = Depends(require_user(P.BOOKING_CREATE)), db: Session = Depends(get_db)):
     _require_verified_email(user)
     now = _now()
-    itinerary = db.get(Itinerary, payload.itinerary_id)
+    # Serialize booking creation with collaboration edits so an active booking
+    # cannot be attached to a stop while an owner-approved proposal removes it.
+    itinerary = db.scalar(
+        select(Itinerary).where(Itinerary.id == payload.itinerary_id).with_for_update()
+    )
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "ITINERARY_NOT_FOUND", "message": "Không tìm thấy lịch trình."})
     if itinerary.user_id != user.id:

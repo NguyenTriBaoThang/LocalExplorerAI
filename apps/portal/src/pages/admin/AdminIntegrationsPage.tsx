@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Activity, AlertCircle, CheckCircle2, CreditCard, Map as MapIcon, Plug, Save, Settings2, Sparkles, Trash2, UserCheck } from 'lucide-react'
+import { Activity, AlertCircle, CheckCircle2, CreditCard, Map as MapIcon, Plug, Save, Settings2, Sparkles, Star, Trash2, UserCheck } from 'lucide-react'
 import { Alert, Badge, Button, Card, Drawer, EmptyState, Field, IconButton, Input, PageHeader, Select, Spinner, useToast } from '../../components/ui'
 import { errorMessage } from '../../lib/api'
 import { formatDate } from '../../lib/format'
 import { integrationsApi, type IntegrationField, type IntegrationGroup, type IntegrationStatus } from '../../lib/adminOps'
 
-const ICONS: Record<string, typeof Plug> = { payments: CreditCard, routing: MapIcon, ai: Sparkles, google_oauth: UserCheck }
+const ICONS: Record<string, typeof Plug> = { payments: CreditCard, routing: MapIcon, ai: Sparkles, google_oauth: UserCheck, google_places: Star }
 const STATUS: Record<IntegrationStatus, { label: string; tone: 'green' | 'amber' | 'gray' }> = {
   active: { label: 'Đang hoạt động', tone: 'green' },
   incomplete: { label: 'Thiếu cấu hình', tone: 'amber' },
@@ -13,6 +13,7 @@ const STATUS: Record<IntegrationStatus, { label: string; tone: 'green' | 'amber'
 }
 
 const HINTS: Record<string, string> = {
+  api_key: 'Khóa Google Cloud đã bật Places API (New). Hệ thống chỉ đọc điểm sao công khai và dừng gọi khi đạt hạn mức hằng tháng (mặc định 900 lượt, trong hạn mức miễn phí).',
   goong_api_key: 'Khóa loại API Key dùng để tính tuyến đường và tìm tọa độ (Geocoding).',
   goong_maptiles_key: 'Khóa loại Maptiles Key từ account.goong.io để tải bản đồ nền và lớp 3D.',
   gemini_api_key: 'Lấy Gemini API Key từ Google AI Studio (aistudio.google.com).',

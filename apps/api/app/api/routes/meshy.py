@@ -72,11 +72,13 @@ class ChatRequest(BaseModel):
 
 @router.post("/admin/meshy/chat")
 def chat(body: ChatRequest, actor: User = Depends(require_user(P.ADMIN_MODELS_3D)), db: Session = Depends(get_db)):
-    from app.services.meshy_assistant import prepare
+    from app.services.meshy_assistant import prepare, AssistantProviderError
     try:
         return prepare(db, body.messages, body.images, body.place_name)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
+    except AssistantProviderError as exc:
+        raise HTTPException(exc.status_code, {"code": "GEMINI_PREPARATION_FAILED", "message": str(exc)})
     except RuntimeError as exc:
         raise HTTPException(502, str(exc))
 

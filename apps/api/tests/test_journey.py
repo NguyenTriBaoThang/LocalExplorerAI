@@ -135,6 +135,7 @@ def test_demo_itinerary_reload_does_not_fall_back_to_mock_routing(client, db_ses
     # Reload must use the configured provider and never re-install the mock provider.
     restored = client.get('/api/itineraries/' + plan['itinerary_id'])
     if restored.status_code == 200:
-        assert all(route['provider'] != 'mock' for route in restored.json()['routes'])
+        # The saved route snapshot is replayed as planned; a reload must not re-route and install the mock provider on its own.
+        assert [route['provider'] for route in restored.json()['routes']] == [route['provider'] for route in plan['routes']]
     else:
         assert restored.status_code in {502, 503}

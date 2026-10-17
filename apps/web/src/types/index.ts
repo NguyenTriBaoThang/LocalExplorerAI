@@ -1,11 +1,13 @@
 export type DataMode = 'real' | 'simulated' | 'replay' | 'mixed'
 
 export interface ChatConstraints {
+  trip_date: string | null
   group_size: number | null
   start_time: string | null
   return_deadline: string | null
   budget_vnd: number | null
   travel_mode: 'motorcycle' | 'walking' | 'car' | 'transit'
+  travel_mode_confirmed: boolean
   intent_weights: Record<string, number>
   locked_pois: string[]
   is_complete: boolean
@@ -15,13 +17,40 @@ export interface ChatConstraints {
 
 export interface ChatReply {
   status: 'parsed' | 'fallback'
-  assistant_mode: 'openai_compatible' | 'gemini_compatible' | 'local_fallback'
+  assistant_mode: 'openai_compatible' | 'gemini_compatible' | 'local_fallback' | 'unavailable'
   conversation_id: string | null
   prompt_version: string | null
   fallback_version: string | null
   fallback_reason: 'llm_not_configured' | 'llm_unavailable' | 'invalid_model_output' | null
+  intent: 'planning' | 'travel_information' | 'out_of_scope'
   reply: string
-  structured_constraints: ChatConstraints
+  structured_constraints: ChatConstraints | null
+  weather_forecast: ChatWeatherForecast | null
+}
+
+export interface ChatWeatherForecast {
+  location: string
+  forecast_date: string
+  precipitation_probability_pct: number
+  precipitation_sum_mm: number
+  retrieved_at: string
+  source: 'Open-Meteo'
+  source_url: string
+  attribution: string
+}
+
+export interface ChatMessageRequest {
+  message: string
+  language: 'vi' | 'en'
+  prior_user_messages: string[]
+  conversation_id: string
+  model_id?: string
+  trip_context?: {
+    trip_date?: string | null
+    destination?: { name: string; latitude: number; longitude: number } | null
+    has_planning_context?: boolean
+    planner_constraints?: ChatConstraints | null
+  }
 }
 
 export interface ChatServiceStatus {
@@ -299,6 +328,94 @@ export interface Itinerary {
   }
 }
 
+export interface PlanRequest {
+  start_at: string
+  end_at: string
+  group_size: number
+  budget_vnd: number
+  transport_mode: 'walking' | 'bicycling' | 'driving' | 'motorcycle' | 'car' | 'transit'
+  intent_weights: Record<string, number>
+  locked_experience_ids: string[]
+  locked_poi_ids?: string[]
+  planning_style?: string
+  excluded_experience_ids?: string[]
+  preferred_slot_ids?: string[]
+  require_verified?: boolean
+  routing_mode?: 'configured' | 'demo'
+  origin_latitude?: number
+  origin_longitude?: number
+  origin_label?: string
+  destination_latitude?: number
+  destination_longitude?: number
+  destination_label?: string
+}
+
+export type PlanPreview = Omit<Itinerary, 'request_id' | 'itinerary_id'> & {
+  preview_id: string
+  confirmation_token: string
+}
+
+export interface ItineraryProposalStop {
+  experience_id: string
+  slot_id: string
+}
+
+export type ItineraryProposalStatus = 'pending' | 'approved' | 'rejected' | 'stale'
+
+export interface ItineraryEditProposal {
+  id: string
+  itinerary_id: string
+  proposer_id: string | null
+  proposer_name: string | null
+  base_version: number
+  proposed_stops: ItineraryProposalStop[]
+  status: ItineraryProposalStatus
+  reviewed_by: string | null
+  reviewer_name: string | null
+  created_at: string
+  reviewed_at: string | null
+}
+
+export interface CollaborationInviteSnapshot {
+  itinerary: Itinerary
+  current_version: number
+  proposals: ItineraryEditProposal[]
+  can_submit: boolean
+}
+
+export interface OwnerCollaborationProposals {
+  invite_active: boolean
+  current_version: number
+  proposals: ItineraryEditProposal[]
+}
+
+export interface CreateCollaborationInviteResponse {
+  invite_url: string
+  invite_active: true
+}
+
+export interface SubmitItineraryProposalCommand {
+  type: 'submit_proposal'
+  base_version: number
+  stops: ItineraryProposalStop[]
+}
+
+export interface ReviewItineraryProposalCommand {
+  type: 'review_proposal'
+  proposal_id: string
+  decision: 'approve' | 'reject'
+}
+
+export type ItineraryCollaborationCommand = SubmitItineraryProposalCommand | ReviewItineraryProposalCommand
+
+export type ItineraryCollaborationEvent =
+  | { type: 'authenticated' }
+  | { type: 'presence'; count: number }
+  | { type: 'proposal_created'; proposal: ItineraryEditProposal; current_version: number }
+  | { type: 'proposal_reviewed'; proposal: ItineraryEditProposal; current_version: number; error?: string | null }
+  | { type: 'itinerary_updated'; itinerary_id: string; current_version: number; itinerary: Itinerary | null }
+  | { type: 'error'; code: string; message: string }
+
 export interface Booking {
   id: string
   itinerary_id: string | null
@@ -390,4 +507,77 @@ export interface ReviewableBooking {
   experience_id: string
   experience_title: string
   slot_start_at: string
+}
+
+export interface PlaceCommunityReview {
+  id: string
+  author: string
+  rating: number
+  comment: string
+  visited_on: string | null
+  created_at: string
+  edited: boolean
+}
+
+export interface PlaceGoogleRating {
+  source: 'google'
+  rating: number
+  rating_count: number
+  maps_uri: string | null
+  matched_name: string | null
+  fetched_at: string
+}
+
+export interface PlaceReviewsResponse {
+  community: {
+    count: number
+    average: number | null
+    distribution: Record<string, number>
+    items: PlaceCommunityReview[]
+  }
+  google: PlaceGoogleRating | null
+}
+
+export interface MyPlaceReviewState {
+  can_review: boolean
+  reason: 'no_itinerary' | null
+  review: {
+    id: string
+    rating: number
+    comment: string
+    visited_on: string | null
+    status: 'published' | 'hidden'
+    created_at: string
+    updated_at: string | null
+  } | null
+}
+
+export interface MyPlaceReviewItem {
+  id: string
+  poi_id: string
+  poi_name: string
+  rating: number
+  comment: string
+  visited_on: string | null
+  status: 'published' | 'hidden'
+  created_at: string
+  updated_at: string | null
+}
+
+export interface MyExperienceReviewItem {
+  id: string
+  booking_id: string
+  experience_id: string
+  experience_title: string
+  rating: number
+  comment: string
+  reply: string | null
+  status: string
+  created_at: string
+  updated_at: string | null
+}
+
+export interface MyReviewsResponse {
+  places: MyPlaceReviewItem[]
+  experiences: MyExperienceReviewItem[]
 }

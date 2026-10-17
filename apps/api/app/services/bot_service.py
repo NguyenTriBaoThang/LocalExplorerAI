@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import httpx
 
-STORE_FILE = Path(__file__).resolve().parent.parent / 'bot_store.json'
+# APP_DATA_DIR points at a mounted volume so admin-managed settings survive container rebuilds.
+STORE_FILE = (Path(os.environ['APP_DATA_DIR']) if os.environ.get('APP_DATA_DIR') else Path(__file__).resolve().parent.parent) / 'bot_store.json'
 
 DEFAULT_PERSONA = (
     'Bạn là Trợ lý Hướng dẫn viên Du lịch Thông minh (Tour Guide AI) của nền tảng Local Explorer AI tại TP. Hồ Chí Minh.\n\n'
@@ -48,7 +49,7 @@ DEFAULT_SYSTEM_SETTINGS = {
     'gemini_api_key': os.getenv("GEMINI_API_KEY", ""),
     'openai_model': 'gpt-4o-mini',
     'verified_provider_boost': 1.25,
-    'site_announcement': 'Chào mừng đến với Local Explorer AI - Hệ thống hỗ trợ du lịch bản địa thông minh',
+    'site_announcement': '',
     'maintenance_mode': False,
 }
 

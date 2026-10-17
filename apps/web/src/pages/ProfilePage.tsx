@@ -33,6 +33,7 @@ import { SessionsCard } from '../components/account/SessionsCard'
 import { MfaCard } from '../components/account/MfaCard'
 import { useTranslation } from '../i18n'
 import { ReviewPrompt } from '../components/content/ReviewPrompt'
+import { MyReviewsCard } from '../components/account/MyReviewsCard'
 
 export function ProfilePage() {
   const { t, locale } = useTranslation()
@@ -475,6 +476,7 @@ export function ProfilePage() {
           <MfaCard />
           <SessionsCard />
           {user?.role === 'traveler' && <ReviewPrompt />}
+          {user?.role === 'traveler' && <MyReviewsCard />}
         </div>
 
         {/* Right Column: Saved Itineraries Gallery */}

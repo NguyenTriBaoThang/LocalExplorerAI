@@ -2,6 +2,12 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Literal
+from pydantic import BaseModel, Field
+from app.api.guards import require_user
+from app.api.permissions import P
+from app.models.entities import User
+from app.services.routing_service import make_routing_provider
 
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from app.schemas.geocoding import GeocodeResponse
@@ -12,6 +18,33 @@ from app.services.routing_service import make_geocoding_provider
 from app.api.guards import public
 
 router = APIRouter(prefix="/api", tags=["routing and geocoding"])
+
+
+class RoutePoint(BaseModel):
+    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    lon: float = Field(ge=-180, le=180, allow_inf_nan=False)
+
+
+class RoadRouteRequest(BaseModel):
+    origin: RoutePoint
+    destination: RoutePoint
+    mode: Literal['motorcycle', 'car'] = 'motorcycle'
+
+
+@router.post('/routing/road')
+def road_route(body: RoadRouteRequest, db: Session = Depends(get_db),
+               user: User = Depends(require_user(P.TRIP_USE))):
+    try:
+        route = make_routing_provider(db).get_route(
+            (body.origin.lat, body.origin.lon), (body.destination.lat, body.destination.lon), body.mode)
+        if route.provider != 'goong_directions_v2' or not route.geometry:
+            raise RoutingProviderError('Road geometry unavailable')
+    except (RoutingProviderError, IntegrationSecretConfigurationError) as error:
+        raise HTTPException(503, 'Không lấy được tuyến đường Goong; không thay bằng đường nối thẳng.') from error
+    return {'provider': route.provider, 'mode': body.mode,
+            'coordinates': [[lon, lat] for lat, lon in route.geometry],
+            'distance_m': route.distance_m, 'duration_min': route.duration_min,
+            'is_realtime': route.is_realtime}
 
 
 @router.get("/routing/capabilities", dependencies=[Depends(public('routing provider capabilities'))])

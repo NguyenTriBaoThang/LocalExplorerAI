@@ -136,6 +136,7 @@ export function MapAdapter({
   pointSourceLabel,
   mapFooterLabel,
   className = '',
+  compact = false,
   showJourneyTracker = true,
   isExpanded = false,
   onExpandToggle,
@@ -150,6 +151,7 @@ export function MapAdapter({
   pointSourceLabel?: string
   mapFooterLabel?: string
   className?: string
+  compact?: boolean
   showJourneyTracker?: boolean
   isExpanded?: boolean
   onExpandToggle?: () => void
@@ -194,8 +196,8 @@ export function MapAdapter({
     <div
       className={`map-shell-3d ${isExpanded ? 'map-shell-expanded' : ''} ${className}`}
       style={{
-        height: isExpanded ? '80vh' : '680px',
-        minHeight: '520px',
+        height: isExpanded ? '80vh' : compact ? '400px' : '680px',
+        minHeight: compact ? '360px' : '520px',
         width: '100%',
         position: 'relative',
         display: 'flex',

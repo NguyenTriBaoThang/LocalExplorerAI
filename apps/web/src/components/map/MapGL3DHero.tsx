@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-// @ts-expect-error - Goong's Mapbox GL fork does not publish TypeScript definitions.
 import goongjs from '@goongmaps/goong-js'
 import '@goongmaps/goong-js/dist/goong-js.css'
 import { Compass, Moon, RotateCcw, Sun } from 'lucide-react'

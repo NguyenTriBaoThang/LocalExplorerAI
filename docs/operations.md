@@ -5,7 +5,7 @@
 - Email is an optional outbound notification channel. Configure SMTP, apply migration `0008_operations_notifications`, then run the `worker` service. Booking requests/decisions and provider slot cancellations enter the database outbox in the same transaction as the business change. Idempotency keys prevent duplicate rows; temporary SMTP failures retry with exponential backoff, and exhausted messages move to `failed`.
 - Admin-only `GET /api/ops/status`, `/api/ops/jobs`, `/api/ops/events`, and `/api/ops/notifications` expose delivery/job/event health. The monitoring API omits recipient addresses and message bodies. These routes need the `ops:read` permission: an admin session, or a service-account key sent as `Authorization: Bearer lek_...` (create one per monitor with `POST /api/admin/service-accounts`; it can hold only `ops:read`). Do not publish the key to a browser or a dashboard accessible to guests.
 - `GET /health` is process liveness. `GET /ready` tests PostgreSQL and, when rate limiting is enabled, Redis. Production Compose enables the shared Redis fixed-window limiter (auth, chat/AI, general quotas); Redis failure returns 503 instead of silently disabling the protection. The app ignores forwarded-IP headers by default. If behind a proxy, set `TRUSTED_PROXY_IPS` to the proxy's exact IP/CIDR ranges and configure the ingress to overwrite/append `X-Forwarded-For`; never trust arbitrary client-supplied forwarded headers.
-- HTTP access logs are structured JSON with request ID, method, path, status and duration. Query strings, request bodies, authorization headers and client addresses are not logged. Return/capture `X-Request-ID` when investigating an incident. Container stdout/stderr must be collected by the host's restricted, rotated log service.
+- HTTP access logs are structured JSON with request ID, method, path, status and duration. Query strings, request bodies, authorization headers and client addresses are not logged; collaboration invite tokens are redacted from application paths, the web proxy suppresses access/error logs for invite API/page routes, and collaboration pages set `Referrer-Policy: no-referrer`. Return/capture `X-Request-ID` when investigating an incident. Container stdout/stderr must be collected by the host's restricted, rotated log service.
 
 ## Environment
 
@@ -23,7 +23,7 @@ Invoke-RestMethod http://localhost:8000/ready
 
 Apply migrations before serving traffic. The development Compose command does this automatically; for controlled production deploys use a one-off API container/job, verify its exit code, then update API and worker. Do not run two independent migration jobs concurrently. Operations endpoints require admin authentication.
 
-For example, after PostgreSQL/Redis are reachable and the production environment file is loaded, run `docker compose -f docker-compose.prod.yml run --rm --no-deps api alembic upgrade head` and verify its exit code before `up -d`.
+For example, after PostgreSQL/Redis are reachable and the production environment file is loaded, run `docker compose -f docker-compose.prod.yml run --rm --no-deps api alembic upgrade head` and then `docker compose -f docker-compose.prod.yml run --rm --no-deps api python -m scripts.sync_rbac`; verify both exit codes before `up -d`. The RBAC sync inserts new code permissions and their default grants without restoring grants an administrator deliberately removed.
 
 ## Backup and restore
 
