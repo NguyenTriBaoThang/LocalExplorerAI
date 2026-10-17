@@ -17,7 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
-import type { GeocodeResponse, POI, RoutingCapabilities } from '../types'
+import type { GeocodeResponse, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
 
 const budgetPresets = [500000, 1000000, 2000000, 3500000]
@@ -166,7 +166,7 @@ export function PlannerPage() {
         end_at: toIso(endTime),
         group_size: groupSize,
         budget_vnd: budget,
-        transport_mode: transport,
+        transport_mode: transport as PlanRequest['transport_mode'],
         intent_weights: Object.fromEntries(selectedIntents.map((intent) => [intent, 1])),
         locked_experience_ids: [],
         locked_poi_ids: lockedPois,

@@ -1,8 +1,8 @@
 {
   "suite": "local-explorer-ai-system-prompts",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "prd_version": "3.0",
-  "effective_date": "2026-09-22",
+  "effective_date": "2026-10-17",
   "language": "vi",
   "prompt_ids": [
     "CONVERSATION_PARSER",
@@ -12,6 +12,12 @@
     "XAI_EXPLANATION",
     "PROVIDER_ASSISTANT",
     "FEEDBACK_LABELER",
-    "WEATHER_AQI_ADVISOR"
+    "WEATHER_AQI_ADVISOR",
+    "CHAT_INTENT_ROUTER",
+    "TRAVEL_ASSISTANT",
+    "TRIP_PARSER",
+    "TRIP_PLANNER",
+    "TRIP_FOLLOWUP",
+    "TRIP_GROUP_REVIEW"
   ]
 }

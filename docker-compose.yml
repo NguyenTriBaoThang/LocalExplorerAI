@@ -113,6 +113,7 @@ services:
         condition: service_healthy
     volumes:
       - ./models:/models:ro
+      - ./data:/data:ro
     command: ["sh", "-c", "alembic upgrade head && if [ \"$$REAL_DATA_ONLY\" != \"true\" ]; then python -m scripts.seed_db; fi && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]

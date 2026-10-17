@@ -1,19 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.adapters.llm.provider import (
-    LLMNotConfigured,
-    LLMProviderError,
-    StructuredOutputProvider,
-)
-from app.api.dependencies import get_llm_provider
-from app.api.dependencies import get_db
+from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError, StructuredOutputProvider
+from app.api.dependencies import get_db, get_llm_provider
 from app.core.config import settings
 from app.prompts.registry import catalog
-from app.schemas.ai import ChatMessage, StructuredConstraints
-from app.services.offline_chat_fallback import build_offline_constraints
+from app.schemas.ai import ChatMessage, ChatReply
+from app.services.chat_response_service import route_chat_message
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from sqlalchemy.orm import Session
-from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.models.entities import User
 from app.api.guards import public, require_user
 from app.api.permissions import P
@@ -21,37 +15,21 @@ from app.api.permissions import P
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
-@router.post("/message")
+@router.post("/message", response_model=ChatReply)
 def chat_message(
     payload: ChatMessage,
     provider: StructuredOutputProvider = Depends(get_llm_provider),
+    db: Session = Depends(get_db),
     user: User | None = Depends(require_user(P.CHAT_USE, optional=True)),
 ):
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "AI chat is a traveler feature."})
     try:
-        constraints = PromptRunner(provider).run(
-            "CONVERSATION_PARSER",
-            {"message": payload.message, "conversation_id": payload.conversation_id},
-            StructuredConstraints,
-        )
-    except LLMNotConfigured:
-        return _fallback_response(payload, "llm_not_configured")
-    except LLMProviderError:
-        return _fallback_response(payload, "llm_unavailable")
-    except InvalidStructuredOutput:
-        return _fallback_response(payload, "invalid_model_output")
-
-    return {
-        "status": "parsed",
-        "assistant_mode": "openai_compatible",
-        "conversation_id": payload.conversation_id,
-        "prompt_version": catalog.version,
-        "fallback_version": None,
-        "fallback_reason": None,
-        "reply": constraints.clarification_question_vi or "Mình đã ghi nhận các ràng buộc chuyến đi.",
-        "structured_constraints": constraints.model_dump(),
-    }
+        return route_chat_message(payload, provider, db)
+    except LLMNotConfigured as error:
+        raise HTTPException(status_code=503, detail={"code": "LLM_NOT_CONFIGURED", "message": "Configure an AI provider or enable LLM_FALLBACK_ENABLED."}) from error
+    except LLMProviderError as error:
+        raise HTTPException(status_code=502, detail={"code": "LLM_PROVIDER_ERROR", "message": "The external LLM is unavailable and the local fallback is disabled."}) from error
 
 
 @router.get("/status", dependencies=[Depends(public('reports whether the concierge is LLM-backed or on the fallback'))])
@@ -69,19 +47,3 @@ def chat_status(provider: StructuredOutputProvider = Depends(get_llm_provider), 
     }
 
 
-def _fallback_response(payload: ChatMessage, reason: str) -> dict:
-    if not settings.llm_fallback_enabled:
-        if reason == "llm_not_configured":
-            raise HTTPException(status_code=503, detail={"code": "LLM_NOT_CONFIGURED", "message": "Configure OPENAI_API_KEY or enable LLM_FALLBACK_ENABLED."})
-        raise HTTPException(status_code=502, detail={"code": "LLM_PROVIDER_ERROR", "message": "The external LLM is unavailable and the local fallback is disabled."})
-    constraints, reply = build_offline_constraints(payload.message, reason)
-    return {
-        "status": "fallback",
-        "assistant_mode": "local_fallback",
-        "conversation_id": payload.conversation_id,
-        "prompt_version": None,
-        "fallback_version": "1.0.0",
-        "fallback_reason": reason,
-        "reply": reply,
-        "structured_constraints": constraints.model_dump(),
-    }

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { t } from '../i18n'
-import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, CollaborationInviteSnapshot, CreateCollaborationInviteResponse, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, OwnerCollaborationProposals, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatMessageRequest, ChatReply, ChatServiceStatus, CollaborationInviteSnapshot, CreateCollaborationInviteResponse, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, OwnerCollaborationProposals, PlanPreview, PlanRequest, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -87,8 +87,8 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-export async function sendChatMessage(message: string, conversation_id: string): Promise<ChatReply> {
-  const { data } = await api.post<ChatReply>('/chat/message', { message, conversation_id })
+export async function sendChatMessage(request: ChatMessageRequest): Promise<ChatReply> {
+  const { data } = await api.post<ChatReply>('/chat/message', request)
   return data
 }
 
@@ -269,23 +269,18 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export async function createItinerary(payload: {
-  start_at: string
-  end_at: string
-  group_size: number
-  budget_vnd: number
-  transport_mode: string
-  intent_weights: Record<string, number>
-  locked_experience_ids: string[]
-  locked_poi_ids?: string[]
-  origin_latitude?: number
-  origin_longitude?: number
-  origin_label?: string
-  destination_latitude?: number
-  destination_longitude?: number
-  destination_label?: string
-}): Promise<Itinerary> {
+export async function createItinerary(payload: PlanRequest): Promise<Itinerary> {
   const { data } = await api.post<Itinerary>('/itineraries/plan', payload)
+  return data
+}
+
+export async function previewItinerary(payload: PlanRequest): Promise<PlanPreview> {
+  const { data } = await api.post<PlanPreview>('/itineraries/preview', payload)
+  return data
+}
+
+export async function confirmItinerary(payload: PlanRequest, confirmation_token: string): Promise<Itinerary> {
+  const { data } = await api.post<Itinerary>('/itineraries/confirm', { plan: payload, confirmation_token })
   return data
 }
 
