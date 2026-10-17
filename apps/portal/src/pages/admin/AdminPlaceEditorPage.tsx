@@ -9,12 +9,13 @@ import type { AdminPlace, PlaceDraft } from '../../lib/types'
 
 const EMPTY: PlaceDraft = {
   name: '', category: 'landmark', district: 'Quận 1', address: '', latitude: 10.7769, longitude: 106.7009, description: '', image_urls: [],
-  opening_hours: '', ticket_info: '', tags: [], is_landmark: true, source_url: '',
+  opening_hours: '', ticket_info: '', tags: [], is_landmark: true, source_url: '', google_place_id: '',
 }
+const GOOGLE_PLACE_ID_RE = /^[A-Za-z0-9_-]*$/
 
 function toDraft(place: AdminPlace): PlaceDraft {
-  const { name, category, district, address, latitude, longitude, description, image_urls, opening_hours, ticket_info, tags, is_landmark, source_url } = place
-  return { name, category, district, address, latitude, longitude, description, image_urls, opening_hours: opening_hours ?? '', ticket_info: ticket_info ?? '', tags, is_landmark, source_url: source_url ?? '' }
+  const { name, category, district, address, latitude, longitude, description, image_urls, opening_hours, ticket_info, tags, is_landmark, source_url, google_place_id } = place
+  return { name, category, district, address, latitude, longitude, description, image_urls, opening_hours: opening_hours ?? '', ticket_info: ticket_info ?? '', tags, is_landmark, source_url: source_url ?? '', google_place_id: google_place_id ?? '' }
 }
 
 export function AdminPlaceEditorPage() {
@@ -39,10 +40,12 @@ export function AdminPlaceEditorPage() {
   const set = <K extends keyof PlaceDraft>(key: K, value: PlaceDraft[K]) => setDraft({ ...draft, [key]: value })
   const payload = (): PlaceDraft => ({
     ...draft, district: draft.district || null, opening_hours: draft.opening_hours?.trim() || null, ticket_info: draft.ticket_info?.trim() || null,
-    source_url: draft.source_url?.trim() || null, tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+    source_url: draft.source_url?.trim() || null, google_place_id: draft.google_place_id?.trim() || null, tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
   })
 
+  const googleIdInvalid = !GOOGLE_PLACE_ID_RE.test(draft.google_place_id?.trim() ?? '')
   const run = async (kind: 'save' | 'publish' | 'hide') => {
+    if (kind !== 'hide' && googleIdInvalid) { setError('Google Place ID chỉ gồm chữ cái, chữ số, dấu gạch dưới và gạch ngang.'); return }
     setBusy(kind)
     setError('')
     try {
@@ -162,6 +165,10 @@ export function AdminPlaceEditorPage() {
               <Field label="Đường dẫn nguồn (HTTPS)"><Input type="url" value={draft.source_url ?? ''} onChange={(e) => set('source_url', e.target.value)} placeholder="https://" /></Field>
               {draft.source_url && <a href={draft.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><Link2 className="h-3.5 w-3.5" /> Mở nguồn</a>}
               {!draft.source_url && <Alert tone="amber">Chưa có nguồn nên chưa thể xuất bản địa điểm.</Alert>}
+              <Field label="Google Place ID" hint="Dán Place ID của địa điểm trên Google Maps (thường bắt đầu bằng ChIJ…). Để trống: hệ thống tự dò cho danh thắng. Chỉ dùng để đọc điểm sao công khai."
+                error={googleIdInvalid ? 'Chỉ gồm chữ cái, chữ số, dấu gạch dưới và gạch ngang.' : undefined}>
+                <Input value={draft.google_place_id ?? ''} onChange={(e) => set('google_place_id', e.target.value)} maxLength={255} placeholder="ChIJ…" invalid={googleIdInvalid} />
+              </Field>
             </div>
           </Card>
           {place && (
