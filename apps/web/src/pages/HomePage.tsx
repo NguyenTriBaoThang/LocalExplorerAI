@@ -12,7 +12,7 @@ import {
   Bot,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { CityHero3D } from '../components/3d/CityHero3D'
+import { MapGL3DHero } from '../components/map/MapGL3DHero'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { useTranslation } from '../i18n'
 import { HomeContentSections } from '../components/content/HomeContentSections'
@@ -160,9 +160,9 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* 3D WebGL Saigon Cityscape Canvas */}
+        {/* Real Goong GL city map with 3D camera and extruded building footprints */}
         <div className="hero-visual-col">
-          <CityHero3D />
+          <MapGL3DHero />
         </div>
       </section>
 

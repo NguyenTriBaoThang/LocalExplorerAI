@@ -17,7 +17,7 @@ export function JourneyBar() {
       .catch((reason) => { if (active) setError(apiErrorMessage(reason)) })
     return () => { active = false }
   }, [])
-  if ((user && user.role !== 'traveler') || !['/map-3d', '/explore', '/planner'].includes(pathname)) return null
+  if ((user && user.role !== 'traveler') || !['/chat', '/map-3d', '/planner',  '/explore'].includes(pathname)) return null
   return <section className="border-y border-emerald-200 bg-white px-5 py-3 text-slate-800" aria-label="Hành trình của bạn">
     <div className="mx-auto max-w-7xl space-y-2">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">

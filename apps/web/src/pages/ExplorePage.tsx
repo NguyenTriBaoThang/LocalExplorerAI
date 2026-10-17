@@ -112,6 +112,7 @@ export function ExplorePage() {
   const [time, setTime] = useTripField('startTime')
   const [groupSize, setGroupSize] = useTripField('groupSize')
   const [budget, setBudget] = useTripField('budget')
+  const [landmarkModelId, setLandmarkModelId] = useTripField('modelId')
   const [indoor, setIndoor] = useState('all')
   const [topic, setTopic] = useState('')
   const [radiusKm, setRadiusKm] = useState(15)
@@ -824,6 +825,9 @@ export function ExplorePage() {
             selectedId={selectedId}
             onSelect={selectExperience}
             className="explore-map-container"
+            webgl3d
+            selectedLandmarkId={landmarkModelId}
+            onLandmarkChange={setLandmarkModelId}
           />
 
           {selectedId && <ReviewsPanel experienceId={selectedId} />}
