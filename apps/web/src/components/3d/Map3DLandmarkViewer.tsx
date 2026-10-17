@@ -1,3 +1,4 @@
+import { LandmarkDiscoveryPanel } from './LandmarkDiscoveryPanel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -9,7 +10,6 @@ import {
   AlertCircle,
   Compass,
   Layers,
-  MapPin,
   RotateCcw,
   Save,
   Settings,
@@ -18,7 +18,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Crosshair,
-  ChevronDown,
 } from 'lucide-react'
 import { api } from '../../api/client'
 import { useAuth } from '../../auth'
@@ -159,10 +158,12 @@ function createProceduralCathedralModel(): THREE.Group {
 
 export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
+  previewJobId,
   defaultCalibration: providedCalibration,
   className = '',
 }: {
   modelId?: string
+  previewJobId?: string
   defaultCalibration?: ModelCalibration
   className?: string
 }) {
@@ -199,6 +200,26 @@ export function Map3DLandmarkViewer({
   const [statusMessage, setStatusMessage] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [modelCardVisible, setModelCardVisible] = useState(false)
 
+  useEffect(() => {
+    if (!modelCardVisible || loading) return
+    const originals = new Map<THREE.MeshStandardMaterial, { color: THREE.Color; intensity: number }>()
+    modelAnchorRef.current?.traverse(node => {
+      if (!(node instanceof THREE.Mesh)) return
+      const materials = Array.isArray(node.material) ? node.material : [node.material]
+      for (const material of materials) {
+        if (!(material instanceof THREE.MeshStandardMaterial) || originals.has(material)) continue
+        originals.set(material, { color: material.emissive.clone(), intensity: material.emissiveIntensity })
+        material.emissive.set('#b88a4c')
+        material.emissiveIntensity = 0.12
+      }
+    })
+    mapRef.current?.triggerRepaint()
+    return () => {
+      originals.forEach((value, material) => { material.emissive.copy(value.color); material.emissiveIntensity = value.intensity })
+      mapRef.current?.triggerRepaint()
+    }
+  }, [modelCardVisible, loading, modelId])
+
   calibrationRef.current = calibration
   const dirty = JSON.stringify(calibration) !== JSON.stringify(saved)
 
@@ -209,7 +230,7 @@ export function Map3DLandmarkViewer({
     setCalibration(fallbackCalibration)
     setSaved(fallbackCalibration)
     api
-      .get(`/models-3d/calibration/${modelId}`)
+      .get(previewJobId ? `/admin/meshy/jobs/${previewJobId}/calibration` : `/models-3d/calibration/${modelId}`)
       .then(({ data }) => {
         if (!alive) return
         const next = sanitizeCalibration(data, fallbackCalibration)
@@ -248,7 +269,9 @@ export function Map3DLandmarkViewer({
       powerPreference: 'high-performance',
     })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight)
+    // CSS owns layout; writing fixed inline pixels here breaks map alignment
+    // after the viewport or parent resizes.
+    renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.15
@@ -407,6 +430,7 @@ export function Map3DLandmarkViewer({
     setLoadingProgress(0)
 
     const loader = new GLTFLoader()
+    loader.setWithCredentials(true)
     loader.load(
       calibrationRef.current.file_url,
       (gltf) => {
@@ -456,6 +480,7 @@ export function Map3DLandmarkViewer({
         }
 
         setLoading(false)
+        if (previewJobId) void api.post(`/admin/meshy/jobs/${previewJobId}/previewed`).catch(() => {})
         mapRef.current?.triggerRepaint()
       },
       (xhr) => {
@@ -539,7 +564,7 @@ export function Map3DLandmarkViewer({
         scale: calibration.scale,
       }
 
-      const { data } = await api.post(`/models-3d/calibration/${modelId}`, payload)
+      const { data } = await api.post(previewJobId ? `/admin/meshy/jobs/${previewJobId}/calibration` : `/models-3d/calibration/${modelId}`, payload)
       const next = sanitizeCalibration(data.calibration, calibration)
       setCalibration(next)
       setSaved(next)
@@ -634,7 +659,7 @@ export function Map3DLandmarkViewer({
       />
 
       {/* Three.js WebGL2 overlay, aligned to Goong's camera matrix */}
-      <canvas ref={threeCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <canvas ref={threeCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '100%', height: '100%' }} />
 
       {/* Loading Overlay */}
       {loading && !loadError && (
@@ -989,70 +1014,8 @@ export function Map3DLandmarkViewer({
         </div>
       )}
 
-      {/* Bottom Landmark Information Card */}
-      <div className={`absolute bottom-3 left-3 right-3 z-20 overflow-y-auto rounded-2xl border border-slate-700/80 bg-slate-950/95 p-4 text-slate-200 shadow-2xl backdrop-blur-xl sm:left-4 sm:right-auto sm:w-[340px] lg:w-[330px] ${modelCardVisible ? 'max-h-[36vh] lg:inset-y-4 lg:bottom-4 lg:max-h-none' : 'max-h-24'}`}>
-        {modelCardVisible ? (
-          <>
-        <div className="flex items-start gap-3 border-b border-slate-800 pb-3">
-          <div className="mt-0.5 shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/15 p-2.5 text-emerald-300">
-            <MapPin size={19} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300">Địa danh đang xem</span>
-            <h4 className="mt-1 text-sm font-bold leading-5 text-white">{calibration.display_name}</h4>
-            <p className="mt-1.5 text-[11px] leading-4 text-slate-400">
-              Mô hình minh họa từ danh mục 3D. Xem thông tin có nguồn và trạng thái liên kết trong khung khám phá.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setModelCardVisible(false)}
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
-            aria-label="Thu gọn thông tin địa danh"
-            aria-expanded="true"
-            title="Thu gọn thông tin"
-          >
-            <ChevronDown size={17} />
-          </button>
-        </div>
-
-        <div className="space-y-3 py-3">
-          <div>
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Vị trí mô hình</p>
-            <p className="font-mono text-[11px] text-slate-200">{calibration.latitude.toFixed(6)}, {calibration.longitude.toFixed(6)}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
-              <p className="text-[10px] text-slate-500">Hướng đặt</p>
-              <p className="mt-1 text-xs font-semibold text-white">{calibration.heading.toFixed(1)}°</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
-              <p className="text-[10px] text-slate-500">Chiều cao mô hình</p>
-              <p className="mt-1 text-xs font-semibold text-white">{calibration.scale.toFixed(0)} m</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
-          <p className="text-[10px] font-semibold text-amber-200">Lưu ý về dữ liệu</p>
-          <p className="mt-1 text-[10px] leading-4 text-slate-400">
-            Đây là thông số hiển thị và căn chỉnh mô hình 3D. Giờ mở cửa, giá vé và thông tin tham quan cần được đối chiếu với nguồn địa phương.
-          </p>
-        </div>
-          </>
-        ) : (
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300"><MapPin size={18} /></span>
-            <button type="button" onClick={() => setModelCardVisible(true)} className="min-w-0 flex-1 text-left" aria-label="Mở thông tin địa danh" aria-expanded="false">
-              <p className="text-xs font-semibold text-white">Chạm vào mô hình 3D</p>
-              <p className="mt-1 text-[10px] leading-4 text-slate-400">Nhấp lên công trình để mở thẻ thông tin địa danh.</p>
-            </button>
-            <button type="button" onClick={() => setModelCardVisible(true)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-400/30 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-300 transition hover:bg-emerald-400/10" aria-label="Mở thông tin địa danh" aria-expanded="false">
-              Thông tin <ChevronDown size={13} />
-            </button>
-          </div>
-        )}
-      </div>
+      {!previewJobId && <LandmarkDiscoveryPanel key={modelId} modelId={modelId} landmark={calibration}
+        open={modelCardVisible} onOpen={() => setModelCardVisible(true)} onClose={() => setModelCardVisible(false)} onView={setCameraPreset} />}
     </div>
   )
 }

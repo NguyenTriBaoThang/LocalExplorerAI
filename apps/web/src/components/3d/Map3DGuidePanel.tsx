@@ -18,7 +18,7 @@ export function Map3DGuidePanel({ landmark, modelId }: { landmark: ModelCalibrat
   const [context, setContext] = useState<LandmarkContext | null>(null)
   const [contextError, setContextError] = useState('')
   const [constraints, setConstraints] = useAssistantField('constraints')
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useAssistantField('busy')
   const [error, setError] = useState('')
@@ -86,7 +86,7 @@ export function Map3DGuidePanel({ landmark, modelId }: { landmark: ModelCalibrat
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="absolute bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-slate-950/95 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:bg-slate-900"
+        className="absolute top-20 right-3 z-30 inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-slate-950/95 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:bg-slate-900"
         aria-label="Mở trợ lý khám phá"
       >
         <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400 text-slate-950"><Bot size={18} /><span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-950 bg-emerald-300" /></span>

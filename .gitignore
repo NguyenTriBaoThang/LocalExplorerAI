@@ -460,6 +460,7 @@ notebooks/*
 .ipynb_checkpoints/
 
 # Bot runtime store
+apps/api/.meshy-assets/
 apps/api/app/bot_store.json
 apps/api/.local-secrets/
 

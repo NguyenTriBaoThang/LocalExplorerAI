@@ -35,7 +35,7 @@ def pilot_status(db: Session) -> dict:
 
 def landmark_context(db: Session, model_id: str, demo: bool = False) -> dict:
     from app.api.routes.models_3d import _get_known_model, _read_calibrations
-    model = _get_known_model(model_id, _read_calibrations())
+    model = _get_known_model(model_id, _read_calibrations(db))
     repository = ExperienceRepository(db)
     pois = repository.list_pois()
     latitude, longitude = model["latitude"], model["longitude"]

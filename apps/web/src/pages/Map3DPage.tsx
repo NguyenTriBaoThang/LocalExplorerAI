@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Building2
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTripField } from '../journey'
 import { api } from '../api/client'
 import { contentApi } from '../api/content'
@@ -14,6 +14,14 @@ import type { POI } from '../types'
 import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../components/3d/landmark/types'
 
 export function Map3DPage() {
+  const [search] = useSearchParams()
+  const previewJobId = search.get("meshyPreview") || undefined
+  const [draft, setDraft] = useState<ModelCalibration | null>(null)
+  const [draftError, setDraftError] = useState("")
+  useEffect(() => {
+    if (!previewJobId) return
+    api.get<ModelCalibration>(`/admin/meshy/jobs/${previewJobId}/calibration`).then(r => setDraft(r.data)).catch(() => setDraftError("Không thể mở model nháp. Hãy đăng nhập tài khoản có quyền quản lý mô hình 3D."))
+  }, [previewJobId])
   const [selectedLandmark, setSelectedLandmark] = useTripField('modelId')
   const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
 
@@ -48,6 +56,13 @@ export function Map3DPage() {
   })
 
   const selectedCalibration = landmarks[selectedLandmark] ?? DEFAULT_CALIBRATIONS.nhathoducba
+
+  if (previewJobId) return <div className="p-3">
+    <p className="rounded-lg bg-amber-50 p-3 text-amber-900">Bản nháp riêng tư · Mô hình do AI tạo. Căn vị trí rồi lưu trước khi quay về Portal xuất bản.</p>
+    {draftError && <p role="alert">{draftError}</p>}
+    {!draft && !draftError && <p>Đang tải bản nháp…</p>}
+    {draft && <Map3DLandmarkViewer key={previewJobId} modelId={draft.model_name} previewJobId={previewJobId} defaultCalibration={draft} className="h-[80vh]" />}
+  </div>
 
   return (
     <div className="map3d-page w-full flex flex-col min-h-[calc(100vh-64px)]">
@@ -122,6 +137,8 @@ export function Map3DPage() {
           })}
         </div>
       )}
+
+      {selectedLandmark.startsWith("meshy-") && <p className="bg-amber-50 px-4 py-2 text-sm text-amber-900">Mô hình do AI tạo · Hình dáng có thể khác công trình thực tế.</p>}
 
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">

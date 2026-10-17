@@ -58,6 +58,7 @@ class IntegrationField:
 
 
 INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
+    "meshy": {"api_key": IntegrationField("Meshy API key", secret=True, fallback_setting="meshy_api_key")},
     "payments": {
         "provider": IntegrationField("Payment provider", fallback_setting="payment_provider"),
         "momo_environment": IntegrationField("MoMo environment", fallback_setting="momo_environment"),
@@ -117,6 +118,7 @@ class ServiceSpec:
 
 
 INTEGRATION_CATALOG: dict[str, ServiceSpec] = {
+    "meshy": ServiceSpec("Meshy · Tạo mô hình 3D", "Key chỉ dùng trên máy chủ. Tác vụ tạo hình tiêu tốn API credit.", required=("api_key",)),
     "payments": ServiceSpec(
         "Thanh toán", "Cổng thanh toán cho đặt chỗ. Chỉ một nhà cung cấp hoạt động tại một thời điểm.", provider_key="provider", testable=True,
         providers={

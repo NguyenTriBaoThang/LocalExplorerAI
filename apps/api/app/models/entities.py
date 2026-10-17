@@ -38,6 +38,17 @@ TEXT_ARRAY = JSON().with_variant(ARRAY(Text()), "postgresql")
 JSON_DOCUMENT = JSON().with_variant(JSONB(), "postgresql")
 
 
+class LandmarkStory(Base):
+    __tablename__ = "landmark_stories"
+    model_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    draft: Mapped[dict] = mapped_column(JSON, nullable=False)
+    published: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    workflow: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
 class PointGeometry(TypeDecorator):
     """PostGIS POINT in production; plain text in SQLite's non-spatial tests."""
 
@@ -764,3 +775,21 @@ class ExperienceReview(Base):
     replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="published")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+class MeshyJob(Base):
+    __tablename__ = "meshy_jobs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    request_key: Mapped[str] = mapped_column(String(36), unique=True)
+    parent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
+    task_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(24), default="submitting", index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    credits: Mapped[int] = mapped_column(Integer)
+    metadata_json: Mapped[dict] = mapped_column(JSON)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    published: Mapped[bool] = mapped_column(Boolean, default=False)
+    previewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
