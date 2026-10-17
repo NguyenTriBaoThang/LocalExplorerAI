@@ -163,7 +163,11 @@ def _message(db: Session, user: User, message: str, trip_id: int | None, provide
         yield sse({"type": "error", "message": "Không tìm thấy chuyến đi"})
         return
     trip = Trip.model_validate(prev.spec) if prev else None
-    intent, topic, _ = chat_response_service.classify_chat_intent(message, prev is not None, provider)
+    intent, topic, reason = chat_response_service.classify_chat_intent(message, prev is not None, provider)
+    if reason is not None and topic != "weather":
+        # The offline keyword router misreads most trip requests as out of scope; only trust its weather match
+        # and let the planner (which reports a missing or unreachable AI itself) take everything else.
+        intent = "planning"
     text = None
     if intent == "out_of_scope":
         text = chat_response_service._out_of_scope_reply("vi")

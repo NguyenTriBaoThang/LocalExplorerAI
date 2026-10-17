@@ -6,6 +6,7 @@ import openai
 import pytest
 from sqlalchemy import func, select
 
+from app.adapters.llm.provider import LLMProviderError, NotConfiguredLLMProvider
 from app.api.dependencies import get_llm_provider
 from app.db.session import get_db
 from app.models.trip_entities import Trip as TripRow, TripItinerary, TripMessage
@@ -14,6 +15,8 @@ from app.services.trip import flow, forecast, llm, rules, store
 from app.services.trip.domain import Trip
 from tests.helpers import bearer_for, make_user
 from tests.trip.conftest import FakeClient, reply
+
+REAL_CLASSIFY = chat_response_service.classify_chat_intent
 
 
 @pytest.fixture(autouse=True)
@@ -289,6 +292,44 @@ def test_weather_question_answers_without_new_version(client, db_session, trip_p
     assert client.get(f"/api/trips/{trip_id}", headers=h).json()["versions"] == [1]
     logged = db_session.scalars(select(TripMessage).where(TripMessage.trip_id == trip_id).order_by(TripMessage.id)).all()
     assert [(m.role, m.text) for m in logged[-2:]] == [("user", "mai có mưa không"), ("ai", evs[0]["text"])]
+
+
+def real_router(monkeypatch, client, provider):
+    monkeypatch.setattr(chat_response_service, "classify_chat_intent", REAL_CLASSIFY)
+    client.app.dependency_overrides[get_llm_provider] = lambda: provider
+
+
+class DownProvider:
+    model_name = "down"
+
+    def generate(self, system_prompt, user_input, schema):
+        raise LLMProviderError("429")
+
+
+def test_router_not_configured_still_plans(client, db_session, trip_places, monkeypatch):
+    real_router(monkeypatch, client, NotConfiguredLLMProvider())
+    monkeypatch.setattr(llm, "chat_client", lambda db: None)
+    evs = events_of(client, "/api/trips", {"message": "TP.HCM 1 ngày 2 triệu"}, auth(db_session))
+    assert evs[-1] == {"type": "error", "message": flow.NO_AI}
+    assert not [e for e in evs if e["type"] == "answer"]
+
+
+def test_router_down_reports_ai_unreachable(client, db_session, trip_places, monkeypatch):
+    real_router(monkeypatch, client, DownProvider())
+    use_llm(monkeypatch, [openai.APIConnectionError(request=httpx.Request("POST", "http://x"))])
+    evs = events_of(client, "/api/trips", {"message": "TP.HCM 1 ngày 2 triệu"}, auth(db_session))
+    assert evs[-1] == {"type": "error", "message": "Không kết nối được AI, kiểm tra mạng rồi thử lại nhé."}
+    assert not [e for e in evs if e["type"] == "answer"]
+
+
+def test_router_down_still_answers_weather(client, db_session, trip_places, monkeypatch):
+    real_router(monkeypatch, client, DownProvider())
+    monkeypatch.setattr(chat_response_service, "daily_forecast", lambda lat, lon, day, name="": {
+        "location": name, "forecast_date": day.isoformat(), "precipitation_probability_pct": 40,
+        "precipitation_sum_mm": 1.5, "retrieved_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "source": "Open-Meteo", "source_url": "https://open-meteo.com/en/docs", "attribution": "Open-Meteo"})
+    evs = events_of(client, "/api/trips", {"message": "ngày mai có mưa không"}, auth(db_session))
+    assert [e["type"] for e in evs] == ["answer"] and "Open-Meteo" in evs[0]["text"]
 
 
 class FakeProvider:
