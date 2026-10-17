@@ -1,0 +1,2 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE DATABASE travility_test;

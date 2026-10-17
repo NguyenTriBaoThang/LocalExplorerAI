@@ -3,7 +3,6 @@ import { LandmarkDiscoveryPanel } from './LandmarkDiscoveryPanel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-// @ts-expect-error - @goongmaps/goong-js does not have official typescript definitions
 import goongjs from '@goongmaps/goong-js'
 import '@goongmaps/goong-js/dist/goong-js.css'
 import axios from 'axios'
@@ -32,9 +31,7 @@ import { offsetGeo } from './landmark/geo'
 
 export type { ModelCalibration } from './landmark/types'
 
-const GOONG_MAPTILES_KEY =
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOONG_MAPTILES_KEY ||
-  '7LMSzHRsHaOKryYjpUQ29NGQAcrSLFw8ho3tcpXU'
+import { GOONG_MAPTILES_KEY } from '../map/goongConfig'
 
 const GOONG_STYLES = {
   streets: 'https://tiles.goong.io/assets/goong_map_web.json',

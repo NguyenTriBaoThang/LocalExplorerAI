@@ -11,9 +11,11 @@ from app.adapters.routing.provider import RoutingConfigurationError, RoutingProv
 from app.db.session import get_db
 from app.models.entities import Event, Experience, ExperienceSlot, Feedback, Itinerary, ItineraryStop, ItineraryVersion, User
 from app.schemas.ai import FeedbackLabelRequest
-from app.schemas.planner import PlanRequest, PlanResponse, ItinerarySuggestionsResponse
+from app.schemas.planner import PlanConfirmationRequest, PlanPreviewResponse, PlanRequest, PlanResponse
+from app.services.plan_preview_token import InvalidPlanPreviewToken, issue_plan_preview_token, request_fingerprint, verify_plan_preview_token
+from app.services.planner_service import NoFeasiblePlan, PlanPreviewChanged, PlannerService
+from app.schemas.planner import ItinerarySuggestionsResponse
 from app.services.itinerary_suggestions import rank_suggestions_with_gemini, suggest_itineraries
-from app.services.planner_service import NoFeasiblePlan, PlannerService
 from app.api.guards import public, require_user
 from app.api.permissions import P
 
@@ -39,10 +41,20 @@ def itinerary_suggestions(payload: PlanRequest, db: Session = Depends(get_db), u
         raise HTTPException(status_code=502, detail={'code': 'ROUTING_PROVIDER_ERROR', 'message': str(error)}) from error
 
 
-@router.post("/itineraries/plan", response_model=PlanResponse)
-def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True))):
+def _create_preview(payload: PlanRequest, db: Session, user: User | None) -> dict:
+    result = PlannerService(db).plan(payload, user.id if user else None, persist=False)
+    preview_id, token = issue_plan_preview_token(payload, result, user.id if user else None)
+    return {"preview_id": preview_id, "confirmation_token": token, **result}
+
+
+def _check_traveler(user: User | None) -> None:
     if user is not None and user.role != "traveler":
         raise HTTPException(status_code=403, detail={"code": "ROLE_FORBIDDEN", "message": "Only traveler accounts can create itineraries."})
+
+
+@router.post("/itineraries/plan", response_model=PlanResponse)
+def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True))):
+    _check_traveler(user)
     try:
         return PlannerService(db).plan(payload, user.id if user else None)
     except NoFeasiblePlan as error:
@@ -51,6 +63,82 @@ def plan_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: Us
             "message": str(error),
             "diagnostics": error.diagnostics,
         }) from error
+    except UnsupportedTravelMode as error:
+        raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
+    except RoutingConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "ROUTING_NOT_CONFIGURED", "message": str(error)}) from error
+    except RoutingProviderError as error:
+        raise HTTPException(status_code=502, detail={"code": "ROUTING_PROVIDER_ERROR", "message": str(error)}) from error
+
+
+@router.post("/itineraries/preview", response_model=PlanPreviewResponse)
+def preview_itinerary(payload: PlanRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True))):
+    _check_traveler(user)
+    try:
+        return _create_preview(payload, db, user)
+    except NoFeasiblePlan as error:
+        raise HTTPException(status_code=422, detail={"code": error.code, "message": str(error)}) from error
+    except UnsupportedTravelMode as error:
+        raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
+    except RoutingConfigurationError as error:
+        raise HTTPException(status_code=503, detail={"code": "ROUTING_NOT_CONFIGURED", "message": str(error)}) from error
+    except RoutingProviderError as error:
+        raise HTTPException(status_code=502, detail={"code": "ROUTING_PROVIDER_ERROR", "message": str(error)}) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail={"code": "SIGNING_SECRET_NOT_CONFIGURED", "message": str(error)}) from error
+
+
+@router.post("/itineraries/confirm", response_model=PlanResponse)
+def confirm_itinerary(payload: PlanConfirmationRequest, db: Session = Depends(get_db), user: User | None = Depends(require_user(P.ITINERARY_PLAN, optional=True))):
+    _check_traveler(user)
+    owner_id = user.id if user else None
+    try:
+        claims = verify_plan_preview_token(payload.confirmation_token, owner_id)
+    except InvalidPlanPreviewToken as error:
+        raise HTTPException(status_code=409, detail={
+            "code": "PREVIEW_INVALID",
+            "message": "The preview expired or is no longer valid. Please generate a fresh preview.",
+        }) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail={"code": "SIGNING_SECRET_NOT_CONFIGURED", "message": str(error)}) from error
+    if claims.get("request_fingerprint") != request_fingerprint(payload.plan):
+        try:
+            replacement = _create_preview(payload.plan, db, user)
+        except NoFeasiblePlan as error:
+            raise HTTPException(status_code=409, detail={"code": "PREVIEW_STALE", "message": str(error)}) from error
+        except UnsupportedTravelMode as error:
+            raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
+        except RoutingConfigurationError as error:
+            raise HTTPException(status_code=503, detail={"code": "ROUTING_NOT_CONFIGURED", "message": str(error)}) from error
+        except RoutingProviderError as error:
+            raise HTTPException(status_code=502, detail={"code": "ROUTING_PROVIDER_ERROR", "message": str(error)}) from error
+        except RuntimeError as error:
+            raise HTTPException(status_code=503, detail={"code": "SIGNING_SECRET_NOT_CONFIGURED", "message": str(error)}) from error
+        raise HTTPException(status_code=409, detail={
+            "code": "PREVIEW_STALE",
+            "message": "The request changed after preview. Review this updated itinerary and confirm it again.",
+            "preview": replacement,
+        })
+    try:
+        return PlannerService(db).plan(
+            payload.plan,
+            owner_id,
+            persist=True,
+            expected_plan_fingerprint=claims.get("plan_fingerprint"),
+        )
+    except PlanPreviewChanged as error:
+        try:
+            preview_id, token = issue_plan_preview_token(payload.plan, error.current_plan, owner_id)
+        except RuntimeError as signing_error:
+            raise HTTPException(status_code=503, detail={"code": "SIGNING_SECRET_NOT_CONFIGURED", "message": str(signing_error)}) from signing_error
+        replacement = {"preview_id": preview_id, "confirmation_token": token, **error.current_plan}
+        raise HTTPException(status_code=409, detail={
+            "code": "PREVIEW_STALE",
+            "message": "Availability or route data changed. Review this updated itinerary and confirm it again.",
+            "preview": replacement,
+        }) from error
+    except NoFeasiblePlan as error:
+        raise HTTPException(status_code=409, detail={"code": "PREVIEW_STALE", "message": str(error)}) from error
     except UnsupportedTravelMode as error:
         raise HTTPException(status_code=422, detail={"code": "UNSUPPORTED_TRAVEL_MODE", "message": str(error)}) from error
     except RoutingConfigurationError as error:

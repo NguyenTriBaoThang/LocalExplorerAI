@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import json
 from zoneinfo import ZoneInfo
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from app.services.ml_ranker_service import MLRankerUnavailable, ranker_service
 from app.services.planner_engine import HeuristicPlanner, PlannerEngine, SuggestionPlanner
 from app.services.recommendation_service import RecommendationService
 from app.services.routing_service import RoutingService
+from app.services.plan_preview_token import plan_fingerprint
 
 
 class NoFeasiblePlan(Exception):
@@ -26,6 +28,12 @@ class NoFeasiblePlan(Exception):
         super().__init__(message)
         self.code = code
         self.diagnostics = diagnostics or {}
+
+
+class PlanPreviewChanged(Exception):
+    def __init__(self, current_plan: dict):
+        super().__init__("The available itinerary no longer matches the reviewed preview.")
+        self.current_plan = current_plan
 
 
 LOCAL_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -111,7 +119,14 @@ class PlannerService:
             status.get("ranking_source") or "ml_model",
         )
 
-    def plan(self, request: PlanRequest, user_id: str | None = None, *, persist: bool = True) -> dict:
+    def plan(
+        self,
+        request: PlanRequest,
+        user_id: str | None = None,
+        *,
+        persist: bool = True,
+        expected_plan_fingerprint: str | None = None,
+    ) -> dict:
         if request.planning_style != "balanced":
             self.engine = SuggestionPlanner(request.planning_style)
         if request.routing_mode == "demo":
@@ -486,14 +501,13 @@ class PlannerService:
                          "locked_experience_ids": request.locked_experience_ids, "locked_poi_ids": request.locked_poi_ids,
                          "origin_latitude": request.origin_latitude, "origin_longitude": request.origin_longitude,
                          "destination_latitude": request.destination_latitude, "destination_longitude": request.destination_longitude,
-                         "origin_label": request.origin_label, "destination_label": request.destination_label},
+                         "origin_label": request.origin_label, "destination_label": request.destination_label,
+                         "route_snapshot": json.loads(json.dumps(routes, default=str)) if request.routing_mode != "demo" else None},
             estimated_cost_vnd=total_cost, data_mode="real" if itinerary_data_mode == "verified" else "simulated" if itinerary_data_mode == "simulated" else "mixed",
         )
-        if persist:
-            self.db.add(itinerary)
-            self.db.flush()
         response_stops = []
         version_snapshot = []
+        stop_records = []
         for position, item in enumerate(chosen, start=1):
             experience, slot = item["experience"], item["slot"]
             stop = ItineraryStop(
@@ -504,8 +518,7 @@ class PlannerService:
                 activity_duration_min=experience.duration_min,
                 cost_vnd=item["cost"], status="planned", is_locked=item["locked"], locked=item["locked"],
             )
-            if persist:
-                self.db.add(stop)
+            stop_records.append(stop)
             response_stops.append(self._stop_dict(stop, experience, slot, position))
             version_snapshot.append({
                 "stop_id": stop.id, "stop_order": position, "poi_id": experience.poi_id,
@@ -513,12 +526,11 @@ class PlannerService:
                 "arrival_at": stop.arrival_at.isoformat(), "departure_at": stop.departure_at.isoformat(),
                 "cost_vnd": stop.cost_vnd, "is_locked": stop.is_locked,
             })
-        if persist:
-            self.db.add(ItineraryVersion(
-                itinerary_id=itinerary.id, version_number=1, stops_snapshot=version_snapshot,
-                total_cost_vnd=total_cost, total_travel_time_s=total_travel * 60,
-                preserved_intents_ratio=(len(preserved) / sum(weight > 0 for weight in request.intent_weights.values())) if any(weight > 0 for weight in request.intent_weights.values()) else 1.0,
-            ))
+        version_record = ItineraryVersion(
+            itinerary_id=itinerary.id, version_number=1, stops_snapshot=version_snapshot,
+            total_cost_vnd=total_cost, total_travel_time_s=total_travel * 60,
+            preserved_intents_ratio=(len(preserved) / sum(weight > 0 for weight in request.intent_weights.values())) if any(weight > 0 for weight in request.intent_weights.values()) else 1.0,
+        )
         explanation = self.explainer.explain(sorted(reason_codes), preserved, lost)
         explanation["ranking_model_version"] = ranking_model_version if ranking_source else None
         explanation["ranking_source"] = ranking_source
@@ -527,18 +539,16 @@ class PlannerService:
             for item in response_stops
             for evidence in (item["poi"]["source_evidence"] + item["source_evidence"] + item["slot_source_evidence"])
         })
-        if persist:
-            self.db.add(DecisionLog(
-                itinerary_id=itinerary.id, base_version=0, new_version=1,
-                preserved_intents=preserved, lost_intents=lost,
-                comparative_metrics={"estimated_cost_vnd": total_cost, "total_travel_time_s": total_travel * 60},
-                explanation_vi="Lịch trình được tạo theo ngân sách, thời gian và mục đích chuyến đi đã chọn.",
-                reason_codes=sorted(reason_codes), rejected_candidates=[], model_version=ranking_model_version,
-            ))
-            self.db.commit()
-        return {
+        decision_record = DecisionLog(
+            itinerary_id=itinerary.id, base_version=0, new_version=1,
+            preserved_intents=preserved, lost_intents=lost,
+            comparative_metrics={"estimated_cost_vnd": total_cost, "total_travel_time_s": total_travel * 60},
+            explanation_vi="Lịch trình được tạo theo ngân sách, thời gian và mục đích chuyến đi đã chọn.",
+            reason_codes=sorted(reason_codes), rejected_candidates=[], model_version=ranking_model_version,
+        )
+        result = {
             "request_id": itinerary.id,
-            "itinerary_id": itinerary.id,
+            "itinerary_id": itinerary.id if persist else None,
             "data_mode": "real" if itinerary_data_mode == "verified" else "simulated" if itinerary_data_mode == "simulated" else "mixed",
             "data_as_of": datetime.now(timezone.utc),
             "feasibility_status": status,
@@ -558,6 +568,19 @@ class PlannerService:
             "routes": routes,
             "explanation": explanation,
         }
+        if expected_plan_fingerprint is not None and plan_fingerprint(result) != expected_plan_fingerprint:
+            raise PlanPreviewChanged({**result, "itinerary_id": None})
+        if not persist:
+            return result
+
+        self.db.add(itinerary)
+        self.db.flush()
+        for stop in stop_records:
+            self.db.add(stop)
+        self.db.add(version_record)
+        self.db.add(decision_record)
+        self.db.commit()
+        return result
 
     def _stop_dict(self, stop: ItineraryStop, experience: Experience, slot: ExperienceSlot, position: int) -> dict:
         poi_verified = entity_is_operationally_verified(self.db, "poi", experience.poi)
@@ -604,7 +627,11 @@ class PlannerService:
         routes = []
         travel = 0
         mode = itinerary.constraints.get("transport_mode", "driving")
-        if stops and itinerary.origin_latitude is not None and itinerary.origin_longitude is not None:
+        saved_routes = itinerary.constraints.get("route_snapshot")
+        if isinstance(saved_routes, list):
+            routes = saved_routes
+            travel = sum(int(route.get("duration_min", 0)) for route in routes)
+        elif stops and itinerary.origin_latitude is not None and itinerary.origin_longitude is not None:
             first = stops[0]
             route = self.routing.get_route((itinerary.origin_latitude, itinerary.origin_longitude),
                                            (first["poi"]["latitude"], first["poi"]["longitude"]), mode)
@@ -613,15 +640,16 @@ class PlannerService:
                            "from_label": itinerary.constraints.get("origin_label") or "Điểm xuất phát",
                            "distance_m": route.distance_m, "duration_min": route.duration_min,
                            **self.routing.eta_metadata(route)})
-        for previous, current in zip(stops, stops[1:]):
-            route = self.routing.get_route(
-                (previous["poi"]["latitude"], previous["poi"]["longitude"]),
-                (current["poi"]["latitude"], current["poi"]["longitude"]),
-                mode,
-            )
-            travel += route.duration_min
-            routes.append({"from_experience_id": previous["experience_id"], "to_experience_id": current["experience_id"], "distance_m": route.distance_m, "duration_min": route.duration_min, **self.routing.eta_metadata(route)})
-        if stops and itinerary.destination_latitude is not None and itinerary.destination_longitude is not None:
+        if not isinstance(saved_routes, list):
+            for previous, current in zip(stops, stops[1:]):
+                route = self.routing.get_route(
+                    (previous["poi"]["latitude"], previous["poi"]["longitude"]),
+                    (current["poi"]["latitude"], current["poi"]["longitude"]),
+                    mode,
+                )
+                travel += route.duration_min
+                routes.append({"from_experience_id": previous["experience_id"], "to_experience_id": current["experience_id"], "distance_m": route.distance_m, "duration_min": route.duration_min, **self.routing.eta_metadata(route)})
+        if not isinstance(saved_routes, list) and stops and itinerary.destination_latitude is not None and itinerary.destination_longitude is not None:
             last = stops[-1]
             route = self.routing.get_route((last["poi"]["latitude"], last["poi"]["longitude"]),
                                            (itinerary.destination_latitude, itinerary.destination_longitude), mode)

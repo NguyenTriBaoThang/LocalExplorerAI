@@ -38,6 +38,8 @@ from app.schemas.ai import (
 )
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.services.replanning_service import ReplanningService, aware
+from app.services.itinerary_collaboration_hub import collaboration_hub
+from app.services.planner_service import PlannerService
 from app.services.evidence_service import REQUIRED_FIELDS, utc_now
 from app.services.open_meteo_service import OpenMeteoUnavailable, current_conditions
 from app.api.guards import public, require, require_user
@@ -246,11 +248,23 @@ def accept_replan(
     if itinerary.current_version != payload.base_version:
         raise HTTPException(status_code=409, detail={"code": "STALE_ITINERARY_VERSION", "message": "The itinerary changed after this advice. Request fresh advice before accepting."})
     try:
-        return ReplanningService(db, None).accept(
+        result = ReplanningService(db, None).accept(
             itinerary_id, payload.event_id, payload.affected_stop_id,
             payload.candidate_experience_id, payload.candidate_slot_id, payload.proposal_code,
             expected_version=payload.base_version,
         )
+        try:
+            snapshot = PlannerService(db).get_itinerary(itinerary_id)
+        except Exception:
+            log.exception("could not create collaboration snapshot after accepting replan for %s", itinerary_id)
+            snapshot = None
+        collaboration_hub.broadcast_from_sync(itinerary_id, {
+            "type": "itinerary_updated",
+            "itinerary_id": itinerary_id,
+            "current_version": result.get("current_version"),
+            "itinerary": snapshot,
+        })
+        return result
     except LookupError as error:
         _not_found(str(error))
     except ValueError as error:

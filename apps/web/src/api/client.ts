@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { t } from '../i18n'
-import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatMessageRequest, ChatReply, ChatServiceStatus, CollaborationInviteSnapshot, CreateCollaborationInviteResponse, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, OwnerCollaborationProposals, PlanPreview, PlanRequest, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
@@ -87,8 +87,9 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-export async function sendChatMessage(message: string, conversation_id: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
-  const { data } = await api.post<ChatReply>('/chat/message', { message, conversation_id, ...context }, { timeout: 65000 })
+export async function sendChatMessage(message: string | ChatMessageRequest, conversation_id?: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
+  const request = typeof message === 'string' ? { message, conversation_id, ...context } : message
+  const { data } = await api.post<ChatReply>('/chat/message', request, { timeout: 65000 })
   return data
 }
 
@@ -205,6 +206,25 @@ export async function createShareLink(itineraryId: string): Promise<{ share_url:
 
 export async function getSharedItinerary(token: string): Promise<Itinerary> {
   const { data } = await api.get<Itinerary>(`/shared/itineraries/${token}`)
+  return data
+}
+
+export async function createCollaborationInvite(itineraryId: string): Promise<CreateCollaborationInviteResponse> {
+  const { data } = await api.post<CreateCollaborationInviteResponse>(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-invite`)
+  return data
+}
+
+export async function revokeCollaborationInvite(itineraryId: string): Promise<void> {
+  await api.delete(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-invite`)
+}
+
+export async function getCollaborationInvite(token: string): Promise<CollaborationInviteSnapshot> {
+  const { data } = await api.get<CollaborationInviteSnapshot>(`/collaborations/${encodeURIComponent(token)}`)
+  return data
+}
+
+export async function getOwnerCollaborationProposals(itineraryId: string): Promise<OwnerCollaborationProposals> {
+  const { data } = await api.get<OwnerCollaborationProposals>(`/itineraries/${encodeURIComponent(itineraryId)}/collaboration-proposals`)
   return data
 }
 
@@ -364,6 +384,16 @@ export async function getItinerarySuggestions(payload: PlanPayload): Promise<Iti
 
 export async function createItinerary(payload: PlanPayload): Promise<Itinerary> {
   const { data } = await api.post<Itinerary>('/itineraries/plan', payload, { timeout: 120000 })
+  return data
+}
+
+export async function previewItinerary(payload: PlanRequest): Promise<PlanPreview> {
+  const { data } = await api.post<PlanPreview>('/itineraries/preview', payload)
+  return data
+}
+
+export async function confirmItinerary(payload: PlanRequest, confirmation_token: string): Promise<Itinerary> {
+  const { data } = await api.post<Itinerary>('/itineraries/confirm', { plan: payload, confirmation_token })
   return data
 }
 

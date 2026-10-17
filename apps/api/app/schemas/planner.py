@@ -171,3 +171,36 @@ class ItineraryOptionRank(BaseModel):
 
 class ItineraryRankingResponse(BaseModel):
     ranked_options: list[ItineraryOptionRank] = Field(min_length=1, max_length=5)
+class PlanPreviewResponse(BaseModel):
+    preview_id: str
+    confirmation_token: str
+    data_mode: str = "simulated"
+    data_as_of: datetime
+    feasibility_status: str
+    estimated_cost_vnd: int
+    total_travel_min: int
+    group_size: int = Field(ge=1)
+    start_at: datetime | None = None
+    return_deadline: datetime | None = None
+    estimated_return_at: datetime | None = None
+    origin_latitude: float | None = None
+    origin_longitude: float | None = None
+    origin_label: str | None = None
+    destination_latitude: float | None = None
+    destination_longitude: float | None = None
+    destination_label: str | None = None
+    stops: list[ItineraryStopRead]
+    routes: list[RouteLeg]
+    explanation: Explanation
+
+    @field_validator("data_as_of", "start_at", "return_deadline", "estimated_return_at", mode="before")
+    @classmethod
+    def require_aware_preview_times(cls, value):
+        if isinstance(value, datetime) and (value.tzinfo is None or value.utcoffset() is None):
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+class PlanConfirmationRequest(BaseModel):
+    plan: PlanRequest
+    confirmation_token: str = Field(min_length=20, max_length=4096)
