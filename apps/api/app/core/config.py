@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     meshy_daily_credits: int = 120
     meshy_storage_dir: str = ""
     app_env: str = "development"
+    auto_verify_email: bool = False
     real_data_only: bool = True
     database_url: str = "sqlite:///./local_explorer.sqlite3"
     redis_url: str = "redis://localhost:6379/0"

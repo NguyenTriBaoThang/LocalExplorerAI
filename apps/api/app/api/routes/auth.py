@@ -58,6 +58,10 @@ def _reject_reserved_email(email: str) -> None:
 
 
 def _send_verification(db: Session, user: User) -> bool:
+    if settings.auto_verify_email:
+        user.email_verified_at = user.email_verified_at or datetime.now(timezone.utc)
+        record_event(db, "email_auto_verified", user_id=user.id, detail={"source": "runtime_configuration"})
+        return False
     row, raw = account_tokens.issue(db, user, account_tokens.VERIFY_EMAIL)
     return queue_account_link(db, user, purpose=account_tokens.VERIFY_EMAIL, token_id=row.id, raw_token=raw)
 
