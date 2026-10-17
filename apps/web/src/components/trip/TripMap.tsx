@@ -37,6 +37,9 @@ export default function TripMap(props: Props) {
     goongjs.accessToken = key
     const m = new goongjs.Map({ container: container.current!, style: 'https://tiles.goong.io/assets/goong_map_web.json', center: latest.current.center, zoom: 12.5, pitch: 45 })
     map.current = m
+    // Goong must track layout changes as well as browser window resizes.
+    const resizeObserver = new ResizeObserver(() => m.resize())
+    resizeObserver.observe(container.current!)
     m.on('load', () => {
       if (disposed) return
       setReady(true)
@@ -50,7 +53,7 @@ export default function TripMap(props: Props) {
     })
     m.on('dragstart', stop)
     m.on('error', () => setError('Bản đồ đang gặp lỗi tải. Lịch trình vẫn được giữ lại.'))
-    return () => { disposed = true; run.current++; m.remove(); map.current = null }
+    return () => { disposed = true; resizeObserver.disconnect(); run.current++; m.remove(); map.current = null }
   }, [])
   useEffect(() => {
     if (!ready) return
@@ -105,7 +108,7 @@ export default function TripMap(props: Props) {
   }
   const tourPoint = tour != null && props.itinerary ? tourStops(props.itinerary)[tour] : null
   return <>
-    <div ref={container} className="absolute inset-0" />
+    <div ref={container} className="trip-map-surface" />
     {error && <p role="status" className="trip-map-notice">{error}</p>}
     <div className="trip-map-controls">
       <small>Đường nét đứt nối thứ tự điểm, không phải chỉ dẫn đường bộ. Giờ và giá theo dữ liệu tham khảo.</small>

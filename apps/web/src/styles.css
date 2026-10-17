@@ -13019,6 +13019,8 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 
 .trip-workspace { --border: var(--border-subtle); --bg-elevated: var(--bg-surface-elevated); isolation: isolate; font-family: 'Be Vietnam Pro', sans-serif; }
 .trip-workspace button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+/* Override Goong's relative positioning so its canvas fills the workspace. */
+.trip-workspace .trip-map-surface { position: absolute; inset: 0; width: 100%; height: 100%; }
 .trip-pin { color: white; border: 2px solid white; border-radius: 999px; min-width: 32px; height: 32px; padding: 0 6px; font-weight: 700; box-shadow: 0 2px 8px #0004; cursor: pointer; }
 .trip-pin--searching { background: #f59e0b; animation: trip-pulse 1s infinite alternate; }
 @keyframes trip-pulse { to { opacity: .4; } }
