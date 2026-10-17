@@ -11,6 +11,7 @@ from tests.route_inventory import inventory
 
 # Adding a public route must be a conscious, reviewed change to this list.
 PUBLIC_ROUTES = {
+    ("push_notifications", "GET", "/api/notifications/push/vapid-public-key"),
     ("admin_bot", "GET", "/api/bot/webhook"), ("admin_bot", "POST", "/api/bot/webhook"),
     ("ai", "GET", "/api/ai/prompts"),
     ("auth", "GET", "/api/auth/google/callback"), ("auth", "GET", "/api/auth/google/start"), ("auth", "GET", "/api/auth/google/status"),
