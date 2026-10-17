@@ -2,6 +2,7 @@
 
 Ngày chốt handoff: 2026-10-17 (+07:00)  
 Nhánh bàn giao: **feat/travility-ai-chat-handoff**  
+PR Draft: [#80](https://github.com/NguyenTriBaoThang/LocalExplorerAI/pull/80)  
 Commit nền khi bàn giao: **c6e8fcd** — fix(trip): a new group review supersedes the pending one  
 Plan: [docs/superpowers/plans/2026-10-17-travility-ai-chat.md](../../../docs/superpowers/plans/2026-10-17-travility-ai-chat.md)  
 Spec: [docs/superpowers/specs/2026-10-17-travility-ai-chat-design.md](../../../docs/superpowers/specs/2026-10-17-travility-ai-chat-design.md)
