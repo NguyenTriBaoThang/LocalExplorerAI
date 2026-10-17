@@ -6,6 +6,7 @@ import { getExperiences } from '../api/client'
 import { getPOI } from '../api/content'
 import '../components/content/content.css'
 import { useTranslation } from '../i18n'
+import { PlaceReviews } from '../components/content/PlaceReviews'
 import type { Experience, POI } from '../types'
 
 export function PlacePage() {
@@ -51,6 +52,7 @@ export function PlacePage() {
               {place.image_urls.slice(1).map((url) => <img key={url} src={url} alt="" loading="lazy" style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />)}
             </div>
           )}
+          <PlaceReviews poiId={place.id} />
           {experiences.length > 0 && (
             <section style={{ marginTop: 36 }}>
               <h2 className="section-title-3d" style={{ fontSize: 22 }}>{vi ? 'Trải nghiệm tại đây' : 'Experiences here'}</h2>
