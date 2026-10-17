@@ -2,6 +2,9 @@
 export const PLACE_CATEGORIES: Record<string, string> = {
   landmark: 'Danh lam thắng cảnh', history: 'Di tích lịch sử', museum: 'Bảo tàng', market: 'Chợ', religious: 'Tôn giáo',
   park: 'Công viên', food: 'Ẩm thực', craft: 'Làng nghề / Xưởng', other: 'Khác',
+  // Groups used by the imported OpenStreetMap catalogue and the older intent-style categories.
+  'an-uong': 'Ăn uống', cafe: 'Cà phê', 'tham-quan': 'Tham quan', 'giai-tri': 'Giải trí', 'cho-o': 'Lưu trú',
+  culture: 'Di sản & Văn hóa', handicraft: 'Thủ công mỹ nghệ', nature: 'Thiên nhiên', relaxation: 'Thư giãn',
 }
 
 export const DISTRICTS = [

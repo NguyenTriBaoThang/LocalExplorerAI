@@ -214,10 +214,20 @@ export function HomePage() {
               {t('home.curatedSubtitle')}
             </p>
           </div>
-          <Link to="/explore" className="view-all-link">
-            <span>{t('home.viewAll')}</span>
-            <ArrowRight size={16} />
-          </Link>
+          <div className="home-showcase-links">
+            <Link to="/places" className="view-all-link">
+              <span>{locale === 'vi' ? 'Danh sách địa điểm' : 'Browse places'}</span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/map-3d" className="view-all-link">
+              <span>{locale === 'vi' ? 'Bản đồ 3D' : '3D map'}</span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/explore" className="view-all-link">
+              <span>{t('home.viewAll')}</span>
+              <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
 
         <div className="showcase-grid-3d">
