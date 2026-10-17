@@ -29,7 +29,10 @@ def test_chat_permissions_validation_and_no_generation(client, db_session, monke
 def test_gemini_vision_payload_and_sanitized_errors(monkeypatch):
     from app.api.routes.meshy import ChatMessage
     image='data:image/png;base64,'+base64.b64encode(b'\x89PNG\r\n\x1a\nfixture').decode()
-    monkeypatch.setattr(meshy_assistant,'resolve_integration_value',lambda db,service,key: 'fake-key' if key=='gemini_api_key' else 'gemini-test')
+    def resolve(db, service, key):
+        assert service == 'map3d_ai', '3D assistant must never read the shared chat key'
+        return 'fake-key' if key == 'gemini_api_key' else 'gemini-test'
+    monkeypatch.setattr(meshy_assistant,'resolve_integration_value',resolve)
     sent=[]
     def post(self,url,**kwargs):
         sent.append((url,kwargs))
@@ -62,3 +65,19 @@ def test_missing_key_and_bad_output(monkeypatch):
         return httpx.Response(200,request=httpx.Request('POST',url),json={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'{"reply":"Done", "ready":true, "prompt":""}'}]}}]})
     monkeypatch.setattr(httpx.Client,'post',invalid)
     with pytest.raises(RuntimeError): meshy_assistant.prepare(None,messages,[], '')
+
+
+def test_provider_capacity_errors_are_distinguished(monkeypatch):
+    import pytest
+    from app.api.routes.meshy import ChatMessage
+    monkeypatch.setattr(meshy_assistant, 'resolve_integration_value', lambda *args: 'fake')
+    for status in (429, 503):
+        def post(self, url, **kwargs):
+            return httpx.Response(status, request=httpx.Request('POST', url), json={'error': {'message': 'private provider details'}})
+        monkeypatch.setattr(httpx.Client, 'post', post)
+        with pytest.raises(RuntimeError) as error:
+            meshy_assistant.prepare(None, [ChatMessage(role='user', content='A building')], [], '')
+        assert f'HTTP {status}' in str(error.value)
+        assert 'private provider details' not in str(error.value)
+        if status == 503:
+            assert 'quota' not in str(error.value)

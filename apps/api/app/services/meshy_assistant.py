@@ -21,10 +21,10 @@ Bạn không có công cụ tạo model, không được nói đã gửi Meshy h
 '''
 
 def prepare(db, messages, images, place_name):
-    key = resolve_integration_value(db, 'ai', 'gemini_api_key')
+    key = resolve_integration_value(db, 'map3d_ai', 'gemini_api_key')
     if not key:
-        raise ValueError('Chưa cấu hình Gemini API key tại Tích hợp & API keys.')
-    model = resolve_integration_value(db, 'ai', 'gemini_model') or 'gemini-3.5-flash'
+        raise ValueError('Chưa cấu hình Gemini API key riêng cho tạo mô hình 3D tại Tích hợp & API keys.')
+    model = resolve_integration_value(db, 'map3d_ai', 'gemini_model') or 'gemini-3.5-flash'
     from urllib.parse import quote
     model = model.removeprefix('models/')
     conversation = [{'role': 'model' if m.role == 'assistant' else 'user', 'parts': [{'text': m.content}]} for m in messages]
@@ -53,8 +53,10 @@ def prepare(db, messages, images, place_name):
             return result.model_dump()
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
-        if status in (429, 503):
-            message = 'Gemini đang quá tải hoặc đã đạt hạn mức. Hãy thử lại sau.'
+        if status == 429:
+            message = 'Gemini đang giới hạn yêu cầu hoặc quota của project đã hết (HTTP 429). Hãy thử lại sau hoặc kiểm tra quota trong Google AI Studio.'
+        elif status == 503:
+            message = 'Máy chủ Gemini tạm thời không khả dụng hoặc đang quá tải (HTTP 503). Hãy thử lại sau ít phút.'
         elif status in (401, 403):
             message = 'Gemini từ chối API key hoặc quyền truy cập. Kiểm tra cấu hình tích hợp.'
         elif status == 404:

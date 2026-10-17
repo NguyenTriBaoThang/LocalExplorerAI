@@ -38,17 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Only /auth/me carries the permission list. Other responses (login, profile update, partner application) do not,
-  // so keep the known list while the role is unchanged and otherwise reload it.
+  // Only /auth/me carries authoritative permissions. Mutation responses include a
+  // default empty array, which must not be mistaken for the user's actual grants.
   const setUser = useCallback((next: AuthUser | null) => {
-    if (!next || Array.isArray(next.permissions)) { setUserState(next); return }
-    let reload = false
+    if (!next) { setUserState(null); return }
     setUserState((prev) => {
       if (prev && prev.id === next.id && prev.role === next.role && Array.isArray(prev.permissions)) return { ...next, permissions: prev.permissions }
-      reload = true
-      return next
+      return { ...next, permissions: undefined }
     })
-    if (reload) window.setTimeout(() => { void refresh() }, 0)
+    void refresh()
   }, [refresh])
 
   useEffect(() => { void refresh() }, [refresh])

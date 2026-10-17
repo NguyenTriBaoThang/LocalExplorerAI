@@ -33,9 +33,18 @@ Only published GLB bytes have a public endpoint. Draft URLs still require admin 
 - https://docs.meshy.ai/en/api/asset-retention (ordinary API assets retained up to 3 days)
 
 ## Gemini chat before Meshy
-Portal now starts with a chat supporting 1–4 images, held in page memory only. Sending explicitly transmits the current images and the latest 15 text messages to Gemini through the backend. Gemini API key/model come from existing encrypted AI integration settings. The endpoint uses native Google generateContent with inlineData images and a responseSchema; model JSON is validated before showing the brief. Runtime model is gemini-3.5-flash, verified against the configured account model listing. The former OpenAI-compatible route returned HTTP 503 during verification; native generation returned a valid brief. Errors do not expose provider bodies or secrets.
+Portal now starts with a chat supporting 1–4 images, held in page memory only. Sending explicitly transmits the current images and the latest 15 text messages to Gemini through the backend. Gemini API key/model come from the dedicated encrypted `map3d_ai` integration (Gemini · Tạo mô hình 3D). Configure `gemini_api_key` and `gemini_model` there; this feature does not read the shared travel assistant key. The endpoint uses native Google generateContent with inlineData images and a responseSchema; model JSON is validated before showing the brief. The current local deployment uses `gemini-2.5-flash`; configure this model explicitly in `map3d_ai`. The former OpenAI-compatible route returned HTTP 503 during verification; native generation returned a valid brief. Errors do not expose provider bodies or secrets.
 
 Gemini prepares a description; it does not create, edit images, or authorize a Meshy charge. The user reviews the brief and confirms the separate Meshy submission. Image mode forwards the original images (no geometry prompt support). Text mode sends the reviewed prompt, so requested textual changes can influence generation. No location/scale is inferred from Gemini. Chat history is not persisted after page reload.
 
 Reference: https://ai.google.dev/gemini-api/docs/openai#image-understanding
 Tests: tests/test_meshy_assistant.py verifies multimodal payload, RBAC, input/output validation, masked errors and that chat creates no paid Meshy jobs.
+
+
+## Public Portal and runtime secrets
+- Public Portal: `https://portal.localexplorerai.site`, Cloudflare Tunnel service `http://localhost:5174`.
+- Public traveler site: `https://www.localexplorerai.site`, Tunnel service `http://localhost:8080`.
+- Both frontends proxy `/api` to `http://127.0.0.1:8000`, using the same database. Set backend `PORTAL_APP_URL=https://portal.localexplorerai.site` and include that origin in `CORS_ORIGINS`.
+- Configure Meshy, dedicated 3D Gemini, shared chat Gemini, and Goong keys in Portal integrations. Set a persistent `INTEGRATION_SECRETS_KEY` on the backend. Actual keys, passwords, databases and generated private models are not shipped in Git; provision them separately on each deployment.
+- Goong model placement search uses the backend routing integration `goong_api_key`. Select a result in the calibration panel, then explicitly save the model position.
+- Portal reads authoritative permissions from `/auth/me` after login/profile updates; the empty default permissions in mutation responses must not deny an administrator access.

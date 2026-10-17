@@ -5,12 +5,11 @@ import '../components/content/content.css'
 import { Stars } from '../components/content/StarRating'
 import { useTranslation } from '../i18n'
 import type { PartnerSummary } from '../types'
+import { PORTAL_URL } from '../portalUrl'
 
 const CATEGORY_KEYS: Record<string, string> = {
   food: 'explore.intentFood', handicraft: 'explore.intentCraft', culture: 'explore.intentCulture', nature: 'explore.intentNature', relaxation: 'explore.intentRelax',
 }
-
-const PORTAL_URL = ((import.meta as unknown as { env?: Record<string, string> }).env?.VITE_PORTAL_URL || 'http://localhost:8081').replace(/\/$/, '')
 
 export function ProviderPage() {
   const { t, locale } = useTranslation()
