@@ -1,6 +1,7 @@
 import ipaddress
 
 from fastapi import Request
+from starlette.requests import HTTPConnection
 
 
 def request_scheme(request: Request, trusted_proxy_ips: str = "") -> str:
@@ -16,7 +17,7 @@ def request_scheme(request: Request, trusted_proxy_ips: str = "") -> str:
     return forwarded if trusted and forwarded in {"http", "https"} else scheme
 
 
-def client_ip(request: Request, trusted_proxy_ips: str = "") -> str:
+def client_ip(request: HTTPConnection, trusted_proxy_ips: str = "") -> str:
     peer = request.client.host if request.client else "unknown"
     if not trusted_proxy_ips.strip():
         return peer

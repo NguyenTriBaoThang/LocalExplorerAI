@@ -12070,3 +12070,326 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
     display: none;
   }
 }
+/* Owner-approved itinerary collaboration */
+.collaboration-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.collaboration-live-status .eyebrow-dot {
+  background: #f59e0b;
+}
+
+.collaboration-live-status .eyebrow-dot.collaboration-dot-online {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.75);
+}
+
+.collaboration-invite-row,
+.collaboration-proposals-heading,
+.collaboration-proposal-topline,
+.collaboration-review-actions,
+.collaboration-actions,
+.collaborative-section-heading,
+.collaborative-summary-card,
+.collaboration-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collaboration-invite-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.collaboration-invite-row strong,
+.collaboration-proposals-heading h4,
+.collaborative-section-heading h2 {
+  color: var(--text-strong);
+}
+
+.collaboration-invite-row p,
+.collaborative-section-heading p,
+.collaborative-summary-card p,
+.collaboration-submit-row p,
+.collaboration-security-note {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.collaboration-link-field {
+  margin: 12px 0 4px;
+}
+
+.collaboration-proposals-heading {
+  margin: 16px 0 8px;
+}
+
+.collaboration-proposals-heading h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.collaboration-proposals-heading > span,
+.collaboration-count-chip,
+.collaboration-locked-chip {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.collaboration-proposal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.collaboration-proposal {
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--deep-rgb), 0.42);
+}
+
+.collaboration-proposal-topline {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  color: var(--text-strong);
+  font-size: 12px;
+}
+
+.collaboration-proposal-topline small,
+.collaboration-diff-grid small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.collaboration-diff-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin: 10px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.collaboration-diff-grid ol,
+.collaborative-proposals-card ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.collaboration-diff-grid li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.collaboration-diff-summary p {
+  margin: 4px 0;
+}
+
+.collaboration-review-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.collaboration-empty {
+  margin: 12px 0 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.collaborative-itinerary-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 16px 80px;
+}
+
+.collaborative-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin: 22px 0;
+}
+
+.collaborative-header h1 {
+  margin: 8px 0;
+  color: var(--text-strong);
+  font-size: clamp(24px, 4vw, 36px);
+}
+
+.collaborative-header p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.collaborative-summary-card,
+.collaborative-editor-card,
+.collaborative-proposals-card {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.collaborative-summary-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--tx-cyan);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.collaborative-section-heading {
+  margin-bottom: 14px;
+}
+
+.collaborative-section-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.collaborative-stop-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.collaborative-stop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--deep-rgb), 0.42);
+}
+
+.collaborative-stop-number {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(6, 182, 212, 0.14);
+  color: var(--tx-cyan);
+  font-weight: 700;
+}
+
+.collaborative-stop-detail {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+  color: var(--text-strong);
+}
+
+.collaborative-stop-detail small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.collaborative-stop-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.collaborative-stop-actions button:disabled,
+.collaborative-editor-card button:disabled,
+.collaboration-review-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.collaboration-locked-chip {
+  color: var(--tx-amber);
+}
+
+.collaborative-add-stop {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(180px, 1.5fr) minmax(150px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.collaborative-add-stop label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.collaborative-add-stop input,
+.collaborative-add-stop select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--deep-rgb), 0.85);
+  color: var(--text-strong);
+}
+
+.collaboration-signin-prompt,
+.collaboration-submit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.collaborative-proposals-card > .collaborative-section-heading {
+  margin-bottom: 8px;
+}
+
+.collaboration-security-note {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .collaborative-header,
+  .collaborative-summary-card,
+  .collaboration-invite-row,
+  .collaboration-signin-prompt,
+  .collaboration-submit-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .collaborative-add-stop {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .collaboration-diff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collaboration-link-field {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+

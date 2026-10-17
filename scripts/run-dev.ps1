@@ -7,6 +7,6 @@ docker compose up -d db redis
 
 # 2. Instructions
 Write-Host "Mở terminal riêng chạy Backend (apps/api):" -ForegroundColor Yellow
-Write-Host "  cd apps/api; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8000"
+Write-Host "  cd apps/api; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8000 --no-access-log --ws-max-size 65536"
 Write-Host "Mở terminal riêng chạy Frontend (apps/web):" -ForegroundColor Yellow
 Write-Host "  cd apps/web; npm run dev"

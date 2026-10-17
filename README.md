@@ -683,7 +683,7 @@ python -m pip install -r requirements-ranking-training.txt  # Optional: ranking 
 
 alembic upgrade head
 # The legacy seed_db command is disabled; it must not be used to create real catalog data.
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536
 
 # 4. Frontend (in a separate terminal)
 cd apps/web

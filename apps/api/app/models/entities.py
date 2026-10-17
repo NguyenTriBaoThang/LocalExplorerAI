@@ -391,6 +391,7 @@ class Itinerary(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     share_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    collaboration_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
     origin_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     origin_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     destination_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -464,6 +465,26 @@ class ItineraryVersion(Base):
     preserved_intents_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     itinerary: Mapped[Itinerary] = relationship(back_populates="versions")
+
+
+class ItineraryEditProposal(Base):
+    __tablename__ = "itinerary_edit_proposals"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'approved', 'rejected', 'stale')", name="ck_itinerary_edit_proposal_status"),
+        Index("ix_itinerary_edit_proposal_owner_queue", "itinerary_id", "status", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    itinerary_id: Mapped[str] = mapped_column(ForeignKey("itineraries.id", ondelete="CASCADE"), nullable=False, index=True)
+    proposer_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    base_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    proposed_stops: Mapped[list[dict]] = mapped_column(JSON_DOCUMENT, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending", index=True)
+    reviewed_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    proposer: Mapped[User | None] = relationship(foreign_keys=[proposer_id])
+    reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
 
 
 class Event(Base):

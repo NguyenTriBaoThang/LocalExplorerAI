@@ -1,5 +1,5 @@
 {
-  "feature_version": "ranker-features-v2",
+  "feature_version": "ranker-features-v1",
   "feature_names": [
     "tag_jaccard",
     "intent_match",
@@ -13,24 +13,9 @@
     "outdoor_rain_mm",
     "temperature_c",
     "pm2_5",
-    "european_aqi",
-    "is_hands_on_known",
-    "is_indoor_known"
+    "european_aqi"
   ],
-  "feature_builder": "apps/api/app/services/ranker_features.py::build_feature_row",
-  "target": "relevance_grade (weak bootstrap labels only)",
-  "excluded_columns": [
-    "query_id",
-    "scenario_family_id",
-    "poi_id",
-    "candidate_experience_id",
-    "candidate_slot_id",
-    "relevance_grade",
-    "label_rationale",
-    "label_status",
-    "label_method",
-    "grade_origin",
-    "estimated_columns",
-    "source/provenance fields"
-  ]
+  "label": "relevance_grade",
+  "group_key": "query_id",
+  "hard_constraint": "filter before ranking"
 }

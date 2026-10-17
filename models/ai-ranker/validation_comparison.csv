@@ -1,5 +1,0 @@
-split,model,ndcg_at_5,ndcg_at_10
-validation,xgboost_ranker,1.0,1.0
-validation,rule-baseline-v1,0.5717464950969843,0.7027545211661906
-test_after_selection,xgboost_ranker,0.6666666666666666,0.6666666666666666
-test_after_selection,rule-baseline-v1,0.49323543530367,0.5541938065439334

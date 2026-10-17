@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content
+from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, collaboration, health, mfa, ml, models_3d, ops, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
 from app.api.guards import public
@@ -34,6 +34,13 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore verified local experiences and build feasible itineraries.", openapi_url="/openapi.json", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 _request_logger = logging.getLogger("local_explorer.request")
+
+
+def _request_log_path(path: str) -> str:
+    segments = path.split("/")
+    if len(segments) > 3 and segments[:3] == ["", "api", "collaborations"]:
+        segments[3] = "[redacted]"
+    return "/".join(segments)
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,96}$")
 
 
@@ -84,7 +91,7 @@ async def request_id_middleware(request: Request, call_next):
         return response
     finally:
         _request_logger.info(json.dumps({
-            "request_id": request_id, "method": request.method, "path": request.url.path,
+            "request_id": request_id, "method": request.method, "path": _request_log_path(request.url.path),
             "status": status_code, "duration_ms": round((time.perf_counter() - started) * 1000, 2),
         }, separators=(",", ":")))
         current_request_id.reset(request_context_token)
@@ -180,6 +187,7 @@ app.include_router(auth.router)
 app.include_router(mfa.router)
 app.include_router(provider.router)
 app.include_router(bookings.router)
+app.include_router(collaboration.router)
 app.include_router(admin.router)
 app.include_router(rbac.router)
 app.include_router(catalog.router)

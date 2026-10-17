@@ -1,6 +1,0 @@
-{
-  "strategy": "none; native XGBoost missing-value handling",
-  "fit_scope": "No learned preprocessing was fitted. Features are created by the shared API function.",
-  "feature_version": "ranker-features-v2",
-  "unknown_values": "Preserved as missing where the shared feature builder specifies NaN."
-}

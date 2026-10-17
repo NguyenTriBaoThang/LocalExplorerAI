@@ -31,7 +31,7 @@ The FastAPI backend in apps/api/app serves the web application and catalog, plan
     python -m pip install -r requirements.txt
     # If apps/api/.env does not exist: Copy-Item ..\..\.env.example .env
     alembic upgrade head
-    python -m uvicorn app.main:app --reload --port 8000
+    python -m uvicorn app.main:app --reload --port 8000 --no-access-log --ws-max-size 65536
 
 Do not commit environment files containing secrets. The database and integration settings may require configuration; see [authentication/search setup](../../docs/auth-and-search-setup.md), [integration settings](../../docs/integration-settings.md), and the [data model](../../docs/data-model.md).
 
@@ -96,7 +96,7 @@ python -m scripts.download_e5_model
 
 ### Bước 6: Khởi chạy API Server
 ```powershell
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536
 ```
 - 🌐 **Swagger UI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - 📖 **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)

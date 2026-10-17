@@ -298,6 +298,67 @@ export interface Itinerary {
   }
 }
 
+export interface ItineraryProposalStop {
+  experience_id: string
+  slot_id: string
+}
+
+export type ItineraryProposalStatus = 'pending' | 'approved' | 'rejected' | 'stale'
+
+export interface ItineraryEditProposal {
+  id: string
+  itinerary_id: string
+  proposer_id: string | null
+  proposer_name: string | null
+  base_version: number
+  proposed_stops: ItineraryProposalStop[]
+  status: ItineraryProposalStatus
+  reviewed_by: string | null
+  reviewer_name: string | null
+  created_at: string
+  reviewed_at: string | null
+}
+
+export interface CollaborationInviteSnapshot {
+  itinerary: Itinerary
+  current_version: number
+  proposals: ItineraryEditProposal[]
+  can_submit: boolean
+}
+
+export interface OwnerCollaborationProposals {
+  invite_active: boolean
+  current_version: number
+  proposals: ItineraryEditProposal[]
+}
+
+export interface CreateCollaborationInviteResponse {
+  invite_url: string
+  invite_active: true
+}
+
+export interface SubmitItineraryProposalCommand {
+  type: 'submit_proposal'
+  base_version: number
+  stops: ItineraryProposalStop[]
+}
+
+export interface ReviewItineraryProposalCommand {
+  type: 'review_proposal'
+  proposal_id: string
+  decision: 'approve' | 'reject'
+}
+
+export type ItineraryCollaborationCommand = SubmitItineraryProposalCommand | ReviewItineraryProposalCommand
+
+export type ItineraryCollaborationEvent =
+  | { type: 'authenticated' }
+  | { type: 'presence'; count: number }
+  | { type: 'proposal_created'; proposal: ItineraryEditProposal; current_version: number }
+  | { type: 'proposal_reviewed'; proposal: ItineraryEditProposal; current_version: number; error?: string | null }
+  | { type: 'itinerary_updated'; itinerary_id: string; current_version: number; itinerary: Itinerary | null }
+  | { type: 'error'; code: string; message: string }
+
 export interface Booking {
   id: string
   itinerary_id: string | null
