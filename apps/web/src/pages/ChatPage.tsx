@@ -758,7 +758,8 @@ export function ChatPage() {
           )}
 
           {/* Contextual Smart Quick Reply Chips Bar */}
-          {quickSuggestions.length > 0 && (
+          {/* Before the first user turn the starter cards already offer suggestions; showing both crowds the panel. */}
+          {userTurns.length > 0 && quickSuggestions.length > 0 && (
             <div className="chat-quick-suggestions-bar">
               <div className="suggestions-header">
                 <Sparkles size={11} className="text-amber" />

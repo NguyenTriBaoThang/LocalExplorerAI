@@ -13,6 +13,35 @@ class FloodModelUnavailable(RuntimeError):
     pass
 
 
+def _deployment_block_reason(metadata: dict[str, Any]) -> str | None:
+    if metadata.get("demo_mode") is not False:
+        return "Flood bundle was trained in demo/simulated mode."
+    if metadata.get("dataset_status") != "verified_human_labeled":
+        return "Flood bundle does not declare verified human-labeled observations."
+    counts = metadata.get("verified_observations")
+    try:
+        enough_observations = int(counts["verified_no_flood"]) >= 200 and int(counts["verified_flood"]) >= 100
+    except (KeyError, TypeError, ValueError):
+        enough_observations = False
+    if not enough_observations:
+        return "Flood bundle lacks the minimum verified positive and negative observation counts."
+    metrics_data = metadata.get("metrics")
+    metrics = metrics_data.get("test", {}) if isinstance(metrics_data, dict) else {}
+    try:
+        quality_passed = (
+            float(metrics["average_precision"]) >= 0.50
+            and float(metrics["brier_score"]) <= 0.20
+            and float(metrics["recall_at_threshold"]) >= 0.80
+        )
+    except (KeyError, TypeError, ValueError):
+        quality_passed = False
+    if not quality_passed:
+        return "Flood bundle did not pass the held-out chronological quality gate."
+    if metadata.get("deployment_eligible") is not True:
+        return "Flood bundle requires explicit deployment approval after validation."
+    return None
+
+
 class FloodModelService:
     def __init__(self, artifact_dir: str | None = None):
         configured = artifact_dir if artifact_dir is not None else settings.flood_model_dir
@@ -45,11 +74,10 @@ class FloodModelService:
             "loaded": self._model is not None,
             "model_version": metadata.get("model_version"),
             "demo_mode": metadata.get("demo_mode"),
-            "deployment_allowed": self.configured and metadata.get("demo_mode") is False,
+            "deployment_allowed": self.configured and _deployment_block_reason(metadata) is None,
             "block_reason": (
                 "Flood artifact files are missing or incomplete." if not self.configured
-                else "Flood bundle was trained in demo mode." if metadata.get("demo_mode") is not False
-                else None
+                else _deployment_block_reason(metadata)
             ),
             "error": self._error,
         }
@@ -63,8 +91,9 @@ class FloodModelService:
             import joblib
 
             self._metadata = json.loads((self.artifact_dir / "metadata.json").read_text(encoding="utf-8"))
-            if self._metadata.get("demo_mode") is not False:
-                raise ValueError("Refusing a flood model trained in demo/simulated mode.")
+            block_reason = _deployment_block_reason(self._metadata)
+            if block_reason:
+                raise ValueError(block_reason)
             self._calibrator = json.loads((self.artifact_dir / "calibration.json").read_text(encoding="utf-8"))
             threshold_data = json.loads((self.artifact_dir / "threshold.json").read_text(encoding="utf-8"))
             self._threshold = float(threshold_data["threshold"])

@@ -131,6 +131,14 @@ def admin_report(db: Session, days: int) -> dict:
         "avg_session_seconds": round(sum(durations) / len(durations)) if durations else 0,
         "sessions": len(sessions),
     }
+    booking_heatmap = [[0 for _ in range(24)] for _ in range(7)]
+    for stamp in bookings:
+        aware_stamp = _aware(stamp)
+        if aware_stamp >= start:
+            local_stamp = aware_stamp.astimezone(LOCAL_TZ)
+            booking_heatmap[local_stamp.weekday()][local_stamp.hour] += 1
+    booking_heatmap_max = max((count for day in booking_heatmap for count in day), default=0)
+
     return {
         "days": days,
         "totals": totals,
@@ -148,6 +156,9 @@ def admin_report(db: Session, days: int) -> dict:
                     for key, label in (("mobile", "Di động"), ("desktop", "Máy tính"), ("tablet", "Máy tính bảng"))],
         "sources": [{"label": label, "value": count} for label, count in Counter(source_class(v.referrer_host) for v in current).most_common()],
         "hours": [Counter(_aware(v.occurred_at).astimezone(LOCAL_TZ).hour for v in current).get(hour, 0) for hour in range(24)],
+        "booking_heatmap": booking_heatmap,
+        "booking_heatmap_max": booking_heatmap_max,
+        "timezone": "Asia/Ho_Chi_Minh",
     }
 
 

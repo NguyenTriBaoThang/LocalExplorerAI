@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, ClipboardCheck, Eye, Timer, UserPlus, Users } from 'lucide-react'
 import { BarChart, BarList, Delta, Legend, LineChart, ShareBar, SERIES_COLORS } from '../../components/charts'
@@ -9,6 +9,7 @@ import type { AdminAnalytics, AdminDashboard, AdminProvider } from '../../lib/ty
 
 type Range = '7' | '30' | '90'
 const number = new Intl.NumberFormat('vi-VN')
+const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 
 export function AdminOverviewPage() {
   const [range, setRange] = useState<Range>('30')
@@ -78,6 +79,31 @@ export function AdminOverviewPage() {
               <div className="px-3 pb-4 pt-2"><BarChart name="Lượt xem" labels={analytics.hours.map((_, h) => `${h}h`)} values={analytics.hours} /></div>
             </Card>
           </div>
+
+          <Card className="mt-6">
+            <CardHeader title="Đặt chỗ theo thứ và giờ" description={`Số booking được tạo trong ${range} ngày gần nhất · giờ Việt Nam (UTC+7)`} />
+            <div className="overflow-x-auto px-5 pb-5">
+              <div className="min-w-[650px]">
+                <div className="grid gap-1" style={{ gridTemplateColumns: '42px repeat(24, minmax(18px, 1fr))' }}>
+                  <span aria-hidden="true" />
+                  {Array.from({ length: 24 }, (_, hour) => <span key={hour} className="text-center text-[10px] text-slate-500">{hour % 3 === 0 ? `${String(hour).padStart(2, '0')}h` : ''}</span>)}
+                  {analytics.booking_heatmap.map((hours, weekday) => <Fragment key={`day-${weekday}`}>
+                    <span className="flex items-center text-xs font-medium text-slate-500">{WEEKDAYS[weekday]}</span>
+                    {hours.map((count, hour) => {
+                      const intensity = analytics.booking_heatmap_max ? count / analytics.booking_heatmap_max : 0
+                      return <span key={`${weekday}-${hour}`} title={`${WEEKDAYS[weekday]} ${String(hour).padStart(2, '0')}:00 · ${number.format(count)} booking`} aria-label={`${WEEKDAYS[weekday]} ${hour}:00, ${count} booking`}
+                        className="h-6 rounded-sm border border-white/5"
+                        style={{ backgroundColor: count === 0 ? 'rgba(148, 163, 184, 0.08)' : `rgba(16, 185, 129, ${0.2 + intensity * 0.75})` }} />
+                    })}
+                  </Fragment>)}
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Ít booking</span>
+                  <span>Nhiều booking</span>
+                </div>
+              </div>
+            </div>
+          </Card>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Card>
