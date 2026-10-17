@@ -78,7 +78,7 @@ Chạy full API tests và web tests/build theo plan; thêm hướng dẫn import
 
 - origin/main tại lúc handoff là c7de7a1, trong khi nhánh làm việc có chung tổ tiên với main tại 1cf0914. Nhánh hiện tại có 14 commit sau origin/uat (1ee0088), nhưng lịch sử nhánh còn có các commit nền itinerary/collaboration trước đó. Vì vậy PR base main chứa nhiều hơn riêng các commit Travility trong plan; hãy xem danh sách commit và files changed trên PR.
 - Migration của main hiện có 0019_landmark_stories.py và 0020_meshy_jobs.py; nhánh này có 0019_itinerary_collaboration.py → 0020_trip_planner.py. Cần hợp nhất/re-number migration graph theo trạng thái main, kiểm tra cả downgrade/upgrade và dữ liệu, không để hai migration có cùng revision ID hoặc hai Alembic heads ngoài ý muốn.
-- Main đã tiến thêm nhiều thay đổi sau điểm chung; rà xung đột/ghi đè ở main.py, API dependencies/permissions, chat/planner, models/prompts, web router/styles và Docker trước khi chuyển PR sang Ready. PR hiện để Draft để teammate hoàn thiện tích hợp và Task 9–14.
+- GitHub hiện đánh dấu PR là CONFLICTING. Merge preview có 14 xung đột nội dung: apps/api/app/api/permissions.py, apps/api/app/api/routes/chat.py, apps/api/app/api/routes/planner.py, apps/api/app/main.py, apps/api/app/prompts/manifest.json, apps/api/app/schemas/ai.py, apps/api/app/schemas/planner.py, apps/api/app/services/offline_chat_fallback.py, apps/api/app/services/planner_service.py, apps/api/tests/test_ai_workflows.py, apps/api/tests/test_rbac.py, apps/web/src/api/client.ts, apps/web/src/pages/ChatPage.tsx, apps/web/src/types/index.ts. Rà và hoà giải các thay đổi này cùng migration graph trước khi chuyển PR sang Ready. PR hiện để Draft để teammate hoàn thiện tích hợp và Task 9–14.
 
 ## File điều phối SDD
 
