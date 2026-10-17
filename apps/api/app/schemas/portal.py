@@ -1,6 +1,6 @@
 """Request bodies for the portal: admin places, site content, analytics collection and reviews."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -43,6 +43,7 @@ class PlaceDraft(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=20)
     is_landmark: bool = False
     source_url: str | None = Field(default=None, max_length=1000)
+    google_place_id: str | None = Field(default=None, max_length=255, pattern=r"^[A-Za-z0-9_-]*$")
 
     @field_validator("image_urls")
     @classmethod
@@ -150,3 +151,16 @@ class ReviewCreate(BaseModel):
 class ReviewReply(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reply: str = Field(min_length=1, max_length=2000)
+
+
+class PlaceReviewWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(default="", max_length=2000)
+    visited_on: date | None = None
+
+
+class ReviewModeration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["hide", "restore"]
+    note: str = Field(default="", max_length=500)

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from app.api.guards import public, require_user
 from app.api.permissions import P
 from app.models.entities import AuditLog, Booking, Experience, ExperienceReview, ExperienceSlot, Provider, User
 from app.schemas.portal import ReviewCreate, ReviewReply
+from app.services.review_common import author_label, check_comment
 
 router = APIRouter(prefix="/api", tags=["reviews"])
 
@@ -24,12 +25,7 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
-def _author(name: str | None) -> str:
-    """Public reviews show a first name and initial only."""
-    parts = (name or "").split()
-    if not parts:
-        return "Du khách"
-    return parts[-1] if len(parts) == 1 else f"{parts[-1]} {parts[0][0]}."
+_author = author_label
 
 
 def review_view(review: ExperienceReview, author: str | None, experience_title: str | None = None) -> dict:
@@ -60,10 +56,31 @@ def create_review(booking_id: str, payload: ReviewCreate, user: User = Depends(r
     if db.scalar(select(ExperienceReview.id).where(ExperienceReview.booking_id == booking.id)):
         raise HTTPException(status_code=409, detail={"code": "ALREADY_REVIEWED", "message": "This booking has already been reviewed."})
     review = ExperienceReview(id=str(uuid4()), experience_id=booking.experience_id, provider_id=booking.provider_id, booking_id=booking.id,
-                              user_id=user.id, rating=payload.rating, comment=payload.comment.strip(), created_at=_now())
+                              user_id=user.id, rating=payload.rating, comment=check_comment(payload.comment), created_at=_now())
     db.add(review)
     db.commit()
     return review_view(review, user.display_name)
+
+
+@router.put("/bookings/{booking_id}/review")
+def edit_review(booking_id: str, payload: ReviewCreate, user: User = Depends(require_user(P.REVIEW_WRITE)), db: Session = Depends(get_db)):
+    """The author changes the rating or comment of their own review. The partner's reply stays."""
+    review = db.scalar(select(ExperienceReview).where(ExperienceReview.booking_id == booking_id, ExperienceReview.user_id == user.id))
+    if review is None:
+        raise HTTPException(status_code=404, detail={"code": "REVIEW_NOT_FOUND", "message": "You have not reviewed this booking."})
+    review.rating, review.comment, review.updated_at = payload.rating, check_comment(payload.comment), _now()
+    db.commit()
+    return review_view(review, user.display_name)
+
+
+@router.delete("/bookings/{booking_id}/review", status_code=204)
+def delete_review(booking_id: str, user: User = Depends(require_user(P.REVIEW_WRITE)), db: Session = Depends(get_db)):
+    review = db.scalar(select(ExperienceReview).where(ExperienceReview.booking_id == booking_id, ExperienceReview.user_id == user.id))
+    if review is None:
+        raise HTTPException(status_code=404, detail={"code": "REVIEW_NOT_FOUND", "message": "You have not reviewed this booking."})
+    db.delete(review)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/me/reviewable-bookings")

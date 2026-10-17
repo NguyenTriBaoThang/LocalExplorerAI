@@ -34,7 +34,7 @@ def _view(poi: POI, experience_count: int = 0, views_30d: int = 0) -> dict:
         "id": poi.id, "name": poi.name, "category": poi.category, "district": poi.district, "address": poi.address,
         "latitude": poi.latitude, "longitude": poi.longitude, "description": poi.description, "image_urls": poi.image_urls or [],
         "status": poi.verification_status, "is_landmark": poi.is_landmark, "opening_hours": poi.opening_hours,
-        "ticket_info": poi.ticket_info, "tags": poi.tags or [], "source_url": poi.source_url,
+        "ticket_info": poi.ticket_info, "tags": poi.tags or [], "source_url": poi.source_url, "google_place_id": poi.google_place_id,
         "submitted_by_provider_id": poi.submitted_by_provider_id, "data_revision": poi.data_revision,
         "experience_count": experience_count, "views_30d": views_30d, "updated_at": poi.updated_at,
     }

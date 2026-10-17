@@ -11,6 +11,7 @@ import { AdminUsersPage } from './pages/admin/AdminUsersPage'
 import { AdminContentPage } from './pages/admin/AdminContentPage'
 import { AdminPlaceEditorPage } from './pages/admin/AdminPlaceEditorPage'
 import { AdminPlacesPage } from './pages/admin/AdminPlacesPage'
+import { AdminReviewsPage } from './pages/admin/AdminReviewsPage'
 import { AdminSiteSettingsPage } from './pages/admin/AdminSiteSettingsPage'
 import { AdminRbacPage } from './pages/admin/AdminRbacPage'
 import { AdminImportsPage } from './pages/admin/AdminImportsPage'
@@ -113,6 +114,9 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="admin:places" />}>
                     <Route path="places/:placeId" element={<AdminPlaceEditorPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="admin:reviews" />}>
+                    <Route path="reviews" element={<AdminReviewsPage />} />
                   </Route>
                   <Route element={<RequirePermission permission="admin:content" />}>
                     <Route path="content" element={<AdminContentPage />} />

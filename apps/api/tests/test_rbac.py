@@ -27,7 +27,7 @@ PUBLIC_ROUTES = {
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
-    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"),
+    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"), ("place_reviews", "GET", "/api/pois/{poi_id}/reviews"),
     ("chat", "GET", "/api/chat/status"),
     # Journey reads public catalog readiness and model-to-place links, without account data.
     ("journey", "GET", "/api/journey/pilot"), ("journey", "GET", "/api/journey/landmarks/{model_id}"),
@@ -217,9 +217,11 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     from alembic.operations import Operations
     module = _load_migration("m0012", "migrations/versions/0012_rbac_seed.py")
     m0016 = _load_migration("m0016", "migrations/versions/0016_portal_platform.py")
+    m0019 = _load_migration("m0019", "migrations/versions/0019_place_reviews.py")
     later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py"),
              # 0016 also changes the schema; only its permission seed applies to this bare RBAC database.
              type("PermissionsOnly", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)}),
+             type("ReviewPermissions", (), {"upgrade": staticmethod(m0019.upgrade_permissions), "downgrade": staticmethod(m0019.downgrade_permissions)}),
              _load_migration("m0018", "migrations/versions/0018_merge_behavior_portal.py")]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
