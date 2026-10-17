@@ -119,7 +119,7 @@ export default function ChatPanel({ items, busy, onSend, children, versions = []
         }
       }}>
         <input aria-label={groupMode ? 'Góp ý nhóm' : 'Yêu cầu chuyến đi'}
-          placeholder={groupMode ? `Góp ý cho bản v${selectedSource}…` : 'Nhắn cho Travility…'}
+          placeholder={groupMode ? `Góp ý cho bản v${selectedSource}…` : 'Nhắn cho Local Explorer AI…'}
           className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-[var(--bg-surface)] px-3 py-2 text-sm"
           value={text} onChange={(e) => setText(e.target.value)} />
         <button disabled={busy || (groupMode && (selectedSource == null || reviewPending))}

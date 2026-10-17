@@ -5,7 +5,7 @@ export default function TripPrintView({ model }: { model: TripPrintModel }) {
   return (
     <article className="trip-print" aria-label="Bản in lịch trình">
       <header className="print-trip-header">
-        <p>Travility · Lịch trình</p>
+        <p>Local Explorer AI · Lịch trình</p>
         <h1>{model.destination}</h1>
         <p>Phiên bản v{model.version}</p>
         <p>Xuất lúc {new Date(model.exportedAt).toLocaleString('vi-VN')}</p>
