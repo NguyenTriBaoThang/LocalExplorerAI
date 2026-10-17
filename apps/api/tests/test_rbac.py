@@ -21,7 +21,7 @@ PUBLIC_ROUTES = {
     ("auth", "POST", "/api/auth/password/forgot"), ("auth", "POST", "/api/auth/password/reset"), ("auth", "POST", "/api/auth/email/verify"),
     # Portal platform: the traveler web reads published content and reviews, and sends anonymous page views.
     ("analytics", "POST", "/api/analytics/pageview"), ("reviews", "GET", "/api/experiences/{experience_id}/reviews"),
-    ("site_content", "GET", "/api/content/home"), ("site_content", "GET", "/api/content/articles"), ("site_content", "GET", "/api/content/articles/{slug}"),
+    ("site_content", "GET", "/api/content/home"), ("site_content", "GET", "/api/content/articles"), ("site_content", "GET", "/api/content/articles/{slug}"), ("site_content", "GET", "/api/site-config"),
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),

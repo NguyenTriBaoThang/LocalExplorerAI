@@ -107,6 +107,7 @@ services:
       ENABLE_BOOTSTRAP_RANKER: ${ENABLE_BOOTSTRAP_RANKER:-false}
       FLOOD_MODEL_DIR: ${FLOOD_MODEL_DIR:-/models/flood-risk}
       ALLOW_UNVERIFIED_RANKER: ${ALLOW_UNVERIFIED_RANKER:-false}
+      APP_DATA_DIR: /data
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -116,6 +117,7 @@ services:
         condition: service_healthy
     volumes:
       - ./models:/models:ro
+      - app_data:/data
     command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed_db && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
@@ -171,3 +173,4 @@ services:
 
 volumes:
   postgres_data:
+  app_data:

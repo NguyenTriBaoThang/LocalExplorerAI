@@ -1,9 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from math import asin, cos, radians, sin, sqrt
 
 from app.core.enums import SlotStatus
 from app.repositories.experience_repository import ExperienceRepository
 from app.schemas.common import ExperienceRead, POIRead, SlotRead
+
+
+def _upcoming(slots):
+    """Drop slots that have already started; they cannot be booked and must not be offered as 'upcoming'."""
+    now = datetime.now(timezone.utc)
+    return [slot for slot in slots if slot.start_at.replace(tzinfo=slot.start_at.tzinfo or timezone.utc) > now]
 
 
 class ExperienceService:
@@ -59,6 +65,7 @@ class ExperienceService:
             if item.verification_status == "verified":
                 slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                          and self.repository.is_fresh_slot(slot)]
+            slots = _upcoming(slots)
             if start_at:
                 slots = [slot for slot in slots if slot.start_at.replace(tzinfo=slot.start_at.tzinfo or start_at.tzinfo) >= start_at]
             if end_at:
@@ -83,6 +90,7 @@ class ExperienceService:
         if item.verification_status == "verified":
             slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                      and self.repository.is_fresh_slot(slot)]
+        slots = _upcoming(slots)
         experience = self.serialize(item, slots, item.verification_status == "verified")
         stats = self.repository.review_stats([item.id])
         if item.id in stats:

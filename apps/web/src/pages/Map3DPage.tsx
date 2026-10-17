@@ -68,7 +68,7 @@ export function Map3DPage() {
             <div>
               <h1 className="text-sm font-bold text-white flex items-center gap-2">
                 Bản Đồ 3D Di Sản Việt Nam
-                <span className="text-[10px] bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="whitespace-nowrap text-[10px] bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                   WebGL 3D
                 </span>
               </h1>

@@ -334,3 +334,5 @@ export type Review = {
 export type MfaChallenge = { mfa_required: true; mfa_ticket: string; expires_in: number }
 export type MfaStatus = { enabled: boolean; required: boolean; setup_pending: boolean; recovery_codes_remaining: number }
 export type MfaSetup = { secret: string; otpauth_uri: string; qr: string }
+
+export type SiteSettings = { site_announcement: string; maintenance_mode: boolean }
