@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-pine: #1f4d3a;
+  --color-pine-soft: #e3ece5;
+  --color-marigold: #e0a21b;
+  --color-mist: #f3f5f1;
+}
+
+.place-popup .maplibregl-popup-content { padding: 0; border-radius: 0.75rem; overflow: hidden; }
+
+.trip-print { display: none; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  html, body, #root { width: auto !important; height: auto !important; overflow: visible !important; }
+  body { background: #fff !important; color: #111 !important; }
+  .app-shell { display: none !important; }
+  .trip-print {
+    display: block !important;
+    color: #111 !important;
+    background: #fff !important;
+    font-family: "Be Vietnam Pro", system-ui, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+  }
+  .trip-print * { color: #111 !important; box-shadow: none !important; }
+  .print-trip-header { border-bottom: 2px solid #333; margin-bottom: 1rem; padding-bottom: 0.75rem; }
+  .print-trip-header h1 { font-size: 22pt; margin: 0.25rem 0; }
+  .print-trip-overview, .print-trip-conflicts { margin: 0 0 1rem; }
+  .print-trip-conflicts { border: 1px solid #777; padding: 0.5rem 0.75rem; }
+  .print-trip-day { margin: 0 0 1rem; }
+  .print-trip-day-title { break-after: avoid-page; page-break-after: avoid; margin: 0 0 0.5rem; }
+  .print-trip-stops { break-before: avoid-page; page-break-before: avoid; margin: 0; padding-left: 1.5rem; }
+  .print-trip-stop { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0.5rem; }
+  .print-trip-stop-heading { display: flex; justify-content: space-between; gap: 1rem; }
+  .print-trip-stop p { margin: 0.15rem 0 0; }
+  .print-trip-legs { margin: 0.5rem 0 0; padding-left: 1.5rem; }
+  .print-trip-legs li { break-inside: avoid; page-break-inside: avoid; }
+}

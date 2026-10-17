@@ -29,10 +29,11 @@ import {
   X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
-import type { ChatConstraints, ChatServiceStatus, POI, RoutingCapabilities } from '../types'
+import { api, apiErrorMessage, confirmItinerary, getChatServiceStatus, getRoutingCapabilities, previewItinerary, sendChatMessage } from '../api/client'
+import type { ChatConstraints, ChatServiceStatus, PlanPreview, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
+import { LEG_COLORS, MapAdapter, type MapPoint, type MapRoute } from '../components/map/MapAdapter'
 
 type ChatLine = {
   id: string
@@ -40,7 +41,7 @@ type ChatLine = {
   text: string
   time?: string
   snapshot?: Partial<ChatConstraints>
-  assistantMode?: 'openai_compatible' | 'local_fallback' | 'gemini_compatible'
+  assistantMode?: 'openai_compatible' | 'local_fallback' | 'gemini_compatible' | 'unavailable'
 }
 
 const localDate = (date: Date) =>
@@ -157,24 +158,25 @@ export function ChatPage() {
   const [conversationId, setConversationId] = useState(makeConversationId)
   const [messages, setMessages] = useState<ChatLine[]>([initialMessage])
   const [userTurns, setUserTurns] = useState<string[]>([])
+  const [planningTurns, setPlanningTurns] = useState<string[]>([])
   const [constraints, setConstraints] = useState<ChatConstraints | null>(null)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [savingPreview, setSavingPreview] = useState(false)
   const [error, setError] = useState('')
   const [pois, setPois] = useState<POI[]>([])
   const [poiError, setPoiError] = useState('')
   const [routingCapabilities, setRoutingCapabilities] = useState<RoutingCapabilities | null>(null)
   const [chatServiceStatus, setChatServiceStatus] = useState<ChatServiceStatus | null>(null)
-  const [date, setDate] = useState(() => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return localDate(tomorrow)
-  })
+  const [date, setDate] = useState('')
   const [originId, setOriginId] = useState('')
   const [destinationId, setDestinationId] = useState('')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
-  const [mobileTab, setMobileTab] = useState<'chat' | 'hud'>('chat')
+  const [mobileTab, setMobileTab] = useState<'chat' | 'preview' | 'hud'>('chat')
+  const [planPreview, setPlanPreview] = useState<PlanPreview | null>(null)
+  const [previewRequest, setPreviewRequest] = useState<PlanRequest | null>(null)
+  const [previewSelectedId, setPreviewSelectedId] = useState('')
   const feedContainerRef = useRef<HTMLDivElement>(null)
   const feedEndRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -255,10 +257,66 @@ export function ChatPage() {
     routingCapabilities && plannerTravelMode && !routingCapabilities.supported_modes.includes(plannerTravelMode),
   )
   const routingUnavailable = routingCapabilities?.configured === false
-  const canCreateItinerary = Boolean(
-    constraints?.is_complete && originId && destinationId && !poiError &&
-    unresolvedLockedPlaces.length === 0 && !unsupportedTravelMode && !routingUnavailable && !busy && !creating,
+  const routeInputsReady = Boolean(
+    date && originId && destinationId && constraints?.travel_mode_confirmed &&
+    routingCapabilities?.configured && !poiError && unresolvedLockedPlaces.length === 0 &&
+    !unsupportedTravelMode && !routingUnavailable,
   )
+  const canPreviewItinerary = Boolean(constraints?.is_complete && routeInputsReady && !busy && !creating)
+  const canSavePreview = Boolean(planPreview && previewRequest && !busy && !creating)
+
+  const previewMapPoints = useMemo<MapPoint[]>(() => {
+    if (!planPreview) return []
+    const points: MapPoint[] = []
+    if (planPreview.origin_latitude != null && planPreview.origin_longitude != null) {
+      points.push({
+        id: 'preview-origin',
+        latitude: planPreview.origin_latitude,
+        longitude: planPreview.origin_longitude,
+        name: planPreview.origin_label || (locale === 'en' ? 'Trip origin' : 'Điểm xuất phát'),
+        category: locale === 'en' ? 'Origin' : 'Điểm đi',
+        type: 'origin',
+      })
+    }
+    for (const stop of planPreview.stops) {
+      points.push({
+        id: stop.experience_id,
+        placeId: stop.poi.id,
+        latitude: stop.poi.latitude,
+        longitude: stop.poi.longitude,
+        name: stop.poi.name || stop.name,
+        category: stop.category,
+        number: stop.position,
+        time: formatTimeOnly(new Date(stop.start_at), locale),
+        type: 'stop',
+        address: stop.poi.address,
+      })
+    }
+    if (planPreview.destination_latitude != null && planPreview.destination_longitude != null) {
+      points.push({
+        id: 'preview-destination',
+        latitude: planPreview.destination_latitude,
+        longitude: planPreview.destination_longitude,
+        name: planPreview.destination_label || (locale === 'en' ? 'Return point' : 'Điểm quay về'),
+        category: locale === 'en' ? 'Destination' : 'Điểm về',
+        type: 'destination',
+      })
+    }
+    return points
+  }, [planPreview, locale])
+
+  const previewMapRoutes = useMemo<MapRoute[]>(() => (planPreview?.routes ?? [])
+    .filter((route) => route.geometry && route.geometry.length > 1)
+    .map((route, index) => ({
+      id: `${route.from_experience_id ?? 'origin'}-${route.to_experience_id ?? 'destination'}-${index}`,
+      coordinates: route.geometry!,
+      color: LEG_COLORS[index % LEG_COLORS.length],
+      fromName: route.from_label ?? undefined,
+      toName: route.to_label ?? undefined,
+      legIndex: index + 1,
+      durationMin: route.duration_min,
+      distanceM: route.distance_m,
+    })), [planPreview])
 
   const criteriaStatus = useMemo(() => {
     const hasGroup = Boolean(constraints?.group_size)
@@ -338,7 +396,7 @@ export function ChatPage() {
       list.push({ label: '💰 500k/người', text: locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.' })
       list.push({ label: '💰 1.200.000₫ tổng', text: locale === 'en' ? 'Total group budget is 1,200,000 VND.' : 'Tổng ngân sách của nhóm là 1.200.000₫.' })
     }
-    if (!constraints?.travel_mode || constraints.travel_mode === 'motorcycle') {
+    if (!constraints?.travel_mode_confirmed || unsupportedTravelMode) {
       list.push({ label: '🛵 Xe máy', text: locale === 'en' ? 'We will travel by motorbike.' : 'Phương tiện di chuyển bằng xe máy.' })
       list.push({ label: '🚗 Ô tô / Taxi', text: locale === 'en' ? 'We will travel by car or taxi.' : 'Phương tiện di chuyển bằng ô tô hoặc taxi.' })
     }
@@ -347,7 +405,7 @@ export function ChatPage() {
       list.push({ label: '🎨 Thủ công & Gốm', text: locale === 'en' ? 'We love hands-on pottery workshops and craft studios.' : 'Mình thích làm gốm và các xưởng thủ công.' })
     }
     return list.slice(0, 5)
-  }, [criteriaStatus, constraints?.travel_mode, locale])
+  }, [criteriaStatus, constraints?.travel_mode_confirmed, locale, unsupportedTravelMode])
 
   const intentConfigs: Record<string, { label: string; icon: string; color: string; barClass: string }> = useMemo(() => ({
     'thủ_công': { label: t('home.catCraft'), icon: '🎨', color: '#f59e0b', barClass: 'intent-bar-craft' },
@@ -359,11 +417,10 @@ export function ChatPage() {
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = draft.trim()
-    if (!text || busy) return
+    if (!text || busy || creating) return
 
     const nextTurns = [...userTurns, text]
-    const transcript = nextTurns.map((turn, index) => `Tin nhắn ${index + 1} của du khách: ${turn}`).join('\n')
-    if (transcript.length > 3900) {
+    if (nextTurns.reduce((total, turn) => total + turn.length, 0) > 3900) {
       setError(locale === 'en'
         ? 'Conversation is very long. Please start a new chat to prevent dropping earlier constraints.'
         : 'Cuộc trò chuyện đã dài. Hãy bắt đầu cuộc trò chuyện mới để tránh bỏ sót ràng buộc cũ.')
@@ -378,16 +435,58 @@ export function ChatPage() {
     setBusy(true)
 
     try {
-      const result = await sendChatMessage(transcript, conversationId)
-      setConstraints(result.structured_constraints)
+      const selectedDestination = pois.find((poi) => poi.id === destinationId)
+      const result = await sendChatMessage({
+        message: text,
+        language: locale,
+        prior_user_messages: planningTurns.slice(-30),
+        conversation_id: conversationId,
+        trip_context: {
+          trip_date: date || null,
+          has_planning_context: Boolean(constraints),
+          planner_constraints: constraints,
+          destination: selectedDestination
+            ? { name: selectedDestination.name, latitude: selectedDestination.latitude, longitude: selectedDestination.longitude }
+            : null,
+        },
+      })
+      if (result.intent === 'planning') {
+        setPlanningTurns((current) => [...current, text])
+      }
+      const planningConstraints = result.intent === 'planning' ? result.structured_constraints : null
+      const effectiveDate = planningConstraints?.trip_date || date
+      if (planningConstraints) {
+        setConstraints(planningConstraints)
+        if (planningConstraints.trip_date) setDate(planningConstraints.trip_date)
+        setPlanPreview(null)
+        setPreviewRequest(null)
+      }
+      const missingRouteInputs = planningConstraints ? [
+        !effectiveDate ? (locale === 'en' ? 'trip date' : 'ngày đi') : '',
+        !originId ? (locale === 'en' ? 'starting point' : 'điểm xuất phát') : '',
+        !destinationId ? (locale === 'en' ? 'return point' : 'điểm quay về') : '',
+        !planningConstraints.travel_mode_confirmed ? (locale === 'en' ? 'travel mode' : 'phương tiện di chuyển') : '',
+      ].filter(Boolean) : []
+      const routeInstructions = planningConstraints ? [
+        !effectiveDate ? (locale === 'en' ? 'Choose the trip date in the Route panel.' : 'Chọn ngày đi trong khung Tuyến đường.') : '',
+        !originId ? (locale === 'en' ? 'Choose a starting point there.' : 'Chọn điểm xuất phát tại đó.') : '',
+        !destinationId ? (locale === 'en' ? 'Choose a return point there.' : 'Chọn điểm quay về tại đó.') : '',
+        !planningConstraints.travel_mode_confirmed ? (locale === 'en' ? 'Tell me your travel mode here.' : 'Nhắn phương tiện bạn sẽ dùng tại đây.') : '',
+      ].filter(Boolean) : []
+      const routeQuestion = missingRouteInputs.length
+        ? (locale === 'en'
+          ? `To choose a suitable route, please provide ${missingRouteInputs.join(', ')}. ${routeInstructions.join(' ')}`
+          : `Để chọn tuyến đường phù hợp, bạn bổ sung giúp mình ${missingRouteInputs.join(', ')} nhé. ${routeInstructions.join(' ')}`)
+        : ''
+      const assistantText = [result.reply || t('chat.constraintsDesc'), routeQuestion].filter(Boolean).join('\n\n')
       setMessages((current) => [
         ...current,
         {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          text: result.reply || result.structured_constraints.clarification_question_vi || t('chat.constraintsDesc'),
+          text: assistantText,
           time: formatTimeOnly(new Date(), locale),
-          snapshot: result.structured_constraints,
+          snapshot: planningConstraints ?? undefined,
           assistantMode: result.assistant_mode,
         },
       ])
@@ -420,10 +519,16 @@ export function ChatPage() {
     setConversationId(makeConversationId())
     setMessages([initialMessage])
     setUserTurns([])
+    setPlanningTurns([])
     setConstraints(null)
     setDraft('')
     setError('')
     setLockedOverrides({})
+    setDate('')
+    setOriginId('')
+    setDestinationId('')
+    setPlanPreview(null)
+    setPreviewRequest(null)
   }
 
   function selectPreset(promptText: string) {
@@ -438,11 +543,17 @@ export function ChatPage() {
     textarea?.focus()
   }
 
-  async function createFromChat() {
-    if (!constraints?.is_complete || !originId || !destinationId || unresolvedLockedPlaces.length) return
-    setError('')
-    setCreating(true)
-    try {
+  function invalidatePreview() {
+    setPlanPreview(null)
+    setPreviewRequest(null)
+  }
+
+  function buildPlanRequest(): PlanRequest {
+    if (!constraints?.is_complete || !date || !originId || !destinationId || !constraints.travel_mode_confirmed || unresolvedLockedPlaces.length) {
+      throw new Error(locale === 'en'
+        ? 'Please complete the trip details, choose a date and both route points, and tell me your travel mode.'
+        : 'Bạn hãy bổ sung ràng buộc chuyến đi, chọn ngày và hai điểm tuyến đường, đồng thời cho biết phương tiện.')
+    }
       const startAt = new Date(`${date}T${constraints.start_time}:00+07:00`)
       const returnAt = new Date(`${date}T${constraints.return_deadline}:00+07:00`)
       if (startAt.getTime() <= Date.now()) {
@@ -474,7 +585,7 @@ export function ChatPage() {
           : `Chưa cấu hình khóa API cho nhà cung cấp tuyến đường ${routingCapabilities?.provider}.`)
       }
 
-      const result = await createItinerary({
+      return {
         start_at: startAt.toISOString(),
         end_at: returnAt.toISOString(),
         group_size: constraints.group_size!,
@@ -489,12 +600,56 @@ export function ChatPage() {
         destination_latitude: destination.latitude,
         destination_longitude: destination.longitude,
         destination_label: destination.name,
-      })
-      navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
+      }
+  }
+
+  async function createPreview() {
+    if (!canPreviewItinerary) return
+    setError('')
+    setCreating(true)
+    try {
+      const request = buildPlanRequest()
+      const result = await previewItinerary(request)
+      setPreviewRequest(request)
+      setPlanPreview(result)
+      setPreviewSelectedId(result.stops[0]?.experience_id ?? '')
+      setMobileTab('preview')
     } catch (reason) {
       setError(getChatError(reason, locale))
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function savePreview() {
+    if (!canSavePreview || !planPreview || !previewRequest) return
+    setError('')
+    setCreating(true)
+    setSavingPreview(true)
+    try {
+      const result = await confirmItinerary(previewRequest, planPreview.confirmation_token)
+      navigate(`/itinerary/${result.itinerary_id}`, { state: { itinerary: result } })
+    } catch (reason) {
+      const detail = (reason as { response?: { status?: number; data?: { detail?: { code?: string; message?: string; preview?: PlanPreview } } } })?.response?.data?.detail
+      if (detail?.preview) {
+        setPlanPreview(detail.preview)
+        setPreviewSelectedId(detail.preview.stops[0]?.experience_id ?? '')
+        setMobileTab('preview')
+        setError(locale === 'en'
+          ? 'Availability changed. Review the updated route, then save it again.'
+          : 'Tình trạng chỗ hoặc tuyến đã thay đổi. Hãy xem lại lịch trình mới rồi xác nhận lưu lần nữa.')
+      } else if (detail?.code === 'PREVIEW_INVALID' || detail?.code === 'PREVIEW_STALE') {
+        setPlanPreview(null)
+        setPreviewRequest(null)
+        setError(locale === 'en'
+          ? 'This preview expired or is no longer available. Generate a new preview to continue.'
+          : 'Bản xem trước đã hết hạn hoặc không còn khả dụng. Hãy tạo bản xem trước mới để tiếp tục.')
+      } else {
+        setError(getChatError(reason, locale))
+      }
+    } finally {
+      setCreating(false)
+      setSavingPreview(false)
     }
   }
 
@@ -571,6 +726,17 @@ export function ChatPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={mobileTab === 'preview'}
+          className={`chat-mobile-tab-btn ${mobileTab === 'preview' ? 'active' : ''}`}
+          onClick={() => setMobileTab('preview')}
+        >
+          <MapPin size={15} />
+          <span>{t('chat.tabPreview')}</span>
+          <span className={`tab-progress-badge ${planPreview ? 'ready' : ''}`}>{planPreview?.stops.length ?? 0}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={mobileTab === 'hud'}
           className={`chat-mobile-tab-btn ${mobileTab === 'hud' ? 'active' : ''}`}
           onClick={() => setMobileTab('hud')}
@@ -584,7 +750,7 @@ export function ChatPage() {
       </div>
 
       {/* Main Grid Workspace */}
-      <div className={`chat-workspace mobile-view-${mobileTab}`}>
+      <div className={`chat-workspace ${planPreview ? 'has-preview' : ''} mobile-view-${mobileTab}`}>
         {/* Left Side: Interactive Chat Panel */}
         <section className="chat-panel" aria-label="AI Chat Panel">
           <div className="chat-panel-topbar">
@@ -795,7 +961,7 @@ export function ChatPage() {
                 placeholder={t('chat.composerPlaceholder')}
                 maxLength={1000}
                 rows={2}
-                disabled={busy}
+                disabled={busy || creating}
               />
               {draft.trim() && (
                 <button
@@ -817,7 +983,7 @@ export function ChatPage() {
               <button
                 type="submit"
                 className="chat-send-button"
-                disabled={!draft.trim() || busy}
+                disabled={!draft.trim() || busy || creating}
                 aria-label={t('chat.send')}
               >
                 {busy ? <LoaderCircle size={18} className="chat-spinner" /> : <Send size={16} />}
@@ -829,6 +995,86 @@ export function ChatPage() {
             <Info size={13} className="inline mr-1 text-cyan" />
             {t('chat.modelNote')}
           </p>
+        </section>
+
+        {/* Live itinerary preview, positioned beside the chat after a read-only solve. */}
+        <section className="chat-preview-column" aria-label={locale === 'en' ? 'Itinerary preview' : 'Bản xem trước lịch trình'}>
+          {planPreview ? (
+            <>
+            <div className="chat-sidebar-card chat-preview-card">
+              <div className="chat-sidebar-title">
+                <div className="title-icon-badge">
+                  <MapPin size={16} className="text-cyan" />
+                </div>
+                <h2>{locale === 'en' ? 'Route preview' : 'Xem trước lộ trình'}</h2>
+                <span className="hud-state-pill is-complete">
+                  {planPreview.stops.length} {locale === 'en' ? 'stops' : 'điểm dừng'}
+                </span>
+              </div>
+              <p className="card-desc-text">
+                {locale === 'en'
+                  ? 'Review the places and order before saving this itinerary.'
+                  : 'Xem các địa điểm và thứ tự ghé trước khi lưu lịch trình.'}
+              </p>
+              <MapAdapter
+                points={previewMapPoints}
+                selectedId={previewSelectedId}
+                onSelect={setPreviewSelectedId}
+                routes={previewMapRoutes}
+                compact
+                pointSourceLabel={locale === 'en' ? 'Preview stops from the itinerary planner' : 'Điểm dừng xem trước từ bộ lập lịch'}
+                mapFooterLabel={locale === 'en' ? 'Preview only · not yet saved' : 'Bản xem trước · chưa lưu lịch trình'}
+              />
+              {!previewMapRoutes.length && (
+                <p className="chat-preview-note">
+                  {locale === 'en'
+                    ? 'The route provider did not return drawable road geometry; numbered stops are still shown.'
+                    : 'Nhà cung cấp tuyến chưa trả hình học đường đi; bản đồ vẫn đánh dấu các điểm dừng theo thứ tự.'}
+                </p>
+              )}
+              <div className="chat-preview-summary">
+                <span>{locale === 'en' ? 'Estimated group total' : 'Tổng chi phí ước tính'}</span>
+                <strong>{formatMoney(planPreview.estimated_cost_vnd)}</strong>
+              </div>
+              <ol className="chat-preview-stop-list">
+                {planPreview.stops.map((stop) => (
+                  <li key={`${stop.experience_id}-${stop.slot_id}`}>
+                    <button
+                      type="button"
+                      className={`chat-preview-stop ${previewSelectedId === stop.experience_id ? 'selected' : ''}`}
+                      onClick={() => setPreviewSelectedId(stop.experience_id)}
+                      aria-pressed={previewSelectedId === stop.experience_id}
+                    >
+                      <span className="chat-preview-stop-number">{stop.position}</span>
+                      <span className="chat-preview-stop-copy">
+                        <strong>{stop.poi.name || stop.name}</strong>
+                        <small>{formatTimeOnly(new Date(stop.start_at), locale)} · {stop.duration_min} {locale === 'en' ? 'min' : 'phút'}</small>
+                      </span>
+                      <span className="chat-preview-stop-cost">{formatMoney(stop.cost_vnd)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <button
+                type="button"
+                className="chat-save-preview-button"
+                onClick={() => void savePreview()}
+                disabled={!canSavePreview}
+              >
+                {savingPreview ? <LoaderCircle size={17} className="chat-spinner" /> : <CheckCircle2 size={17} />}
+                <span>{locale === 'en' ? 'Save itinerary' : 'Xác nhận lưu lịch trình'}</span>
+              </button>
+            </div>
+            </>
+          ) : (
+            <div className="chat-sidebar-card chat-preview-empty">
+              <div className="title-icon-badge"><MapPin size={16} className="text-cyan" /></div>
+              <h2>{locale === 'en' ? 'Your route will appear here' : 'Lộ trình sẽ hiện ở đây'}</h2>
+              <p>{locale === 'en'
+                ? 'Tell me your trip details, choose a date and route points, then preview the stops before saving.'
+                : 'Hãy cung cấp thông tin chuyến đi, chọn ngày và hai đầu tuyến. Bản đồ cùng thứ tự điểm dừng sẽ hiện tại đây trước khi lưu.'}</p>
+            </div>
+          )}
         </section>
 
         {/* Right Side: Trip Dashboard & Constraints HUD */}
@@ -950,17 +1196,19 @@ export function ChatPage() {
               </div>
 
               {/* Travel Mode */}
-              <div className="param-cell param-active">
+              <div className={`param-cell ${constraints?.travel_mode_confirmed ? 'param-active' : ''}`}>
                 <div className="param-header">
                   {travelModeIcons[constraints?.travel_mode ?? 'motorcycle']}
                   <span>{t('chat.transport')}</span>
-                  <span className="param-check-dot" />
+                  {constraints?.travel_mode_confirmed && <span className="param-check-dot" />}
                 </div>
                 <div className="param-val">
-                  {modeLabels[constraints?.travel_mode ?? 'motorcycle']}
+                  {constraints?.travel_mode_confirmed ? modeLabels[constraints.travel_mode] : '—'}
                 </div>
                 <div className={`param-sub ${unsupportedTravelMode ? 'text-amber' : ''}`}>
-                  {routingUnavailable
+                  {!constraints?.travel_mode_confirmed
+                    ? (locale === 'en' ? 'Tell me how you will travel.' : 'Hãy cho mình biết phương tiện di chuyển.')
+                    : routingUnavailable
                     ? (locale === 'en' ? `API key missing for ${routingCapabilities?.provider}.` : `Thiếu khóa API ${routingCapabilities?.provider}.`)
                     : unsupportedTravelMode
                       ? (locale === 'en' ? `Unsupported by ${routingCapabilities?.provider}; choose motorcycle, walking, or car.` : `Nhà cung cấp ${routingCapabilities?.provider} chưa hỗ trợ; hãy chọn xe máy, đi bộ hoặc ô tô.`)
@@ -1073,8 +1321,8 @@ export function ChatPage() {
                     <select
                       id="origin-poi-select"
                       value={originId}
-                      onChange={(event) => setOriginId(event.target.value)}
-                      disabled={!pois.length}
+                      onChange={(event) => { invalidatePreview(); setOriginId(event.target.value) }}
+                      disabled={!pois.length || creating}
                     >
                       <option value="">{t('chat.originSelectPrompt')}</option>
                       {pois.map((poi) => (
@@ -1101,8 +1349,8 @@ export function ChatPage() {
                     <select
                       id="destination-poi-select"
                       value={destinationId}
-                      onChange={(event) => setDestinationId(event.target.value)}
-                      disabled={!pois.length}
+                      onChange={(event) => { invalidatePreview(); setDestinationId(event.target.value) }}
+                      disabled={!pois.length || creating}
                     >
                       <option value="">{t('chat.destSelectPrompt')}</option>
                       {pois.map((poi) => (
@@ -1124,7 +1372,8 @@ export function ChatPage() {
                     type="date"
                     value={date}
                     min={localDate(new Date())}
-                    onChange={(event) => setDate(event.target.value)}
+                    disabled={creating}
+                    onChange={(event) => { invalidatePreview(); setDate(event.target.value) }}
                   />
                 </div>
               </div>
@@ -1163,8 +1412,9 @@ export function ChatPage() {
                       </div>
                       <select
                         value={place?.poiId ?? ''}
+                        disabled={creating}
                         onChange={(event) =>
-                          setLockedOverrides((current) => ({ ...current, [index]: event.target.value }))
+                          { invalidatePreview(); setLockedOverrides((current) => ({ ...current, [index]: event.target.value })) }
                         }
                       >
                         <option value="">-- {t('chat.selectPoi')} --</option>
@@ -1193,11 +1443,11 @@ export function ChatPage() {
           <div className="chat-launch-area">
             <button
               type="button"
-              className={`chat-create-button ${canCreateItinerary ? 'chat-create-button-ready' : ''}`}
-              onClick={() => void createFromChat()}
-              disabled={!canCreateItinerary}
+              className={`chat-create-button ${canPreviewItinerary ? 'chat-create-button-ready' : ''}`}
+              onClick={() => void createPreview()}
+              disabled={!canPreviewItinerary}
             >
-              {creating ? (
+                {creating ? (
                 <>
                   <LoaderCircle size={18} className="chat-spinner" />
                   <span>{t('chat.computingHeuristic')}</span>
@@ -1205,7 +1455,7 @@ export function ChatPage() {
               ) : (
                 <>
                   <Zap size={18} className="text-amber fill-amber" />
-                  <span>{t('chat.createScheduleNow')}</span>
+                    <span>{locale === 'en' ? 'Preview route' : 'Xem trước lộ trình'}</span>
                   <ArrowRight size={18} />
                 </>
               )}
@@ -1217,9 +1467,9 @@ export function ChatPage() {
                 {constraints?.is_complete ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}
                 <span>{t('chat.chkAiDone')}</span>
               </div>
-              <div className={`chk-item ${originId && destinationId ? 'chk-done' : ''}`}>
-                {originId && destinationId ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}
-                <span>{t('chat.chkEndpoints')}</span>
+              <div className={`chk-item ${routeInputsReady ? 'chk-done' : ''}`}>
+                {routeInputsReady ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}
+                <span>{locale === 'en' ? 'Date, endpoints & travel mode' : 'Ngày đi, hai đầu tuyến & phương tiện'}</span>
               </div>
               <div className={`chk-item ${unresolvedLockedPlaces.length === 0 ? 'chk-done' : ''}`}>
                 {unresolvedLockedPlaces.length === 0 ? <CheckCircle2 size={13} /> : <CircleHelp size={13} />}

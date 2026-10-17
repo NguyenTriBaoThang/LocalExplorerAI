@@ -1,11 +1,13 @@
 export type DataMode = 'real' | 'simulated' | 'replay' | 'mixed'
 
 export interface ChatConstraints {
+  trip_date: string | null
   group_size: number | null
   start_time: string | null
   return_deadline: string | null
   budget_vnd: number | null
   travel_mode: 'motorcycle' | 'walking' | 'car' | 'transit'
+  travel_mode_confirmed: boolean
   intent_weights: Record<string, number>
   locked_pois: string[]
   is_complete: boolean
@@ -15,13 +17,39 @@ export interface ChatConstraints {
 
 export interface ChatReply {
   status: 'parsed' | 'fallback'
-  assistant_mode: 'openai_compatible' | 'local_fallback'
+  assistant_mode: 'openai_compatible' | 'gemini_compatible' | 'local_fallback' | 'unavailable'
   conversation_id: string | null
   prompt_version: string | null
   fallback_version: string | null
   fallback_reason: 'llm_not_configured' | 'llm_unavailable' | 'invalid_model_output' | null
+  intent: 'planning' | 'travel_information' | 'out_of_scope'
   reply: string
-  structured_constraints: ChatConstraints
+  structured_constraints: ChatConstraints | null
+  weather_forecast: ChatWeatherForecast | null
+}
+
+export interface ChatWeatherForecast {
+  location: string
+  forecast_date: string
+  precipitation_probability_pct: number
+  precipitation_sum_mm: number
+  retrieved_at: string
+  source: 'Open-Meteo'
+  source_url: string
+  attribution: string
+}
+
+export interface ChatMessageRequest {
+  message: string
+  language: 'vi' | 'en'
+  prior_user_messages: string[]
+  conversation_id: string
+  trip_context?: {
+    trip_date?: string | null
+    destination?: { name: string; latitude: number; longitude: number } | null
+    has_planning_context?: boolean
+    planner_constraints?: ChatConstraints | null
+  }
 }
 
 export interface ChatServiceStatus {
@@ -296,6 +324,28 @@ export interface Itinerary {
     ranking_model_version?: string | null
     ranking_source?: 'rule_baseline' | 'ml_model' | 'bootstrap_ml_model' | null
   }
+}
+
+export interface PlanRequest {
+  start_at: string
+  end_at: string
+  group_size: number
+  budget_vnd: number
+  transport_mode: 'walking' | 'bicycling' | 'driving' | 'motorcycle' | 'car' | 'transit'
+  intent_weights: Record<string, number>
+  locked_experience_ids: string[]
+  locked_poi_ids?: string[]
+  origin_latitude?: number
+  origin_longitude?: number
+  origin_label?: string
+  destination_latitude?: number
+  destination_longitude?: number
+  destination_label?: string
+}
+
+export type PlanPreview = Omit<Itinerary, 'request_id' | 'itinerary_id'> & {
+  preview_id: string
+  confirmation_token: string
 }
 
 export interface ItineraryProposalStop {

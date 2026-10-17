@@ -204,6 +204,7 @@ export const translations = {
     'chat.sidebarFootnote':
       'Khung giờ thực tế, sức chứa và cước phí di chuyển sẽ được thuật toán tối ưu hóa trước khi trình bày lịch trình.',
     'chat.tabChat': 'Trò chuyện AI',
+    'chat.tabPreview': 'Bản đồ',
     'chat.tabHud': 'Thông số hành trình',
     'chat.quickSuggestions': 'Gợi ý nhanh',
     'chat.readyToLaunch': 'Sẵn sàng khởi tạo',
@@ -912,6 +913,7 @@ export const translations = {
     'chat.sidebarFootnote':
       'Actual timeslots, capacity, and travel distances are mathematically optimized before display.',
     'chat.tabChat': 'AI Chat',
+    'chat.tabPreview': 'Map',
     'chat.tabHud': 'Trip Parameters',
     'chat.quickSuggestions': 'Quick Suggestions',
     'chat.readyToLaunch': 'Ready to Launch',

@@ -25,6 +25,8 @@ class FakeStructuredProvider:
     model_name = "test-structured"
 
     def generate(self, system_prompt, user_input, schema):
+        if "You route the latest message" in system_prompt:
+            return {"intent": "planning", "topic": None}
         if "Travel Needs Parser" in system_prompt:
             return {
                 "group_size": 2, "start_time": "09:00", "return_deadline": "16:00", "budget_vnd": 500000,
@@ -79,18 +81,18 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
 
     catalog = client.get("/api/ai/prompts")
     assert catalog.status_code == 200
-    assert catalog.json()["version"] == "3.0.0"
-    assert len(catalog.json()["prompt_ids"]) == 8
+    assert catalog.json()["version"] == "3.1.0"
+    assert len(catalog.json()["prompt_ids"]) == 10
 
     chat = client.post("/api/chat/message", json={"message": "Hai người đi làm gốm, bắt đầu 9 giờ, về trước 16 giờ, ngân sách 500 nghìn."})
     assert chat.status_code == 200
-    assert chat.json()["prompt_version"] == "3.0.0"
+    assert chat.json()["prompt_version"] == "3.1.0"
     assert chat.json()["structured_constraints"]["travel_mode"] == "motorcycle"
 
     tagged = client.post(f"/api/experiences/{sample_experience.id}/ai-tag", json={}, headers=admin)
     assert tagged.status_code == 200, tagged.text
     assert sample_experience.primary_intent == "thủ_công"
-    assert sample_experience.tagger_prompt_version == "3.0.0"
+    assert sample_experience.tagger_prompt_version == "3.1.0"
     assert sample_experience.indoor is False
 
     other_provider = Provider(name="Second provider", portal_access_key="provider-test-key")
@@ -105,7 +107,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     similarity = client.post("/api/ai/intent-similarity", json={"experience_a_id": sample_experience.id, "experience_b_id": other.id}, headers=admin)
     assert similarity.status_code == 200, similarity.text
     assert similarity.json()["stored_pair"] == sorted([sample_experience.id, other.id])
-    assert similarity.json()["prompt_version"] == "3.0.0"
+    assert similarity.json()["prompt_version"] == "3.1.0"
 
     slot = ExperienceSlot(experience_id=sample_experience.id,
         start_at=datetime(2030, 10, 1, 2, 0, tzinfo=timezone.utc),
@@ -150,7 +152,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
 
     advice = client.post(f"/api/itineraries/{itinerary.id}/replan-advice", json={"event_id": event.id})
     assert advice.status_code == 200, advice.text
-    assert advice.json()["prompt_version"] == "3.0.0"
+    assert advice.json()["prompt_version"] == "3.1.0"
     proposal = advice.json()["proposals"][0]
     accepted = client.post(f"/api/itineraries/{itinerary.id}/replan-advice/accept", json={
         "event_id": event.id, "affected_stop_id": affected.id,
