@@ -18,11 +18,11 @@ router = APIRouter(prefix="/api/ops", tags=["operations"], dependencies=[Depends
 def operations_status(db: Session = Depends(get_db)) -> dict:
     counts = dict(db.execute(select(NotificationDelivery.status, func.count()).group_by(NotificationDelivery.status)).all())
     try:
-        heartbeat = _redis().get("local-explorer:worker:email_outbox")
+        heartbeat = _redis().get("local-explorer:worker:notification_outbox")
         worker = {"status": "running", "last_seen": heartbeat} if heartbeat else {"status": "unknown", "last_seen": None}
     except Exception:
         worker = {"status": "unreachable", "last_seen": None}
-    latest = db.scalar(select(OpsJobRun).where(OpsJobRun.job_name == "email_outbox").order_by(OpsJobRun.started_at.desc()).limit(1))
+    latest = db.scalar(select(OpsJobRun).where(OpsJobRun.job_name == "notification_outbox").order_by(OpsJobRun.started_at.desc()).limit(1))
     active_events = db.scalar(select(func.count()).select_from(Event).where(Event.status == "active")) or 0
     return {
         "generated_at": datetime.now(timezone.utc),
@@ -31,7 +31,7 @@ def operations_status(db: Session = Depends(get_db)) -> dict:
         "last_job": ({"status": latest.status, "started_at": latest.started_at, "finished_at": latest.finished_at,
                       "processed_count": latest.processed_count, "error_summary": latest.error_summary} if latest else None),
         "active_events": active_events,
-        "channels": {"email_enabled": settings.email_is_configured},
+        "channels": {"email_enabled": settings.email_is_configured, "webpush_enabled": settings.web_push_is_configured},
         "rate_limit_enabled": settings.rate_limit_enabled,
     }
 

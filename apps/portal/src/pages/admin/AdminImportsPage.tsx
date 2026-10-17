@@ -48,16 +48,47 @@ function DuplicateCountLoader({ onCount }: { onCount: (count: number) => void })
 
 const FLAG_LABELS: Record<string, string> = {
   source_url_missing: 'Thiếu URL nguồn',
+  source_url_insecure: 'URL nguồn chưa dùng HTTPS',
+  source_type_missing: 'Thiếu loại nguồn',
+  source_license_missing: 'Thiếu giấy phép/điều khoản nguồn',
+  source_license_review_pending: 'Giấy phép/điều khoản nguồn cần rà soát',
   address_missing: 'Thiếu địa chỉ',
   address_geocode_needs_confirmation: 'Địa chỉ tra ngược, chưa xác nhận đúng POI',
   opening_hours_missing: 'Thiếu giờ mở cửa',
   price_basis_missing: 'Thiếu đơn vị/phạm vi giá',
   price_amount_unverified: 'Giá trong file chưa được kiểm chứng',
   photo_missing: 'Thiếu ảnh',
+  photo_rights_review_pending: 'Quyền sử dụng ảnh cần rà soát riêng',
   coordinates_missing: 'Thiếu tọa độ',
   coordinates_reused: 'Tọa độ bị lặp',
   verified_flag_unsubstantiated: 'Cờ verified chưa có bằng chứng',
+  verified_claim_pending_review: 'Nhãn verified trong file chưa được duyệt',
+  field_coverage_incomplete: 'Nguồn chưa khai báo đủ trường POI bắt buộc',
   field_level_evidence_pending: 'Chưa duyệt bằng chứng theo từng trường',
+  observed_at_missing: 'Thiếu thời điểm quan sát nguồn',
+  observed_at_invalid_or_timezone_missing: 'Thời điểm nguồn sai hoặc thiếu múi giờ',
+  observed_at_in_future: 'Thời điểm nguồn đang ở tương lai',
+  expires_at_missing: 'Thiếu hạn rà soát nguồn',
+  expires_at_invalid_or_timezone_missing: 'Hạn nguồn sai hoặc thiếu múi giờ',
+  evidence_expired: 'Bằng chứng đã hết hạn',
+  evidence_expiry_before_observation: 'Hạn nguồn trước thời điểm quan sát',
+}
+
+const POI_EVIDENCE_FIELDS = [
+  ['name', 'Tên địa điểm'],
+  ['address', 'Địa chỉ'],
+  ['latitude', 'Vĩ độ'],
+  ['longitude', 'Kinh độ'],
+  ['category', 'Danh mục'],
+] as const
+
+function isSafeHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password
+  } catch {
+    return false
+  }
 }
 
 const QUALITY_METRICS: Array<[string, string]> = [
@@ -65,6 +96,14 @@ const QUALITY_METRICS: Array<[string, string]> = [
   ['Tọa độ dùng lại', 'coordinates_reused'],
   ['Thiếu giờ mở cửa', 'opening_hours_missing'],
   ['Thiếu URL nguồn', 'source_url_missing'],
+  ['URL nguồn không dùng HTTPS', 'source_url_insecure'],
+  ['Thiếu loại nguồn', 'source_type_missing'],
+  ['Thiếu giấy phép/điều khoản', 'source_license_missing'],
+  ['Điều khoản nguồn cần rà soát', 'source_license_review_pending'],
+  ['Ảnh cần rà quyền dùng', 'photo_rights_review_pending'],
+  ['Thiếu thời điểm quan sát', 'observed_at_missing'],
+  ['Thiếu hạn rà soát', 'expires_at_missing'],
+  ['Nguồn khai thiếu trường POI', 'field_coverage_incomplete'],
   ['Thiếu cơ sở giá', 'price_basis_missing'],
   ['Giá chưa xác minh', 'price_amount_unverified'],
   ['Địa chỉ cần đối chiếu', 'address_geocode_needs_confirmation'],
@@ -186,6 +225,8 @@ function candidateStatus(candidate: PlaceImportCandidate): [string, 'green' | 'a
 function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidate; onPromote: () => void }) {
   const [open, setOpen] = useState(false)
   const raw = candidate.raw_payload
+  const sourceUrl = String(raw.source_url || raw.source_uri || raw.source || '')
+  const sourceUrlIsHttps = isSafeHttpsUrl(sourceUrl)
   const tags = Array.isArray(raw.tags) ? raw.tags.map(String).join(', ') : String(raw.tags || '')
   const [statusLabel, statusTone] = candidateStatus(candidate)
   const lines: string[] = [
@@ -196,6 +237,11 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
   if (raw.address) lines.push(`Địa chỉ Goong gợi ý: ${String(raw.address)}`)
   if (raw.address_source_reference) lines.push(`Nguồn địa chỉ: ${String(raw.address_source_reference)}`)
   if (raw.address_status) lines.push(`Trạng thái địa chỉ: ${String(raw.address_status)}`)
+  if (raw.source_type) lines.push(`Loại nguồn ghi trong file (chưa rà soát): ${String(raw.source_type)}`)
+  if (raw.license) lines.push(`Giấy phép/điều khoản ghi trong file (chưa rà soát): ${String(raw.license)}`)
+  if (raw.fields_covered) lines.push(`Trường nguồn tự khai (chưa đối chiếu): ${Array.isArray(raw.fields_covered) ? raw.fields_covered.map(String).join(', ') : String(raw.fields_covered)}`)
+  if (raw.observed_at) lines.push(`Thời điểm nguồn ghi trong file (chưa rà soát): ${String(raw.observed_at)}`)
+  if (raw.expires_at) lines.push(`Hạn nguồn ghi trong file (chưa rà soát): ${String(raw.expires_at)}`)
   if (raw.price_status) lines.push(`Trạng thái giá: ${String(raw.price_status)}`)
   if (raw.verification_basis) lines.push(`Căn cứ cờ xác minh: ${String(raw.verification_basis)}`)
   if (raw.evidence_status) lines.push(`Bằng chứng: ${String(raw.evidence_status)}`)
@@ -206,6 +252,7 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
   )
   if (raw.description) lines.push(String(raw.description))
   if (raw.note) lines.push(`Ghi chú nguồn: ${String(raw.note)}`)
+  if (raw.photo_url) lines.push(`Ảnh ghi trong file: ${String(raw.photo_url)} · ghi công: ${String(raw.photo_credit || 'chưa có')} · giấy phép ảnh: ${String(raw.photo_license || 'chưa có')}`)
 
   return (
     <div className="px-5 py-4">
@@ -227,14 +274,26 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
             )}
           </span>
         </button>
-        {candidate.review_status === 'needs_enrichment' && (
-          <Button size="sm" onClick={onPromote}>Bổ sung & gửi duyệt</Button>
+        {(candidate.review_status === 'needs_enrichment' || (candidate.target_poi_id && candidate.target_poi_status === 'pending')) && (
+          <Button size="sm" onClick={onPromote}>{candidate.target_poi_id ? 'Thêm nguồn xác minh' : 'Bổ sung & gửi duyệt'}</Button>
         )}
       </div>
       {open && (
-        <ul className="mt-3 space-y-1 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-          {lines.map((line, index) => <li key={index} className="break-words">{line}</li>)}
-        </ul>
+        <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+          <ul className="space-y-1">
+            {lines.map((line, index) => <li key={index} className="break-words">{line}</li>)}
+            {sourceUrl && <li className="break-words">URL nguồn trong file (chưa xác minh): {sourceUrlIsHttps
+              ? <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">Mở nguồn HTTPS</a>
+              : sourceUrl}</li>}
+            {raw.photo_url && (() => {
+              const photoUrl = String(raw.photo_url)
+              const safePhotoUrl = isSafeHttpsUrl(photoUrl)
+              return <li className="break-words">URL ảnh trong file (chưa xác minh): {safePhotoUrl
+                ? <a href={photoUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">Mở ảnh</a>
+                : photoUrl}</li>
+            })()}
+          </ul>
+        </div>
       )}
     </div>
   )
@@ -246,12 +305,20 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
   const toast = useToast()
   const [busy, setBusy] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [fieldsCovered, setFieldsCovered] = useState<string[]>([])
+  const sourceTypes = ['official', 'provider', 'website', 'dataset', 'field_check']
+  const rawSourceType = String(candidate.raw_payload.source_type || '')
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    const selectedFields = form.getAll('fields_covered').map(String)
     const observedAt = new Date(String(form.get('observed_at') || ''))
     const expiresAt = new Date(String(form.get('expires_at') || ''))
+    if (selectedFields.length === 0) {
+      toast.error('Chọn ít nhất một trường mà URL nguồn xác nhận trực tiếp.')
+      return
+    }
     if (Number.isNaN(observedAt.getTime()) || Number.isNaN(expiresAt.getTime())) {
       toast.error('Vui lòng nhập ngày quan sát và hạn dùng bằng chứng hợp lệ.')
       return
@@ -267,7 +334,7 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
         source_type: String(form.get('source_type') || ''),
         source_label: String(form.get('source_label') || ''),
         license: String(form.get('license') || '') || null,
-        fields_covered: ['name', 'address', 'latitude', 'longitude', 'category'],
+        fields_covered: selectedFields,
         observed_at: observedAt.toISOString(),
         expires_at: expiresAt.toISOString(),
       })
@@ -287,14 +354,14 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
 
   return (
     <Modal open onClose={() => { if (!busy) onClose() }} size="lg" title={`Bổ sung bằng chứng: ${candidate.name}`}
-      description="Nhập lại và đối chiếu thông tin với nguồn trước khi gửi duyệt."
+      description="Chỉ chọn những trường URL này xác nhận trực tiếp. Các cờ verified trong Excel không thay thế bằng chứng."
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={busy}>Hủy</Button>
-        <Button type="submit" form="promote-form" loading={busy} disabled={!confirmed}>Gửi duyệt</Button>
+        <Button type="submit" form="promote-form" loading={busy} disabled={!confirmed || fieldsCovered.length === 0}>Gửi duyệt</Button>
       </>}>
       <form id="promote-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         <Field label="Địa chỉ (đối chiếu với nguồn)" required className="sm:col-span-2">
-          <Input name="address" defaultValue={String(candidate.raw_payload.address || '')} required minLength={5} maxLength={300} />
+          <Input name="address" defaultValue={String(candidate.raw_payload.address || candidate.raw_payload.full_address || '')} required minLength={5} maxLength={300} />
         </Field>
         <Field label="Vĩ độ (nhập lại và xác minh)" required>
           <Input name="latitude" type="number" min={-90} max={90} step="any" required />
@@ -306,10 +373,11 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
           <Input name="category" defaultValue={candidate.kind} required minLength={2} maxLength={40} />
         </Field>
         <Field label="URL nguồn (HTTPS)" required>
-          <Input name="source_uri" type="url" required placeholder="https://..." />
+          <Input name="source_uri" type="url" defaultValue={String(candidate.raw_payload.source_url || candidate.raw_payload.source_uri || '')} required placeholder="https://..." />
         </Field>
         <Field label="Loại nguồn">
-          <Select name="source_type" defaultValue="official">
+          <Select name="source_type" defaultValue={sourceTypes.includes(rawSourceType) ? rawSourceType : ''} required>
+            <option value="" disabled>Chọn loại nguồn</option>
             <option value="official">Chính thức</option>
             <option value="provider">Đối tác</option>
             <option value="website">Website</option>
@@ -321,7 +389,7 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
           <Input name="source_label" required minLength={2} maxLength={180} />
         </Field>
         <Field label="Giấy phép (tùy chọn)">
-          <Input name="license" maxLength={120} />
+          <Input name="license" maxLength={120} placeholder="Chỉ ghi điều khoản đã kiểm tra; chưa rõ thì để trống" />
         </Field>
         <Field label="Ngày quan sát" required>
           <Input name="observed_at" type="datetime-local" required />
@@ -329,9 +397,29 @@ function PromoteModal({ batchId, candidate, onClose, onDone, onSettled }: {
         <Field label="Bằng chứng hết hạn vào" required>
           <Input name="expires_at" type="datetime-local" required />
         </Field>
+        <fieldset className="space-y-2 sm:col-span-2">
+          <legend className="mb-2 text-sm font-medium text-slate-700">Các trường URL này xác nhận trực tiếp</legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {POI_EVIDENCE_FIELDS.map(([field, label]) => (
+              <label key={field} className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  name="fields_covered"
+                  value={field}
+                  checked={fieldsCovered.includes(field)}
+                  onChange={(event) => setFieldsCovered((current) => event.target.checked
+                    ? [...current, field]
+                    : current.filter((item) => item !== field))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">Có thể gửi thêm nguồn riêng cho các trường còn thiếu. Không chọn trường chỉ vì giá trị có sẵn trong Excel.</p>
+        </fieldset>
         <label className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-2">
           <input type="checkbox" className="mt-1" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-          Tôi đã kiểm tra rằng nguồn này xác nhận tên, địa chỉ, tọa độ và danh mục của địa điểm.
+          Tôi đã mở URL và đối chiếu từng trường đã chọn; giấy phép và quyền ảnh chưa rõ sẽ không được xem là đã xác minh.
         </label>
       </form>
     </Modal>

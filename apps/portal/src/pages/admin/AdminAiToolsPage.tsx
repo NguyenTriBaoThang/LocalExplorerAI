@@ -2,9 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Brain, CheckCircle2, RefreshCw, Sparkles } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Select, Tabs, useToast } from '../../components/ui'
 import { errorMessage } from '../../lib/api'
-import { adminAiApi, type AiTargetSet, type MlStatus, type PromptManifest } from '../../lib/adminAi'
+import { adminAiApi, type AiTargetSet, type CurrentWeatherData, type MlStatus, type PromptManifest } from '../../lib/adminAi'
 
 type ToolKey = 'tag' | 'similarity' | 'weather'
+
+function dateTimeLocalValue(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+}
 
 export function AdminAiToolsPage() {
   const toast = useToast()
@@ -22,6 +28,9 @@ export function AdminAiToolsPage() {
   const [temperature, setTemperature] = useState('')
   const [children, setChildren] = useState(false)
   const [observedAt, setObservedAt] = useState('')
+  const [weatherObservedAtIso, setWeatherObservedAtIso] = useState<string | null>(null)
+  const [weatherSource, setWeatherSource] = useState<CurrentWeatherData | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
   const [result, setResult] = useState<unknown>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -50,6 +59,28 @@ export function AdminAiToolsPage() {
   }
 
   useEffect(() => { void loadTargets() }, [])
+
+  async function loadLiveWeather() {
+    if (!itineraryId) return
+    setWeatherLoading(true)
+    setWeatherSource(null)
+    setError('')
+    try {
+      const data = await adminAiApi.itineraryWeatherData(itineraryId)
+      setRain(String(data.rain_mm_per_hour))
+      setAqi(String(data.aqi_pm25))
+      setTemperature(String(data.temperature_c))
+      setObservedAt(dateTimeLocalValue(data.observed_at))
+      setWeatherObservedAtIso(data.observed_at)
+      setWeatherSource(data)
+      toast.success(`Đã lấy dữ liệu thời tiết tại ${data.location.name}.`)
+    } catch (reason) {
+      setWeatherObservedAtIso(null)
+      setError(errorMessage(reason))
+    } finally {
+      setWeatherLoading(false)
+    }
+  }
 
   function submitTool(event: FormEvent) {
     event.preventDefault()
@@ -80,7 +111,7 @@ export function AdminAiToolsPage() {
           aqi_pm25: Number(aqi),
           temperature_c: Number(temperature),
           children_in_group: children,
-          observed_at: new Date(observedAt).toISOString(),
+          observed_at: weatherObservedAtIso || new Date(observedAt).toISOString(),
         })
       }
       setResult(response)
@@ -165,21 +196,26 @@ export function AdminAiToolsPage() {
           {tool === 'weather' && (
             <form className="grid gap-4 p-5 sm:grid-cols-2" onSubmit={submitTool}>
               <div className="sm:col-span-2"><h3 className="text-sm font-semibold text-slate-900">WEATHER_AQI_ADVISOR</h3>
-                <p className="text-sm text-slate-500">Dùng số liệu do quản trị viên nhập; không tự coi mưa là ngập. Kết quả có thể tạo sự kiện cảnh báo thời tiết cho điểm ngoài trời.</p></div>
+                <p className="text-sm text-slate-500">Lấy thời tiết và AQI hiện tại từ Open-Meteo cho điểm ngoài trời đầu tiên trong lịch trình, hoặc nhập quan sát của bạn. Dữ liệu dự báo không xác nhận ngập; mưa không được xem là bằng chứng ngập đường.</p></div>
               <Field label="Lịch trình">
-                <Select required value={itineraryId} onChange={(event) => setItineraryId(event.target.value)}>
+                <Select required value={itineraryId} onChange={(event) => { setItineraryId(event.target.value); setWeatherSource(null); setWeatherObservedAtIso(null) }}>
                   <option value="" disabled>Chọn lịch trình</option>
                   {targets.itineraries.map((item) => <option key={item.id} value={item.id}>{item.id.slice(0, 12)} · {item.planned_date || new Date(item.created_at).toLocaleDateString('vi-VN')}</option>)}
                 </Select>
               </Field>
-              <Field label="Mưa (mm/giờ)"><Input type="number" required min="0" max="500" step="0.1" value={rain} onChange={(event) => setRain(event.target.value)} /></Field>
-              <Field label="AQI PM2.5"><Input type="number" required min="0" max="1000" value={aqi} onChange={(event) => setAqi(event.target.value)} /></Field>
-              <Field label="Nhiệt độ (°C)"><Input type="number" required min="-20" max="60" step="0.1" value={temperature} onChange={(event) => setTemperature(event.target.value)} /></Field>
-              <Field label="Thời điểm quan sát"><Input type="datetime-local" required value={observedAt} onChange={(event) => setObservedAt(event.target.value)} /></Field>
+              <div className="flex items-end"><Button type="button" variant="secondary" icon={RefreshCw} loading={weatherLoading} disabled={!itineraryId || weatherLoading} onClick={() => void loadLiveWeather()}>Lấy dữ liệu Open-Meteo</Button></div>
+              <Field label="Mưa / mưa rào (mm trong giờ trước)"><Input type="number" required min="0" max="500" step="0.1" value={rain} onChange={(event) => { setRain(event.target.value); setWeatherSource(null); setWeatherObservedAtIso(null) }} /></Field>
+              <Field label="AQI PM2.5 (US AQI)"><Input type="number" required min="0" max="1000" value={aqi} onChange={(event) => { setAqi(event.target.value); setWeatherSource(null); setWeatherObservedAtIso(null) }} /></Field>
+              <Field label="Nhiệt độ (°C)"><Input type="number" required min="-20" max="60" step="0.1" value={temperature} onChange={(event) => { setTemperature(event.target.value); setWeatherSource(null); setWeatherObservedAtIso(null) }} /></Field>
+              <Field label="Thời điểm dữ liệu"><Input type="datetime-local" required value={observedAt} onChange={(event) => { setObservedAt(event.target.value); setWeatherSource(null); setWeatherObservedAtIso(null) }} /></Field>
               <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
                 <input type="checkbox" checked={children} onChange={(event) => setChildren(event.target.checked)} /> Có trẻ nhỏ trong nhóm
               </label>
               <div className="sm:col-span-2"><Button type="submit" loading={loading} disabled={!itineraryId}>Tạo tư vấn & cảnh báo</Button></div>
+              {weatherSource && <div className="sm:col-span-2"><Alert tone="brand">
+                <p>{weatherSource.attribution} · vị trí: {weatherSource.location.name} ({weatherSource.location.latitude.toFixed(4)}, {weatherSource.location.longitude.toFixed(4)}) · thời điểm: {weatherSource.observed_at} · PM2.5: {weatherSource.pm25_ug_m3 ?? 'không có'} μg/m³.</p>
+                <p className="mt-1"><a className="underline" href={weatherSource.weather_source_url} target="_blank" rel="noreferrer">Nguồn thời tiết</a> · <a className="underline" href={weatherSource.air_quality_source_url} target="_blank" rel="noreferrer">Nguồn chất lượng không khí</a></p>
+              </Alert></div>}
             </form>
           )}
         </Card>

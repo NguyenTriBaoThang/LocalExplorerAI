@@ -15,7 +15,7 @@ The FastAPI backend in apps/api/app serves the web application and catalog, plan
   - `scikit-learn` + `joblib` (Saigon Flood Risk Classifier)
 - **Định tuyến & Địa lý**: Goong Directions API + Goong Forward Geocoding (với cache in-memory TTL và provenance)
 - **Thanh toán Trực tuyến**: Cổng VNPay (HMAC-SHA512 với sandbox/production) và Ví MoMo (HMAC-SHA256 captureWallet)
-- **Vận hành & Hàng đợi**: Transactional Email Outbox worker (`worker.py`), Redis Rate Limiting, HTTP structured JSON logging
+- **Vận hành & Hàng đợi**: Transactional notification outbox worker (`worker.py`) for email and opt-in Web Push, Redis Rate Limiting, HTTP structured JSON logging
 - **Bot Tự Động & 3D**: Telegram Bot Webhook sync & n8n forwarding (`admin_bot.py`), 3D Digital Twin Landmark calibration service (`models_3d.py`)
 
 - The planner checks feasibility against time, budget, locked stops, capacity, and outbound/return routes.
@@ -110,7 +110,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```powershell
 python -m scripts.worker
 ```
-*Worker tự động quét bảng `email_outbox` để gửi email xác nhận đặt chỗ, thông báo quyết định của nhà cung cấp và xử lý sự cố hủy ca.*
+*Worker tự động quét bảng `notification_deliveries` để gửi email và Web Push cho các sự kiện đặt chỗ. Web Push yêu cầu chạy migration mới nhất và cấu hình ba biến `WEB_PUSH_VAPID_*`; khóa riêng chỉ lưu trong secret manager.*
 
 ---
 

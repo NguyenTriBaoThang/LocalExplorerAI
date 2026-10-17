@@ -27,7 +27,7 @@ export default function Demo() {
   const [open, setOpen] = useState<number | null>(null)
   return (
     <section className="page">
-      <PageHeader eyebrow="Demo" title="A seven-minute walkthrough" lead="Order and content follow DEMO_SCRIPT.md in the repository. It runs against the product app (npm run dev on port 5173), not this site." />
+      <PageHeader eyebrow="Demo" title="A seven-minute walkthrough" lead="Order and content follow DEMO_SCRIPT.md in the repository. It runs against the product app (npm run dev on port 8080), not this site." />
       <ol className="steps">
         {DEMO_STEPS.map((s, i) => (
           <li key={s.title}>

@@ -307,11 +307,11 @@ class BookingEvent(Base):
 
 
 class NotificationDelivery(Base):
-    """Durable email outbox row with retry state and idempotency key."""
+    """Durable notification outbox row with retry state and idempotency key."""
 
     __tablename__ = "notification_deliveries"
     __table_args__ = (
-        CheckConstraint("channel IN ('email')", name="ck_notification_channel"),
+        CheckConstraint("channel IN ('email', 'webpush')", name="ck_notification_channel"),
         CheckConstraint("status IN ('queued', 'sending', 'retry', 'sent', 'failed')", name="ck_notification_status"),
         CheckConstraint("attempts >= 0", name="ck_notification_attempts"),
         UniqueConstraint("idempotency_key", name="uq_notification_idempotency_key"),
@@ -334,6 +334,25 @@ class NotificationDelivery(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class WebPushSubscription(Base):
+    """A user's opted-in browser endpoint and encryption keys; never returned to admin APIs."""
+
+    __tablename__ = "web_push_subscriptions"
+    __table_args__ = (
+        UniqueConstraint("endpoint", name="uq_web_push_subscription_endpoint"),
+        Index("ix_web_push_user_active", "user_id", "is_active"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    endpoint: Mapped[str] = mapped_column(String(2048))
+    p256dh_key: Mapped[str] = mapped_column(String(256))
+    auth_key: Mapped[str] = mapped_column(String(128))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

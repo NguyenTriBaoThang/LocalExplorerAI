@@ -14,6 +14,12 @@ function JourneyApp() {
   return <JourneyProvider key={owner} owner={owner}><RouterProvider router={router} future={{ v7_startTransition: true }} /></JourneyProvider>
 }
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => undefined)
+  }, { once: true })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><AuthProvider><JourneyApp /></AuthProvider></React.StrictMode>,
 )
