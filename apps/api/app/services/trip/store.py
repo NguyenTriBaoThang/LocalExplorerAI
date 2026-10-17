@@ -2,7 +2,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.trip_entities import Trip as TripRow, TripItinerary, TripMessage
+from app.models.trip_entities import Trip as TripRow, TripItinerary, TripMessage, TripProposal
 from app.services.trip.domain import Hub, Itinerary, Trip
 from app.services.trip.places import get_places, list_destinations
 
@@ -16,19 +16,20 @@ def hub_for(dest: dict, trip: Trip) -> Hub | None:
     return Hub.model_validate(h) if h else None
 
 
-def save_itinerary(db: Session, trip_id: int, itinerary: dict, places: dict) -> int:
+def save_itinerary(db: Session, trip_id: int, itinerary: dict, places: dict, commit: bool = True) -> int:
     """Lưu một version Itinerary mới (bất biến) và trả số version."""
     # Row lock serialises concurrent saves on Postgres; SQLite ignores FOR UPDATE (it locks the whole file).
     db.execute(select(TripRow.id).where(TripRow.id == trip_id).with_for_update())
     version = (db.scalar(select(func.max(TripItinerary.version)).where(TripItinerary.trip_id == trip_id)) or 0) + 1
     db.add(TripItinerary(trip_id=trip_id, version=version, data={"itinerary": itinerary, "places": places}))
-    db.commit()
+    db.commit() if commit else db.flush()
     return version
 
 
-def log_message(db: Session, trip_id: int, role: str, text: str, version: int | None = None) -> None:
+def log_message(db: Session, trip_id: int, role: str, text: str, version: int | None = None,
+                commit: bool = True) -> None:
     db.add(TripMessage(trip_id=trip_id, role=role, text=text, version=version))
-    db.commit()
+    db.commit() if commit else db.flush()
 
 
 def load_itinerary(db: Session, trip_id: int, version: int | None = None) -> tuple[int, Itinerary, dict] | None:
@@ -67,3 +68,20 @@ def list_trips(db: Session, user_id: str) -> list[dict]:
     rows = db.scalars(select(TripRow).where(TripRow.user_id == user_id).order_by(TripRow.id.desc()))
     return [{"id": r.id, "spec": r.spec, "created_at": r.created_at, "destination_name": names.get(r.spec.get("destination"))}
             for r in rows]
+
+
+def set_pin(db: Session, row: TripRow, place_id: int, pinned: bool) -> list[int]:
+    # Reassign (not mutate) so the JSON column registers the change.
+    row.pinned_place_ids = [p for p in row.pinned_place_ids or [] if p != place_id] + ([place_id] if pinned else [])
+    db.commit()
+    return row.pinned_place_ids
+
+
+def messages(db: Session, trip_id: int) -> list[dict]:
+    return [{"role": m.role, "text": m.text, "version": m.version, "created_at": m.created_at}
+            for m in db.scalars(select(TripMessage).where(TripMessage.trip_id == trip_id).order_by(TripMessage.id))]
+
+
+def locked_proposal(db: Session, trip_id: int, proposal_id: int) -> TripProposal | None:
+    return db.scalar(select(TripProposal).where(TripProposal.id == proposal_id, TripProposal.trip_id == trip_id)
+                     .with_for_update())
