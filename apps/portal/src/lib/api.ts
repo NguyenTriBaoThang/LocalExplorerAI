@@ -43,6 +43,10 @@ export function errorMessage(error: unknown, fallback = 'Đã có lỗi xảy ra
     }
     if (code && MESSAGES[code]) return MESSAGES[code]
     if (body?.error?.message) return body.error.message
+    const detail = (body as { detail?: unknown } | undefined)?.detail
+    if (typeof detail === 'string') return detail
+    if (error.code === 'ECONNABORTED') return 'Máy chủ mất quá nhiều thời gian phản hồi. Vui lòng thử lại.'
+    if ([502, 503, 504].includes(error.response?.status ?? 0)) return 'Dịch vụ tạm thời không phản hồi. Vui lòng thử lại sau.'
     if (!error.response) return 'Không kết nối được máy chủ.'
   }
   return fallback
