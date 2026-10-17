@@ -329,7 +329,7 @@ function TripWorkspace() {
   return (
     <>
       <div className="trip-workspace app-shell bg-stone-200 font-sans text-[var(--text-main)]">
-        <MapView center={center} searchPins={searchPins} itinerary={itinerary} places={places}
+        <MapView travelMode={current?.spec.travel_mode} center={center} searchPins={searchPins} itinerary={itinerary} places={places}
           selected={selected} onSelect={setSelected} padding={{ left, right }} pins={pins}
           onPin={tripId != null && version != null && !proposal && !busy && !viewingOld(version, latest) ? pin : undefined} />
         <Rail busy={busy} trips={trips} currentId={tripId} onNewTrip={tripId != null ? newTrip : undefined}

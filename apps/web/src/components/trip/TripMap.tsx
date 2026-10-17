@@ -1,3 +1,5 @@
+import { api } from '../../api/client'
+import { roadSegments } from './roadRoutes'
 import { GOONG_MAPTILES_KEY } from '../map/goongConfig'
 import { useEffect, useRef, useState } from 'react'
 import goongjs from '@goongmaps/goong-js'
@@ -10,7 +12,7 @@ import { createLandmarkLayer } from './landmarkLayer'
 
 const COLORS = ['#047857', '#b45309', '#2563eb', '#be123c', '#7c3aed', '#0f766e']
 const duration = (ms: number) => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms
-type Props = { center: [number, number]; searchPins: Place[]; itinerary: Itinerary | null; places: Record<string, Place>; selected: Selected; onSelect(s: Selected): void; padding: { left: number; right: number }; pins: number[]; onPin?(id: number, pinned: boolean): void }
+type Props = { travelMode?: string; center: [number, number]; searchPins: Place[]; itinerary: Itinerary | null; places: Record<string, Place>; selected: Selected; onSelect(s: Selected): void; padding: { left: number; right: number }; pins: number[]; onPin?(id: number, pinned: boolean): void }
 
 export default function TripMap(props: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -20,6 +22,9 @@ export default function TripMap(props: Props) {
   const [ready, setReady] = useState(false)
   const [tour, setTour] = useState<number | null>(null)
   const [error, setError] = useState('')
+  const [roadStatus, setRoadStatus] = useState('')
+  const roadCache = useRef(new Map<string, { at: number; coordinates: number[][] }>())
+  const profile = ['grab', 'o-to-rieng'].includes(props.travelMode ?? '') ? 'car' : 'motorcycle'
   const stop = () => { run.current++; setTour(null) }
   function fit() {
     const { itinerary, places, padding } = latest.current
@@ -60,13 +65,8 @@ export default function TripMap(props: Props) {
     stop()
     const m = map.current
     const markers: any[] = []
-    const features: any[] = []
     const { itinerary, places } = props
     itinerary?.days.forEach((d, day) => {
-      const pts = d.stops.map(s => places[s.place_id]).filter(Boolean)
-      const stay = itinerary.stay_place_id == null ? undefined : places[itinerary.stay_place_id]
-      const line = stay ? [stay, ...pts, stay] : pts
-      if (line.length > 1) features.push({ type: 'Feature', properties: { color: COLORS[day % COLORS.length] }, geometry: { type: 'LineString', coordinates: line.map(p => [p.lon, p.lat]) } })
       d.stops.forEach((s, index) => {
         const p = places[s.place_id]; if (!p) return
         const el = document.createElement('button'); el.type = 'button'; el.className = 'trip-pin'
@@ -79,16 +79,58 @@ export default function TripMap(props: Props) {
       const el = document.createElement('span'); el.className = 'trip-pin trip-pin--searching'; el.textContent = '•'; el.title = p.name
       markers.push(new goongjs.Marker(el).setLngLat([p.lon, p.lat]).addTo(m))
     })
-    const data = { type: 'FeatureCollection', features }
-    if (m.getSource('trip-routes')) m.getSource('trip-routes').setData(data)
-    else {
-      m.addSource('trip-routes', { type: 'geojson', data })
-      m.addLayer({ id: 'trip-routes-line', type: 'line', source: 'trip-routes', paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-dasharray': [2, 2] } })
-    }
     if (itinerary) fit()
     else m.flyTo({ center: props.center, zoom: 12.5, duration: duration(1000) })
     return () => markers.forEach(marker => marker.remove())
   }, [ready, props.itinerary, props.places, props.searchPins, props.center])
+  useEffect(() => {
+    if (!ready || !map.current) return
+    const m = map.current
+    const controller = new AbortController()
+    const features: any[] = []
+    const update = () => {
+      if (controller.signal.aborted) return
+      const data = { type: 'FeatureCollection', features: [...features] }
+      if (m.getSource('trip-routes')) m.getSource('trip-routes').setData(data)
+      else {
+        m.addSource('trip-routes', { type: 'geojson', data })
+        m.addLayer({ id: 'trip-routes-line', type: 'line', source: 'trip-routes',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': ['get', 'color'], 'line-width': 4, 'line-opacity': 0.85 } })
+      }
+    }
+    update()
+    const segments = roadSegments(props.itinerary, props.places)
+    let cursor = 0, completed = 0, failed = 0
+    setRoadStatus(segments.length ? 'Đang tải tuyến đường Goong…' : '')
+    async function worker() {
+      while (cursor < segments.length && !controller.signal.aborted) {
+        const { day, origin, destination } = segments[cursor++]
+        const key = `${profile}:${origin.lat},${origin.lon}:${destination.lat},${destination.lon}`
+        try {
+          const cached = roadCache.current.get(key)
+          let coordinates = cached && Date.now() - cached.at < 300000 ? cached.coordinates : null
+          if (!coordinates) {
+            const { data } = await api.post('/routing/road', { origin: { lat: origin.lat, lon: origin.lon },
+              destination: { lat: destination.lat, lon: destination.lon }, mode: profile }, { signal: controller.signal })
+            coordinates = data.coordinates as number[][]
+            if (roadCache.current.size > 256) roadCache.current.clear()
+            roadCache.current.set(key, { at: Date.now(), coordinates })
+          }
+          if (controller.signal.aborted) return
+          features.push({ type: 'Feature', properties: { color: COLORS[day % COLORS.length] },
+            geometry: { type: 'LineString', coordinates } })
+          update()
+        } catch { if (controller.signal.aborted) return; failed++ }
+        completed++
+        setRoadStatus(completed < segments.length ? `Đang tải tuyến đường ${completed}/${segments.length}…`
+          : failed ? `${failed}/${segments.length} chặng chưa lấy được đường đi; không vẽ nối thẳng thay thế.`
+          : 'Đã tải tuyến đường Goong theo tọa độ các điểm.')
+      }
+    }
+    void Promise.all(Array.from({ length: Math.min(3, segments.length) }, worker))
+    return () => controller.abort()
+  }, [ready, props.itinerary, props.places, profile])
   const selectedId = selectedPlace(props.itinerary, props.selected)
   const selected = selectedId == null ? undefined : props.places[selectedId]
   useEffect(() => {
@@ -111,7 +153,7 @@ export default function TripMap(props: Props) {
     <div ref={container} className="trip-map-surface" />
     {error && <p role="status" className="trip-map-notice">{error}</p>}
     <div className="trip-map-controls">
-      <small>Đường nét đứt nối thứ tự điểm, không phải chỉ dẫn đường bộ. Giờ và giá theo dữ liệu tham khảo.</small>
+      <small>{roadStatus || 'Chọn lịch trình để xem đường đi.'} Tuyến {profile === 'car' ? 'ô tô' : 'xe máy'}, không phải chỉ dẫn đi bộ. Thời gian lịch trình vẫn là ước tính; không phải giao thông trực tiếp.</small>
       {props.itinerary && <button className="btn-secondary-3d" onClick={tour == null ? startTour : stop} disabled={!ready}>
         {tour == null ? '▶ Xem hành trình' : `■ Dừng · Ngày ${(tourPoint?.day ?? 0) + 1} · Điểm ${tour + 1} · ${selected?.name ?? ''}`}
       </button>}

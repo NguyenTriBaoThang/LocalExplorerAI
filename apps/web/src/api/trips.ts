@@ -199,7 +199,7 @@ export const signed = (n: number, unit: (x: number) => string) =>
   n === 0 ? 'như cũ' : (n > 0 ? '+' : '−') + unit(Math.abs(n))
 
 export type TripSummary = {
-  id: number; spec: { destination: string; days: number }; created_at: string; destination_name: string | null
+  id: number; spec: { destination: string; days: number; travel_mode?: string }; created_at: string; destination_name: string | null
 }
 export type TripView = {
   trip_id: number; trip: { budget: number }; center: [number, number]; version: number | null
