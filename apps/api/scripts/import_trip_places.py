@@ -107,4 +107,4 @@ if __name__ == "__main__":
 
     with SessionLocal() as db:
         print(import_file(db, sys.argv[1] if len(sys.argv) > 1 else "/data/sai_gon_places.json",
-                          lambda texts: llm.embed(db, texts)))
+                          lambda texts: llm.embed(db, texts, wait_on_rate_limit=True)))
