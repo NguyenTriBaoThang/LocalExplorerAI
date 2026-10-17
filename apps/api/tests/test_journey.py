@@ -37,7 +37,7 @@ def test_offline_money_never_treats_per_person_as_total():
 
 def test_landmark_link_requires_spatial_agreement_and_cannot_publish_unsourced_description(client, db_session, sample_experience, monkeypatch):
     poi = sample_experience.poi
-    monkeypatch.setattr(models_3d, '_read_calibrations', lambda: {
+    monkeypatch.setattr(models_3d, '_read_calibrations', lambda db=None: {
         'matched': model_for(poi),
         'wrong': model_for(poi, latitude=15.877, longitude=108.326, poi_id=poi.id),
     })
@@ -81,7 +81,7 @@ def test_verified_journey_links_sources_selects_experience_and_plans_return_leg(
     slot.confirmed_at = now - timedelta(hours=1)
     slot.expires_at = now + timedelta(days=1)
     db_session.commit()
-    monkeypatch.setattr(models_3d, '_read_calibrations', lambda: {'test': model_for(poi)})
+    monkeypatch.setattr(models_3d, '_read_calibrations', lambda db=None: {'test': model_for(poi)})
     context = client.get('/api/journey/landmarks/test').json()
     assert context['verified'] and context['sources'][0]['observed_at']
     assert context['description'] is None  # Description is not covered by approved evidence.
