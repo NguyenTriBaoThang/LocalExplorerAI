@@ -388,3 +388,5 @@ export type AdminCustomerHistory = {
   behavior_history_visible: boolean
   limit: number
 }
+
+export type SiteSettings = { site_announcement: string; maintenance_mode: boolean }

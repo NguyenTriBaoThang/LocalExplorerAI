@@ -40,7 +40,10 @@ export function GuidesPage() {
       {articles === null ? (
         <div className="loading-state-3d"><span className="loader-orbit" /></div>
       ) : visible.length === 0 ? (
-        <p className="review-text" style={{ marginTop: 32 }}>{vi ? 'Chưa có bài viết nào.' : 'No guides yet.'}</p>
+        <p className="review-text" style={{ marginTop: 32 }}>
+          {vi ? 'Chưa có bài viết nào. Trong lúc chờ, bạn có thể ' : 'No guides yet. Meanwhile, you can '}
+          <Link to="/places" style={{ textDecoration: 'underline' }}>{vi ? 'khám phá các địa điểm' : 'browse the places'}</Link>.
+        </p>
       ) : (
         <div className="content-grid" style={{ marginTop: 28 }}>{visible.map((article) => <ArticleCard key={article.id} article={article} />)}</div>
       )}

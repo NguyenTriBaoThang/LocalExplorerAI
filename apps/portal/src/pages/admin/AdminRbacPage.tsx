@@ -12,7 +12,7 @@ const GROUPS: Record<string, string> = {
 }
 const LABELS: Record<string, string> = {
   'recommendations:use': 'Quản lý đồng ý và tương tác gợi ý của mình',
-  'account:read': 'Xem hồ sơ cá nhân', 'account:update': 'Sửa hồ sơ cá nhân', 'account:password': 'Đổi mật khẩu', 'account:sessions': 'Xem & đăng xuất thiết bị',
+  'account:read': 'Xem hồ sơ cá nhân', 'account:update': 'Sửa hồ sơ cá nhân', 'account:password': 'Đổi mật khẩu', 'account:sessions': 'Xem & đăng xuất thiết bị', 'account:mfa': 'Quản lý xác thực hai lớp',
   'itinerary:plan': 'Tạo lịch trình', 'itinerary:read': 'Xem lịch trình', 'itinerary:list': 'Danh sách lịch trình của mình', 'itinerary:compare': 'So sánh lịch trình',
   'itinerary:versions': 'Lịch sử phiên bản lịch trình', 'itinerary:share': 'Chia sẻ lịch trình', 'itinerary:feedback': 'Gửi đánh giá lịch trình',
   'notification:read': 'Xem thông báo hủy slot', 'chat:use': 'Dùng AI Concierge', 'replan:advise': 'Xin gợi ý điều chỉnh lịch trình', 'replan:accept': 'Chấp nhận điều chỉnh',
