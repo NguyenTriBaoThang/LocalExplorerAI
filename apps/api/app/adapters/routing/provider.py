@@ -57,4 +57,7 @@ class MockRoutingProvider:
             distance_m, duration_min, provider="mock", is_realtime=False,
             eta_source="Mock straight-line estimate", calculated_at=now,
             valid_until=now + timedelta(minutes=5),
+            # The demo is explicitly a straight segment, not a road route.
+            # Supplying its endpoints lets the itinerary map render the route.
+            geometry=[origin, destination],
         )

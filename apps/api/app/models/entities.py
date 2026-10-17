@@ -490,6 +490,52 @@ class Feedback(Base):
     itinerary: Mapped[Itinerary] = relationship(back_populates="feedbacks")
 
 
+class RecommendationConsent(Base):
+    """Separate, revocable choices for personalization and model-training use."""
+
+    __tablename__ = "recommendation_consents"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    personalization_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    model_training_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    admin_history_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    consent_version: Mapped[str] = mapped_column(String(40), default="behavior-v2", nullable=False)
+    consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class RecommendationInteraction(Base):
+    """Consent-gated impressions and selections used to prepare future ranking data."""
+
+    __tablename__ = "recommendation_interactions"
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ('impression', 'selected', 'dismissed')",
+            name="ck_recommendation_interactions_event_type",
+        ),
+        CheckConstraint("position IS NULL OR position >= 0", name="ck_recommendation_interactions_position"),
+        Index("ix_recommendation_interactions_user_created", "user_id", "created_at"),
+        Index("ix_recommendation_interactions_request", "request_id"),
+        Index("ix_recommendation_interactions_training", "model_training_eligible", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    experience_id: Mapped[str | None] = mapped_column(
+        ForeignKey("experiences.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    context_snapshot: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict, nullable=False)
+    candidate_snapshot: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict, nullable=False)
+    personalization_eligible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    model_training_eligible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    admin_history_eligible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    consent_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
 class Evidence(Base):
     __tablename__ = "evidence"
 

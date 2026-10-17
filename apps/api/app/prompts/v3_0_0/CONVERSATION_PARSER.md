@@ -10,3 +10,4 @@ Rules:
 - Normalize the four intents: `thủ_công`, `ẩm_thực`, `văn_hóa`, and `thư_giãn`. Weights must be in [0,1] and sum to 1. If the traveler states no preference, use a balanced 0.25 for each intent; this is a default, not a statement made by the traveler.
 - Set `travel_mode` according to the traveler's stated choice; if absent, use `car` as a technical default and do not treat it as a confirmed preference.
 - Return exactly one JSON object matching the supplied schema, with no Markdown or preamble.
+- If `previous_constraints` is provided, preserve values not changed by the latest message. Explicit corrections take priority. Never infer preferences or budget from landmark content.

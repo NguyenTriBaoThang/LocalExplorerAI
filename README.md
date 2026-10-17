@@ -886,3 +886,7 @@ Flood report data (data/raw/hcmc_flood_reports_2002_2026.csv): CC BY-NC 4.0 — 
   <p>Built with ❤️ for Ho Chi Minh City</p>
   <p><a href="https://nguyentribaothang.github.io/LocalExplorerAI/">Technical Documentation</a> · <a href="./DEMO_SCRIPT.md">Demo Script</a> · <a href="./ARCHITECTURE.md">Architecture</a></p>
 </div>
+
+## Local integration from MLAI_DA
+
+The journey flow, consent-based recommendations, and customer history have been integrated with the separate portal and RBAC. See [the integration notes](docs/mlai-da-integration.md) for scope, validation, and migration details.

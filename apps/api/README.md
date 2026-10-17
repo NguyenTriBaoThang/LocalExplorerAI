@@ -82,7 +82,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 ### Bước 4: Chạy Migration & Nạp dữ liệu mô phỏng
 ```powershell
-# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất (0010_place_import_staging)
+# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất
 alembic upgrade head
 
 # Nạp dữ liệu mô phỏng ban đầu và tài khoản thử nghiệm

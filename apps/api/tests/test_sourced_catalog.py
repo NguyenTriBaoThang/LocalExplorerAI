@@ -8,6 +8,25 @@ from app.auth.passwords import hash_password
 from tests.helpers import sign_in
 
 
+def test_citywide_listing_has_detail_outside_pilot(client, db_session, sample_experience):
+    poi = sample_experience.poi
+    poi.latitude, poi.longitude = 10.79, 106.68
+    poi.opening_hours = '09:00–17:00'
+    poi.ticket_info = 'Giá tham khảo từ dữ liệu cũ'
+    poi.source_url = 'https://example.org/place'
+    poi.details = {'venue_facts': {'public_admission_fee_vnd': 0}}
+    db_session.commit()
+    assert poi.id in {row['id'] for row in client.get('/api/pois?scope=citywide').json()}
+    detail = client.get(f'/api/pois/{poi.id}')
+    assert detail.status_code == 200
+    assert detail.json()['source_url'] == poi.source_url
+    assert detail.json()['opening_hours'] == poi.opening_hours
+    assert detail.json()['details']['venue_facts']['public_admission_fee_vnd'] == 0
+    poi.verification_status = 'unverified'
+    db_session.commit()
+    assert client.get(f'/api/pois/{poi.id}').status_code == 404
+
+
 def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session, monkeypatch):
     provider = Provider(name="Source-backed studio", status="active")
     db_session.add(provider)
@@ -132,7 +151,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
 
     def fake_goong_request(_provider, path, params):
         assert path == "/v2/direction"
-        assert params["vehicle"] == "foot"
+        assert params["vehicle"] == "car"
         return {"status": "OK", "routes": [{"legs": [{
             "distance": {"value": 1_200}, "duration": {"value": 300},
         }]}]}
@@ -143,7 +162,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     sign_in(client, traveler)
     planned = client.post("/api/itineraries/plan", json={
         "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=110)).isoformat(),
-        "group_size": 2, "budget_vnd": 1000000, "transport_mode": "walking",
+        "group_size": 2, "budget_vnd": 1000000, "transport_mode": "car",
         "intent_weights": {"thủ_công": 1.0}, "locked_experience_ids": [experience_id],
         "origin_latitude": 10.76, "origin_longitude": 106.68,
         "destination_latitude": 10.78, "destination_longitude": 106.69,

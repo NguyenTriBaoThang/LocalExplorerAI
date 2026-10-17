@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import type {
-  AdminDashboard, AdminProvider, AdminProviderDetail, AdminUser, AdminUserDetail, AuthUser, Booking, Experience,
+  AdminCustomerHistory, AdminDashboard, AdminProvider, AdminProviderDetail, AdminUser, AdminUserDetail, AuthUser, Booking, Experience,
   AdminAnalytics, AdminPlace, Article, AuditLog, Banner, Collection, ExperienceDraft, ModerationQueue, PartnerAnalytics, PlaceDraft, Review, Page, PartnerApplication, Poi, PoiDraft, ProviderProfile, RbacMatrix, Role,
   MfaChallenge, MfaSetup, MfaStatus, ServiceAccount, SessionInfo,
 } from './types'
@@ -107,6 +107,8 @@ export const partnerApi = {
 }
 
 export const adminApi = {
+  customerHistory: async (id: string, limit = 40) =>
+    (await http.get<AdminCustomerHistory>(`/admin/users/${encodeURIComponent(id)}/history`, { params: { limit } })).data,
   dashboard: async () => (await http.get<AdminDashboard>('/admin/dashboard')).data,
   users: async (params: { q?: string; role?: Role | ''; active?: boolean | ''; limit: number; offset: number }) => {
     const clean = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== '' && value !== undefined))

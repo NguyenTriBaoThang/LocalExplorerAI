@@ -55,7 +55,7 @@ export function AdminLayout() {
           { title: 'Nội dung', items: [
             { to: '/admin/places', label: 'Địa điểm & Danh thắng', icon: MapPinned, perm: 'admin:places' },
             { to: '/admin/content', label: 'Nội dung website', icon: FileText, perm: 'admin:content' },
-            { to: '/admin/imports', label: 'Nhập địa điểm & Trùng lặp', icon: FileInput, perm: ['admin:place_import', 'admin:duplicates'] },
+            { to: '/admin/imports', label: 'Nhập liệu & Trùng lặp', icon: FileInput, perm: ['admin:place_import', 'admin:duplicates'] },
           ] },
           { title: 'Hệ thống', items: [
             { to: '/admin/operations', label: 'Vận hành', icon: Activity, perm: 'ops:read' },

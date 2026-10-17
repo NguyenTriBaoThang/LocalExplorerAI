@@ -14,7 +14,7 @@ def get_planner_service(db: Session = Depends(get_db)) -> PlannerService:
 
 def get_llm_provider(db: Session = Depends(get_db)) -> StructuredOutputProvider:
     try:
-        selected = (resolve_integration_value(db, "ai", "provider") or "openai").strip().lower()
+        selected = (resolve_integration_value(db, "ai", "provider") or settings.llm_provider).strip().lower()
     except IntegrationSecretConfigurationError:
         return NotConfiguredLLMProvider()
     if selected == "gemini":

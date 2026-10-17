@@ -1,0 +1,22 @@
+{
+  "feature_version": "fv_2026_v1",
+  "feature_names": [
+    "feat_tag_jaccard",
+    "feat_tag_overlap",
+    "feat_target_budget",
+    "feat_price_ratio",
+    "feat_price_abs_diff",
+    "feat_log_price",
+    "feat_history_tag_affinity",
+    "feat_history_price_affinity",
+    "feat_history_count_log",
+    "feat_distance_or_eta",
+    "feat_duration_min",
+    "feat_group_size",
+    "feat_is_indoor",
+    "feat_is_verified",
+    "feat_is_available",
+    "feat_hard_feasible",
+    "feat_budget_band_code"
+  ]
+}

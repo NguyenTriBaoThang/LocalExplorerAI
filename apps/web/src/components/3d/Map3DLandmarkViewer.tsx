@@ -17,7 +17,8 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  Crosshair
+  Crosshair,
+  ChevronDown,
 } from 'lucide-react'
 import { api } from '../../api/client'
 import { useAuth } from '../../auth'
@@ -182,6 +183,7 @@ export function Map3DLandmarkViewer({
   const cameraRef = useRef<THREE.Camera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const modelAnchorRef = useRef<THREE.Group | null>(null)
+  const modelRaycasterRef = useRef(new THREE.Raycaster())
   const calibrationRef = useRef<ModelCalibration>(fallbackCalibration)
 
   const [calibration, setCalibration] = useState<ModelCalibration>(fallbackCalibration)
@@ -195,6 +197,7 @@ export function Map3DLandmarkViewer({
   const [styleMode, setStyleMode] = useState<'streets' | 'dark'>('streets')
   const [saving, setSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const [modelCardVisible, setModelCardVisible] = useState(false)
 
   calibrationRef.current = calibration
   const dirty = JSON.stringify(calibration) !== JSON.stringify(saved)
@@ -344,6 +347,30 @@ export function Map3DLandmarkViewer({
     map.on('zoom', renderFrame)
     map.on('pitch', renderFrame)
     map.on('rotate', renderFrame)
+    const handleMapClick = (event: { point?: { x: number; y: number } }) => {
+      const model = modelAnchorRef.current
+      const camera = cameraRef.current
+      const canvas = threeCanvasRef.current
+      if (!model || !camera || !canvas || !event.point) {
+        setModelCardVisible(false)
+        return
+      }
+
+      const bounds = canvas.getBoundingClientRect()
+      const pointer = new THREE.Vector2(
+        (event.point.x / bounds.width) * 2 - 1,
+        -(event.point.y / bounds.height) * 2 + 1,
+      )
+      const raycaster = modelRaycasterRef.current
+      // The overlay uses a base THREE.Camera with Goong's combined view/model
+      // matrix, so build the ray from its inverse clip matrix directly.
+      const nearPoint = new THREE.Vector3(pointer.x, pointer.y, -1).applyMatrix4(camera.projectionMatrixInverse)
+      const farPoint = new THREE.Vector3(pointer.x, pointer.y, 1).applyMatrix4(camera.projectionMatrixInverse)
+      raycaster.set(nearPoint, farPoint.sub(nearPoint).normalize())
+      const hit = raycaster.intersectObject(model, true).length > 0
+      setModelCardVisible(hit)
+    }
+    map.on('click', handleMapClick)
     const resizeOverlay = () => {
       const canvas = threeCanvasRef.current
       const renderer = rendererRef.current
@@ -363,6 +390,7 @@ export function Map3DLandmarkViewer({
       map.off('zoom', renderFrame)
       map.off('pitch', renderFrame)
       map.off('rotate', renderFrame)
+      map.off('click', handleMapClick)
       map.remove()
       mapRef.current = null
     }
@@ -439,7 +467,12 @@ export function Map3DLandmarkViewer({
       },
       (err) => {
         if (cancelled) return
-        console.warn('3D GLB model file not present, activating procedural digital twin:', err)
+        console.warn('3D GLB model file could not be loaded:', err)
+        if (modelId !== 'nhathoducba') {
+          setLoading(false)
+          setLoadError('Không tải được mô hình của địa danh này. Hãy kiểm tra tệp GLB; hệ thống không thay bằng mô hình của địa danh khác.')
+          return
+        }
         const raw = createProceduralCathedralModel()
         const box = new THREE.Box3().setFromObject(raw)
         const size = box.getSize(new THREE.Vector3())
@@ -463,7 +496,7 @@ export function Map3DLandmarkViewer({
         }
 
         setLoading(false)
-        setLoadError(null)
+        setLoadError('Không tải được tệp GLB. Đang hiển thị hình học minh họa Nhà thờ Đức Bà, chưa được kiểm chứng về kiến trúc.')
         mapRef.current?.triggerRepaint()
       }
     )
@@ -957,33 +990,68 @@ export function Map3DLandmarkViewer({
       )}
 
       {/* Bottom Landmark Information Card */}
-      <div className="absolute bottom-4 left-4 z-20 max-w-sm bg-slate-900/90 border border-slate-800 backdrop-blur-md p-3.5 rounded-2xl shadow-xl text-slate-200">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-xl shrink-0 mt-0.5">
-            <MapPin size={18} />
+      <div className={`absolute bottom-3 left-3 right-3 z-20 overflow-y-auto rounded-2xl border border-slate-700/80 bg-slate-950/95 p-4 text-slate-200 shadow-2xl backdrop-blur-xl sm:left-4 sm:right-auto sm:w-[340px] lg:w-[330px] ${modelCardVisible ? 'max-h-[36vh] lg:inset-y-4 lg:bottom-4 lg:max-h-none' : 'max-h-24'}`}>
+        {modelCardVisible ? (
+          <>
+        <div className="flex items-start gap-3 border-b border-slate-800 pb-3">
+          <div className="mt-0.5 shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/15 p-2.5 text-emerald-300">
+            <MapPin size={19} />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-white">{calibration.display_name}</h4>
-              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">
-                GOONG 3D VERIFIED
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              {calibration.description ||
-                'Vương cung thánh đường Chính tòa Đức Mẹ Vô nhiễm Nguyên tội tại Công xã Paris, Quận 1.'}
+          <div className="min-w-0">
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300">Địa danh đang xem</span>
+            <h4 className="mt-1 text-sm font-bold leading-5 text-white">{calibration.display_name}</h4>
+            <p className="mt-1.5 text-[11px] leading-4 text-slate-400">
+              Mô hình minh họa từ danh mục 3D. Xem thông tin có nguồn và trạng thái liên kết trong khung khám phá.
             </p>
-            <div className="mt-2 flex items-center gap-3 text-xs text-slate-400 font-mono">
-              <span>
-                GPS: {calibration.latitude.toFixed(6)}, {calibration.longitude.toFixed(6)}
-              </span>
-              <span>•</span>
-              <span>Góc xoay: {calibration.heading.toFixed(1)}°</span>
-              <span>•</span>
-              <span>Cao: {calibration.scale.toFixed(0)}m</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModelCardVisible(false)}
+            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            aria-label="Thu gọn thông tin địa danh"
+            aria-expanded="true"
+            title="Thu gọn thông tin"
+          >
+            <ChevronDown size={17} />
+          </button>
+        </div>
+
+        <div className="space-y-3 py-3">
+          <div>
+            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Vị trí mô hình</p>
+            <p className="font-mono text-[11px] text-slate-200">{calibration.latitude.toFixed(6)}, {calibration.longitude.toFixed(6)}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
+              <p className="text-[10px] text-slate-500">Hướng đặt</p>
+              <p className="mt-1 text-xs font-semibold text-white">{calibration.heading.toFixed(1)}°</p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
+              <p className="text-[10px] text-slate-500">Chiều cao mô hình</p>
+              <p className="mt-1 text-xs font-semibold text-white">{calibration.scale.toFixed(0)} m</p>
             </div>
           </div>
         </div>
+
+        <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
+          <p className="text-[10px] font-semibold text-amber-200">Lưu ý về dữ liệu</p>
+          <p className="mt-1 text-[10px] leading-4 text-slate-400">
+            Đây là thông số hiển thị và căn chỉnh mô hình 3D. Giờ mở cửa, giá vé và thông tin tham quan cần được đối chiếu với nguồn địa phương.
+          </p>
+        </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300"><MapPin size={18} /></span>
+            <button type="button" onClick={() => setModelCardVisible(true)} className="min-w-0 flex-1 text-left" aria-label="Mở thông tin địa danh" aria-expanded="false">
+              <p className="text-xs font-semibold text-white">Chạm vào mô hình 3D</p>
+              <p className="mt-1 text-[10px] leading-4 text-slate-400">Nhấp lên công trình để mở thẻ thông tin địa danh.</p>
+            </button>
+            <button type="button" onClick={() => setModelCardVisible(true)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-400/30 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-300 transition hover:bg-emerald-400/10" aria-label="Mở thông tin địa danh" aria-expanded="false">
+              Thông tin <ChevronDown size={13} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

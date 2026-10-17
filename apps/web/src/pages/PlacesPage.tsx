@@ -6,23 +6,53 @@ import {
   MapPin,
   Search,
   X,
-  ExternalLink,
   ShieldCheck,
   Building2,
 } from 'lucide-react'
 import { getPOIs } from '../api/client'
+import { useTranslation } from '../i18n'
 import type { POI } from '../types'
 
+// The catalogue mixes the older English intents (food, culture, ...) with the Vietnamese OSM groups (an-uong, tham-quan, ...);
+// each tab lists every category id it covers so no place falls outside the filter.
 const CATEGORY_TABS = [
-  { id: 'all', label: 'Tất cả', icon: '✨' },
-  { id: 'food', label: 'Ẩm thực', icon: '🍜' },
-  { id: 'culture', label: 'Di sản & Văn hóa', icon: '🏛️' },
-  { id: 'handicraft', label: 'Thủ công', icon: '🎨' },
-  { id: 'nature', label: 'Thiên nhiên', icon: '🌿' },
-  { id: 'relaxation', label: 'Thư giãn', icon: '🍵' },
+  { id: 'all', icon: '✨', ids: [] as string[] },
+  { id: 'an-uong', icon: '🍜', ids: ['an-uong', 'food'] },
+  { id: 'cafe', icon: '☕', ids: ['cafe'] },
+  { id: 'tham-quan', icon: '🏛️', ids: ['tham-quan', 'culture', 'heritage', 'local_life'] },
+  { id: 'giai-tri', icon: '🎭', ids: ['giai-tri'] },
+  { id: 'cho-o', icon: '🏨', ids: ['cho-o', 'accommodation'] },
+  { id: 'handicraft', icon: '🎨', ids: ['handicraft'] },
+  { id: 'nature', icon: '🌿', ids: ['nature'] },
+  { id: 'relaxation', icon: '🍵', ids: ['relaxation'] },
 ]
 
+const CATEGORY_META: Record<string, { icon: string }> = {
+  'an-uong': { icon: '🍜' },
+  food: { icon: '🍜' },
+  cafe: { icon: '☕' },
+  'tham-quan': { icon: '🏛️' },
+  culture: { icon: '🏛️' },
+  heritage: { icon: '🏛️' },
+  local_life: { icon: '🏛️' },
+  accommodation: { icon: '🏨' },
+  'giai-tri': { icon: '🎭' },
+  'cho-o': { icon: '🏨' },
+  handicraft: { icon: '🎨' },
+  nature: { icon: '🌿' },
+  relaxation: { icon: '🍵' },
+}
+
+/** Imported descriptions say "thuộc nhóm an-uong"; show the category's label instead of its slug. */
+const humanizeDescription = (text: string, label: (slug: string) => string, group: string) =>
+  text.replace(/thuộc nhóm ([a-z-]+)/g, (match, slug: string) => (CATEGORY_META[slug] ? `${group} ${label(slug).toLowerCase()}` : match))
+
+const inTab = (category: string, tabId: string) =>
+  tabId === 'all' || (CATEGORY_TABS.find((tab) => tab.id === tabId)?.ids ?? []).includes(category)
+
 export function PlacesPage() {
+  const { t } = useTranslation()
+  const catLabel = (slug: string) => t(`places.meta.${({ heritage: 'culture', local_life: 'tham-quan', accommodation: 'cho-o' } as Record<string, string>)[slug] ?? slug}`)
   const [places, setPlaces] = useState<POI[]>([])
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -30,16 +60,16 @@ export function PlacesPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getPOIs()
+    getPOIs('citywide')
       .then(setPlaces)
-      .catch(() => setError('Không tải được danh mục địa điểm. Hãy thử tải lại trang.'))
+      .catch(() => setError(t('places.loadError')))
       .finally(() => setLoading(false))
   }, [])
 
   const filteredPlaces = useMemo(() => {
     let list = places
     if (selectedCategory !== 'all') {
-      list = list.filter((p) => p.category === selectedCategory)
+      list = list.filter((p) => inTab(p.category, selectedCategory))
     }
     const val = query.trim().toLocaleLowerCase('vi')
     if (val) {
@@ -52,57 +82,40 @@ export function PlacesPage() {
     return list
   }, [places, selectedCategory, query])
 
-  const categoryMeta: Record<string, { label: string; icon: string }> = {
-    food: { label: 'Ẩm thực', icon: '🍜' },
-    culture: { label: 'Di sản & Văn hóa', icon: '🏛️' },
-    handicraft: { label: 'Thủ công mỹ nghệ', icon: '🎨' },
-    nature: { label: 'Sinh thái & Tự nhiên', icon: '🌿' },
-    relaxation: { label: 'Thư giãn & Wellness', icon: '🍵' },
-  }
-
   return (
     <div className="page-wrap places-page">
       {/* Hero Header */}
       <header className="places-page-header">
         <div className="flex items-center gap-2 mb-2">
           <span className="eyebrow-3d">
-            <span className="eyebrow-dot" /> DANH MỤC ĐỊA ĐIỂM SÀI GÒN
+            <span className="eyebrow-dot" /> {t('places.eyebrow')}
           </span>
           <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-            Pilot Quận 1
+            {t('places.pilot')}
           </span>
         </div>
 
         <h1 className="page-heading-3d">
-          Khám phá <em>Địa Điểm & Không Gian</em> Văn Hóa
+          {t('places.titleA')} <em>{t('places.titleB')}</em> {t('places.titleC')}
         </h1>
         <p className="page-subtext-3d">
-          Khám phá 124 điểm đến đặc sắc tại trung tâm Sài Gòn. Dữ liệu chuẩn xác từ OpenStreetMap, tích hợp định vị không gian và khung giờ thực.
+          {places.length > 0 ? t('places.sub', { count: places.length }) : t('places.subNoCount')}
         </p>
 
         {/* Live Metrics Row */}
         <div className="places-stats-row">
           <div className="places-stat-pill">
             <Building2 size={13} className="text-emerald-400" />
-            <span><strong>{places.length || 124}</strong> địa điểm catalog</span>
+            <span><strong>{places.length || 0}</strong> {t('places.statCatalog')}</span>
           </div>
           <div className="places-stat-pill">
             <Compass size={13} className="text-cyan-400" />
-            <span><strong>100%</strong> tọa độ GPS</span>
+            <span><strong>{places.filter((place) => place.details?.catalog_mode === 'hcmc_catalog_candidate').length}</strong> {t('places.statCandidates')}</span>
           </div>
           <div className="places-stat-pill">
             <ShieldCheck size={13} className="text-amber-400" />
-            <span>Bảo vệ bản quyền ODbL-1.0</span>
+            <span>{t('places.statLicense')}</span>
           </div>
-          <a
-            href="https://www.openstreetmap.org/copyright"
-            target="_blank"
-            rel="noreferrer"
-            className="places-stat-pill places-stat-link"
-          >
-            <span>© OpenStreetMap contributors</span>
-            <ExternalLink size={11} />
-          </a>
         </div>
       </header>
 
@@ -112,9 +125,8 @@ export function PlacesPage() {
         <div className="places-category-tabs">
           {CATEGORY_TABS.map((cat) => {
             const active = selectedCategory === cat.id
-            const count = cat.id === 'all'
-              ? places.length
-              : places.filter((p) => p.category === cat.id).length
+            const count = places.filter((p) => inTab(p.category, cat.id)).length
+            if (cat.id !== 'all' && count === 0 && !active) return null
 
             return (
               <button
@@ -124,7 +136,7 @@ export function PlacesPage() {
                 className={`places-cat-btn ${active ? 'active' : ''}`}
               >
                 <span>{cat.icon}</span>
-                <span>{cat.label}</span>
+                <span>{t(`places.cat.${cat.id}`)}</span>
                 <span className="cat-count-badge">{count}</span>
               </button>
             )
@@ -138,14 +150,14 @@ export function PlacesPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo tên địa điểm, địa chỉ, loại hình…"
+            placeholder={t('places.searchPlaceholder')}
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
               className="search-clear-btn"
-              title="Xóa tìm kiếm"
+              title={t('places.searchClear')} aria-label={t('places.searchClear')}
             >
               <X size={15} />
             </button>
@@ -158,9 +170,9 @@ export function PlacesPage() {
       {/* Results Header */}
       <div className="places-results-meta">
         <span>
-          Hiển thị <strong>{filteredPlaces.length}</strong> địa điểm
-          {selectedCategory !== 'all' && ` · ${CATEGORY_TABS.find((c) => c.id === selectedCategory)?.label}`}
-          {query && ` cho từ khóa "${query}"`}
+          {t('places.showing', { count: filteredPlaces.length })}
+          {selectedCategory !== 'all' && ` · ${t(`places.cat.${selectedCategory}`)}`}
+          {query && ` ${t('places.forKeyword', { query })}`}
         </span>
         {query && (
           <button
@@ -168,7 +180,7 @@ export function PlacesPage() {
             onClick={() => { setQuery(''); setSelectedCategory('all') }}
             className="text-xs text-emerald-400 hover:underline"
           >
-            Đặt lại bộ lọc
+            {t('places.reset')}
           </button>
         )}
       </div>
@@ -176,7 +188,7 @@ export function PlacesPage() {
       {loading ? (
         <div className="places-loading-box">
           <div className="places-spinner" />
-          <p>Đang tải danh mục địa điểm Sài Gòn…</p>
+          <p>{t('places.loading')}</p>
         </div>
       ) : filteredPlaces.length > 0 ? (
         <div className="places-grid-elevated">
@@ -189,15 +201,19 @@ export function PlacesPage() {
               place.image_urls?.[0] ||
               null
 
-            const catInfo = categoryMeta[place.category] || { label: place.category, icon: '📍' }
+            const catInfo = {
+              icon: CATEGORY_META[place.category]?.icon ?? '📍',
+              label: CATEGORY_META[place.category] ? catLabel(place.category) : place.category,
+            }
 
             return (
               <Link
                 className="place-card-elevated group"
+                data-category={place.category}
                 to={`/places/${encodeURIComponent(place.id)}`}
                 key={place.id}
               >
-                <div className="place-card-photo-box">
+                <div className="place-card-photo-box" data-category={place.category} data-has-photo={photoUrl ? 'true' : 'false'}>
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -207,6 +223,7 @@ export function PlacesPage() {
                       onError={(e) => {
                         const img = e.currentTarget
                         img.style.display = 'none'
+                        img.parentElement?.setAttribute('data-has-photo', 'false')
                         const fallback = img.parentElement?.querySelector('.place-card-fallback') as HTMLElement
                         if (fallback) fallback.style.display = 'flex'
                       }}
@@ -222,6 +239,11 @@ export function PlacesPage() {
                   </div>
 
                   <div className="place-card-gradient-overlay" />
+                  {sourcePhoto && (
+                    <span className="card-photo-credit" title={`${sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · ${sourcePhoto.license}`}>
+                      {sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · {sourcePhoto.license}
+                    </span>
+                  )}
 
                   {/* Top Badges */}
                   <div className="place-card-top-badges">
@@ -236,11 +258,16 @@ export function PlacesPage() {
                   {/* Bottom Badges */}
                   <div className="place-card-bottom-badges">
                     <span className="place-district-pill">
-                      <MapPin size={11} /> {place.district || 'Quận 1, TP.HCM'}
+                      <MapPin size={11} /> {place.district || t('places.defaultDistrict')}
                     </span>
                     {place.verification_status === 'verified' && (
                       <span className="place-verified-pill">
-                        <ShieldCheck size={11} /> Đã duyệt
+                        <ShieldCheck size={11} /> {t('places.verified')}
+                      </span>
+                    )}
+                    {place.details?.catalog_mode === 'hcmc_catalog_candidate' && (
+                      <span className="place-verified-pill place-candidate-pill" title={t('places.candidateHint')}>
+                        {t('places.candidate')}
                       </span>
                     )}
                   </div>
@@ -252,19 +279,19 @@ export function PlacesPage() {
                   </h3>
 
                   <p className="place-card-address">
-                    <MapPin size={12} className="shrink-0 text-emerald-400 mt-0.5" />
-                    <span>{place.address || 'Trung tâm TP. Hồ Chí Minh'}</span>
+                    <MapPin size={12} className="place-address-icon shrink-0 mt-0.5" />
+                    <span>{place.address || t('places.defaultAddress')}</span>
                   </p>
 
                   {place.description && (
                     <p className="place-card-desc">
-                      {place.description}
+                      {humanizeDescription(place.description, catLabel, t('places.group'))}
                     </p>
                   )}
 
                   <div className="place-card-footer">
                     <span className="place-card-cta">
-                      Xem chi tiết địa điểm <ArrowUpRight size={13} />
+                      {t('places.viewDetail')} <ArrowUpRight size={13} />
                     </span>
                   </div>
                 </div>
@@ -277,14 +304,14 @@ export function PlacesPage() {
           <div className="empty-icon-wrap">
             <Search size={32} />
           </div>
-          <h3>Không tìm thấy địa điểm phù hợp</h3>
-          <p>Hãy thử tìm kiếm với từ khóa khác hoặc chuyển sang danh mục "Tất cả".</p>
+          <h3>{t('places.emptyTitle')}</h3>
+          <p>{t('places.emptyHint')}</p>
           <button
             type="button"
             onClick={() => { setQuery(''); setSelectedCategory('all') }}
             className="btn-reset-search"
           >
-            Xem tất cả {places.length} địa điểm
+            {t('places.viewAll', { count: places.length })}
           </button>
         </div>
       )}

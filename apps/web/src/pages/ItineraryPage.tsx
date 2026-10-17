@@ -968,13 +968,13 @@ export function ItineraryPage() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             pointSourceLabel={locale === 'en' ? 'Itinerary location' : 'Địa điểm trong lịch trình'}
-            mapFooterLabel={locale === 'en' ? 'Trip endpoints, stops, and provider route geometry' : 'Điểm đầu-cuối, điểm dừng và hình học tuyến từ nhà cung cấp'}
+            mapFooterLabel={itinerary.routes?.some((leg) => leg.provider === 'mock') ? (locale === 'en' ? 'Demo straight-line routes; not navigation instructions' : 'Tuyến đường thẳng mô phỏng; không dùng để chỉ đường thực tế') : (locale === 'en' ? 'Trip endpoints, stops, and provider route geometry' : 'Điểm đầu-cuối, điểm dừng và hình học tuyến từ nhà cung cấp')}
             className="itinerary-map-container"
           />
 
           <div className="map-route-caption">
             <span className="route-dot-active" />
-            <span>{t('itinerary.routeMatrixNote')}</span>
+            <span>{itinerary.routes?.some((leg) => leg.provider === 'mock') ? (locale === 'en' ? 'Simulated routes and ETA for testing the itinerary flow.' : 'Tuyến và thời gian di chuyển mô phỏng để thử luồng lập lịch.') : t('itinerary.routeMatrixNote')}</span>
           </div>
 
           {itinerary.routes && itinerary.routes.length > 0 && (

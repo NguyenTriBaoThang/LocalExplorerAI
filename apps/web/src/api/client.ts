@@ -69,8 +69,8 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
-export async function sendChatMessage(message: string, conversation_id: string): Promise<ChatReply> {
-  const { data } = await api.post<ChatReply>('/chat/message', { message, conversation_id })
+export async function sendChatMessage(message: string, conversation_id: string, context: { previous_constraints?: ChatReply['structured_constraints'] | null; model_id?: string } = {}): Promise<ChatReply> {
+  const { data } = await api.post<ChatReply>('/chat/message', { message, conversation_id, ...context }, { timeout: 65000 })
   return data
 }
 
@@ -87,6 +87,88 @@ export async function getGoogleOAuthStatus(): Promise<GoogleOAuthStatus> {
 export async function updateProfile(display_name: string, phone: string | null): Promise<AuthUser> {
   const { data } = await api.patch<AuthUser>('/auth/me', { display_name, phone })
   return data
+}
+
+export type RecommendationConsent = {
+  personalization_enabled: boolean
+  model_training_enabled: boolean
+  admin_history_enabled: boolean
+  consent_version: string
+}
+
+export type BehaviorExperimentStatus = {
+  available: boolean
+  model_version: string | null
+  dataset_status: string
+  deployment_eligible: false
+  warning: string
+}
+
+export type BehaviorExperimentRankResult = {
+  model_version: string | null
+  dataset_status: string
+  warning: string
+  score_type: 'relative_ranking_score_not_probability'
+  ranked_candidates: Array<{ experience_id: string; score: number }>
+}
+
+export type RecommendationInteraction = {
+  event_id: string
+  request_id: string
+  experience_id: string
+  event_type: 'impression' | 'selected' | 'dismissed'
+  position?: number
+  context: {
+    intent_tags: string[]
+    budget_band: 'under_500k' | '500k_1m' | '1m_2m' | 'over_2m'
+    group_size: number
+    indoor_preference: 'all' | 'indoor' | 'outdoor'
+    time_bucket: 'morning' | 'afternoon' | 'evening'
+  }
+}
+
+export async function getRecommendationConsent(): Promise<RecommendationConsent> {
+  const { data } = await api.get<RecommendationConsent>('/recommendations/consent')
+  return data
+}
+
+export async function getBehaviorExperimentStatus(): Promise<BehaviorExperimentStatus> {
+  const { data } = await api.get<BehaviorExperimentStatus>('/recommendations/behavior-experiment/status')
+  return data
+}
+
+export async function rankBehaviorExperiences(payload: {
+  experience_ids: string[]
+  intent_tags: string[]
+  budget_band: RecommendationInteraction['context']['budget_band'] & string
+  group_size: number
+  center_latitude?: number
+  center_longitude?: number
+}): Promise<BehaviorExperimentRankResult> {
+  const { data } = await api.post<BehaviorExperimentRankResult>(
+    '/recommendations/behavior-experiment/rank',
+    payload,
+  )
+  return data
+}
+
+export async function updateRecommendationConsent(
+  personalization_enabled: boolean,
+  model_training_enabled: boolean,
+  admin_history_enabled: boolean,
+): Promise<RecommendationConsent> {
+  const { data } = await api.put<RecommendationConsent>('/recommendations/consent', {
+    personalization_enabled,
+    model_training_enabled,
+    admin_history_enabled,
+    consent_version: 'behavior-v2',
+  })
+  return data
+}
+
+export async function recordRecommendationInteractions(events: RecommendationInteraction[]): Promise<void> {
+  if (!events.length) return
+  await api.post('/recommendations/interactions', { events })
 }
 
 export async function changePassword(current_password: string | null, new_password: string): Promise<void> {
@@ -222,8 +304,8 @@ export async function getExperiences(params?: Record<string, string | number | b
   return data
 }
 
-export async function getPOIs(): Promise<POI[]> {
-  const { data } = await api.get<POI[]>('/pois')
+export async function getPOIs(scope: 'pilot' | 'citywide' = 'pilot', verifiedOnly = false): Promise<POI[]> {
+  const { data } = await api.get<POI[]>('/pois', { params: { scope, verified_only: verifiedOnly } })
   return data
 }
 
@@ -232,7 +314,12 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export async function createItinerary(payload: {
+export type PlanPayload = {
+  planning_style?: string
+  excluded_experience_ids?: string[]
+  preferred_slot_ids?: string[]
+  require_verified?: boolean
+  routing_mode?: 'configured' | 'demo'
   start_at: string
   end_at: string
   group_size: number
@@ -247,8 +334,18 @@ export async function createItinerary(payload: {
   destination_latitude?: number
   destination_longitude?: number
   destination_label?: string
-}): Promise<Itinerary> {
-  const { data } = await api.post<Itinerary>('/itineraries/plan', payload)
+}
+
+export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanPayload; preview: Itinerary }
+export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' }
+
+export async function getItinerarySuggestions(payload: PlanPayload): Promise<ItinerarySuggestions> {
+  const { data } = await api.post<ItinerarySuggestions>('/itineraries/suggestions', payload, { timeout: 180000 })
+  return data
+}
+
+export async function createItinerary(payload: PlanPayload): Promise<Itinerary> {
+  const { data } = await api.post<Itinerary>('/itineraries/plan', payload, { timeout: 120000 })
   return data
 }
 
@@ -273,22 +370,89 @@ function weakPasswordMessage(serverMessage: string): string {
 
 export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: { code?: string; message?: string }; detail?: string | { message?: string } } } }).response
-    if (response?.data?.error?.code === 'WEAK_PASSWORD') return weakPasswordMessage(response.data.error.message ?? '')
-    const code = response?.data?.error?.code
-    if (code && ERROR_CODES.has(code)) return t(`error.${code}`)
+    const response = (error as { response?: { data?: { error?: { message?: string; code?: string; diagnostics?: {
+      reason_codes?: string[]
+      counts?: Record<string, number>
+    } }; detail?: string | {
+      code?: string
+      message?: string
+      diagnostics?: { reason_codes?: string[]; counts?: Record<string, number> }
+    } } } }).response
     const detail = response?.data?.detail
     const detailCode = (error as { response?: { data?: { detail?: { code?: string } } } }).response?.data?.detail?.code
-    const planCode = code ?? detailCode
-    if (planCode === 'NO_BOOKABLE_SLOTS') {
-      return locale === 'en'
+    const code = response?.data?.error?.code ?? detailCode
+    if (code === 'WEAK_PASSWORD') return weakPasswordMessage(response?.data?.error?.message ?? '')
+    if (code && ERROR_CODES.has(code)) return t(`error.${code}`)
+    const diagnostics = response?.data?.error?.diagnostics
+      ?? (typeof detail === 'object' && detail !== null ? detail.diagnostics : undefined)
+    const reasonLabels: Record<string, string> = locale === 'en' ? {
+      NO_ELIGIBLE_EXPERIENCES: 'No eligible experiences are available in the active pilot area.',
+      NO_SLOTS_ON_DATE: 'No activities have bookable time slots on that date.',
+      NO_SLOTS_IN_TIME_WINDOW: 'Activities have slots on that date, but none fit entirely inside the selected time window.',
+      VERIFIED_CATALOG_EMPTY: 'No verified pilot experiences are available. Add source evidence or explicitly enable demo mode.',
+      TRIP_TIME_INVALID: 'The trip must start in the future and end after it starts.',
+      NO_BOOKABLE_SLOTS: 'The listed slots are cancelled, full, or do not have enough capacity for your group.',
+      SLOTS_UNAVAILABLE: 'Some matching slots are full, cancelled, or unavailable.',
+      BUDGET_TOO_LOW: 'The matching activities exceed the remaining trip budget.',
+      GROUP_TOO_LARGE_FOR_CAPACITY: 'The available capacity is smaller than your group size.',
+      AVAILABILITY_NEEDS_CONFIRMATION: 'Some slot availability needs provider confirmation.',
+      ROUTE_UNAVAILABLE: 'No route could be found for one or more travel legs.',
+      NOT_ENOUGH_TIME_TO_REACH_STOP: 'Travel time would make you arrive after an activity starts.',
+      RETURN_DEADLINE_TOO_EARLY: 'The return trip would finish after your deadline.',
+      PINNED_STOP_NOT_FEASIBLE: 'A pinned place cannot fit the time, route, capacity, or budget constraints.',
+      PINNED_STOP_NOT_AVAILABLE: 'A pinned place is outside the active pilot catalog or has no eligible experience.',
+    } : {
+      NO_ELIGIBLE_EXPERIENCES: 'Không có trải nghiệm đủ điều kiện trong khu vực thử nghiệm hiện tại.',
+      NO_SLOTS_ON_DATE: 'Ngày đã chọn không có ca trải nghiệm phù hợp.',
+      NO_SLOTS_IN_TIME_WINDOW: 'Ngày đó có ca, nhưng không ca nào nằm trọn trong khung giờ bạn chọn.',
+      VERIFIED_CATALOG_EMPTY: 'Pilot chưa có trải nghiệm đủ nguồn xác minh. Cần bổ sung nguồn, hoặc bật chế độ mô phỏng để thử luồng.',
+      TRIP_TIME_INVALID: 'Giờ bắt đầu phải ở tương lai và giờ kết thúc phải sau giờ bắt đầu.',
+      NO_BOOKABLE_SLOTS: 'Các ca hiện có đã hết/hủy, không nhận khách hoặc không đủ chỗ cho nhóm.',
+      SLOTS_UNAVAILABLE: 'Một số ca phù hợp đã hết chỗ, bị hủy hoặc không nhận khách.',
+      BUDGET_TOO_LOW: 'Chi phí các hoạt động phù hợp vượt ngân sách còn lại.',
+      GROUP_TOO_LARGE_FOR_CAPACITY: 'Số chỗ còn lại ít hơn số người trong nhóm.',
+      AVAILABILITY_NEEDS_CONFIRMATION: 'Một số ca cần cơ sở xác nhận lại tình trạng nhận khách.',
+      ROUTE_UNAVAILABLE: 'Không tìm được đường đi cho một hoặc nhiều chặng.',
+      NOT_ENOUGH_TIME_TO_REACH_STOP: 'Thời gian di chuyển khiến bạn đến sau giờ bắt đầu hoạt động.',
+      RETURN_DEADLINE_TOO_EARLY: 'Chặng về khiến bạn không kịp đến điểm về trước hạn.',
+      PINNED_STOP_NOT_FEASIBLE: 'Địa điểm đã ghim không thể xếp vào lịch với thời gian, đường đi, chỗ hoặc ngân sách hiện tại.',
+      PINNED_STOP_NOT_AVAILABLE: 'Địa điểm đã ghim nằm ngoài danh mục thử nghiệm hiện tại hoặc chưa có trải nghiệm phù hợp.',
+    }
+    const reasonText = diagnostics?.reason_codes
+      ?.filter((reason) => reason !== code)
+      ?.map((reason) => reasonLabels[reason])
+      .filter((reason): reason is string => Boolean(reason))
+    const counts = diagnostics?.counts
+    const checkedSummary = counts
+      ? locale === 'en'
+        ? ` Checked ${counts.experiences_checked ?? 0} experiences; ${counts.slots_in_requested_window ?? 0} slots fit fully inside your time window.`
+        : ` Đã rà soát ${counts.experiences_checked ?? 0} trải nghiệm; ${counts.slots_in_requested_window ?? 0} ca nằm trọn trong khung giờ đã chọn.`
+      : ''
+    const diagnosticText = reasonText?.length
+      ? `${locale === 'en' ? 'Reason:' : 'Lý do:'} ${[...new Set(reasonText)].join(' ')}${checkedSummary}`
+      : ''
+    if (code === 'NO_BOOKABLE_SLOTS') {
+      const message = locale === 'en'
         ? 'There are no currently bookable slots on the selected date. Choose another date or ask the provider to update availability.'
         : 'Ngày đã chọn hiện không có ca đủ điều kiện nhận khách (có thể đã hủy, hết chỗ hoặc chưa được xác nhận mới). Hãy chọn ngày khác hoặc nhờ cơ sở cập nhật ca.'
+      return diagnosticText ? `${message} ${diagnosticText}` : message
     }
-    if (planCode === 'NO_FEASIBLE_PLAN') {
+    if (code === 'TRIP_TIME_INVALID') {
       return locale === 'en'
+        ? 'The trip must start in the future and end after it starts.'
+        : 'Giờ bắt đầu phải ở tương lai và giờ kết thúc phải sau giờ bắt đầu.'
+    }
+    if (code === 'PINNED_STOP_NOT_AVAILABLE') {
+      const message = locale === 'en'
+        ? 'A pinned place is outside the active pilot catalog or has no eligible experience.'
+        : 'Địa điểm đã ghim nằm ngoài danh mục thử nghiệm hiện tại hoặc chưa có trải nghiệm phù hợp.'
+      return diagnosticText ? `${message} ${diagnosticText}` : message
+    }
+    if (code === 'NO_FEASIBLE_PLAN') {
+      const message = locale === 'en'
         ? 'No itinerary fits the selected time, return route, budget, and availability. Try a wider time window, another date, or a higher budget.'
         : 'Chưa tìm được lịch phù hợp với khung giờ, chặng về, ngân sách và tình trạng chỗ. Hãy thử ngày khác, nới khung giờ hoặc điều chỉnh ngân sách.'
+      return diagnosticText ? `${message} ${diagnosticText}` : message
     }
     return response?.data?.error?.message ?? (typeof detail === 'string' ? detail : detail?.message) ?? 'Đang hiển thị chế độ mô phỏng trực tuyến.'
   }

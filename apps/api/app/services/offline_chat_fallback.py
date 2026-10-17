@@ -59,8 +59,8 @@ def _clock_value(match: re.Match[str] | None) -> str | None:
 def _parse_money(text: str) -> int | None:
     pattern = (
         r"(?:ngan sach|budget|toi da|chi phi|du tru)"
-        r"[^0-9]{0,30}(?P<amount>\d+(?:[.,]\d+)?)\s*"
-        r"(?P<unit>trieu|tr|nghin|ngan|k|vnd|dong|d)?"
+        r"[^0-9]{0,30}(?P<amount>\d+(?:[.,]\d+)*)\s*"
+        r"(?P<unit>trieu|tr|nghin|ngan|k|vnd|dong|₫|d)?"
     )
     matches = list(re.finditer(pattern, text, re.IGNORECASE))
     if not matches:
@@ -71,6 +71,8 @@ def _parse_money(text: str) -> int | None:
         return None
     raw = match.group("amount")
     unit = (match.group("unit") or "").lower()
+    if unit in {"trieu", "tr", "nghin", "ngan", "k"} and len(re.findall(r"[.,]", raw)) > 1:
+        return None  # Ambiguous amount; ask again instead of raising an exception.
     if unit in {"trieu", "tr"}:
         amount = float(raw.replace(",", ".")) * 1_000_000
     elif unit in {"nghin", "ngan", "k"}:
@@ -81,7 +83,7 @@ def _parse_money(text: str) -> int | None:
 
 
 def _parse_group_size(text: str) -> int | None:
-    matches = list(re.finditer(rf"\b(?P<count>{_NUMBER})\s*(?:nguoi|khach|thanh vien)\b", text, re.IGNORECASE))
+    matches = list(re.finditer(rf"\b(?P<count>{_NUMBER})\s*(?:nguoi|khach|thanh vien|people|persons)\b", text, re.IGNORECASE))
     if not matches:
         return None
     count = _as_integer(matches[-1].group("count").lower())
@@ -96,7 +98,7 @@ def _parse_mode(text: str) -> str:
     modes = {
         "motorcycle": ("xe may", "motorcycle", "motorbike"),
         "walking": ("di bo", "walking", "di bo"),
-        "car": ("o to", "xe hoi", "car", "di xe hoi"),
+        "car": ("o to", "xe hoi", "car", "di xe hoi", "taxi"),
         "transit": ("xe buyt", "bus", "metro", "tau dien", "public transit"),
     }
     hits = [
@@ -124,16 +126,27 @@ def _parse_locked_pois(original: str) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))[:10]
 
 
-def build_offline_constraints(message: str, reason: str) -> tuple[StructuredConstraints, str]:
+def build_offline_constraints(message: str, reason: str, previous: StructuredConstraints | None = None) -> tuple[StructuredConstraints, str]:
     """Extract only values matching explicit simple patterns; never invent prices or availability."""
     folded = _fold(message)
     group_size = _parse_group_size(folded)
-    start_time = _parse_time((rf"(?:bat dau|khoi hanh|xuat phat|di luc|tu)\s*(?:luc\s*)?{_TIME}",), folded)
-    return_deadline = _parse_time((rf"(?:ve truoc|phai ve|gio ve|tro ve|den luc|den)\s*(?:luc\s*)?{_TIME}",), folded)
+    start_time = _parse_time((rf"(?:bat dau|khoi hanh|xuat phat|di luc|tu|from|start at)\s*(?:luc\s*)?{_TIME}",), folded)
+    return_deadline = _parse_time((rf"(?:ve truoc|phai ve|gio ve|tro ve|den luc|den|to|return by)\s*(?:luc\s*)?{_TIME}",), folded)
     budget_vnd = _parse_money(folded)
     travel_mode = _parse_mode(folded)
     intent_weights = _parse_intents(folded)
     locked_pois = _parse_locked_pois(message)
+
+    if previous:
+        group_size = group_size if group_size is not None else previous.group_size
+        start_time = start_time or previous.start_time
+        return_deadline = return_deadline or previous.return_deadline
+        budget_vnd = budget_vnd if budget_vnd is not None else previous.budget_vnd
+        if not any(alias in folded for alias in ("xe may", "motorcycle", "motorbike", "di bo", "walking", "o to", "xe hoi", "car", "taxi", "xe buyt", "bus", "metro", "tau dien", "public transit")):
+            travel_mode = previous.travel_mode
+        if not any(keyword in folded for terms in _INTENT_KEYWORDS.values() for keyword in terms):
+            intent_weights = previous.intent_weights
+        locked_pois = list(dict.fromkeys([*previous.locked_pois, *locked_pois]))[:10]
 
     missing_fields = [
         field for field, value in (

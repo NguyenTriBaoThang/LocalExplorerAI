@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Map3DLandmarkViewer } from '../components/3d/Map3DLandmarkViewer'
+import { Map3DGuidePanel } from '../components/3d/Map3DGuidePanel'
 import {
   Compass,
   ArrowLeft,
   Building2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useTripField } from '../journey'
 import { api } from '../api/client'
 import { contentApi } from '../api/content'
 import type { POI } from '../types'
 import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../components/3d/landmark/types'
 
 export function Map3DPage() {
-  const [selectedLandmark, setSelectedLandmark] = useState('nhathoducba')
+  const [selectedLandmark, setSelectedLandmark] = useTripField('modelId')
   const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export function Map3DPage() {
   const selectedCalibration = landmarks[selectedLandmark] ?? DEFAULT_CALIBRATIONS.nhathoducba
 
   return (
-    <div className="w-full flex flex-col bg-slate-950 text-slate-100 min-h-[calc(100vh-64px)]">
+    <div className="map3d-page w-full flex flex-col min-h-[calc(100vh-64px)]">
       {/* Top Banner Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-4 px-4 sm:px-8 py-3.5 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -128,6 +130,7 @@ export function Map3DPage() {
           defaultCalibration={selectedCalibration}
           className="w-full h-full min-h-[calc(100vh-140px)]"
         />
+        <Map3DGuidePanel landmark={selectedCalibration} modelId={selectedLandmark} />
       </div>
     </div>
   )
