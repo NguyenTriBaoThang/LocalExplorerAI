@@ -1226,6 +1226,171 @@ a {
   position: relative;
 }
 
+/* Live Goong GL map used in the landing-page hero. */
+.mapgl3d-hero,
+.mapgl3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mapgl3d-hero {
+  overflow: hidden;
+  isolation: isolate;
+  background: #07131d;
+}
+
+.mapgl3d-canvas .mapboxgl-canvas {
+  outline: none;
+}
+
+.mapgl3d-topbar {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.mapgl3d-location-pill,
+.mapgl3d-controls,
+.mapgl3d-bottom-left,
+.mapgl3d-bottom-right {
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(8, 17, 31, 0.82);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.mapgl3d-location-pill {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mapgl3d-location-pill strong {
+  color: #34d399;
+}
+
+.mapgl3d-live-dot,
+.mapgl3d-status-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.85);
+}
+
+.mapgl3d-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  pointer-events: auto;
+}
+
+.mapgl3d-controls button {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.mapgl3d-controls button:hover,
+.mapgl3d-controls button.active {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.mapgl3d-bottom-left,
+.mapgl3d-bottom-right {
+  position: absolute;
+  z-index: 4;
+  bottom: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(50% - 24px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #cbd5e1;
+  pointer-events: none;
+}
+
+.mapgl3d-bottom-left {
+  left: 14px;
+}
+
+.mapgl3d-bottom-right {
+  right: 14px;
+  color: #6ee7b7;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.mapgl3d-poi-marker {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 2px solid rgba(236, 253, 245, 0.96);
+  border-radius: 50% 50% 50% 4px;
+  background: linear-gradient(145deg, #34d399, #047857);
+  box-shadow: 0 3px 14px rgba(16, 185, 129, 0.55);
+  transform: rotate(-45deg);
+}
+
+.mapgl3d-poi-marker span {
+  color: #ecfdf5;
+  font-size: 9px;
+  font-weight: 900;
+  transform: rotate(45deg);
+}
+
+.mapgl3d-loading,
+.mapgl3d-error {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 15, 27, 0.84);
+  color: #cbd5e1;
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.mapgl3d-error {
+  color: #fecaca;
+}
+
 .city-hero-3d-inline {
   min-height: 100%;
   overflow: hidden;
