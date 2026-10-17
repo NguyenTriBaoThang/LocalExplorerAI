@@ -6,12 +6,15 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.api.guards import public, require_user
 from app.api.permissions import P
+from app.services.bot_service import bot_service
+from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.models.entities import AuditLog, POI, SiteArticle, SiteBanner, SiteCollection, User
 from app.schemas.portal import ArticlePayload, BannerPayload, CollectionPayload
 
@@ -236,3 +239,40 @@ def published_article(slug: str, db: Session = Depends(get_db)):
     if article is None:
         raise _not_found("article")
     return article_view(article)
+
+
+class SiteSettingsPayload(BaseModel):
+    site_announcement: str = Field(default="", max_length=300)
+    maintenance_mode: bool = False
+
+
+def _site_settings() -> dict:
+    current = bot_service.get_system_settings()
+    return {"site_announcement": str(current.get("site_announcement") or "").strip(), "maintenance_mode": bool(current.get("maintenance_mode"))}
+
+
+@router.get("/site-config", dependencies=[Depends(public("site announcement and public map settings"))])
+def site_config(db: Session = Depends(get_db)):
+    """What the traveler web needs at start-up: the announcement, the maintenance flag and the map tile key.
+
+    A Goong *maptiles* key is a browser token by design (it ships in every page that draws the map), so it is safe to
+    return here. The REST key used for routing and geocoding never leaves the server.
+    """
+    try:
+        maptiles_key = (resolve_integration_value(db, "routing", "goong_maptiles_key") or "").strip()
+    except IntegrationSecretConfigurationError:
+        maptiles_key = ""
+    return {**_site_settings(), "maptiles_key": maptiles_key or None}
+
+
+@router.get("/admin/site-settings")
+def get_site_settings(actor: User = Depends(require_user(P.ADMIN_SYSTEM))):
+    return _site_settings()
+
+
+@router.put("/admin/site-settings")
+def update_site_settings(payload: SiteSettingsPayload, actor: User = Depends(require_user(P.ADMIN_SYSTEM)), db: Session = Depends(get_db)):
+    bot_service.update_system_settings({"site_announcement": payload.site_announcement.strip(), "maintenance_mode": payload.maintenance_mode})
+    _audit(db, actor, "site_settings.updated", "site_settings", "site")
+    db.commit()
+    return _site_settings()

@@ -9,6 +9,7 @@ from app.adapters.routing.goong import (
     GoongGeocodingProvider,
 )
 from app.adapters.routing.provider import (
+    MockRoutingProvider,
     RouteEstimate,
     RoutingConfigurationError,
     UnsupportedTravelMode,
@@ -20,9 +21,16 @@ from app.services.planner_service import PlannerService
 from tests.conftest import add_slot
 
 
+def test_mock_route_returns_drawable_straight_line_geometry():
+    origin = (10.77, 106.68)
+    destination = (10.78, 106.69)
+    route = MockRoutingProvider().get_route(origin, destination, "car")
+    assert route.geometry == [origin, destination]
+
+
 @pytest.mark.parametrize(
     ("app_mode", "goong_vehicle"),
-    [("motorcycle", "bike"), ("walking", "foot"), ("car", "car")],
+    [("motorcycle", "bike"), ("car", "car")],
 )
 def test_goong_directions_mode_mapping_and_eta_cache(app_mode, goong_vehicle):
     provider = GoongDirectionsProvider("test-key", eta_ttl_seconds=300)
@@ -52,7 +60,7 @@ def test_goong_directions_mode_mapping_and_eta_cache(app_mode, goong_vehicle):
     assert first.geometry[0] == pytest.approx((38.5, -120.2))
 
 
-@pytest.mark.parametrize("mode", ["transit", "bicycling", "walking_transit"])
+@pytest.mark.parametrize("mode", ["transit", "bicycling", "walking_transit", "walking"])
 def test_goong_rejects_unconfigured_transport_modes(mode):
     provider = GoongDirectionsProvider("test-key")
     with pytest.raises(UnsupportedTravelMode):

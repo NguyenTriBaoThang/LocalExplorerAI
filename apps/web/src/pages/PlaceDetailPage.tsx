@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowLeft,
+  ArrowUpRight,
   Clock3,
   ExternalLink,
   Globe2,
@@ -20,9 +21,26 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getPOI } from '../api/client'
+import { useEntityView } from '../analytics'
 import type { POIDetail, SourcePhoto } from '../types'
 
 const unavailable = 'Chưa có dữ liệu trong nguồn đã nạp'
+
+function textValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function hoursText(value: unknown): string {
+  let parsed = value
+  if (typeof value === 'string') {
+    try { parsed = JSON.parse(value) } catch { return value }
+  }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const hours = parsed as Record<string, unknown>
+    return [textValue(hours.days), [textValue(hours.open), textValue(hours.close)].filter(Boolean).join('–')].filter(Boolean).join(' · ')
+  }
+  return textValue(parsed)
+}
 
 function externalUrl(value?: string | null): string | null {
   if (!value) return null
@@ -35,7 +53,7 @@ function externalUrl(value?: string | null): string | null {
 }
 
 export function PlaceDetailPage() {
-  const { id = '' } = useParams()
+  const { placeId: id = '' } = useParams()
   const navigate = useNavigate()
   const [place, setPlace] = useState<POIDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,6 +70,8 @@ export function PlaceDetailPage() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [id])
+
+  useEntityView(place && place.id === id ? { entity_type: 'poi', entity_id: place.id } : null)
 
   const copyAddress = () => {
     if (place?.address) {
@@ -82,6 +102,24 @@ export function PlaceDetailPage() {
   }
 
   const details = place.details || {}
+  const rawCandidate = details.source_candidate
+  const sourceCandidate = rawCandidate && typeof rawCandidate === 'object'
+    ? rawCandidate as Record<string, unknown>
+    : null
+  const candidateSourceUrl = typeof sourceCandidate?.source_url === 'string'
+    ? externalUrl(sourceCandidate.source_url)
+    : null
+  const rawSourceFields = sourceCandidate?.source_fields
+  const sourceFields = rawSourceFields && typeof rawSourceFields === 'object'
+    ? rawSourceFields as Record<string, unknown>
+    : null
+  const sourceDescription = typeof sourceFields?.description === 'string' ? sourceFields.description : ''
+  const sourceAddress = typeof sourceFields?.address === 'string' ? sourceFields.address : ''
+  const sourceNote = typeof sourceFields?.note === 'string' ? sourceFields.note : ''
+  const sourceHours = hoursText(sourceFields?.open_hours)
+  const sourcePrice = typeof sourceFields?.price_vnd === 'number' && Number.isFinite(sourceFields.price_vnd)
+    ? sourceFields.price_vnd
+    : null
   const sourcePhotos = (Array.isArray(details.images) ? details.images : [])
     .filter((photo): photo is SourcePhoto => Boolean((photo.local_url || photo.url) && photo.source_url && photo.license))
   const catalogPhotos = Array.isArray(place.image_urls) ? place.image_urls : []
@@ -93,7 +131,16 @@ export function PlaceDetailPage() {
     catalogPhotos[0] ||
     null
 
-  const website = externalUrl(details.website)
+  const venueFacts = details.venue_facts && typeof details.venue_facts === 'object'
+    ? details.venue_facts as Record<string, unknown> : {}
+  const sourceUrls = details.source_urls && typeof details.source_urls === 'object'
+    ? details.source_urls as Record<string, unknown> : {}
+  const openingHours = place.opening_hours || hoursText(details.opening_hours) || hoursText(venueFacts.public_hours) || sourceHours || hoursText(details.open_hours)
+  const referencePrice = sourcePrice ?? (typeof venueFacts.public_admission_fee_vnd === 'number' ? venueFacts.public_admission_fee_vnd : null)
+  const fee = place.ticket_info || textValue(details.fee) || textValue(venueFacts.fee_note)
+    || (referencePrice !== null ? `${referencePrice.toLocaleString('vi-VN')} ₫ · giá tham khảo từ nguồn` : unavailable)
+  const website = externalUrl(details.website || place.source_url || textValue(details.source_url)
+    || textValue(sourceUrls.venue_official) || textValue(venueFacts.facts_source) || candidateSourceUrl)
   const mapUrl = `https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=18/${place.latitude}/${place.longitude}`
   const tags = Object.entries(details.osm_tags && typeof details.osm_tags === 'object' ? details.osm_tags : {})
   const experiences = Array.isArray(place.experiences) ? place.experiences : []
@@ -105,6 +152,7 @@ export function PlaceDetailPage() {
     handicraft: { label: 'Thủ công mỹ nghệ', icon: '🎨', bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
     nature: { label: 'Sinh thái & Tự nhiên', icon: '🌿', bg: 'bg-teal-500/15 text-teal-400 border-teal-500/30' },
     relaxation: { label: 'Thư giãn & Phục hồi', icon: '🍵', bg: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30' },
+    accommodation: { label: 'Lưu trú', icon: '🏨', bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
   }
 
   const cat = categoryMeta[place.category] || { label: place.category, icon: '📍', bg: 'bg-slate-700/30 text-slate-300 border-slate-600/30' }
@@ -116,12 +164,12 @@ export function PlaceDetailPage() {
         <Link className="place-back-pill" to="/places">
           <ArrowLeft size={15} /> <span>Tất cả địa điểm</span>
         </Link>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span>Quận 1</span>
+        <div className="place-detail-breadcrumb flex items-center gap-2 text-xs text-slate-400">
+          <span>{place.district || 'TP. Hồ Chí Minh'}</span>
           <ChevronRight size={13} />
           <span>{cat.label}</span>
           <ChevronRight size={13} />
-          <span className="text-slate-200 font-semibold truncate max-w-[200px]">{place.name}</span>
+          <span className="place-detail-breadcrumb-current text-slate-200 font-semibold truncate max-w-[200px]">{place.name}</span>
         </div>
       </div>
 
@@ -145,28 +193,31 @@ export function PlaceDetailPage() {
         {/* Floating Content Over Banner */}
         <div className="place-hero-content">
           <div className="flex items-center gap-2 flex-wrap mb-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md ${cat.bg}`}>
+            <span className={`place-hero-badge place-hero-category px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md ${cat.bg}`}>
               {cat.icon} {cat.label}
             </span>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md flex items-center gap-1.5">
+            <span className="place-hero-badge px-3 py-1 rounded-full text-xs font-semibold bg-slate-900/80 text-slate-300 border border-slate-700 backdrop-blur-md flex items-center gap-1.5">
               <MapPin size={12} className="text-emerald-400" />
               {place.district || 'Quận 1, TP. Hồ Chí Minh'}
             </span>
             {place.verification_status === 'verified' ? (
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md flex items-center gap-1.5">
+              <span className="place-hero-badge place-hero-verified px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md flex items-center gap-1.5">
                 <ShieldCheck size={13} /> Đã xác minh catalog
               </span>
             ) : (
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 backdrop-blur-md">
-                Nguồn tham khảo OpenStreetMap
+              <span className="place-hero-badge place-hero-unverified px-3 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 backdrop-blur-md">
+                Dữ liệu tham khảo · chưa xác minh vận hành
               </span>
             )}
           </div>
 
           <h1 className="place-hero-title">{place.name}</h1>
           <p className="place-hero-desc">
-            {place.description || 'Địa điểm thuộc danh mục không gian trải nghiệm văn hóa và giải trí tại trung tâm Sài Gòn.'}
+            {sourceDescription || place.description || unavailable}
           </p>
+          {(place.tags?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">{place.tags!.map((tag) => <span key={tag} className="place-hero-tag">#{tag}</span>)}</div>
+          )}
 
           {/* Quick CTA Action Buttons */}
           <div className="place-hero-actions">
@@ -246,7 +297,36 @@ export function PlaceDetailPage() {
                 ))}
               </div>
             </section>
+          ) : details.catalog_mode === 'hcmc_catalog_candidate' ? (
+            <section className="place-detail-card">
+              <h2 className="section-card-title flex items-center gap-2">
+                <Sparkles size={18} className="text-emerald-400" />
+                Ảnh địa điểm
+              </h2>
+              <p className="text-sm text-slate-400">
+                Chưa tìm thấy ảnh khớp chính xác có giấy phép và thông tin ghi công rõ ràng; mình không dùng ảnh minh họa thay thế.
+              </p>
+            </section>
           ) : null}
+
+          {details.catalog_mode === 'hcmc_catalog_candidate' && sourceFields && (
+            <section className="place-detail-card">
+              <h2 className="section-card-title flex items-center gap-2">
+                <MapPin size={18} className="text-amber-400" />
+                Thông tin từ dữ liệu nguồn · chưa xác minh
+              </h2>
+              <p className="text-xs text-amber-300 mb-4">
+                Đây là nội dung được điền từ bộ dữ liệu của dự án, không phải thông tin vận hành đã được địa điểm xác nhận.
+              </p>
+              <div className="place-provenance-box">
+                {sourceDescription && <div className="provenance-item"><span className="provenance-label">Mô tả nguồn:</span><span className="provenance-val">{sourceDescription}</span></div>}
+                {sourceAddress && <div className="provenance-item"><span className="provenance-label">Địa chỉ nguồn:</span><span className="provenance-val">{sourceAddress}</span></div>}
+                {sourceHours && <div className="provenance-item"><span className="provenance-label">Giờ nguồn:</span><span className="provenance-val">{sourceHours}</span></div>}
+                {sourcePrice !== null && <div className="provenance-item"><span className="provenance-label">Giá nguồn:</span><span className="provenance-val">{sourcePrice.toLocaleString('vi-VN')} ₫ · chưa xác minh</span></div>}
+                {sourceNote && <div className="provenance-item"><span className="provenance-label">Ghi chú nguồn:</span><span className="provenance-val">{sourceNote}</span></div>}
+              </div>
+            </section>
+          )}
 
           {/* Experiences inside this POI */}
           {experiences.length > 0 && (
@@ -262,19 +342,19 @@ export function PlaceDetailPage() {
                     <div className="place-exp-item-card" key={exp.id}>
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
-                          <h3 className="place-exp-title">{exp.name}</h3>
+                          <h3 className="place-exp-title"><Link to={`/experiences/${encodeURIComponent(exp.id)}`}>{exp.name} <ArrowUpRight size={14} className="inline" /></Link></h3>
                           <p className="place-exp-desc">{exp.description || unavailable}</p>
                         </div>
                         <div className="place-exp-price-badge">
-                          {exp.price_vnd > 0 ? `${exp.price_vnd.toLocaleString('vi-VN')} ₫` : 'Miễn phí'}
-                          <span className="text-[10px] text-slate-400 font-normal"> / người</span>
+                          {details.catalog_mode === 'hcmc_catalog_candidate' ? 'Chưa có giá hoạt động' : exp.price_vnd > 0 ? `${exp.price_vnd.toLocaleString('vi-VN')} ₫` : 'Miễn phí'}
+                          {details.catalog_mode !== 'hcmc_catalog_candidate' && <span className="text-[10px] text-slate-400 font-normal"> / {exp.price_basis === 'per_person' ? 'người' : 'nhóm'}</span>}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 text-xs text-slate-300 mt-2">
                         <span className="flex items-center gap-1.5">
                           <Clock3 size={13} className="text-amber-400" />
-                          {exp.duration_min} phút
+                          {exp.duration_min > 0 ? `${exp.duration_min} phút` : 'Chưa có thời lượng'}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Compass size={13} className="text-emerald-400" />
@@ -316,18 +396,35 @@ export function PlaceDetailPage() {
               Nguồn dữ liệu & Tính minh bạch
             </h2>
             <div className="place-provenance-box">
-              <div className="provenance-item">
-                <span className="provenance-label">Bản quyền dữ liệu:</span>
-                <span className="provenance-val">
-                  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline inline-flex items-center gap-1">
-                    © OpenStreetMap contributors · ODbL-1.0 <ExternalLink size={12} />
-                  </a>
-                </span>
-              </div>
+              {details.catalog_mode === 'hcmc_catalog_candidate' ? (
+                <>
+                  {candidateSourceUrl && (
+                    <div className="provenance-item">
+                      <span className="provenance-label">Nguồn ban đầu:</span>
+                      <span className="provenance-val">
+                        <a href={candidateSourceUrl} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline inline-flex items-center gap-1">
+                          Mở nguồn của bản ghi <ExternalLink size={12} />
+                        </a>
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="provenance-item">
+                  <span className="provenance-label">Bản quyền dữ liệu:</span>
+                  <span className="provenance-val">
+                    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline inline-flex items-center gap-1">
+                      © OpenStreetMap contributors · ODbL-1.0 <ExternalLink size={12} />
+                    </a>
+                  </span>
+                </div>
+              )}
               <div className="provenance-item">
                 <span className="provenance-label">Trạng thái dữ liệu:</span>
                 <span className="provenance-val">
-                  {place.data_mode === 'real'
+                  {details.catalog_mode === 'hcmc_catalog_candidate'
+                    ? 'Ứng viên từ bộ dữ liệu địa điểm TP.HCM; chưa được xác minh độc lập.'
+                    : place.data_mode === 'real'
                     ? 'Có bằng chứng nguồn kiểm định trong catalog'
                     : 'Dữ liệu pilot tham khảo từ OpenStreetMap'}
                 </span>
@@ -439,7 +536,7 @@ export function PlaceDetailPage() {
                   <span>Giờ mở cửa (nguồn)</span>
                 </div>
                 <p className="text-xs text-slate-200 font-medium">
-                  {details.opening_hours || unavailable}
+                  {openingHours || unavailable}
                 </p>
               </div>
 
@@ -447,10 +544,10 @@ export function PlaceDetailPage() {
               <div className="side-info-item">
                 <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
                   <Ticket size={13} className="text-emerald-400 shrink-0" />
-                  <span>Phí vào cửa</span>
+                  <span>Phí / giá tham khảo</span>
                 </div>
                 <p className="text-xs text-slate-200 font-medium">
-                  {details.fee || 'Không ghi nhận phí hoặc miễn phí'}
+                  {fee}
                 </p>
               </div>
 
@@ -483,7 +580,7 @@ export function PlaceDetailPage() {
                 <div className="side-info-item">
                   <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
                     <Globe2 size={13} className="text-cyan-400 shrink-0" />
-                    <span>Website chính thức</span>
+                    <span>Website / nguồn thông tin</span>
                   </div>
                   <a href={website} target="_blank" rel="noreferrer" className="text-xs text-cyan-400 hover:underline flex items-center gap-1 font-semibold break-all">
                     Mở website <ExternalLink size={12} />
@@ -507,9 +604,9 @@ export function PlaceDetailPage() {
                 href={`https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-2.5 px-3 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 border border-slate-700/60 transition-all"
+                className="place-directions-link w-full py-2.5 px-3 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 border border-slate-700/60 transition-all"
               >
-                <MapPin size={14} className="text-emerald-400" />
+                <MapPin size={14} className="place-directions-icon text-emerald-400" />
                 <span>Chỉ đường trên Google Maps</span>
               </a>
             </div>

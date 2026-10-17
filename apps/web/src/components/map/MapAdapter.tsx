@@ -4,6 +4,7 @@ import type { LatLngExpression } from 'leaflet'
 import { divIcon } from 'leaflet'
 import { MapPin, Layers, Sparkles, Box, Maximize2, Minimize2, RotateCcw } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CityHero3D } from '../3d/CityHero3D'
 
 export const LEG_COLORS = [
   '#10b981', // 1: Emerald
@@ -41,6 +42,8 @@ export interface MapRoute {
   durationMin?: number
   distanceM?: number
 }
+
+const EMPTY_ROUTES: MapRoute[] = []
 
 function escapeHtml(str: string): string {
   return str
@@ -107,17 +110,17 @@ const TILE_PRESETS: Record<string, { name: string; url: string; attribution: str
   goong_streets: {
     name: 'Đường phố Sài Gòn (HD)',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Goong Directions V2 · Sài Gòn &copy; OpenStreetMap contributors',
+    attribution: 'Tiles &copy; Esri',
   },
   google: {
     name: 'Google Maps VN',
     url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google Maps &copy; Goong Directions',
+    attribution: '&copy; Google Maps',
   },
   dark: {
     name: 'Đêm Huyền Ảo (Carto Dark)',
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; CARTO &copy; OpenStreetMap &copy; Goong Directions',
+    attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
     subdomains: 'abcd',
   },
 }
@@ -126,7 +129,7 @@ export function MapAdapter({
   points,
   selectedId,
   onSelect,
-  routes = [],
+  routes = EMPTY_ROUTES,
   pointSourceLabel,
   mapFooterLabel,
   className = '',
@@ -149,6 +152,7 @@ export function MapAdapter({
 }) {
   const [styleMode, setStyleMode] = useState<string>('goong_streets')
   const [resetCounter, setResetCounter] = useState(0)
+  const [is3D, setIs3D] = useState(false)
   const selected = points.find((point) => point.id === selectedId)
   const center: LatLngExpression = [10.775, 106.7]
 
@@ -224,6 +228,15 @@ export function MapAdapter({
 
       {/* Main Map View Canvas */}
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        {is3D ? (
+          <CityHero3D
+            journeyPoints={points}
+            routes={routes}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            variant="inline"
+          />
+        ) : (
         <MapContainer
           center={center}
           zoom={13}
@@ -414,10 +427,12 @@ export function MapAdapter({
             )
           })}
         </MapContainer>
+        )}
 
         {/* Floating Top Controls (Neat Top-Right Stack) */}
         <div className="map-floating-top-right">
           <div className="map-control-btn-group">
+            {!is3D && <>
             <button
               type="button"
               className="map-float-btn"
@@ -441,6 +456,7 @@ export function MapAdapter({
               <Layers size={14} />
               <span>{TILE_PRESETS[styleMode]?.name.split(' ')[0] || 'Lớp bản đồ'}</span>
             </button>
+            </>}
 
             {onExpandToggle && (
               <button
@@ -454,14 +470,16 @@ export function MapAdapter({
               </button>
             )}
 
-            <Link
-              to="/map-3d"
+            <button
+              type="button"
+              onClick={() => setIs3D((current) => !current)}
+              aria-pressed={is3D}
               className="map-float-btn map-float-btn-accent"
-              title="Xem bản đồ 3D Landmark Sài Gòn Digital Twin"
+              title={is3D ? 'Quay lại bản đồ 2D' : 'Xem hành trình trên bản đồ 3D'}
             >
-              <Box size={14} />
-              <span>3D Sài Gòn</span>
-            </Link>
+              {is3D ? <Layers size={14} /> : <Box size={14} />}
+              <span>{is3D ? 'Bản đồ 2D' : '3D Sài Gòn'}</span>
+            </button>
           </div>
         </div>
 
@@ -469,13 +487,13 @@ export function MapAdapter({
         <div className="map-floating-top-left">
           <div className="map-provider-pill">
             <span className="badge-live-pulse" />
-            <span>Goong Maps & Directions · Sài Gòn</span>
+            <span>{is3D ? 'Bản đồ 3D hành trình · TP.HCM' : 'Bản đồ hành trình · TP.HCM'}</span>
           </div>
         </div>
 
         {/* Bottom Route Legend Overlay */}
         <div className="map-3d-bottom-info">
-          <span>{mapFooterLabel || 'Tọa độ & lộ trình chính xác từ Goong Directions API · Cập nhật theo thời gian thực'}</span>
+          <span>{mapFooterLabel || (is3D ? 'Mô hình 3D minh họa · Tuyến nối theo các điểm hành trình' : 'Vị trí theo danh mục · Kiểm tra nguồn thông tin trước chuyến đi')}</span>
         </div>
       </div>
     </div>

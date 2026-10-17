@@ -15,6 +15,23 @@ export const contentApi = {
 }
 
 export async function getPOI(id: string) {
-  const { data } = await api.get<import('../types').POI>(`/pois/${id}`)
+  const { data } = await api.get<import('../types').POI>(`/pois/${id}?scope=citywide`)
   return data
+}
+
+import type { MyPlaceReviewState, MyReviewsResponse, PlaceReviewsResponse } from '../types'
+
+export const placeReviewsApi = {
+  list: async (poiId: string) => (await api.get<PlaceReviewsResponse>(`/pois/${encodeURIComponent(poiId)}/reviews`)).data,
+  mine: async (poiId: string) => (await api.get<MyPlaceReviewState>(`/pois/${encodeURIComponent(poiId)}/reviews/mine`)).data,
+  save: async (poiId: string, body: { rating: number; comment?: string; visited_on?: string }) =>
+    (await api.put<NonNullable<MyPlaceReviewState['review']>>(`/pois/${encodeURIComponent(poiId)}/review`, body)).data,
+  remove: async (poiId: string) => { await api.delete(`/pois/${encodeURIComponent(poiId)}/review`) },
+}
+
+export const myReviewsApi = {
+  list: async () => (await api.get<MyReviewsResponse>('/me/reviews')).data,
+  editExperience: async (bookingId: string, rating: number, comment: string) =>
+    (await api.put(`/bookings/${encodeURIComponent(bookingId)}/review`, { rating, comment })).data,
+  removeExperience: async (bookingId: string) => { await api.delete(`/bookings/${encodeURIComponent(bookingId)}/review`) },
 }

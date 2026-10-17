@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { Activity, Bot, Building2, CloudRain, FileText, History, KeyRound, LayoutDashboard, MapPinned, PlugZap, UserCog, Users } from 'lucide-react'
+import { Activity, Bot, Building2, CloudRain, FileText, History, KeyRound, LayoutDashboard, MapPinned, MessageSquare, PlugZap, Settings2, UserCog, Users } from 'lucide-react'
 import { FileInput } from 'lucide-react'
 import { BrandLogo } from '../../components/Brand'
 import { MfaCard } from '../../components/MfaCard'
@@ -53,13 +53,17 @@ export function AdminLayout() {
             { to: '/admin/rbac', label: 'Phân quyền', icon: KeyRound, perm: 'admin:rbac' },
           ] },
           { title: 'Nội dung', items: [
+            { to: '/admin/meshy', label: 'Tạo mô hình 3D · Meshy', icon: Bot, perm: 'admin:models_3d' },
             { to: '/admin/places', label: 'Địa điểm & Danh thắng', icon: MapPinned, perm: 'admin:places' },
+            { to: '/admin/landmark-stories', label: 'Câu chuyện địa danh 3D', icon: History, perm: 'admin:content' },
+            { to: '/admin/reviews', label: 'Đánh giá', icon: MessageSquare, perm: 'admin:reviews' },
             { to: '/admin/content', label: 'Nội dung website', icon: FileText, perm: 'admin:content' },
             { to: '/admin/imports', label: 'Nhập liệu & Trùng lặp', icon: FileInput, perm: ['admin:place_import', 'admin:duplicates'] },
           ] },
           { title: 'Hệ thống', items: [
             { to: '/admin/operations', label: 'Vận hành', icon: Activity, perm: 'ops:read' },
             { to: '/admin/integrations', label: 'Tích hợp & API keys', icon: PlugZap, perm: 'admin:integrations' },
+            { to: '/admin/site-settings', label: 'Cài đặt website', icon: Settings2, perm: 'admin:system' },
             { to: '/admin/ai-tools', label: 'Công cụ AI', icon: Bot, perm: 'admin:ai_tools' },
             { to: '/admin/flood-risk', label: 'Rủi ro ngập', icon: CloudRain },
             { to: '/admin/audit', label: 'Nhật ký hệ thống', icon: History, perm: 'admin:audit' },

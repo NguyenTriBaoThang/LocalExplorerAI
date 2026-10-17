@@ -1,9 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from math import asin, cos, radians, sin, sqrt
 
 from app.core.enums import SlotStatus
 from app.repositories.experience_repository import ExperienceRepository
 from app.schemas.common import ExperienceRead, POIRead, SlotRead
+
+
+def _upcoming(slots):
+    """Drop slots that have already started; they cannot be booked and must not be offered as 'upcoming'."""
+    now = datetime.now(timezone.utc)
+    return [slot for slot in slots if slot.start_at.replace(tzinfo=slot.start_at.tzinfo or timezone.utc) > now]
 
 
 class ExperienceService:
@@ -25,6 +31,9 @@ class ExperienceService:
         center_longitude: float | None = None,
         slot_id: str | None = None,
         district: str | None = None,
+        verified_only: bool = False,
+        poi_id: str | None = None,
+        total_budget_vnd: int | None = None,
     ):
         items = self.repository.list_experiences(
             intent=intent,
@@ -35,6 +44,14 @@ class ExperienceService:
         )
         result: list[ExperienceRead] = []
         for item in items:
+            if verified_only and item.verification_status != "verified":
+                continue
+            if poi_id and item.poi_id != poi_id:
+                continue
+            if total_budget_vnd is not None:
+                cost = item.price_vnd * (group_size or 1) if item.price_basis == "per_person" else item.price_vnd
+                if cost > total_budget_vnd:
+                    continue
             if topic and topic.casefold() not in " ".join(item.intent_tags or []).casefold() and topic.casefold() not in item.poi.category.casefold():
                 continue
             if is_indoor is not None and item.is_indoor != is_indoor:
@@ -59,6 +76,7 @@ class ExperienceService:
             if item.verification_status == "verified":
                 slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                          and self.repository.is_fresh_slot(slot)]
+            slots = _upcoming(slots)
             if start_at:
                 slots = [slot for slot in slots if slot.start_at.replace(tzinfo=slot.start_at.tzinfo or start_at.tzinfo) >= start_at]
             if end_at:
@@ -67,7 +85,7 @@ class ExperienceService:
                 slots = [slot for slot in slots if slot.available_reported is None or slot.available_reported >= group_size]
             if slot_id:
                 slots = [slot for slot in slots if slot.id == slot_id]
-            if (start_at or end_at) and not slots:
+            if (start_at or end_at or group_size or slot_id) and not slots:
                 continue
             result.append(self.serialize(item, slots, item.verification_status == "verified"))
         stats = self.repository.review_stats([item.id for item in result])
@@ -83,6 +101,7 @@ class ExperienceService:
         if item.verification_status == "verified":
             slots = [slot for slot in slots if slot.status in {SlotStatus.OPEN.value, SlotStatus.AVAILABLE.value}
                      and self.repository.is_fresh_slot(slot)]
+        slots = _upcoming(slots)
         experience = self.serialize(item, slots, item.verification_status == "verified")
         stats = self.repository.review_stats([item.id])
         if item.id in stats:

@@ -7,6 +7,11 @@ from app.schemas.common import POIRead, SourceEvidenceRead
 
 
 class PlanRequest(BaseModel):
+    planning_style: Literal['balanced', 'budget', 'nearby', 'relaxed', 'interests'] = 'balanced'
+    excluded_experience_ids: list[str] = Field(default_factory=list, max_length=100)
+    preferred_slot_ids: list[str] = Field(default_factory=list, max_length=6)
+    require_verified: bool = False
+    routing_mode: Literal["configured", "demo"] = "configured"
     start_at: datetime
     end_at: datetime
     group_size: int = Field(ge=1, le=50)
@@ -24,6 +29,8 @@ class PlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_coordinate_pairs(self):
+        if set(self.excluded_experience_ids) & set(self.locked_experience_ids):
+            raise ValueError('A selected experience cannot also be excluded')
         if (self.origin_latitude is None) != (self.origin_longitude is None):
             raise ValueError("Provide both origin latitude and longitude")
         if (self.destination_latitude is None) != (self.destination_longitude is None):
@@ -174,3 +181,28 @@ class PlanPreviewResponse(BaseModel):
 class PlanConfirmationRequest(BaseModel):
     plan: PlanRequest
     confirmation_token: str = Field(min_length=20, max_length=4096)
+
+
+class ItinerarySuggestion(BaseModel):
+    style: str
+    relaxed_experience_names: list[str] = Field(default_factory=list)
+    relaxed_poi_names: list[str] = Field(default_factory=list)
+    recommendation_reason: str | None = Field(default=None, max_length=400)
+    request: PlanRequest
+    preview: PlanResponse
+
+
+class ItinerarySuggestionsResponse(BaseModel):
+    options: list[ItinerarySuggestion]
+    requested_count: int
+    returned_count: int
+    ranking_source: Literal['gemini', 'heuristic'] = 'heuristic'
+
+
+class ItineraryOptionRank(BaseModel):
+    option_id: str = Field(min_length=1, max_length=100)
+    reason_vi: str = Field(min_length=1, max_length=400)
+
+
+class ItineraryRankingResponse(BaseModel):
+    ranked_options: list[ItineraryOptionRank] = Field(min_length=1, max_length=5)

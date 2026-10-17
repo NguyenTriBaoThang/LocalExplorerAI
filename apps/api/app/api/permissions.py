@@ -32,6 +32,7 @@ class P:
     ITINERARY_FEEDBACK = _p("itinerary:feedback", "Submit and read feedback")
     TRIP_USE = _p("trip:use", "Plan and edit multi-day trips in AI Chat")
     NOTIFICATION_READ = _p("notification:read", "Read own slot-cancellation notices")
+    RECOMMENDATIONS_USE = _p("recommendations:use", "Manage own recommendation consent and interactions")
     CHAT_USE = _p("chat:use", "Use the AI concierge")
     REPLAN_ADVISE = _p("replan:advise", "Ask for replanning advice")
     REPLAN_ACCEPT = _p("replan:accept", "Accept a replanning proposal")
@@ -71,6 +72,7 @@ class P:
     ADMIN_PLACES = _p("admin:places", "Create, edit, publish and hide places and landmarks")
     ADMIN_CONTENT = _p("admin:content", "Manage banners, articles and collections on the traveler web")
     ADMIN_ANALYTICS = _p("admin:analytics", "Read traffic analytics")
+    ADMIN_REVIEWS = _p("admin:reviews", "Hide and restore traveler reviews of places and experiences")
     OPS_READ = _p("ops:read", "Read operational status (also grantable to service accounts)")
 
 
@@ -79,7 +81,7 @@ DEFAULT_GRANTS: dict[str, list[str]] = {
     "traveler": _ACCOUNT + [
         P.ITINERARY_PLAN, P.ITINERARY_READ, P.ITINERARY_LIST, P.ITINERARY_COMPARE, P.ITINERARY_VERSIONS, P.ITINERARY_SHARE,
         P.ITINERARY_COLLABORATE, P.TRIP_USE,
-        P.ITINERARY_FEEDBACK, P.NOTIFICATION_READ, P.CHAT_USE, P.REPLAN_ADVISE, P.REPLAN_ACCEPT, P.BOOKING_CREATE,
+        P.ITINERARY_FEEDBACK, P.NOTIFICATION_READ, P.CHAT_USE, P.RECOMMENDATIONS_USE, P.REPLAN_ADVISE, P.REPLAN_ACCEPT, P.BOOKING_CREATE,
         P.BOOKING_CANCEL, P.BOOKING_CHECKOUT, P.REVIEW_WRITE,
     ],
     "provider": _ACCOUNT + [

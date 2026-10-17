@@ -1,0 +1,139 @@
+{
+  "overview": {
+    "text": "Nhà thờ Đức Bà Sài Gòn được xây dựng trong giai đoạn 1877–1880 theo thiết kế của J. Bourard. Công trình là nhà thờ chính tòa của Tổng Giáo phận Sài Gòn, nổi bật với hai tháp chuông và mặt ngoài bằng gạch đỏ.",
+    "source_ids": [
+      "cathedral"
+    ],
+    "status": "sourced"
+  },
+  "image": null,
+  "sources": [
+    {
+      "id": "cathedral",
+      "title": "Nhà thờ Chính tòa Đức Bà — Giới thiệu",
+      "url": "https://www.chinhtoasaigon.org/gioi-thieu",
+      "accessed_on": "2026-10-17"
+    },
+    {
+      "id": "archdiocese",
+      "title": "Tổng Giáo phận Sài Gòn — Vương cung Thánh đường Đức Bà",
+      "url": "https://tgpsaigon.net/bai-viet/vuong-cung-thanh-duong-duc-ba-sai-gon-37259",
+      "accessed_on": "2026-10-17"
+    }
+  ],
+  "timeline": [
+    {
+      "text": "Giám mục Isidore Colombert chủ trì nghi thức khởi dựng nhà thờ.",
+      "source_ids": [
+        "archdiocese"
+      ],
+      "status": "sourced",
+      "id": "1877",
+      "year_start": 1877,
+      "year_end": null,
+      "period": "07/10/1877",
+      "title": "Đặt viên đá đầu tiên",
+      "image": null
+    },
+    {
+      "text": "Sau ba năm thi công, nhà thờ được cung hiến và khánh thành.",
+      "source_ids": [
+        "archdiocese"
+      ],
+      "status": "sourced",
+      "id": "1880",
+      "year_start": 1880,
+      "year_end": null,
+      "period": "11/04/1880",
+      "title": "Khánh thành",
+      "image": null
+    },
+    {
+      "text": "Hai tháp chuông được xây thêm, làm thay đổi diện mạo phần mặt tiền.",
+      "source_ids": [
+        "archdiocese"
+      ],
+      "status": "sourced",
+      "id": "1895",
+      "year_start": 1895,
+      "year_end": null,
+      "period": "1895",
+      "title": "Bổ sung hai tháp chuông",
+      "image": null
+    },
+    {
+      "text": "Nhà thờ trở thành chính tòa của Tổng Giáo phận Sài Gòn.",
+      "source_ids": [
+        "cathedral"
+      ],
+      "status": "sourced",
+      "id": "1960",
+      "year_start": 1960,
+      "year_end": null,
+      "period": "1960",
+      "title": "Nhà thờ chính tòa Tổng Giáo phận",
+      "image": null
+    },
+    {
+      "text": "Giáo hoàng Gioan XXIII ban danh hiệu Tiểu Vương cung thánh đường.",
+      "source_ids": [
+        "cathedral"
+      ],
+      "status": "sourced",
+      "id": "1962",
+      "year_start": 1962,
+      "year_end": null,
+      "period": "13/11/1962",
+      "title": "Danh hiệu Tiểu Vương cung thánh đường",
+      "image": null
+    }
+  ],
+  "architecture": [
+    {
+      "text": "Thiết kế kết hợp Roman cải biên và các nét Gothic. Quan sát mặt tiền để nhận ra bố cục hai tháp và các cửa vòm.",
+      "source_ids": [
+        "cathedral"
+      ],
+      "status": "sourced",
+      "title": "Mặt tiền và phong cách kiến trúc",
+      "view": "front"
+    },
+    {
+      "text": "Hai tháp chuông được bổ sung năm 1895, tạo nên đường nét quen thuộc của công trình.",
+      "source_ids": [
+        "archdiocese"
+      ],
+      "status": "sourced",
+      "title": "Hai tháp chuông",
+      "view": "cinematic"
+    }
+  ],
+  "visit": {
+    "address": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "duration": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "hours": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "admission": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "notes": {
+      "text": "Lịch sử trong thẻ được tổng hợp từ nguồn giáo phận. Giờ tham quan, vé và khả năng vào bên trong cần kiểm tra trực tiếp với đơn vị quản lý; không suy ra từ lịch lễ.",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "checked_on": null
+  }
+}

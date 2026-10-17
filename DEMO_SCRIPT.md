@@ -22,7 +22,7 @@ This document guides a presenter or judge through a **5–7 minute** live demons
 ## 🚀 Detailed Step-by-Step Script
 
 ### Step 1: Opening and Problem Statement (0:00 - 0:45)
-- **Action:** Open the home page at `http://localhost:5173`.
+- **Action:** Open the home page at `http://localhost:8080`.
 - **Presenter script:**
   > *“Judges, when traveling in Ho Chi Minh City, most of us use Google Maps. But a venue being open does not mean its experiences are currently running. Visitors may arrive after a workshop has ended or find that it is fully booked. Local Explorer AI was created to solve this problem: **discover the right experience at the right time**.”*
 

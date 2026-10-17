@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { AlertTriangle, Download, MapPinned, RefreshCw, Upload } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardHeader, EmptyState, PageHeader } from '../../components/ui'
 import { errorMessage } from '../../lib/api'
-import { adminAiApi, type FloodModelStatus, type FloodPrediction, type FloodSample } from '../../lib/adminAi'
+import { adminAiApi, type FloodModelStatus, type FloodPrediction, type FloodSample, modelMessage } from '../../lib/adminAi'
 
 type GeoSample = { latitude: number; longitude: number; sample: FloodSample }
 
@@ -145,7 +145,7 @@ export function AdminFloodRiskPage() {
   async function predict() {
     setError('')
     setPredictions([])
-    if (!model?.deployment_allowed) { setError(model?.block_reason || 'Model chưa được phép triển khai.'); return }
+    if (!model?.deployment_allowed) { setError(modelMessage(model?.block_reason) || 'Model chưa được phép triển khai.'); return }
     if (!rows.length) { setError('Hãy nạp CSV/JSON có đặc trưng model và tọa độ thật trước.'); return }
     setLoading(true)
     try {
@@ -184,10 +184,10 @@ export function AdminFloodRiskPage() {
           </Alert>
         ) : (
         <Alert tone={model?.deployment_allowed ? 'green' : 'amber'} title={<span className="inline-flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Trạng thái model</span>}>
-          {model?.deployment_allowed ? `Model ${model.model_version || 'đã tải'} sẵn sàng${model.loaded ? ' và đã nạp' : ''}. Kết quả chỉ là xác suất dự đoán.` : model?.block_reason || (modelLoading || !model ? 'Đang kiểm tra artifact model…' : 'Model chưa được phép triển khai.')}
+          {model?.deployment_allowed ? `Model ${model.model_version || 'đã tải'} sẵn sàng${model.loaded ? ' và đã nạp' : ''}. Kết quả chỉ là xác suất dự đoán.` : modelMessage(model?.block_reason) || (modelLoading || !model ? 'Đang kiểm tra artifact model…' : 'Model chưa được phép triển khai.')}
         </Alert>
         )}
-        {model?.error && <Alert tone="amber">{model.error}</Alert>}
+        {model?.error && <Alert tone="amber">{modelMessage(model.error)}</Alert>}
         {error && <Alert tone="red">{error}</Alert>}
 
         <Card>

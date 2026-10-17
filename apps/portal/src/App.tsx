@@ -1,3 +1,5 @@
+import { AdminMeshyPage } from './pages/admin/AdminMeshyPage'
+import { AdminLandmarkStoriesPage } from './pages/admin/AdminLandmarkStoriesPage'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { GuestOnly, RequireAuth, RequirePermission, RequireRole } from './auth/guards'
@@ -9,6 +11,8 @@ import { AdminUsersPage } from './pages/admin/AdminUsersPage'
 import { AdminContentPage } from './pages/admin/AdminContentPage'
 import { AdminPlaceEditorPage } from './pages/admin/AdminPlaceEditorPage'
 import { AdminPlacesPage } from './pages/admin/AdminPlacesPage'
+import { AdminReviewsPage } from './pages/admin/AdminReviewsPage'
+import { AdminSiteSettingsPage } from './pages/admin/AdminSiteSettingsPage'
 import { AdminRbacPage } from './pages/admin/AdminRbacPage'
 import { AdminImportsPage } from './pages/admin/AdminImportsPage'
 import { AdminIntegrationsPage } from './pages/admin/AdminIntegrationsPage'
@@ -92,6 +96,7 @@ export function App() {
               </Route>
               <Route element={<RequireRole role="admin" />}>
                 <Route path="/admin" element={<AdminLayout />}>
+                  <Route element={<RequirePermission permission="admin:models_3d" />}><Route path="meshy" element={<AdminMeshyPage />} /></Route>
                   <Route element={<RequirePermission permission="admin:dashboard" />}>
                     <Route index element={<AdminOverviewPage />} />
                   </Route>
@@ -110,8 +115,12 @@ export function App() {
                   <Route element={<RequirePermission permission="admin:places" />}>
                     <Route path="places/:placeId" element={<AdminPlaceEditorPage />} />
                   </Route>
+                  <Route element={<RequirePermission permission="admin:reviews" />}>
+                    <Route path="reviews" element={<AdminReviewsPage />} />
+                  </Route>
                   <Route element={<RequirePermission permission="admin:content" />}>
                     <Route path="content" element={<AdminContentPage />} />
+                    <Route path="landmark-stories" element={<AdminLandmarkStoriesPage />} />
                   </Route>
                   <Route element={<RequirePermission anyOf={['admin:place_import', 'admin:duplicates']} />}>
                     <Route path="imports" element={<AdminImportsPage />} />
@@ -121,6 +130,9 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="ops:read" />}>
                     <Route path="operations" element={<AdminOperationsPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="admin:system" />}>
+                    <Route path="site-settings" element={<AdminSiteSettingsPage />} />
                   </Route>
                   <Route element={<RequirePermission permission="admin:ai_tools" />}>
                     <Route path="ai-tools" element={<AdminAiToolsPage />} />

@@ -58,6 +58,11 @@ class IntegrationField:
 
 
 INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
+    "map3d_ai": {
+        "gemini_api_key": IntegrationField("Gemini API key riêng cho tạo mô hình 3D", secret=True),
+        "gemini_model": IntegrationField("Gemini model cho tạo mô hình 3D"),
+    },
+    "meshy": {"api_key": IntegrationField("Meshy API key", secret=True, fallback_setting="meshy_api_key")},
     "payments": {
         "provider": IntegrationField("Payment provider", fallback_setting="payment_provider"),
         "momo_environment": IntegrationField("MoMo environment", fallback_setting="momo_environment"),
@@ -90,6 +95,9 @@ INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
         "gemini_base_url": IntegrationField("Gemini OpenAI-compatible base URL", fallback_setting="gemini_base_url"),
         "gemini_model": IntegrationField("Gemini model", fallback_setting="gemini_model"),
     },
+    "google_places": {
+        "api_key": IntegrationField("Google Places API key", secret=True, fallback_setting="google_places_api_key"),
+    },
     "google_oauth": {
         "client_id": IntegrationField("Google OAuth client ID", fallback_setting="google_client_id"),
         "client_secret": IntegrationField("Google OAuth client secret", secret=True, fallback_setting="google_client_secret"),
@@ -117,6 +125,8 @@ class ServiceSpec:
 
 
 INTEGRATION_CATALOG: dict[str, ServiceSpec] = {
+    "map3d_ai": ServiceSpec("Gemini · Tạo mô hình 3D", "Key riêng cho chat và phân tích ảnh chuẩn bị mô hình Meshy, không dùng cho trợ lý du lịch.", required=("gemini_api_key",)),
+    "meshy": ServiceSpec("Meshy · Tạo mô hình 3D", "Key chỉ dùng trên máy chủ. Tác vụ tạo hình tiêu tốn API credit.", required=("api_key",)),
     "payments": ServiceSpec(
         "Thanh toán", "Cổng thanh toán cho đặt chỗ. Chỉ một nhà cung cấp hoạt động tại một thời điểm.", provider_key="provider", testable=True,
         providers={
@@ -137,6 +147,9 @@ INTEGRATION_CATALOG: dict[str, ServiceSpec] = {
             "gemini": ProviderSpec("Google Gemini", ("gemini_api_key", "gemini_base_url", "gemini_model"), ("gemini_api_key",)),
             "openai": ProviderSpec("OpenAI hoặc tương thích", ("openai_api_key", "openai_base_url", "openai_model"), ("openai_api_key",)),
         }),
+    "google_places": ServiceSpec(
+        "Đánh giá Google Maps", "Lấy điểm sao và số lượt đánh giá của địa điểm từ Google Maps để hiển thị cạnh đánh giá của du khách.",
+        testable=True, required=("api_key",)),
     "google_oauth": ServiceSpec(
         "Đăng nhập Google", "Cho phép du khách đăng nhập bằng tài khoản Google.", testable=True,
         required=("client_id", "client_secret", "redirect_uri")),

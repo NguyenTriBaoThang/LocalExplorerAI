@@ -12,7 +12,7 @@ export type AuthUser = {
   mfa_enabled: boolean
   created_at: string
   /** Permissions of the signed-in role; only present on /auth/me. */
-  permissions: string[]
+  permissions?: string[]
 }
 
 export type ProviderStatus = 'pending' | 'verified' | 'rejected' | 'suspended' | 'mock' | 'simulated'
@@ -248,6 +248,7 @@ export type PlaceDraft = {
   tags: string[]
   is_landmark: boolean
   source_url: string | null
+  google_place_id?: string | null
 }
 
 export type AdminPlace = PlaceDraft & {
@@ -333,3 +334,60 @@ export type Review = {
 export type MfaChallenge = { mfa_required: true; mfa_ticket: string; expires_in: number }
 export type MfaStatus = { enabled: boolean; required: boolean; setup_pending: boolean; recovery_codes_remaining: number }
 export type MfaSetup = { secret: string; otpauth_uri: string; qr: string }
+
+export type AdminCustomerHistory = {
+  customer: {
+    id: string
+    email: string
+    display_name: string
+    role: string
+    is_active: boolean
+    created_at: string
+  }
+  consent: {
+    personalization_enabled: boolean
+    model_training_enabled: boolean
+    admin_history_enabled: boolean
+  }
+  summary: {
+    itineraries: number
+    bookings: number
+    feedback: number
+    behavior_events: number | null
+  }
+  itineraries: Array<{
+    id: string
+    city: string
+    planned_date: string | null
+    status: string
+    group_size: number
+    estimated_cost_vnd: number
+    created_at: string
+  }>
+  bookings: Array<{
+    id: string
+    experience_name: string
+    status: string
+    quantity: number
+    amount_vnd: number
+    created_at: string
+  }>
+  feedback: Array<{
+    id: string
+    itinerary_id: string
+    rating: number | null
+    created_at: string
+  }>
+  behavior_events: Array<{
+    id: string
+    event_type: 'impression' | 'selected' | 'dismissed'
+    experience_name: string | null
+    position: number | null
+    context: Record<string, unknown>
+    created_at: string
+  }>
+  behavior_history_visible: boolean
+  limit: number
+}
+
+export type SiteSettings = { site_announcement: string; maintenance_mode: boolean }

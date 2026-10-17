@@ -10,18 +10,19 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from geoalchemy2.elements import WKTElement
 
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from app.api.dependencies import get_db, get_llm_provider
-from app.models.entities import AuditLog, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
+from app.models.entities import AuditLog, Booking, Feedback, RecommendationConsent, RecommendationInteraction, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
 from app.api.routes.provider import provider_profile_payload
 from app.models.auth_entities import AuthSession
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
 from app.schemas.partner import ProviderDecisionRequest
+from app.services import external_ratings
 from app.services.notifications import enqueue_email
 from app.auth import hash_password
 from app.services.auth_runtime import invalidate_user_state
@@ -180,6 +181,141 @@ def provider_counts(user: User = Depends(require_user(P.ADMIN_PROVIDERS)), db: S
         counts[key] = counts.get(key, 0) + count
     counts["all"] = sum(count for _, count in rows)
     return counts
+
+
+@router.get("/users/{user_id}/history")
+def user_history(
+    user_id: str,
+    actor: User = Depends(require_user(P.ADMIN_USERS)),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=40, ge=1, le=100),
+):
+    """Show operational history; identifiable Explore activity requires a separate opt-in."""
+    customer = db.get(User, user_id)
+    if customer is None:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "Không tìm thấy tài khoản."})
+
+    consent = db.get(RecommendationConsent, customer.id)
+    behavior_history_visible = bool(consent and consent.admin_history_enabled)
+
+    itinerary_query = select(Itinerary).where(Itinerary.user_id == customer.id)
+    itinerary_count = db.scalar(select(func.count(Itinerary.id)).where(Itinerary.user_id == customer.id)) or 0
+    itineraries = db.scalars(
+        itinerary_query.order_by(Itinerary.created_at.desc()).limit(limit)
+    ).all()
+
+    booking_count = db.scalar(select(func.count(Booking.id)).where(Booking.user_id == customer.id)) or 0
+    booking_rows = db.execute(
+        select(Booking, func.coalesce(Experience.title, Experience.name).label("experience_name"))
+        .join(Experience, Experience.id == Booking.experience_id)
+        .where(Booking.user_id == customer.id)
+        .order_by(Booking.created_at.desc())
+        .limit(limit)
+    ).all()
+
+    feedback_filter = or_(Feedback.user_id == customer.id, Itinerary.user_id == customer.id)
+    feedback_query = select(Feedback).outerjoin(Itinerary, Feedback.itinerary_id == Itinerary.id).where(feedback_filter)
+    feedback_count = db.scalar(
+        select(func.count(Feedback.id))
+        .outerjoin(Itinerary, Feedback.itinerary_id == Itinerary.id)
+        .where(feedback_filter)
+    ) or 0
+    feedback_rows = db.scalars(feedback_query.order_by(Feedback.created_at.desc()).limit(limit)).all()
+
+    behavior_count = 0
+    behavior_rows = []
+    if behavior_history_visible:
+        behavior_filter = (
+            RecommendationInteraction.user_id == customer.id,
+            RecommendationInteraction.admin_history_eligible.is_(True),
+        )
+        behavior_count = db.scalar(
+            select(func.count(RecommendationInteraction.id)).where(*behavior_filter)
+        ) or 0
+        behavior_rows = db.execute(
+            select(RecommendationInteraction, func.coalesce(Experience.title, Experience.name).label("experience_name"))
+            .outerjoin(Experience, Experience.id == RecommendationInteraction.experience_id)
+            .where(*behavior_filter)
+            .order_by(RecommendationInteraction.created_at.desc())
+            .limit(limit)
+        ).all()
+
+    _audit(
+        db,
+        actor,
+        "customer_history_viewed",
+        "user",
+        customer.id,
+        {"behavior_history_visible": behavior_history_visible, "limit": limit},
+    )
+    db.commit()
+
+    return {
+        "customer": {
+            "id": customer.id,
+            "email": customer.email,
+            "display_name": customer.display_name,
+            "role": customer.role,
+            "is_active": customer.is_active,
+            "created_at": customer.created_at,
+        },
+        "consent": {
+            "personalization_enabled": bool(consent and consent.personalization_enabled),
+            "model_training_enabled": bool(consent and consent.model_training_enabled),
+            "admin_history_enabled": behavior_history_visible,
+        },
+        "summary": {
+            "itineraries": itinerary_count,
+            "bookings": booking_count,
+            "feedback": feedback_count,
+            "behavior_events": behavior_count if behavior_history_visible else None,
+        },
+        "itineraries": [
+            {
+                "id": item.id,
+                "city": item.city,
+                "planned_date": item.planned_date,
+                "status": item.status,
+                "group_size": item.group_size,
+                "estimated_cost_vnd": item.estimated_cost_vnd,
+                "created_at": item.created_at,
+            }
+            for item in itineraries
+        ],
+        "bookings": [
+            {
+                "id": booking.id,
+                "experience_name": experience_name,
+                "status": booking.status,
+                "quantity": booking.quantity,
+                "amount_vnd": booking.amount_vnd,
+                "created_at": booking.created_at,
+            }
+            for booking, experience_name in booking_rows
+        ],
+        "feedback": [
+            {
+                "id": item.id,
+                "itinerary_id": item.itinerary_id,
+                "rating": item.rating,
+                "created_at": item.created_at,
+            }
+            for item in feedback_rows
+        ],
+        "behavior_events": [
+            {
+                "id": interaction.id,
+                "event_type": interaction.event_type,
+                "experience_name": experience_name,
+                "position": interaction.position,
+                "context": interaction.context_snapshot,
+                "created_at": interaction.created_at,
+            }
+            for interaction, experience_name in behavior_rows
+        ],
+        "behavior_history_visible": behavior_history_visible,
+        "limit": limit,
+    }
 
 
 @router.get("/providers")
@@ -616,7 +752,7 @@ def test_integration_connection(
     db: Session = Depends(get_db),
 ):
     """Run a small, non-customer-data health check and never return provider payloads or secrets."""
-    if service not in {"ai", "routing", "payments", "google_oauth"}:
+    if service not in {"ai", "routing", "payments", "google_oauth", "google_places"}:
         raise HTTPException(
             status_code=404,
             detail={"code": "INTEGRATION_TEST_UNSUPPORTED", "message": "Connection tests are available for AI, routing, payments, and Google OAuth integrations."},
@@ -624,7 +760,9 @@ def test_integration_connection(
 
     status = "failed"
     detail_vi = None
-    if service == "ai":
+    if service == "google_places":
+        status, detail_vi = external_ratings.test_connection(db)
+    elif service == "ai":
         provider = get_llm_provider(db)
         if provider.model_name == "not-configured":
             status = "not_configured"
@@ -747,7 +885,7 @@ def test_integration_connection(
         "service": service,
         "status": status,
         "ok": status in {"connected", "configured"},
-        "check_type": "external_request" if service in {"ai", "routing"} else "configuration_only",
+        "check_type": "external_request" if service in {"ai", "routing", "google_places"} else "configuration_only",
         "message_vi": messages[status],
         "detail_vi": detail_vi,
     }

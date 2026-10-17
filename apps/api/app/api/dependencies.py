@@ -15,7 +15,7 @@ def get_planner_service(db: Session = Depends(get_db)) -> PlannerService:
 def resolve_llm_config(db: Session) -> tuple[str, str, str] | None:
     """(api_key, base_url, model) of the selected chat provider, or None when not configured."""
     try:
-        selected = (resolve_integration_value(db, "ai", "provider") or "openai").strip().lower()
+        selected = (resolve_integration_value(db, "ai", "provider") or settings.llm_provider).strip().lower()
     except IntegrationSecretConfigurationError:
         return None
     if selected == "gemini":

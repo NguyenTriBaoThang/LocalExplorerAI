@@ -1,0 +1,53 @@
+{
+  "dataset_status": "synthetic_simulated",
+  "warning": "Offline experiment only. The supplied generator creates simulated impressions, synthetic flood labels, placeholder evidence URLs, and fabricated verification metadata. Metrics measure imitation of that generator, not real user preference, real flood risk, or operational readiness. Do not deploy or use for decisions.",
+  "split_method": "GroupShuffleSplit by request_id; 25% held out",
+  "seed": 42,
+  "train_requests": 150,
+  "test_requests": 50,
+  "train_viewable_impressions": 664,
+  "test_viewable_impressions": 220,
+  "label_distribution_train": {
+    "0": 569,
+    "1": 55,
+    "2": 18,
+    "3": 22
+  },
+  "label_distribution_test": {
+    "0": 189,
+    "1": 20,
+    "2": 5,
+    "3": 6
+  },
+  "test_ndcg_at_5": {
+    "lightgbm_ranker": 0.2852320255633007,
+    "rule_baseline": 0.3077994178610098
+  },
+  "feature_version": "ranker-features-v2",
+  "feature_names": [
+    "tag_jaccard",
+    "intent_match",
+    "is_hands_on",
+    "is_indoor",
+    "duration_ratio",
+    "eta_ratio",
+    "total_time_ratio",
+    "group_cost_ratio",
+    "rain_mm",
+    "outdoor_rain_mm",
+    "temperature_c",
+    "pm2_5",
+    "european_aqi",
+    "is_hands_on_known",
+    "is_indoor_known"
+  ],
+  "position_used_as_feature": false,
+  "only_viewable_impressions_used": true,
+  "limitations": [
+    "The generator creates synthetic clicks/saves/bookings with random probabilities.",
+    "The outcome labels are not real traveler feedback.",
+    "The CSV omits live ETA, remaining time, weather and AQI; their features stay missing.",
+    "Some item prices are per item and others per person; unknown price basis is not normalized.",
+    "The held-out metric only measures this generator's weak-label process."
+  ]
+}

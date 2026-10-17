@@ -44,6 +44,7 @@ export interface ChatMessageRequest {
   language: 'vi' | 'en'
   prior_user_messages: string[]
   conversation_id: string
+  model_id?: string
   trip_context?: {
     trip_date?: string | null
     destination?: { name: string; latitude: number; longitude: number } | null
@@ -123,6 +124,7 @@ export interface POI {
   image_urls?: string[]
   opening_hours?: string | null
   ticket_info?: string | null
+  source_url?: string | null
   tags?: string[]
   is_landmark?: boolean
   details?: {
@@ -335,6 +337,11 @@ export interface PlanRequest {
   intent_weights: Record<string, number>
   locked_experience_ids: string[]
   locked_poi_ids?: string[]
+  planning_style?: string
+  excluded_experience_ids?: string[]
+  preferred_slot_ids?: string[]
+  require_verified?: boolean
+  routing_mode?: 'configured' | 'demo'
   origin_latitude?: number
   origin_longitude?: number
   origin_label?: string
@@ -500,4 +507,77 @@ export interface ReviewableBooking {
   experience_id: string
   experience_title: string
   slot_start_at: string
+}
+
+export interface PlaceCommunityReview {
+  id: string
+  author: string
+  rating: number
+  comment: string
+  visited_on: string | null
+  created_at: string
+  edited: boolean
+}
+
+export interface PlaceGoogleRating {
+  source: 'google'
+  rating: number
+  rating_count: number
+  maps_uri: string | null
+  matched_name: string | null
+  fetched_at: string
+}
+
+export interface PlaceReviewsResponse {
+  community: {
+    count: number
+    average: number | null
+    distribution: Record<string, number>
+    items: PlaceCommunityReview[]
+  }
+  google: PlaceGoogleRating | null
+}
+
+export interface MyPlaceReviewState {
+  can_review: boolean
+  reason: 'no_itinerary' | null
+  review: {
+    id: string
+    rating: number
+    comment: string
+    visited_on: string | null
+    status: 'published' | 'hidden'
+    created_at: string
+    updated_at: string | null
+  } | null
+}
+
+export interface MyPlaceReviewItem {
+  id: string
+  poi_id: string
+  poi_name: string
+  rating: number
+  comment: string
+  visited_on: string | null
+  status: 'published' | 'hidden'
+  created_at: string
+  updated_at: string | null
+}
+
+export interface MyExperienceReviewItem {
+  id: string
+  booking_id: string
+  experience_id: string
+  experience_title: string
+  rating: number
+  comment: string
+  reply: string | null
+  status: string
+  created_at: string
+  updated_at: string | null
+}
+
+export interface MyReviewsResponse {
+  places: MyPlaceReviewItem[]
+  experiences: MyExperienceReviewItem[]
 }

@@ -16,7 +16,7 @@ import { ChatPage } from './pages/ChatPage'
 import { Map3DPage } from './pages/Map3DPage'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/RecoveryPages'
 import { GuidePage, GuidesPage } from './pages/GuidesPage'
-import { PlacePage } from './pages/PlacePage'
+import { PlaceDetailPage } from './pages/PlaceDetailPage'
 import { PlacesPage } from './pages/PlacesPage'
 import { ExperiencePage } from './pages/ExperiencePage'
 import { CustomerRoute, GuestRoute, RoleHome, RoleRoute } from './auth'
@@ -33,7 +33,7 @@ export const router = createBrowserRouter([{
     { path: '/guides', element: <GuidesPage /> },
     { path: '/guides/:slug', element: <GuidePage /> },
     { path: '/places', element: <PlacesPage /> },
-    { path: '/places/:placeId', element: <PlacePage /> },
+    { path: '/places/:placeId', element: <PlaceDetailPage /> },
     { path: '/experiences/:experienceId', element: <ExperiencePage /> },
     // Traveler features
     { element: <CustomerRoute />, children: [

@@ -11,6 +11,8 @@ from tests.route_inventory import inventory
 
 # Adding a public route must be a conscious, reviewed change to this list.
 PUBLIC_ROUTES = {
+    ("meshy", "GET", "/api/meshy/jobs/{job_id}/asset"),
+    ("landmark_stories", "GET", "/api/landmark-stories/{model_id}"),
     ("push_notifications", "GET", "/api/notifications/push/vapid-public-key"),
     ("admin_bot", "GET", "/api/bot/webhook"), ("admin_bot", "POST", "/api/bot/webhook"),
     ("ai", "GET", "/api/ai/prompts"),
@@ -21,12 +23,14 @@ PUBLIC_ROUTES = {
     ("auth", "POST", "/api/auth/password/forgot"), ("auth", "POST", "/api/auth/password/reset"), ("auth", "POST", "/api/auth/email/verify"),
     # Portal platform: the traveler web reads published content and reviews, and sends anonymous page views.
     ("analytics", "POST", "/api/analytics/pageview"), ("reviews", "GET", "/api/experiences/{experience_id}/reviews"),
-    ("site_content", "GET", "/api/content/home"), ("site_content", "GET", "/api/content/articles"), ("site_content", "GET", "/api/content/articles/{slug}"),
+    ("site_content", "GET", "/api/content/home"), ("site_content", "GET", "/api/content/articles"), ("site_content", "GET", "/api/content/articles/{slug}"), ("site_content", "GET", "/api/site-config"),
     ("bookings", "GET", "/api/payments/momo/return"), ("bookings", "GET", "/api/payments/status"), ("bookings", "GET", "/api/payments/vnpay/ipn"),
     ("bookings", "GET", "/api/payments/vnpay/return"), ("bookings", "POST", "/api/payments/momo/ipn"),
     ("catalog", "GET", "/api/experience-search"), ("catalog", "GET", "/api/experiences"), ("catalog", "GET", "/api/experiences/{experience_id}"),
-    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"),
+    ("catalog", "GET", "/api/experiences/{experience_id}/slots"), ("catalog", "GET", "/api/pois"), ("catalog", "GET", "/api/pois/{poi_id}"), ("catalog", "GET", "/api/partners"), ("catalog", "GET", "/api/partners/{slug}"), ("place_reviews", "GET", "/api/pois/{poi_id}/reviews"),
     ("chat", "GET", "/api/chat/status"),
+    # Journey reads public catalog readiness and model-to-place links, without account data.
+    ("journey", "GET", "/api/journey/pilot"), ("journey", "GET", "/api/journey/landmarks/{model_id}"),
     ("health", "GET", "/health"), ("health", "GET", "/ready"),
     ("main", "GET", "/"),
     ("ml", "GET", "/api/ml/status"), ("ml", "POST", "/api/ml/flood-risk"), ("ml", "POST", "/api/ml/rank-experiences"),
@@ -216,10 +220,13 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     module = _load_migration("m0012", "migrations/versions/0012_rbac_seed.py")
     m0016 = _load_migration("m0016", "migrations/versions/0016_portal_platform.py")
     m0019 = _load_migration("m0019", "migrations/versions/0019_itinerary_collaboration.py")
+    m0019_reviews = _load_migration("m0019_reviews", "migrations/versions/0019_place_reviews.py")
     m0020 = _load_migration("m0020", "migrations/versions/0020_trip_planner.py")
     later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py"),
              # 0016 also changes the schema; only its permission seed applies to this bare RBAC database.
              type("PermissionsOnly0016", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)}),
+             _load_migration("m0018", "migrations/versions/0018_merge_behavior_portal.py"),
+             type("ReviewPermissions", (), {"upgrade": staticmethod(m0019_reviews.upgrade_permissions), "downgrade": staticmethod(m0019_reviews.downgrade_permissions)}),
              # 0019 also adds schema; exercise only its traveler permission seed here.
              type("PermissionsOnly0019", (), {"upgrade": staticmethod(m0019.upgrade_permissions), "downgrade": staticmethod(m0019.downgrade_permissions)}),
              # 0020 also adds schema; exercise only its trip:use seed here.
