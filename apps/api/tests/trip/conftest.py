@@ -3,6 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.core.config import settings
+from app.services.trip import distance
+
 from openai.types.chat import ChatCompletionMessage
 
 from app.services.trip.domain import WEEKDAYS
@@ -66,3 +69,10 @@ def trip_places(db_session) -> dict[str, TripPlace]:
     db_session.add_all(places.values())
     db_session.commit()
     return places
+
+
+@pytest.fixture(autouse=True)
+def _clean_distance(monkeypatch):
+    distance._cache.clear()
+    distance._down_until = 0.0
+    monkeypatch.setattr(settings, "goong_api_key", "")
