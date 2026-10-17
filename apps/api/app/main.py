@@ -14,11 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-<<<<<<< HEAD
-from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, places_admin, planner, provider, rbac, reviews, routing, site_content, journey, recommendations, landmark_stories, meshy
-=======
-from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content
->>>>>>> origin/main
+from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content, journey, recommendations, landmark_stories, meshy
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
 from app.api.guards import public

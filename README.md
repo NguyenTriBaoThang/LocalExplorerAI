@@ -886,12 +886,10 @@ Flood report data (data/raw/hcmc_flood_reports_2002_2026.csv): CC BY-NC 4.0 — 
   <p>Built with ❤️ for Ho Chi Minh City</p>
   <p><a href="https://nguyentribaothang.github.io/LocalExplorerAI/">Technical Documentation</a> · <a href="./DEMO_SCRIPT.md">Demo Script</a> · <a href="./ARCHITECTURE.md">Architecture</a></p>
 </div>
-<<<<<<< HEAD
 
 ## Local integration from MLAI_DA
 
 The journey flow, consent-based recommendations, and customer history have been integrated with the separate portal and RBAC. See [the integration notes](docs/mlai-da-integration.md) for scope, validation, and migration details.
-=======
 ## v1.1 — Các chức năng đã triển khai
 
 ### Thời tiết và chất lượng không khí
@@ -917,4 +915,3 @@ Dashboard quản trị hiển thị phân bố đặt chỗ theo 7 ngày trong t
 ### Trạng thái triển khai
 
 Các tích hợp thời tiết, PWA, push và heatmap đã có trong mã nguồn. Push cần khóa VAPID/HTTPS ở môi trường chạy thực tế. Mô hình ngập vẫn chờ dữ liệu âm đã xác minh; không tạo nhãn âm tổng hợp để thay thế dữ liệu thực.
->>>>>>> origin/main

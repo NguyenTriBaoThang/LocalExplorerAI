@@ -10,23 +10,23 @@ import {
   AlertCircle,
   Route,
   Shield,
-<<<<<<< HEAD
   Brain,
+  Bell,
 } from 'lucide-react'
 import {
   apiErrorMessage,
   changePassword,
+  deleteWebPushSubscription,
   getMyItineraries,
+  getWebPushPublicKey,
+  getWebPushStatus,
   getRecommendationConsent,
+  saveWebPushSubscription,
   updateProfile,
   updateRecommendationConsent,
   type RecommendationConsent,
+  type WebPushStatus,
 } from '../api/client'
-=======
-  Bell,
-} from 'lucide-react'
-import { apiErrorMessage, changePassword, deleteWebPushSubscription, getMyItineraries, getWebPushPublicKey, getWebPushStatus, saveWebPushSubscription, updateProfile, type WebPushStatus } from '../api/client'
->>>>>>> origin/main
 import { useAuth } from '../auth'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 import { SessionsCard } from '../components/account/SessionsCard'
@@ -48,11 +48,9 @@ export function ProfilePage() {
   const [error, setError] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
-<<<<<<< HEAD
   const [recommendationConsent, setRecommendationConsent] = useState<RecommendationConsent | null>(null)
   const [loadingRecommendationConsent, setLoadingRecommendationConsent] = useState(false)
   const [savingRecommendationConsent, setSavingRecommendationConsent] = useState(false)
-=======
   const [pushStatus, setPushStatus] = useState<WebPushStatus | null>(null)
   const [pushSupported, setPushSupported] = useState(false)
   const [pushCurrentDevice, setPushCurrentDevice] = useState(false)
@@ -134,7 +132,6 @@ export function ProfilePage() {
       setPushBusy(false)
     }
   }
->>>>>>> origin/main
 
   useEffect(() => {
     if (user?.role !== 'traveler') {
@@ -325,7 +322,6 @@ export function ProfilePage() {
             </form>
           </section>
 
-<<<<<<< HEAD
           {user?.role === 'traveler' && (
             <section className="profile-card-3d">
               <div className="profile-card-title-row">
@@ -405,7 +401,6 @@ export function ProfilePage() {
               )}
             </section>
           )}
-=======
           {/* Booking notifications */}
           <section className="profile-card-3d">
             <div className="profile-card-title-row">
@@ -435,7 +430,6 @@ export function ProfilePage() {
               )}
             </div>
           </section>
->>>>>>> origin/main
 
           {/* Change Password Card */}
           <section className="profile-card-3d">

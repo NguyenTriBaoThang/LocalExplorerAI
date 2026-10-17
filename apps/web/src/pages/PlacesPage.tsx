@@ -19,15 +19,9 @@ const CATEGORY_TABS = [
   { id: 'all', icon: '✨', ids: [] as string[] },
   { id: 'an-uong', icon: '🍜', ids: ['an-uong', 'food'] },
   { id: 'cafe', icon: '☕', ids: ['cafe'] },
-<<<<<<< HEAD
   { id: 'tham-quan', icon: '🏛️', ids: ['tham-quan', 'culture', 'heritage', 'local_life'] },
   { id: 'giai-tri', icon: '🎭', ids: ['giai-tri'] },
   { id: 'cho-o', icon: '🏨', ids: ['cho-o', 'accommodation'] },
-=======
-  { id: 'tham-quan', icon: '🏛️', ids: ['tham-quan', 'culture'] },
-  { id: 'giai-tri', icon: '🎭', ids: ['giai-tri'] },
-  { id: 'cho-o', icon: '🏨', ids: ['cho-o'] },
->>>>>>> origin/main
   { id: 'handicraft', icon: '🎨', ids: ['handicraft'] },
   { id: 'nature', icon: '🌿', ids: ['nature'] },
   { id: 'relaxation', icon: '🍵', ids: ['relaxation'] },
@@ -39,12 +33,9 @@ const CATEGORY_META: Record<string, { icon: string }> = {
   cafe: { icon: '☕' },
   'tham-quan': { icon: '🏛️' },
   culture: { icon: '🏛️' },
-<<<<<<< HEAD
   heritage: { icon: '🏛️' },
   local_life: { icon: '🏛️' },
   accommodation: { icon: '🏨' },
-=======
->>>>>>> origin/main
   'giai-tri': { icon: '🎭' },
   'cho-o': { icon: '🏨' },
   handicraft: { icon: '🎨' },
@@ -61,11 +52,7 @@ const inTab = (category: string, tabId: string) =>
 
 export function PlacesPage() {
   const { t } = useTranslation()
-<<<<<<< HEAD
   const catLabel = (slug: string) => t(`places.meta.${({ heritage: 'culture', local_life: 'tham-quan', accommodation: 'cho-o' } as Record<string, string>)[slug] ?? slug}`)
-=======
-  const catLabel = (slug: string) => t(`places.meta.${slug}`)
->>>>>>> origin/main
   const [places, setPlaces] = useState<POI[]>([])
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -123,11 +110,7 @@ export function PlacesPage() {
           </div>
           <div className="places-stat-pill">
             <Compass size={13} className="text-cyan-400" />
-<<<<<<< HEAD
             <span><strong>{places.filter((place) => place.details?.catalog_mode === 'hcmc_catalog_candidate').length}</strong> {t('places.statCandidates')}</span>
-=======
-            <span><strong>100%</strong> {t('places.statGps')}</span>
->>>>>>> origin/main
           </div>
           <div className="places-stat-pill">
             <ShieldCheck size={13} className="text-amber-400" />
@@ -280,14 +263,11 @@ export function PlacesPage() {
                     {place.verification_status === 'verified' && (
                       <span className="place-verified-pill">
                         <ShieldCheck size={11} /> {t('places.verified')}
-<<<<<<< HEAD
                       </span>
                     )}
                     {place.details?.catalog_mode === 'hcmc_catalog_candidate' && (
                       <span className="place-verified-pill place-candidate-pill" title={t('places.candidateHint')}>
                         {t('places.candidate')}
-=======
->>>>>>> origin/main
                       </span>
                     )}
                   </div>
@@ -299,11 +279,7 @@ export function PlacesPage() {
                   </h3>
 
                   <p className="place-card-address">
-<<<<<<< HEAD
-                    <MapPin size={12} className="place-address-icon shrink-0 mt-0.5" />
-=======
-                    <MapPin size={12} className="shrink-0 text-emerald-400 mt-0.5" />
->>>>>>> origin/main
+                    <MapPin size={12} className="place-address-icon shrink-0 text-emerald-400 mt-0.5" />
                     <span>{place.address || t('places.defaultAddress')}</span>
                   </p>
 

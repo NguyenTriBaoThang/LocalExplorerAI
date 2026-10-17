@@ -641,12 +641,9 @@ export const translations = {
     'mfa.confirmAction': 'Nhập mã để xác nhận',
     // Places catalogue
     'places.cat.all': 'Tất cả',
-<<<<<<< HEAD
     'places.statCandidates': 'ứng viên cần xác minh',
     'places.candidate': 'Ứng viên · cần xác minh',
     'places.candidateHint': 'Ứng viên local; tọa độ và thông tin chưa được xác minh',
-=======
->>>>>>> origin/main
     'places.cat.an-uong': 'Ăn uống',
     'places.cat.cafe': 'Cà phê',
     'places.cat.tham-quan': 'Tham quan & Văn hóa',
@@ -667,7 +664,6 @@ export const translations = {
     'places.meta.relaxation': 'Thư giãn & Wellness',
     'places.group': 'thuộc nhóm',
     'places.loadError': 'Không tải được danh mục địa điểm. Hãy thử tải lại trang.',
-<<<<<<< HEAD
     'places.eyebrow': 'DANH MỤC ĐỊA ĐIỂM TP.HCM',
     'places.pilot': 'Danh mục local',
     'places.titleA': 'Khám phá',
@@ -678,29 +674,13 @@ export const translations = {
     'places.statCatalog': 'địa điểm catalog',
     'places.statGps': 'tọa độ GPS',
     'places.statLicense': 'Giá và giờ chưa xác minh',
-=======
-    'places.eyebrow': 'DANH MỤC ĐỊA ĐIỂM SÀI GÒN',
-    'places.pilot': 'Pilot Quận 1',
-    'places.titleA': 'Khám phá',
-    'places.titleB': 'Địa Điểm & Không Gian',
-    'places.titleC': 'Văn Hóa',
-    'places.sub': 'Khám phá {count} điểm đến đặc sắc tại trung tâm Sài Gòn. Dữ liệu chuẩn xác từ OpenStreetMap, tích hợp định vị không gian và khung giờ thực.',
-    'places.subNoCount': 'Khám phá các điểm đến đặc sắc tại trung tâm Sài Gòn. Dữ liệu chuẩn xác từ OpenStreetMap, tích hợp định vị không gian và khung giờ thực.',
-    'places.statCatalog': 'địa điểm catalog',
-    'places.statGps': 'tọa độ GPS',
-    'places.statLicense': 'Bảo vệ bản quyền ODbL-1.0',
->>>>>>> origin/main
     'places.searchPlaceholder': 'Tìm theo tên địa điểm, địa chỉ, loại hình…',
     'places.searchClear': 'Xóa tìm kiếm',
     'places.showing': 'Hiển thị {count} địa điểm',
     'places.forKeyword': 'cho từ khóa "{query}"',
     'places.reset': 'Đặt lại bộ lọc',
     'places.loading': 'Đang tải danh mục địa điểm Sài Gòn…',
-<<<<<<< HEAD
     'places.defaultDistrict': 'TP. Hồ Chí Minh',
-=======
-    'places.defaultDistrict': 'Quận 1, TP.HCM',
->>>>>>> origin/main
     'places.verified': 'Đã duyệt',
     'places.defaultAddress': 'Trung tâm TP. Hồ Chí Minh',
     'places.viewDetail': 'Xem chi tiết địa điểm',
@@ -1311,12 +1291,9 @@ export const translations = {
     'mfa.confirmAction': 'Enter a code to confirm',
     // Places catalogue
     'places.cat.all': 'All',
-<<<<<<< HEAD
     'places.statCandidates': 'candidates awaiting verification',
     'places.candidate': 'Candidate · unverified',
     'places.candidateHint': 'Local candidate; coordinates and details have not been verified',
-=======
->>>>>>> origin/main
     'places.cat.an-uong': 'Food & drink',
     'places.cat.cafe': 'Cafés',
     'places.cat.tham-quan': 'Sightseeing & culture',
@@ -1337,7 +1314,6 @@ export const translations = {
     'places.meta.relaxation': 'Relaxation & wellness',
     'places.group': 'in the group',
     'places.loadError': 'Could not load the places catalogue. Please reload the page.',
-<<<<<<< HEAD
     'places.eyebrow': 'HO CHI MINH CITY PLACES',
     'places.pilot': 'Local catalogue',
     'places.titleA': 'Discover',
@@ -1348,29 +1324,13 @@ export const translations = {
     'places.statCatalog': 'places in the catalogue',
     'places.statGps': 'GPS coordinates',
     'places.statLicense': 'Prices and hours require verification',
-=======
-    'places.eyebrow': 'SAIGON PLACES CATALOGUE',
-    'places.pilot': 'District 1 pilot',
-    'places.titleA': 'Discover',
-    'places.titleB': 'Places & Cultural',
-    'places.titleC': 'Spaces',
-    'places.sub': 'Discover {count} distinctive places in central Saigon. Reliable OpenStreetMap data with spatial positioning and real opening hours.',
-    'places.subNoCount': 'Discover distinctive places in central Saigon. Reliable OpenStreetMap data with spatial positioning and real opening hours.',
-    'places.statCatalog': 'places in the catalogue',
-    'places.statGps': 'GPS coordinates',
-    'places.statLicense': 'ODbL-1.0 licensed',
->>>>>>> origin/main
     'places.searchPlaceholder': 'Search by name, address or type…',
     'places.searchClear': 'Clear search',
     'places.showing': 'Showing {count} places',
     'places.forKeyword': 'for "{query}"',
     'places.reset': 'Reset filters',
     'places.loading': 'Loading the Saigon places catalogue…',
-<<<<<<< HEAD
     'places.defaultDistrict': 'Ho Chi Minh City',
-=======
-    'places.defaultDistrict': 'District 1, HCMC',
->>>>>>> origin/main
     'places.verified': 'Verified',
     'places.defaultAddress': 'Central Ho Chi Minh City',
     'places.viewDetail': 'View place details',

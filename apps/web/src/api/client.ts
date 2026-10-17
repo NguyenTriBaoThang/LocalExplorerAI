@@ -328,7 +328,7 @@ export async function getPOIs(scope: 'pilot' | 'citywide' = 'pilot', verifiedOnl
 }
 
 export async function getPOI(id: string): Promise<POIDetail> {
-  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}`)
+  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}?scope=citywide`)
   return data
 }
 
