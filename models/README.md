@@ -8,6 +8,7 @@ This directory stores model artifacts and metadata. The presence of an artifact 
 - e5/: currently contains only a placeholder; the model weights are not in the repository.
 - flood-risk/: currently contains only a placeholder; no road-flood prediction model has been trained with suitable observed labels.
 - The flood-report experiment, if present, is under data/experimental/. It is a separate task and is not a flood-risk model.
+- dataset-17-experiment/: offline experiments from the supplied DATA_ngay17 CSVs. The input generator creates simulated user outcomes and formula-derived flood labels with placeholder evidence. Outputs are not production eligible; the ranker pilot is disabled and the Flood API must reject its demo bundle.
 
 ## Promotion principles
 

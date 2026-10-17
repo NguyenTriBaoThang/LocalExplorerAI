@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "numeric_features": [
+    "rainfall_last_1h_mm",
+    "rainfall_last_3h_mm",
+    "rainfall_last_6h_mm",
+    "forecast_rain_next_3h_mm",
+    "tide_level_m",
+    "elevation_m",
+    "slope_deg",
+    "distance_to_canal_m",
+    "drainage_capacity_score",
+    "impervious_surface_ratio"
+  ],
+  "categorical_features": [],
+  "source": "DATA_ngay17 flood_features.csv"
+}

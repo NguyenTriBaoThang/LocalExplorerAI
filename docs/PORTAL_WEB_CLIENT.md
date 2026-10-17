@@ -73,7 +73,7 @@ và thêm đường dẫn vào `ENTITY_PAGES` trong `src/analytics.ts` để kh�
 3. ✅ Điểm sao trung bình trên thẻ trải nghiệm.
 4. ✅ Lọc theo `tags`/`is_landmark` ở Khám phá và dải "Danh thắng" trên bản đồ 3D.
 5. ✅ `/admin` và `/provider-portal` đã gỡ khỏi web khách: hai đường dẫn này chuyển người dùng sang portal
-   (`/admin`, `/partner`) theo `VITE_PORTAL_URL` (mặc định `http://localhost:5174`). Các màn hình Rủi ro ngập, Công cụ AI, Vận hành,
+   (`/admin`, `/partner`) theo `VITE_PORTAL_URL` (mặc định `http://localhost:8081`). Các màn hình Rủi ro ngập, Công cụ AI, Vận hành,
    Tích hợp, Nhập địa điểm & Trùng lặp, Trợ lý cập nhật ca, Nguồn xác minh đã có ở portal.
 6. ✅ Các key i18n `footer.*`, `profile.savedTrips`, `profile.updateSuccess`, `provider.subtitle` đã được bổ sung.
 

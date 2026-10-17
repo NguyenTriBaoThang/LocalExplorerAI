@@ -456,6 +456,7 @@ notebooks/*
 *.ipynb
 !notebooks/LocalExplorerAI_Train_Verified_Ranker_Colab.ipynb
 !notebooks/LocalExplorerAI_Bootstrap_Ranker_Colab.ipynb
+!notebooks/LocalExplorerAI_DATA_ngay17_Offline_Experiments.ipynb
 .ipynb_checkpoints/
 
 # Bot runtime store
