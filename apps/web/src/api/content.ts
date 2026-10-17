@@ -15,7 +15,7 @@ export const contentApi = {
 }
 
 export async function getPOI(id: string) {
-  const { data } = await api.get<import('../types').POI>(`/pois/${id}`)
+  const { data } = await api.get<import('../types').POI>(`/pois/${id}?scope=citywide`)
   return data
 }
 

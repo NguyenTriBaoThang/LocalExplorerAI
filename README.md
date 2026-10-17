@@ -734,7 +734,7 @@ Create apps/api/.env from the root .env.example if it does not already exist:
 | `VNPAY_TMN_CODE` | *(tùy chọn)* | Mã Terminal ID do VNPay cấp |
 | `VNPAY_HASH_SECRET` | *(tùy chọn)* | Khóa bí mật tạo chữ ký số HMAC-SHA512 VNPay |
 | `VNPAY_PAYMENT_URL` | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` | Endpoint thanh toán VNPay |
-| `VNPAY_RETURN_URL` | `http://localhost:5173/itinerary/` | URL điều hướng hiển thị kết quả sau thanh toán |
+| `VNPAY_RETURN_URL` | `http://localhost:8080/itinerary/` | URL điều hướng hiển thị kết quả sau thanh toán |
 | `VNPAY_IPN_URL` | `http://localhost:8000/api/payments/vnpay/ipn` | Webhook IPN tiếp nhận xác nhận thanh toán |
 | `MOMO_ENVIRONMENT` | `sandbox` | Môi trường Ví MoMo (`sandbox` hoặc `production`) |
 | `MOMO_PARTNER_CODE` | *(tùy chọn)* | Mã đối tác do MoMo cấp |
@@ -886,6 +886,10 @@ Flood report data (data/raw/hcmc_flood_reports_2002_2026.csv): CC BY-NC 4.0 — 
   <p>Built with ❤️ for Ho Chi Minh City</p>
   <p><a href="https://nguyentribaothang.github.io/LocalExplorerAI/">Technical Documentation</a> · <a href="./DEMO_SCRIPT.md">Demo Script</a> · <a href="./ARCHITECTURE.md">Architecture</a></p>
 </div>
+
+## Local integration from MLAI_DA
+
+The journey flow, consent-based recommendations, and customer history have been integrated with the separate portal and RBAC. See [the integration notes](docs/mlai-da-integration.md) for scope, validation, and migration details.
 ## v1.1 — Các chức năng đã triển khai
 
 ### Thời tiết và chất lượng không khí

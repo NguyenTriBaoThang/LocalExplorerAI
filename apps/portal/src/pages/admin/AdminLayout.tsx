@@ -53,7 +53,9 @@ export function AdminLayout() {
             { to: '/admin/rbac', label: 'Phân quyền', icon: KeyRound, perm: 'admin:rbac' },
           ] },
           { title: 'Nội dung', items: [
+            { to: '/admin/meshy', label: 'Tạo mô hình 3D · Meshy', icon: Bot, perm: 'admin:models_3d' },
             { to: '/admin/places', label: 'Địa điểm & Danh thắng', icon: MapPinned, perm: 'admin:places' },
+            { to: '/admin/landmark-stories', label: 'Câu chuyện địa danh 3D', icon: History, perm: 'admin:content' },
             { to: '/admin/reviews', label: 'Đánh giá', icon: MessageSquare, perm: 'admin:reviews' },
             { to: '/admin/content', label: 'Nội dung website', icon: FileText, perm: 'admin:content' },
             { to: '/admin/imports', label: 'Nhập liệu & Trùng lặp', icon: FileInput, perm: ['admin:place_import', 'admin:duplicates'] },

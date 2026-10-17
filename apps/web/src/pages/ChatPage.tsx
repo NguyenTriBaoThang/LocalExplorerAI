@@ -32,6 +32,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, apiErrorMessage, createItinerary, getChatServiceStatus, getRoutingCapabilities, sendChatMessage } from '../api/client'
 import type { ChatConstraints, ChatServiceStatus, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
+import { useJourney, useTripField, useAssistantField, chatContext } from '../journey'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
 
 type ChatLine = {
@@ -146,6 +147,7 @@ function FormattedChatMessage({ content }: { content: string }) {
 export function ChatPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const { trip, applyConstraints } = useJourney()
 
   const initialMessage = useMemo<ChatLine>(() => ({
     id: 'welcome',
@@ -154,27 +156,24 @@ export function ChatPage() {
     time: t('chat.justNow'),
   }), [t])
 
-  const [conversationId, setConversationId] = useState(makeConversationId)
-  const [messages, setMessages] = useState<ChatLine[]>([initialMessage])
-  const [userTurns, setUserTurns] = useState<string[]>([])
-  const [constraints, setConstraints] = useState<ChatConstraints | null>(null)
+  const [conversationId, setConversationId] = useAssistantField('conversationId')
+  const [messages, setMessages] = useAssistantField('messages')
+  const userTurns = messages.filter((message) => message.role === 'user')
+  const [storedConstraints, setConstraints] = useAssistantField('constraints')
+  const constraints = chatContext(trip, storedConstraints)
+  const [busy, setBusy] = useAssistantField('busy')
   // Place and experience pages link here with ?q=<question> to start the conversation about that place.
   const [searchParams] = useSearchParams()
   const [draft, setDraft] = useState(() => (searchParams.get('q') ?? '').slice(0, 500))
-  const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [pois, setPois] = useState<POI[]>([])
   const [poiError, setPoiError] = useState('')
   const [routingCapabilities, setRoutingCapabilities] = useState<RoutingCapabilities | null>(null)
   const [chatServiceStatus, setChatServiceStatus] = useState<ChatServiceStatus | null>(null)
-  const [date, setDate] = useState(() => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return localDate(tomorrow)
-  })
-  const [originId, setOriginId] = useState('')
-  const [destinationId, setDestinationId] = useState('')
+  const [date, setDate] = useTripField('date')
+  const [originId, setOriginId] = useTripField('originId')
+  const [destinationId, setDestinationId] = useTripField('destinationId')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
   const [mobileTab, setMobileTab] = useState<'chat' | 'hud'>('chat')
   const feedContainerRef = useRef<HTMLDivElement>(null)
@@ -212,11 +211,11 @@ export function ChatPage() {
 
   useEffect(() => {
     let active = true
-    api.get<POI[]>('/pois')
+    api.get<POI[]>('/pois', { params: { verified_only: !trip.demo } })
       .then(({ data }) => { if (active) setPois(data) })
       .catch((reason: unknown) => { if (active) setPoiError(getChatError(reason, locale)) })
     return () => { active = false }
-  }, [locale])
+  }, [locale, trip.demo])
 
   useEffect(() => {
     let active = true
@@ -265,7 +264,7 @@ export function ChatPage() {
   const criteriaStatus = useMemo(() => {
     const hasGroup = Boolean(constraints?.group_size)
     const hasTime = Boolean(constraints?.start_time && constraints?.return_deadline)
-    const hasBudget = Boolean(constraints?.budget_vnd)
+    const hasBudget = constraints?.budget_vnd != null
     const hasIntents = Boolean(
       constraints?.intent_weights &&
       Object.values(constraints.intent_weights).some((w) => w > 0)
@@ -337,7 +336,7 @@ export function ChatPage() {
       list.push({ label: '⏰ 14:00 - 21:30', text: locale === 'en' ? 'We want to travel from 14:00 to 21:30.' : 'Tụi mình muốn đi từ 14:00 đến 21:30.' })
     }
     if (!criteriaStatus.hasBudget) {
-      list.push({ label: '💰 500k/người', text: locale === 'en' ? 'Budget is around 500,000 VND per person.' : 'Ngân sách khoảng 500.000₫ mỗi người.' })
+      list.push({ label: '💰 500k tổng', text: locale === 'en' ? 'Total budget is 500,000 VND.' : 'Tổng ngân sách 500.000 đồng.' })
       list.push({ label: '💰 1.200.000₫ tổng', text: locale === 'en' ? 'Total group budget is 1,200,000 VND.' : 'Tổng ngân sách của nhóm là 1.200.000₫.' })
     }
     if (!constraints?.travel_mode || constraints.travel_mode === 'motorcycle') {
@@ -363,25 +362,15 @@ export function ChatPage() {
     const text = draft.trim()
     if (!text || busy) return
 
-    const nextTurns = [...userTurns, text]
-    const transcript = nextTurns.map((turn, index) => `Tin nhắn ${index + 1} của du khách: ${turn}`).join('\n')
-    if (transcript.length > 3900) {
-      setError(locale === 'en'
-        ? 'Conversation is very long. Please start a new chat to prevent dropping earlier constraints.'
-        : 'Cuộc trò chuyện đã dài. Hãy bắt đầu cuộc trò chuyện mới để tránh bỏ sót ràng buộc cũ.')
-      return
-    }
-
     const nowStr = formatTimeOnly(new Date(), locale)
     setDraft('')
     setError('')
-    setUserTurns(nextTurns)
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: 'user', text, time: nowStr }])
     setBusy(true)
 
     try {
-      const result = await sendChatMessage(transcript, conversationId)
-      setConstraints(result.structured_constraints)
+      const result = await sendChatMessage(text, conversationId, { previous_constraints: constraints, model_id: trip.modelId })
+      applyConstraints(result.structured_constraints)
       setMessages((current) => [
         ...current,
         {
@@ -421,7 +410,6 @@ export function ChatPage() {
   function startNewConversation() {
     setConversationId(makeConversationId())
     setMessages([initialMessage])
-    setUserTurns([])
     setConstraints(null)
     setDraft('')
     setError('')
@@ -467,8 +455,8 @@ export function ChatPage() {
       }
       if (routingCapabilities && !routingCapabilities.supported_modes.includes(constraints.travel_mode)) {
         throw new Error(locale === 'en'
-          ? `${constraints.travel_mode} routing is not supported by ${routingCapabilities.provider}. Choose motorcycle, walking, or car in the chat.`
-          : `${routingCapabilities.provider} chưa hỗ trợ phương tiện “${constraints.travel_mode}”. Hãy nhắn lại để chọn xe máy, đi bộ hoặc ô tô.`)
+          ? `${constraints.travel_mode} routing is not supported by ${routingCapabilities.provider}. Supported modes: ${routingCapabilities.supported_modes.join(', ')}.`
+          : `${routingCapabilities.provider} chưa hỗ trợ phương tiện “${constraints.travel_mode}”. Hãy chọn phương tiện được hỗ trợ: ${routingCapabilities.supported_modes.join(', ')}.`)
       }
       if (routingUnavailable) {
         throw new Error(locale === 'en'
@@ -483,8 +471,10 @@ export function ChatPage() {
         budget_vnd: constraints.budget_vnd!,
         transport_mode: constraints.travel_mode,
         intent_weights: constraints.intent_weights,
-        locked_experience_ids: [],
-        locked_poi_ids: lockedPlaces.map((place) => place.poiId),
+        require_verified: !trip.demo,
+        routing_mode: 'configured',
+        locked_experience_ids: trip.selected.map((item) => item.id),
+        locked_poi_ids: [...new Set([...trip.lockedPois, ...lockedPlaces.map((place) => place.poiId)])],
         origin_latitude: origin.latitude,
         origin_longitude: origin.longitude,
         origin_label: origin.name,
@@ -965,7 +955,7 @@ export function ChatPage() {
                   {routingUnavailable
                     ? (locale === 'en' ? `API key missing for ${routingCapabilities?.provider}.` : `Thiếu khóa API ${routingCapabilities?.provider}.`)
                     : unsupportedTravelMode
-                      ? (locale === 'en' ? `Unsupported by ${routingCapabilities?.provider}; choose motorcycle, walking, or car.` : `Nhà cung cấp ${routingCapabilities?.provider} chưa hỗ trợ; hãy chọn xe máy, đi bộ hoặc ô tô.`)
+                      ? (locale === 'en' ? `Unsupported by ${routingCapabilities?.provider}. Supported: ${routingCapabilities?.supported_modes.join(', ')}.` : `Nhà cung cấp ${routingCapabilities?.provider} chưa hỗ trợ. Hỗ trợ: ${routingCapabilities?.supported_modes.map((mode) => modeLabels[mode as keyof typeof modeLabels] || mode).join(', ')}.`)
                       : t('chat.autoEta')}
                 </div>
               </div>

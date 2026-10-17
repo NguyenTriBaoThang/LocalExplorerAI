@@ -6,7 +6,6 @@ import {
   MapPin,
   Search,
   X,
-  ExternalLink,
   ShieldCheck,
   Building2,
 } from 'lucide-react'
@@ -20,9 +19,9 @@ const CATEGORY_TABS = [
   { id: 'all', icon: '✨', ids: [] as string[] },
   { id: 'an-uong', icon: '🍜', ids: ['an-uong', 'food'] },
   { id: 'cafe', icon: '☕', ids: ['cafe'] },
-  { id: 'tham-quan', icon: '🏛️', ids: ['tham-quan', 'culture'] },
+  { id: 'tham-quan', icon: '🏛️', ids: ['tham-quan', 'culture', 'heritage', 'local_life'] },
   { id: 'giai-tri', icon: '🎭', ids: ['giai-tri'] },
-  { id: 'cho-o', icon: '🏨', ids: ['cho-o'] },
+  { id: 'cho-o', icon: '🏨', ids: ['cho-o', 'accommodation'] },
   { id: 'handicraft', icon: '🎨', ids: ['handicraft'] },
   { id: 'nature', icon: '🌿', ids: ['nature'] },
   { id: 'relaxation', icon: '🍵', ids: ['relaxation'] },
@@ -34,6 +33,9 @@ const CATEGORY_META: Record<string, { icon: string }> = {
   cafe: { icon: '☕' },
   'tham-quan': { icon: '🏛️' },
   culture: { icon: '🏛️' },
+  heritage: { icon: '🏛️' },
+  local_life: { icon: '🏛️' },
+  accommodation: { icon: '🏨' },
   'giai-tri': { icon: '🎭' },
   'cho-o': { icon: '🏨' },
   handicraft: { icon: '🎨' },
@@ -50,7 +52,7 @@ const inTab = (category: string, tabId: string) =>
 
 export function PlacesPage() {
   const { t } = useTranslation()
-  const catLabel = (slug: string) => t(`places.meta.${slug}`)
+  const catLabel = (slug: string) => t(`places.meta.${({ heritage: 'culture', local_life: 'tham-quan', accommodation: 'cho-o' } as Record<string, string>)[slug] ?? slug}`)
   const [places, setPlaces] = useState<POI[]>([])
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -58,7 +60,7 @@ export function PlacesPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getPOIs()
+    getPOIs('citywide')
       .then(setPlaces)
       .catch(() => setError(t('places.loadError')))
       .finally(() => setLoading(false))
@@ -108,21 +110,12 @@ export function PlacesPage() {
           </div>
           <div className="places-stat-pill">
             <Compass size={13} className="text-cyan-400" />
-            <span><strong>100%</strong> {t('places.statGps')}</span>
+            <span><strong>{places.filter((place) => place.details?.catalog_mode === 'hcmc_catalog_candidate').length}</strong> {t('places.statCandidates')}</span>
           </div>
           <div className="places-stat-pill">
             <ShieldCheck size={13} className="text-amber-400" />
             <span>{t('places.statLicense')}</span>
           </div>
-          <a
-            href="https://www.openstreetmap.org/copyright"
-            target="_blank"
-            rel="noreferrer"
-            className="places-stat-pill places-stat-link"
-          >
-            <span>© OpenStreetMap contributors</span>
-            <ExternalLink size={11} />
-          </a>
         </div>
       </header>
 
@@ -216,10 +209,11 @@ export function PlacesPage() {
             return (
               <Link
                 className="place-card-elevated group"
+                data-category={place.category}
                 to={`/places/${encodeURIComponent(place.id)}`}
                 key={place.id}
               >
-                <div className="place-card-photo-box">
+                <div className="place-card-photo-box" data-category={place.category} data-has-photo={photoUrl ? 'true' : 'false'}>
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -229,6 +223,7 @@ export function PlacesPage() {
                       onError={(e) => {
                         const img = e.currentTarget
                         img.style.display = 'none'
+                        img.parentElement?.setAttribute('data-has-photo', 'false')
                         const fallback = img.parentElement?.querySelector('.place-card-fallback') as HTMLElement
                         if (fallback) fallback.style.display = 'flex'
                       }}
@@ -244,6 +239,11 @@ export function PlacesPage() {
                   </div>
 
                   <div className="place-card-gradient-overlay" />
+                  {sourcePhoto && (
+                    <span className="card-photo-credit" title={`${sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · ${sourcePhoto.license}`}>
+                      {sourcePhoto.attribution || sourcePhoto.credit_line || sourcePhoto.title} · {sourcePhoto.license}
+                    </span>
+                  )}
 
                   {/* Top Badges */}
                   <div className="place-card-top-badges">
@@ -265,6 +265,11 @@ export function PlacesPage() {
                         <ShieldCheck size={11} /> {t('places.verified')}
                       </span>
                     )}
+                    {place.details?.catalog_mode === 'hcmc_catalog_candidate' && (
+                      <span className="place-verified-pill place-candidate-pill" title={t('places.candidateHint')}>
+                        {t('places.candidate')}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -274,7 +279,7 @@ export function PlacesPage() {
                   </h3>
 
                   <p className="place-card-address">
-                    <MapPin size={12} className="shrink-0 text-emerald-400 mt-0.5" />
+                    <MapPin size={12} className="place-address-icon shrink-0 text-emerald-400 mt-0.5" />
                     <span>{place.address || t('places.defaultAddress')}</span>
                   </p>
 

@@ -99,8 +99,8 @@
     "model_name": "hoian",
     "display_name": "Phố cổ Hội An - Chùa Cầu",
     "file_url": "/models_3d/HoiAn_ChuaCau_web.glb",
-    "latitude": 15.8779,
-    "longitude": 108.3264,
+    "latitude": 15.8772216,
+    "longitude": 108.3260634,
     "altitude": 0.0,
     "heading": 0.0,
     "pitch": 0.0,
@@ -108,7 +108,8 @@
     "scale": 10.0,
     "poi_id": "hoi-an-chua-cau",
     "description": "Mô hình 3D khu phố cổ Hội An, đặt gần Chùa Cầu. Có thể căn chỉnh GPS và góc xoay trong giao diện bản đồ 3D.",
-    "updated_at": null
+    "updated_at": "2026-10-14T14:47:51.073440+00:00",
+    "updated_by": "cd474ca5-9d96-4fb5-a8d1-55fa7cf1ca33"
   },
   "vungtauchrist": {
     "model_name": "vungtauchrist",

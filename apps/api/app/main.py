@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -13,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, place_reviews, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content
+from app.api.routes import admin, admin_bot, ai, analytics, auth, bookings, catalog, chat, health, mfa, ml, models_3d, ops, place_reviews, places_admin, planner, provider, push_notifications, rbac, reviews, routing, site_content, journey, recommendations, landmark_stories, meshy
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.api.auth_cookies import ACCESS_NAMES, REFRESH_NAMES
 from app.api.guards import public
@@ -28,10 +29,23 @@ from app.services.rate_limit import check_rate_limit
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     token_service()  # fail fast: the RS256 signing key is required in every environment
-    yield
+    from app.services.meshy import worker
+    task = asyncio.create_task(worker()) if settings.app_env != "test" else None
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(title="Local Explorer AI API", version="0.1.0", description="Explore verified local experiences and build feasible itineraries.", openapi_url="/openapi.json", lifespan=lifespan)
+app.include_router(journey.router)
+app.include_router(landmark_stories.router)
+app.include_router(meshy.router)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
 _request_logger = logging.getLogger("local_explorer.request")
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,96}$")
@@ -132,8 +146,11 @@ async def origin_check_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-def error_response(request: Request, code: str, message: str, details: list | None = None, status_code: int = 400, headers: dict | None = None):
-    return JSONResponse(status_code=status_code, headers=headers, content={"error": {"code": code, "message": message, "details": details or [], "request_id": getattr(request.state, "request_id", str(uuid4()))}})
+def error_response(request: Request, code: str, message: str, details: list | None = None, status_code: int = 400, headers: dict | None = None, diagnostics: dict | None = None):
+    error = {"code": code, "message": message, "details": details or [], "request_id": getattr(request.state, "request_id", str(uuid4()))}
+    if diagnostics:
+        error["diagnostics"] = diagnostics
+    return JSONResponse(status_code=status_code, headers=headers, content={"error": error})
 
 
 @app.exception_handler(AuthError)
@@ -144,7 +161,13 @@ async def auth_error_handler(request: Request, exc: AuthError):
 @app.exception_handler(StarletteHTTPException)
 async def http_error_handler(request: Request, exc: StarletteHTTPException):
     detail = exc.detail if isinstance(exc.detail, dict) else {}
-    return error_response(request, detail.get("code", "HTTP_ERROR"), detail.get("message", str(exc.detail)), status_code=exc.status_code, headers=exc.headers)
+    return error_response(
+        request,
+        detail.get("code", "HTTP_ERROR"),
+        detail.get("message", str(exc.detail)),
+        status_code=exc.status_code,
+        diagnostics=detail.get("diagnostics"), headers=exc.headers,
+    )
 
 
 @app.exception_handler(RequestValidationError)
@@ -184,6 +207,7 @@ app.include_router(admin.router)
 app.include_router(rbac.router)
 app.include_router(catalog.router)
 app.include_router(planner.router)
+app.include_router(recommendations.router)
 app.include_router(chat.router)
 app.include_router(ai.router)
 app.include_router(ml.router)

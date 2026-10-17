@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { Sparkles, Compass, Eye, Sun, Moon } from 'lucide-react'
 import { getPOIs } from '../../api/client'
 import type { POI } from '../../types'
+import type { MapPoint, MapRoute } from '../map/MapAdapter'
 import { useTheme } from '../../theme'
 import { useTranslation } from '../../i18n'
 
@@ -14,7 +15,21 @@ interface HoveredPoint {
   y: number
 }
 
-export function CityHero3D() {
+const EMPTY_ROUTES: MapRoute[] = []
+
+export function CityHero3D({
+  journeyPoints,
+  routes = EMPTY_ROUTES,
+  selectedId,
+  onSelect,
+  variant = 'hero',
+}: {
+  journeyPoints?: MapPoint[]
+  routes?: MapRoute[]
+  selectedId?: string
+  onSelect?: (id: string) => void
+  variant?: 'hero' | 'inline'
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [pois, setPois] = useState<POI[]>([])
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPoint | null>(null)
@@ -24,8 +39,13 @@ export function CityHero3D() {
   // Follow the global theme; the Moon/Sun buttons still override locally.
   useEffect(() => setThemeMode(theme === 'light' ? 'day' : 'night'), [theme])
   const [activeDistrict, setActiveDistrict] = useState('Quận 1')
+  const selectedIdRef = useRef(selectedId)
+  const onSelectRef = useRef(onSelect)
+  selectedIdRef.current = selectedId
+  onSelectRef.current = onSelect
 
   useEffect(() => {
+    if (journeyPoints !== undefined) return
     let active = true
     void getPOIs().then((rows) => {
       if (active) setPois(rows)
@@ -33,7 +53,7 @@ export function CityHero3D() {
       if (active) setPois([])
     })
     return () => { active = false }
-  }, [])
+  }, [journeyPoints])
 
   const themeRef = useRef(themeMode)
   themeRef.current = themeMode
@@ -50,7 +70,7 @@ export function CityHero3D() {
     scene.fog = new THREE.FogExp2(themeRef.current === 'night' ? 0x051310 : 0xf0fdf4, 0.045)
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
-    camera.position.set(0, 8.5, 14.5)
+    camera.position.set(0, 12, 25)
     camera.lookAt(0, 0, 0)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
@@ -178,20 +198,66 @@ export function CityHero3D() {
     }
     scene.add(buildingGroup)
 
-    // Interactive 3D POI Pins
-    const mapPois = pois.length <= 12
+    // Center and scale the selected POIs/routes so the real journey fits this scene.
+    const mapPois = journeyPoints ?? (pois.length <= 12
       ? pois
-      : Array.from({ length: 12 }, (_, index) => pois[Math.round(index * (pois.length - 1) / 11)])
-    const poiData = mapPois.map((poi) => ({
+      : Array.from({ length: 12 }, (_, index) => pois[Math.round(index * (pois.length - 1) / 11)]))
+    const scenePoints: MapPoint[] = journeyPoints ?? mapPois.map((poi) => ({
+      id: poi.id,
+      latitude: poi.latitude,
+      longitude: poi.longitude,
       name: poi.name,
       category: poi.category,
-      district: poi.district || 'Quận 1',
-      pos: [
-        Math.max(-6, Math.min(6, (poi.longitude - 106.7009) * 150)),
-        1.2,
-        Math.max(-6, Math.min(6, (10.7769 - poi.latitude) * 150)),
-      ],
+      district: poi.district,
     }))
+    const allCoordinates = [
+      ...scenePoints.map((point) => [point.latitude, point.longitude] as [number, number]),
+      ...routes.flatMap((route) => route.coordinates),
+    ].filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude))
+    const minLatitude = Math.min(...allCoordinates.map(([latitude]) => latitude), 10.7769)
+    const maxLatitude = Math.max(...allCoordinates.map(([latitude]) => latitude), 10.7769)
+    const minLongitude = Math.min(...allCoordinates.map(([, longitude]) => longitude), 106.7009)
+    const maxLongitude = Math.max(...allCoordinates.map(([, longitude]) => longitude), 106.7009)
+    const centerLatitude = (minLatitude + maxLatitude) / 2
+    const centerLongitude = (minLongitude + maxLongitude) / 2
+    const longitudeFactor = Math.cos((centerLatitude * Math.PI) / 180)
+    const sceneExtent = Math.max((maxLongitude - minLongitude) * longitudeFactor, maxLatitude - minLatitude, 0.01)
+    const sceneScale = 18 / sceneExtent
+    const toScenePosition = (latitude: number, longitude: number) => new THREE.Vector3(
+      (longitude - centerLongitude) * longitudeFactor * sceneScale,
+      0.12,
+      (centerLatitude - latitude) * sceneScale,
+    )
+    const poiData = scenePoints.map((point) => ({
+      id: point.id,
+      name: point.name,
+      category: point.category ?? 'Địa điểm',
+      district: point.district || 'TP. Hồ Chí Minh',
+      pos: toScenePosition(point.latitude, point.longitude).toArray(),
+    }))
+
+    // Draw each route leg in its own color, matching the 2D map legend.
+    const routeGroup = new THREE.Group()
+    routes.forEach((route, index) => {
+      const positions = route.coordinates.map(([latitude, longitude]) => {
+        const position = toScenePosition(latitude, longitude)
+        position.y = 0.22
+        return position
+      })
+      if (positions.length < 2) return
+      const curve = new THREE.CatmullRomCurve3(positions)
+      const geometry = new THREE.TubeGeometry(curve, Math.max(24, positions.length * 8), 0.075, 8, false)
+      const color = new THREE.Color(route.color || ['#10b981', '#06b6d4', '#f59e0b', '#8b5cf6'][index % 4])
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.55,
+        roughness: 0.3,
+        metalness: 0.2,
+      })
+      routeGroup.add(new THREE.Mesh(geometry, material))
+    })
+    scene.add(routeGroup)
 
     const pinGroup = new THREE.Group()
     const pinInteractiveObjects: THREE.Object3D[] = []
@@ -222,7 +288,7 @@ export function CityHero3D() {
       })
       const head = new THREE.Mesh(headGeo, headMat)
       head.position.y = 1.4
-      head.userData = { isHead: true, poi }
+      head.userData = { isHead: true, poi, poiId: poi.id }
       pinAnchor.add(head)
 
       // Outer radar pulse ring
@@ -265,7 +331,7 @@ export function CityHero3D() {
 
     // Mouse & Raycasting for 3D Camera Parallax and Pin Tooltip
     const mouse = new THREE.Vector2(-999, -999)
-    const targetCameraPos = new THREE.Vector3(0, 8.5, 14.5)
+    const targetCameraPos = new THREE.Vector3(0, 12, 25)
     const raycaster = new THREE.Raycaster()
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -276,8 +342,8 @@ export function CityHero3D() {
       mouse.y = y
 
       targetCameraPos.x = x * 3.5
-      targetCameraPos.y = 8.5 + y * 2.2
-      targetCameraPos.z = 14.5 - y * 1.5
+      targetCameraPos.y = 12 + y * 2.2
+      targetCameraPos.z = 25 - y * 1.5
 
       raycaster.setFromCamera(mouse, camera)
       const intersects = raycaster.intersectObjects(pinInteractiveObjects, false)
@@ -285,6 +351,7 @@ export function CityHero3D() {
       if (intersects.length > 0) {
         const hit = intersects[0].object
         const poi = hit.userData.poi as HoveredPoint
+        container.style.cursor = 'pointer'
         // Project 3D point to 2D screen coordinate
         const screenPos = hit.getWorldPosition(new THREE.Vector3()).project(camera)
         const sx = ((screenPos.x + 1) * width) / 2
@@ -299,8 +366,19 @@ export function CityHero3D() {
         })
         setActiveDistrict(poi.district)
       } else {
+        container.style.cursor = 'grab'
         setHoveredPoint(null)
       }
+    }
+
+    const handlePinClick = (event: MouseEvent) => {
+      const rect = container.getBoundingClientRect()
+      mouse.x = ((event.clientX - rect.left) / width) * 2 - 1
+      mouse.y = -((event.clientY - rect.top) / height) * 2 + 1
+      raycaster.setFromCamera(mouse, camera)
+      const hit = raycaster.intersectObjects(pinInteractiveObjects, false)[0]?.object
+      const pointId = hit?.userData.poiId
+      if (typeof pointId === 'string') onSelectRef.current?.(pointId)
     }
 
     const handleResize = () => {
@@ -314,6 +392,7 @@ export function CityHero3D() {
 
     window.addEventListener('resize', handleResize)
     container.addEventListener('mousemove', handleMouseMove)
+    container.addEventListener('click', handlePinClick)
 
     // Animation Loop
     let animationFrameId: number
@@ -330,6 +409,11 @@ export function CityHero3D() {
       // Floating pins
       pinGroup.children.forEach((anchor, i) => {
         anchor.position.y = poiData[i].pos[1] + Math.sin(elapsed * 2 + i * 1.5) * 0.12
+        const head = anchor.children[1] as THREE.Mesh
+        const headMaterial = head.material as THREE.MeshStandardMaterial
+        const isSelected = poiData[i].id && poiData[i].id === selectedIdRef.current
+        headMaterial.color.setHex(isSelected ? 0xf59e0b : i === 1 ? 0xf59e0b : 0x10b981)
+        headMaterial.emissive.setHex(isSelected ? 0xf59e0b : i === 1 ? 0xf59e0b : 0x10b981)
         const ring = anchor.children[2] as THREE.Mesh
         if (ring) {
           const s = 1 + Math.sin(elapsed * 3 + i) * 0.25
@@ -362,17 +446,24 @@ export function CityHero3D() {
       cancelAnimationFrame(animationFrameId)
       window.removeEventListener('resize', handleResize)
       container.removeEventListener('mousemove', handleMouseMove)
+      container.removeEventListener('click', handlePinClick)
+      scene.traverse((object) => {
+        const mesh = object as THREE.Mesh
+        mesh.geometry?.dispose()
+        if (Array.isArray(mesh.material)) mesh.material.forEach((material) => material.dispose())
+        else mesh.material?.dispose()
+      })
       renderer.dispose()
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement)
       }
     }
-  }, [themeMode, pois])
+  }, [themeMode, pois, journeyPoints, routes])
 
   return (
-    <div className="city-hero-3d-wrapper" ref={containerRef}>
+    <div className={`city-hero-3d-wrapper ${variant === 'inline' ? 'city-hero-3d-inline' : ''}`} ref={containerRef}>
       {/* 3D Scene Overlay Badge & Controls */}
-      <div className="city-hero-3d-header">
+      {variant === 'hero' && <div className="city-hero-3d-header">
         <div className="district-pill">
           <span className="pulse-beacon" />
           <Compass size={14} className="icon-emerald" />
@@ -398,7 +489,7 @@ export function CityHero3D() {
             <Sun size={14} />
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Floating 3D Interactive Tooltip */}
       {hoveredPoint && (
@@ -422,17 +513,17 @@ export function CityHero3D() {
       )}
 
       {/* 3D Floating Info Cards */}
-      <div className="hero-3d-floating-stats">
+      {variant === 'hero' && <div className="hero-3d-floating-stats">
         <div className="stat-capsule">
           <Eye size={13} className="text-emerald" />
           <span>{t('city3d.floatingStats')}</span>
         </div>
-      </div>
+      </div>}
 
-      <div className="hero-3d-bottom-badge">
+      {variant === 'hero' && <div className="hero-3d-bottom-badge">
         <span className="hero-lat-lng">10°46'37" N · 106°42'04" E</span>
         <span className="hero-tech-label">{t('city3d.digitalTwin')}</span>
-      </div>
+      </div>}
     </div>
   )
 }

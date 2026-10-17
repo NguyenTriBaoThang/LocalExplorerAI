@@ -80,7 +80,8 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     catalog = client.get("/api/ai/prompts")
     assert catalog.status_code == 200
     assert catalog.json()["version"] == "3.0.0"
-    assert len(catalog.json()["prompt_ids"]) == 8
+    assert len(catalog.json()["prompt_ids"]) == 9
+    assert "ITINERARY_RANKER" in catalog.json()["prompt_ids"]
 
     chat = client.post("/api/chat/message", json={"message": "Hai người đi làm gốm, bắt đầu 9 giờ, về trước 16 giờ, ngân sách 500 nghìn."})
     assert chat.status_code == 200

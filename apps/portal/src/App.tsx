@@ -1,3 +1,5 @@
+import { AdminMeshyPage } from './pages/admin/AdminMeshyPage'
+import { AdminLandmarkStoriesPage } from './pages/admin/AdminLandmarkStoriesPage'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { GuestOnly, RequireAuth, RequirePermission, RequireRole } from './auth/guards'
@@ -94,6 +96,7 @@ export function App() {
               </Route>
               <Route element={<RequireRole role="admin" />}>
                 <Route path="/admin" element={<AdminLayout />}>
+                  <Route element={<RequirePermission permission="admin:models_3d" />}><Route path="meshy" element={<AdminMeshyPage />} /></Route>
                   <Route element={<RequirePermission permission="admin:dashboard" />}>
                     <Route index element={<AdminOverviewPage />} />
                   </Route>
@@ -117,6 +120,7 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="admin:content" />}>
                     <Route path="content" element={<AdminContentPage />} />
+                    <Route path="landmark-stories" element={<AdminLandmarkStoriesPage />} />
                   </Route>
                   <Route element={<RequirePermission anyOf={['admin:place_import', 'admin:duplicates']} />}>
                     <Route path="imports" element={<AdminImportsPage />} />

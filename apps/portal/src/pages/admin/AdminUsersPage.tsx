@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LogOut, Save, Search, ShieldCheck, Users } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
+import { CustomerHistory } from './CustomerHistory'
 import {
   Alert, Avatar, Badge, Button, Card, DescriptionList, Drawer, EmptyState, Field, Input, Modal, PageHeader, Pagination, Select, Spinner, StatusBadge, Toggle, useToast,
 } from '../../components/ui'
@@ -192,6 +193,7 @@ function UserDrawer({ detail, isSelf, onClose, onChanged }: { detail: AdminUserD
           </div>
           {dirty && <p className="text-xs text-amber-700">Đổi vai trò hoặc khóa tài khoản sẽ đăng xuất người dùng khỏi mọi thiết bị.</p>}
         </section>
+        <CustomerHistory userId={detail.id} />
         <section>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Hoạt động gần đây</h4>
           {detail.audit.length === 0 ? <p className="text-sm text-slate-500">Chưa có hoạt động.</p> : (

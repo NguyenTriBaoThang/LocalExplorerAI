@@ -72,6 +72,7 @@ class POIRead(ORMModel):
     image_urls: list[str] = Field(default_factory=list)
     opening_hours: str | None = None
     ticket_info: str | None = None
+    source_url: str | None = None
     tags: list[str] = Field(default_factory=list)
     is_landmark: bool = False
     details: dict[str, Any] = Field(default_factory=dict)

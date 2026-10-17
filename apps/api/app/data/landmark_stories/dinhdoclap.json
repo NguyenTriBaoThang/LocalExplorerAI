@@ -1,0 +1,116 @@
+{
+  "overview": {
+    "text": "Dinh Độc Lập gắn với những biến chuyển lịch sử của Sài Gòn và sự kiện ngày 30/4/1975. Công trình hiện nay được xây dựng theo thiết kế của kiến trúc sư Ngô Viết Thụ.",
+    "source_ids": [
+      "official"
+    ],
+    "status": "sourced"
+  },
+  "image": {
+    "url": "/images/places/hcmc/sai-gon-dinh-doc-lap.jpg",
+    "caption": "Ảnh tư liệu địa điểm; không đại diện cho từng mốc lịch sử.",
+    "credit": "Theodor · CC BY-SA 4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Dinh_%C4%90%E1%BB%99c_L%E1%BA%ADp_3.jpg"
+  },
+  "sources": [
+    {
+      "id": "official",
+      "title": "Di tích Dinh Độc Lập — Lịch sử",
+      "url": "https://dinhdoclap.gov.vn/lich-su-dinh-doc-lap/",
+      "accessed_on": "2026-10-17"
+    }
+  ],
+  "timeline": [
+    {
+      "text": "Sau khi dinh cũ bị hư hại do ném bom, công trình mới được khởi dựng.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1962",
+      "year_start": 1962,
+      "year_end": null,
+      "period": "1962",
+      "title": "Xây dựng dinh mới",
+      "image": null
+    },
+    {
+      "text": "Dinh mới được đưa vào sử dụng.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1966",
+      "year_start": 1966,
+      "year_end": null,
+      "period": "31/10/1966",
+      "title": "Khánh thành",
+      "image": null
+    },
+    {
+      "text": "Dinh gắn với sự kiện kết thúc chiến tranh, mở đầu thời kỳ thống nhất đất nước.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1975",
+      "year_start": 1975,
+      "year_end": null,
+      "period": "30/04/1975",
+      "title": "Dấu mốc lịch sử",
+      "image": null
+    },
+    {
+      "text": "Dinh được công nhận là di tích lịch sử – văn hóa quốc gia.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "id": "1976",
+      "year_start": 1976,
+      "year_end": null,
+      "period": "25/06/1976",
+      "title": "Công nhận di tích",
+      "image": null
+    }
+  ],
+  "architecture": [
+    {
+      "text": "Kiến trúc sư Ngô Viết Thụ thiết kế công trình mới thay thế dinh cũ.",
+      "source_ids": [
+        "official"
+      ],
+      "status": "sourced",
+      "title": "Điểm nhấn kiến trúc",
+      "view": "front"
+    }
+  ],
+  "visit": {
+    "address": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "duration": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "hours": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "admission": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "notes": {
+      "text": "",
+      "source_ids": [],
+      "status": "unverified"
+    },
+    "checked_on": null
+  }
+}

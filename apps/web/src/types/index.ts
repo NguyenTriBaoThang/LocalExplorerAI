@@ -15,7 +15,7 @@ export interface ChatConstraints {
 
 export interface ChatReply {
   status: 'parsed' | 'fallback'
-  assistant_mode: 'openai_compatible' | 'local_fallback'
+  assistant_mode: 'openai_compatible' | 'gemini_compatible' | 'local_fallback'
   conversation_id: string | null
   prompt_version: string | null
   fallback_version: string | null
@@ -95,6 +95,7 @@ export interface POI {
   image_urls?: string[]
   opening_hours?: string | null
   ticket_info?: string | null
+  source_url?: string | null
   tags?: string[]
   is_landmark?: boolean
   details?: {

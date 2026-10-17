@@ -1,0 +1,6 @@
+{
+  "method": "sigmoid",
+  "coef": 1.0,
+  "intercept": 0.0,
+  "status": "identity placeholder; not calibrated"
+}

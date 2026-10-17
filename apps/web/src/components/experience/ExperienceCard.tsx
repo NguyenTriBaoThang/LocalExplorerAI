@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Clock3, MapPin, Users, Sparkles, Compass, Star } from 'lucide-react'
+import { useJourney } from '../../journey'
+import { SourceDetails } from '../journey/SourceDetails'
 import type { Experience } from '../../types'
 import { VerificationBadge } from '../common/StatusBadge'
 import { TiltCard3D } from '../3d/TiltCard3D'
@@ -16,6 +18,19 @@ export function ExperienceCard({
   onSelect: () => void
 }) {
   const { t, locale } = useTranslation()
+  const { trip, toggleExperience } = useJourney()
+  const included = trip.selected.some((item) => item.id === experience.id)
+  const isSimulated = experience.data_mode === 'simulated'
+  const sourceCandidate = experience.poi.details?.source_candidate
+  const sourceFields = sourceCandidate && typeof sourceCandidate === 'object'
+    ? (sourceCandidate as Record<string, unknown>).source_fields
+    : undefined
+  const sourceDescription = sourceFields && typeof sourceFields === 'object'
+    ? (sourceFields as Record<string, unknown>).description
+    : undefined
+  const cardDescription = isSimulated && typeof sourceDescription === 'string' && sourceDescription.trim()
+    ? sourceDescription
+    : experience.description
 
   const categoryMeta: Record<string, { label: string; color: string; icon: string }> = {
     handicraft: { label: t('explore.intentCraft'), color: 'bg-amber-500/10 text-amber-700 border-amber-200', icon: '🎨' },
@@ -27,7 +42,7 @@ export function ExperienceCard({
 
   const sourcePhoto = experience.poi.details?.images?.find((item) => (item.local_url || item.url) && item.source_url && item.license)
   const photoUrl = (sourcePhoto && (sourcePhoto.local_url || sourcePhoto.url)) || experience.poi.image_urls?.[0] || null
-  const slot = experience.slots.find((item) => !['full', 'unavailable', 'cancelled'].includes(item.status))
+  const slot = isSimulated ? undefined : experience.slots.find((item) => !['full', 'unavailable', 'cancelled'].includes(item.status))
   const time = slot
     ? new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
         hour: '2-digit',
@@ -104,7 +119,9 @@ export function ExperienceCard({
               <MapPin size={11} /> {experience.poi.district || 'TP. Hồ Chí Minh'}
             </span>
             <span className="card-price-glow-badge">
-              {experience.price_vnd > 0 ? `${experience.price_vnd.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}₫` : (locale === 'vi' ? 'Miễn phí' : 'Free')}
+              {isSimulated
+                ? (locale === 'vi' ? 'Mô phỏng' : 'Simulated')
+                : experience.price_vnd > 0 ? `${experience.price_vnd.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}₫` : (locale === 'vi' ? 'Miễn phí' : 'Free')}
             </span>
           </div>
         </div>
@@ -124,7 +141,7 @@ export function ExperienceCard({
               {locale === 'vi' ? 'Xem chi tiết' : 'Details'}
             </Link>
           </div>
-          <p className="card-desc">{experience.description}</p>
+          <p className="card-desc">{cardDescription}</p>
           <Link
             className="card-place-detail-link"
             to={`/places/${encodeURIComponent(experience.poi.id)}`}
@@ -146,16 +163,21 @@ export function ExperienceCard({
           <div className="card-stats-row">
             <div className="stat-item">
               <Clock3 size={13} className="stat-icon text-amber" />
-              <span>{experience.duration_min} {t('explore.minutes')}</span>
+              <span>{isSimulated ? (locale === 'vi' ? 'Thời lượng chưa xác minh' : 'Duration unverified') : `${experience.duration_min} ${t('explore.minutes')}`}</span>
             </div>
             <div className="stat-item">
               <Users size={13} className="stat-icon text-cyan" />
-              <span>
+              {isSimulated ? <span>{locale === 'vi' ? 'Giá chưa xác minh' : 'Price unverified'}</span> : <span>
                 {experience.price_vnd.toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
-                {locale === 'vi' ? '₫ / người' : ' VND / person'}
-              </span>
+                {experience.price_basis === 'per_person' ? (locale === 'vi' ? '₫ / người' : ' VND / person') : (locale === 'vi' ? '₫ / nhóm' : ' VND / group')}
+              </span>}
             </div>
-            {experience.indoor ? (
+            {isSimulated ? (
+              <div className="stat-item">
+                <Sparkles size={13} className="stat-icon text-emerald" />
+                <span>{locale === 'vi' ? 'Thông tin chưa xác minh' : 'Details unverified'}</span>
+              </div>
+            ) : experience.indoor ? (
               <div className="stat-item">
                 <Compass size={13} className="stat-icon text-emerald" />
                 <span>{locale === 'vi' ? 'Trong nhà' : 'Indoor'}</span>
@@ -168,11 +190,15 @@ export function ExperienceCard({
             )}
           </div>
 
+          {experience.slots.length > 0 && (trip.demo || experience.data_mode === 'real') && <button type="button" disabled={!included && trip.selected.length >= 6} onClick={(event) => { event.stopPropagation(); toggleExperience({ id: experience.id, name: experience.name, poiId: experience.poi_id }) }} className="my-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm text-white disabled:opacity-50">{included ? 'Bỏ khỏi hành trình' : 'Chọn vào hành trình'}</button>}
+          {experience.data_mode === 'real' && <SourceDetails sources={[...(experience.poi.source_evidence || []), ...(experience.source_evidence || [])]} />}
           {/* Card Footer */}
           <div className="card-footer-3d">
             <span className="slot-notice">
               <MapPin size={12} className="text-emerald" />
-              {slot ? t('explore.slotNotice', { time: time || '' }) : t('explore.noFixedSlot')}
+              {isSimulated
+                ? (locale === 'vi' ? 'Lịch mô phỏng · không đặt chỗ' : 'Simulated schedule · not bookable')
+                : slot ? t('explore.slotNotice', { time: time || '' }) : t('explore.noFixedSlot')}
             </span>
             <VerificationBadge status={experience.data_mode === 'real' ? 'verified' : 'simulated'} />
           </div>

@@ -27,7 +27,7 @@ def routing_capabilities(db: Session = Depends(get_db)):
         ) from error
     modes = {
         "mock": ["walking", "bicycling", "driving", "motorcycle", "car", "transit"],
-        "goong": ["motorcycle", "walking", "car"],
+        "goong": ["motorcycle", "car"],
     }.get(routing_provider, [])
     mock_allowed = not settings.real_data_only
     return {
