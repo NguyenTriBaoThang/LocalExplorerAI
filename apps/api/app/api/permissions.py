@@ -30,6 +30,7 @@ class P:
     ITINERARY_SHARE = _p("itinerary:share", "Create or revoke a share link")
     ITINERARY_COLLABORATE = _p("itinerary:collaborate", "View and propose changes to an invited itinerary")
     ITINERARY_FEEDBACK = _p("itinerary:feedback", "Submit and read feedback")
+    TRIP_USE = _p("trip:use", "Plan and edit multi-day trips in AI Chat")
     NOTIFICATION_READ = _p("notification:read", "Read own slot-cancellation notices")
     CHAT_USE = _p("chat:use", "Use the AI concierge")
     REPLAN_ADVISE = _p("replan:advise", "Ask for replanning advice")
@@ -77,7 +78,7 @@ _ACCOUNT = [P.ACCOUNT_READ, P.ACCOUNT_UPDATE, P.ACCOUNT_PASSWORD, P.ACCOUNT_MFA,
 DEFAULT_GRANTS: dict[str, list[str]] = {
     "traveler": _ACCOUNT + [
         P.ITINERARY_PLAN, P.ITINERARY_READ, P.ITINERARY_LIST, P.ITINERARY_COMPARE, P.ITINERARY_VERSIONS, P.ITINERARY_SHARE,
-        P.ITINERARY_COLLABORATE,
+        P.ITINERARY_COLLABORATE, P.TRIP_USE,
         P.ITINERARY_FEEDBACK, P.NOTIFICATION_READ, P.CHAT_USE, P.REPLAN_ADVISE, P.REPLAN_ACCEPT, P.BOOKING_CREATE,
         P.BOOKING_CANCEL, P.BOOKING_CHECKOUT, P.REVIEW_WRITE,
     ],

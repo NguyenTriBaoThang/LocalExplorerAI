@@ -661,6 +661,7 @@ class ItineraryClaimToken(Base):
 
 # Register the auth tables on Base (they live in their own module to keep the auth package independent).
 from app.models import auth_entities  # noqa: E402,F401
+from app.models import trip_entities  # noqa: E402,F401
 
 
 class SiteBanner(Base):
