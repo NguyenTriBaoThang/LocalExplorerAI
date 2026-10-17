@@ -84,7 +84,7 @@ export function ProfilePage() {
         await subscription.unsubscribe()
         subscription = null
       }
-      subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodeVapidKey(publicKey) })
+      subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: new Uint8Array(decodeVapidKey(publicKey)).buffer as ArrayBuffer })
       const payload = subscription.toJSON()
       if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys.auth) throw new Error('The browser returned an incomplete push subscription.')
       await saveWebPushSubscription({ endpoint: payload.endpoint, keys: { p256dh: payload.keys.p256dh, auth: payload.keys.auth } })
