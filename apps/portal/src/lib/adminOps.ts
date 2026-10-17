@@ -49,7 +49,7 @@ export type OperationsStatus = {
   worker: { status: string; last_seen: string | null }
   last_job: { status: string; started_at: string; finished_at: string | null; processed_count: number; error_summary: string | null } | null
   active_events: number
-  channels: { email_enabled: boolean }
+  channels: { email_enabled: boolean; webpush_enabled: boolean }
   rate_limit_enabled: boolean
 }
 export type OpsJobRow = { id: string; job_name: string; status: string; started_at: string; finished_at: string | null; processed_count: number; error_summary: string | null }

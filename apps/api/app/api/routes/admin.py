@@ -326,16 +326,19 @@ def promote_place_candidate(
     ))
     if candidate is None:
         raise HTTPException(status_code=404, detail={"code": "PLACE_CANDIDATE_NOT_FOUND", "message": "Place candidate not found in this import."})
-    if candidate.target_poi_id:
-        return {"poi_id": candidate.target_poi_id, "status": "already_submitted"}
-    if candidate.review_status != "needs_enrichment":
+    poi = db.get(POI, candidate.target_poi_id) if candidate.target_poi_id else None
+    if candidate.target_poi_id and poi is None:
+        raise HTTPException(status_code=409, detail={"code": "PLACE_CANDIDATE_TARGET_MISSING", "message": "The candidate's submitted POI no longer exists."})
+    if poi is not None and poi.verification_status != "pending":
+        return {"poi_id": poi.id, "status": "already_submitted"}
+    if poi is None and candidate.review_status != "needs_enrichment":
         raise HTTPException(status_code=409, detail={"code": "PLACE_CANDIDATE_NOT_PROMOTABLE", "message": "Only candidates awaiting enrichment can be promoted."})
 
     required_fields = REQUIRED_FIELDS["poi"]
-    if set(payload.fields_covered) != required_fields:
-        missing = sorted(required_fields - set(payload.fields_covered))
-        extra = sorted(set(payload.fields_covered) - required_fields)
-        raise HTTPException(status_code=422, detail={"code": "POI_EVIDENCE_FIELDS_INCOMPLETE", "message": "The source must explicitly support every required POI field.", "details": {"missing": missing, "unsupported": extra}})
+    submitted_fields = set(payload.fields_covered)
+    if not submitted_fields or not submitted_fields.issubset(required_fields):
+        extra = sorted(submitted_fields - required_fields)
+        raise HTTPException(status_code=422, detail={"code": "POI_EVIDENCE_FIELDS_INVALID", "message": "Select only required POI fields that this source actually supports.", "details": {"unsupported": extra}})
     source = urlparse(payload.source_uri.strip())
     if source.scheme != "https" or not source.hostname or source.username or source.password:
         raise HTTPException(status_code=422, detail={"code": "INVALID_EVIDENCE_URL", "message": "Evidence URL must be an HTTPS URL without embedded credentials."})
@@ -343,50 +346,55 @@ def promote_place_candidate(
     if payload.observed_at > now or payload.expires_at <= now or payload.expires_at <= payload.observed_at:
         raise HTTPException(status_code=422, detail={"code": "EVIDENCE_NOT_CURRENT", "message": "Evidence must have a past observation time and a future expiry time."})
 
-    details_value = payload.details or candidate.raw_payload.get("details")
-    raw_details = dict(details_value) if isinstance(details_value, dict) else {}
-    raw_photos = raw_details.get("images") or candidate.raw_payload.get("photos") or []
-    if not isinstance(raw_photos, list):
-        raw_photos = []
-    source_photos = []
-    for photo in raw_photos:
-        if not isinstance(photo, dict) or not photo.get("url") or not photo.get("source_url") or not photo.get("license"):
-            continue
-        photo_url, credit_url = urlparse(str(photo["url"])), urlparse(str(photo["source_url"]))
-        if photo_url.scheme != "https" or credit_url.scheme != "https":
-            continue
-        source_photos.append(photo)
-    raw_details = {**raw_details, "images": source_photos}
+    is_new_poi = poi is None
+    if is_new_poi:
+        details_value = payload.details or candidate.raw_payload.get("details")
+        raw_details = dict(details_value) if isinstance(details_value, dict) else {}
+        raw_photos = raw_details.get("images") or candidate.raw_payload.get("photos") or []
+        if not isinstance(raw_photos, list):
+            raw_photos = []
+        source_photos = []
+        for photo in raw_photos:
+            if not isinstance(photo, dict) or not photo.get("url") or not photo.get("source_url") or not photo.get("license"):
+                continue
+            photo_url, credit_url = urlparse(str(photo["url"])), urlparse(str(photo["source_url"]))
+            if photo_url.scheme != "https" or credit_url.scheme != "https":
+                continue
+            source_photos.append(photo)
+        raw_details = {**raw_details, "images": source_photos}
 
-    poi_id = str(uuid4())
-    poi = POI(
-        id=poi_id,
-        name=candidate.name,
-        description=payload.description.strip() or str(candidate.raw_payload.get("description") or "").strip(),
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        geom=WKTElement(f"POINT({payload.longitude} {payload.latitude})", srid=4326),
-        category=payload.category.strip(),
-        address=payload.address.strip(),
-        source_attribution=payload.source_label.strip(),
-        image_urls=payload.image_urls or [str(image.get("local_url") or image["url"]) for image in source_photos],
-        details=raw_details,
-        verification_status="pending",
-        data_revision=1,
-    )
-    db.add(poi)
+        poi_id = str(uuid4())
+        poi = POI(
+            id=poi_id,
+            name=candidate.name,
+            description=payload.description.strip() or str(candidate.raw_payload.get("description") or "").strip(),
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            geom=WKTElement(f"POINT({payload.longitude} {payload.latitude})", srid=4326),
+            category=payload.category.strip(),
+            address=payload.address.strip(),
+            source_attribution=payload.source_label.strip(),
+            image_urls=payload.image_urls or [str(image.get("local_url") or image["url"]) for image in source_photos],
+            details=raw_details,
+            verification_status="pending",
+            data_revision=1,
+        )
+        db.add(poi)
+    else:
+        poi_id = poi.id
+
     db.add(Evidence(
         id=str(uuid4()),
         source_uri=payload.source_uri.strip(),
         source_type=payload.source_type.strip(),
         source_label=payload.source_label.strip(),
         license=payload.license.strip() if payload.license else None,
-        notes=f"Admin-verified enrichment of source row {candidate.source_row}.",
+        notes=f"Admin-submitted source for row {candidate.source_row}; selected fields require moderation.",
         submitted_by=actor.id,
         target_type="poi",
         target_id=poi_id,
-        target_revision=1,
-        fields_covered=sorted(required_fields),
+        target_revision=poi.data_revision,
+        fields_covered=sorted(submitted_fields),
         observed_at=payload.observed_at,
         valid_from=payload.observed_at,
         expires_at=payload.expires_at,
@@ -399,11 +407,16 @@ def promote_place_candidate(
         "candidate_id": candidate.id,
         "source_row": candidate.source_row,
         "source_uri": payload.source_uri,
-        "fields_covered": sorted(required_fields),
+        "fields_covered": sorted(submitted_fields),
         "expires_at": payload.expires_at.isoformat(),
     })
     db.commit()
-    return {"poi_id": poi_id, "status": "pending_review", "data_mode": "not_public"}
+    return {
+        "poi_id": poi_id,
+        "status": "pending_review" if is_new_poi else "evidence_added",
+        "fields_covered": sorted(submitted_fields),
+        "data_mode": "not_public",
+    }
 
 
 @router.patch("/users/{user_id}")

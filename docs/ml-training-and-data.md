@@ -30,6 +30,14 @@ The supplied `dataset_ranking_tphcm.csv` has 877 rows and 170 query groups. It i
 
 The supplied flood notebook is not compatible with that ranking CSV. Flood training also requires independently verified negative observations; missing flood reports cannot be relabeled as no-flood. The new flood notebook has no simulated-data fallback and refuses simulated/heuristic rows.
 
+### Verified flood-risk training gate
+
+`data/training/flood_risk_verified_template.csv` is a header-only collection template. Each row must describe a real road-edge decision time and future label window, with source/evidence URLs, reviewer provenance, a distinct observation-group ID, and explicit `verified_flood` or `verified_no_flood` status. A negative additionally needs at least 95% direct observation coverage during that interval and edge-level spatial precision. The trainer does not sample missing reports or generate labels.
+
+The current 425-row public-report file does not satisfy this contract: it has no verified dry windows, project road-edge IDs, or sufficiently exact observation times. Consequently, no flood classifier is trained or shipped from the repository data.
+
+When an authorized, reviewed dataset is available, install `apps/api/requirements-ml.txt` and run `python scripts/train_verified_flood_risk.py --input <verified.csv> --output models/flood-risk-candidate`. The gate requires at least 100 verified flood and 200 verified no-flood rows, at least 20 road edges and 20 independent observation groups per class, and chronological group splits that contain both labels. The candidate must reach test average precision ≥0.50, Brier score ≤0.20 and recall ≥0.80. It remains ineligible for inference unless the operator also supplies `--approve-deployment`; the API repeats the count, provenance, metric and approval checks from bundle metadata. Never edit metadata to bypass the checks.
+
 ## Public HCMC flood reports (raw, not training-ready)
 
 `data/raw/hcmc_flood_reports_2002_2026.csv` is a CSV conversion of the 425-row, 22-column `Flood_event_locations.tab` published in DataSuds (Hardy & Radziute, 2026, [DOI 10.23708/8Y16HU](https://doi.org/10.23708/8Y16HU)). `data/raw/flood_training.csv` is a duplicate with the exact requested filename, **not a training-ready dataset**. The source compiles reported observations from 53 sources; 63 rows have no exact `Date` value in the downloaded table. The source file checksum is verified by `scripts/download_hcmc_flood_reports.py`; run that script to download and convert the original file again.

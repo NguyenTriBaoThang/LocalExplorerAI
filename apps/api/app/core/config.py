@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     goong_timeout_seconds: float = 8.0
     goong_eta_ttl_seconds: int = 300
     geocode_cache_ttl_seconds: int = 86400
+    # Open-Meteo's public endpoint is for non-commercial use; production can point at a paid customer endpoint.
+    open_meteo_forecast_url: str = "https://api.open-meteo.com/v1/forecast"
+    open_meteo_air_quality_url: str = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    open_meteo_api_key: str | None = None
+    open_meteo_cache_ttl_seconds: int = Field(default=600, ge=60, le=3600)
+    web_push_vapid_public_key: str | None = None
+    web_push_vapid_private_key: str | None = None
+    web_push_vapid_subject: str | None = None
+    web_push_allowed_hosts: str = "fcm.googleapis.com,push.services.mozilla.com,push.apple.com,web.push.apple.com,notify.windows.com,wns.windows.com,push.samsung.com"
     openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
@@ -160,6 +169,19 @@ class Settings(BaseSettings):
     @property
     def email_is_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_from_email)
+
+    @property
+    def web_push_is_configured(self) -> bool:
+        subject = (self.web_push_vapid_subject or "").strip()
+        return bool(
+            self.web_push_vapid_public_key and self.web_push_vapid_public_key.strip()
+            and self.web_push_vapid_private_key and self.web_push_vapid_private_key.strip()
+            and (subject.startswith("mailto:") or subject.startswith("https://"))
+        )
+
+    @property
+    def web_push_host_suffixes(self) -> list[str]:
+        return [host.strip().lower().rstrip(".") for host in self.web_push_allowed_hosts.split(",") if host.strip()]
 
     @property
     def vnpay_credentials_configured(self) -> bool:
