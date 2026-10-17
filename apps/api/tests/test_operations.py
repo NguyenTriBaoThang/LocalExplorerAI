@@ -27,22 +27,32 @@ def test_production_rate_limiter_fails_closed_and_returns_trace_id(client, monke
     assert limited_response.headers["X-Request-ID"]
 
 
-def test_ops_endpoints_are_admin_only_and_hide_recipient_data(client, db_session):
+def test_ops_endpoints_need_ops_read_and_hide_recipient_data(client, db_session):
+    from app.services.rbac_service import create_service_account
+    from tests.helpers import bearer_for, make_user
+
     db_session.add(NotificationDelivery(
         id="notification-private-test", idempotency_key="notification-private-test",
         recipient_email="private@example.com", subject="test subject", body_text="private body",
         status="queued",
     ))
     db_session.flush()
-    status = client.get("/api/ops/status")
+    _, key = create_service_account(db_session, "monitor", ["ops:read"], None)
+    monitor = {"Authorization": f"Bearer {key}"}
+
+    status = client.get("/api/ops/status", headers=monitor)
     assert status.status_code == 200
     assert status.json()["channels"]["email_enabled"] is False
     assert status.json()["notifications"] == {"queued": 1, "sending": 0, "retry": 0, "sent": 0, "failed": 0}
-    deliveries = client.get("/api/ops/notifications").json()
+    deliveries = client.get("/api/ops/notifications", headers=monitor).json()
     assert len(deliveries) == 1
     assert "recipient_email" not in deliveries[0]
     assert "body_text" not in deliveries[0]
-    assert client.get("/api/ops/jobs", headers={"X-Admin-Key": "invalid"}).status_code == 401
+
+    assert client.get("/api/ops/jobs").status_code == 401                                   # anonymous
+    assert client.get("/api/ops/jobs", headers={"Authorization": "Bearer lek_bad_key"}).status_code == 401
+    assert client.get("/api/ops/jobs", headers=bearer_for(make_user(db_session, "traveler"))).status_code == 403
+    assert client.get("/api/ops/jobs", headers=bearer_for(make_user(db_session, "admin"))).status_code == 200
 
 
 def test_fixed_window_rate_limit_reports_remaining(monkeypatch):

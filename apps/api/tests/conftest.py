@@ -8,11 +8,18 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
+os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")  # left set on purpose: a configured legacy key must grant nothing
 os.environ.setdefault("ROUTING_PROVIDER", "mock")
+# Authentication needs an RS256 key in every environment, tests included: generate a throwaway pair per run.
+from app.auth import generate_rsa_keypair
+
+_test_private_key, _ = generate_rsa_keypair(bits=2048)
+os.environ.setdefault("AUTH_JWT_KEY_ID", "test-key")
+os.environ.setdefault("AUTH_JWT_PRIVATE_KEY_B64", _test_private_key)
 from geoalchemy2.elements import WKTElement
 
 from app.db.base import Base
+from app.services.rbac_service import sync_catalog
 from app.db.session import get_db
 from app.main import app
 from app.models.entities import Experience, ExperienceSlot, POI, Provider
@@ -29,6 +36,7 @@ def db_session() -> Generator[Session, None, None]:
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     with session_factory() as session:
+        sync_catalog(session)  # roles, permissions and the default grants
         yield session
     Base.metadata.drop_all(engine)
     engine.dispose()
@@ -40,7 +48,7 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app, headers={"X-Admin-Key": os.environ["ADMIN_API_KEY"]}) as test_client:
+    with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 
@@ -48,7 +56,7 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture
 def sample_experience(db_session: Session) -> Experience:
     provider = Provider(name="Demo provider", status="simulated")
-    poi = POI(name="Demo craft point", description="Synthetic", latitude=10.775, longitude=106.7, geom=WKTElement("POINT(106.7 10.775)", srid=4326), category="handicraft", address="Demo address", verification_status="simulated")
+    poi = POI(name="Demo craft point", description="Synthetic", district="District 1", latitude=10.775, longitude=106.7, geom=WKTElement("POINT(106.7 10.775)", srid=4326), category="handicraft", address="Demo address", verification_status="simulated")
     experience = Experience(
         poi=poi, provider=provider, name="Paper workshop", description="Simulated workshop",
         intent_tags=["handicraft", "hands_on"], duration_min=60, indoor=True,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Map3DLandmarkViewer } from '../components/3d/Map3DLandmarkViewer'
 import {
   Compass,
@@ -6,49 +6,46 @@ import {
   Building2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-const LANDMARKS = [
-  {
-    id: 'nhathoducba',
-    name: 'Nhà thờ Đức Bà Sài Gòn',
-    tag: 'Mô hình 3D Hoạt động',
-    status: 'active',
-    district: 'Quận 1, TP. Hồ Chí Minh',
-    built: '1880',
-    height: '60.5m',
-    poi_link: '/explore?q=nhathoducba'
-  },
-  {
-    id: 'dinhdoclap',
-    name: 'Dinh Độc Lập',
-    tag: 'Sắp ra mắt',
-    status: 'coming_soon',
-    district: 'Quận 1, TP. Hồ Chí Minh',
-    built: '1966',
-    height: '26m',
-  },
-  {
-    id: 'chobenthanh',
-    name: 'Chợ Bến Thành',
-    tag: 'Sắp ra mắt',
-    status: 'coming_soon',
-    district: 'Quận 1, TP. Hồ Chí Minh',
-    built: '1912',
-    height: '28m',
-  },
-  {
-    id: 'landmark81',
-    name: 'Landmark 81 SkyView',
-    tag: 'Sắp ra mắt',
-    status: 'coming_soon',
-    district: 'Bình Thạnh, TP. Hồ Chí Minh',
-    built: '2018',
-    height: '461.2m',
-  }
-]
+import { api } from '../api/client'
+import { contentApi } from '../api/content'
+import type { POI } from '../types'
+import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../components/3d/landmark/types'
 
 export function Map3DPage() {
   const [selectedLandmark, setSelectedLandmark] = useState('nhathoducba')
+  const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
+
+  useEffect(() => {
+    let active = true
+    api.get<Record<string, ModelCalibration>>('/models-3d/calibration')
+      .then(({ data }) => {
+        if (!active || !data || typeof data !== 'object') return
+        const next = { ...DEFAULT_CALIBRATIONS, ...data }
+        setLandmarks(next)
+        setSelectedLandmark((current) => next[current] ? current : 'nhathoducba')
+      })
+      .catch(() => {
+        // Keep the built-in catalog usable if the API is temporarily offline.
+      })
+    return () => { active = false }
+  }, [])
+
+  const landmarkIds = [
+    ...Object.keys(DEFAULT_CALIBRATIONS),
+    ...Object.keys(landmarks).filter((id) => !(id in DEFAULT_CALIBRATIONS)),
+  ]
+  // Landmarks published in the portal: each links to its place page; the ones with a 3D model also open it here.
+  const [portalLandmarks, setPortalLandmarks] = useState<POI[]>([])
+  useEffect(() => {
+    contentApi.places().then((places) => setPortalLandmarks(places.filter((place) => place.is_landmark))).catch(() => setPortalLandmarks([]))
+  }, [])
+  const normalise = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const modelFor = (place: POI) => landmarkIds.find((id) => {
+    const name = normalise((landmarks[id] ?? DEFAULT_CALIBRATIONS[id])?.display_name ?? '')
+    return name !== '' && normalise(place.name).includes(name)
+  })
+
+  const selectedCalibration = landmarks[selectedLandmark] ?? DEFAULT_CALIBRATIONS.nhathoducba
 
   return (
     <div className="w-full flex flex-col bg-slate-950 text-slate-100 min-h-[calc(100vh-64px)]">
@@ -70,13 +67,13 @@ export function Map3DPage() {
             </span>
             <div>
               <h1 className="text-sm font-bold text-white flex items-center gap-2">
-                Bản Đồ 3D Không Gian Landmark Sài Gòn
+                Bản Đồ 3D Di Sản Việt Nam
                 <span className="text-[10px] bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                   WebGL 3D
                 </span>
               </h1>
               <p className="text-[11px] text-slate-400 hidden md:block">
-                Tương tác không gian 3 chiều với các di sản và công trình biểu tượng của TP. Hồ Chí Minh
+                Tương tác 3D với các di sản và công trình biểu tượng tại Sài Gòn và Hội An
               </p>
             </div>
           </div>
@@ -84,39 +81,51 @@ export function Map3DPage() {
 
         {/* Landmark Selector Dropdown / Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
-          {LANDMARKS.map((lm) => {
-            const isSelected = selectedLandmark === lm.id
+          {landmarkIds.map((id) => {
+            const landmark = landmarks[id] ?? DEFAULT_CALIBRATIONS[id]
+            if (!landmark) return null
+            const isSelected = selectedLandmark === id
             return (
               <button
-                key={lm.id}
+                key={id}
                 type="button"
-                onClick={() => setSelectedLandmark(lm.id)}
-                disabled={lm.status === 'coming_soon'}
+                onClick={() => setSelectedLandmark(id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   isSelected
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20'
-                    : lm.status === 'coming_soon'
-                      ? 'bg-slate-900/40 text-slate-500 border border-slate-800/60 cursor-not-allowed opacity-60'
-                      : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/50'
+                    : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/50'
                 }`}
               >
                 <Building2 size={13} />
-                <span>{lm.name}</span>
-                {lm.status === 'coming_soon' && (
-                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-normal">
-                    Sắp có
-                  </span>
-                )}
+                <span>{landmark.display_name}</span>
               </button>
             )
           })}
         </div>
       </div>
 
+      {portalLandmarks.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-4 sm:px-8 py-2.5 bg-slate-900/60 border-b border-slate-800">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Danh thắng</span>
+          {portalLandmarks.map((place) => {
+            const model = modelFor(place)
+            return (
+              <span key={place.id} className="inline-flex items-center overflow-hidden rounded-lg border border-slate-700/60 text-xs">
+                <Link to={`/places/${place.id}`} className="px-2.5 py-1 text-slate-200 hover:bg-slate-800">{place.name}</Link>
+                {model && (
+                  <button type="button" onClick={() => setSelectedLandmark(model)} className="border-l border-slate-700/60 px-2 py-1 text-emerald-400 hover:bg-slate-800" title="Xem mô hình 3D">3D</button>
+                )}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">
         <Map3DLandmarkViewer
           modelId={selectedLandmark}
+          defaultCalibration={selectedCalibration}
           className="w-full h-full min-h-[calc(100vh-140px)]"
         />
       </div>

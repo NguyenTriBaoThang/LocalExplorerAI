@@ -35,10 +35,12 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/local_explorer}
       REDIS_URL: redis://redis:6379/0
+      REAL_DATA_ONLY: ${REAL_DATA_ONLY:-true}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-false}
       RATE_LIMIT_GENERAL_PER_MINUTE: ${RATE_LIMIT_GENERAL_PER_MINUTE:-120}
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
       RATE_LIMIT_CHAT_PER_MINUTE: ${RATE_LIMIT_CHAT_PER_MINUTE:-20}
+      RATE_LIMIT_COSTLY_PER_MINUTE: ${RATE_LIMIT_COSTLY_PER_MINUTE:-30}
       TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -67,14 +69,17 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-30}
       LLM_FALLBACK_ENABLED: ${LLM_FALLBACK_ENABLED:-true}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
       APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:-}
-      AUTH_SECRET: ${AUTH_SECRET:-}
-      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-7200}
+      AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:-}
+      AUTH_JWT_PRIVATE_KEY_B64: ${AUTH_JWT_PRIVATE_KEY_B64:-}
+      AUTH_JWT_PUBLIC_KEYS_B64: ${AUTH_JWT_PUBLIC_KEYS_B64:-}
+      AUTH_ISSUER: ${AUTH_ISSUER:-local-explorer-ai}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-local-explorer-api}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8000/api/auth/google/callback}
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:5173}
+      PORTAL_APP_URL: ${PORTAL_APP_URL:-http://localhost:${PORTAL_PORT:-5174}}
       VNPAY_ENVIRONMENT: ${VNPAY_ENVIRONMENT:-sandbox}
       VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
       VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
@@ -96,6 +101,7 @@ services:
       DEMO_TRAVELER_PASSWORD: ${DEMO_TRAVELER_PASSWORD:-}
       E5_MODEL_PATH: ${E5_MODEL_PATH:-/models/e5}
       RANKER_MODEL_DIR: ${RANKER_MODEL_DIR:-/models/ai-ranker}
+      ENABLE_BOOTSTRAP_RANKER: ${ENABLE_BOOTSTRAP_RANKER:-false}
       FLOOD_MODEL_DIR: ${FLOOD_MODEL_DIR:-/models/flood-risk}
       ALLOW_UNVERIFIED_RANKER: ${ALLOW_UNVERIFIED_RANKER:-false}
     ports:
@@ -125,6 +131,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/local_explorer}
       REDIS_URL: redis://redis:6379/0
+      REAL_DATA_ONLY: ${REAL_DATA_ONLY:-true}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
@@ -148,6 +155,14 @@ services:
       context: ./apps/web
     ports:
       - "${WEB_PORT:-5173}:80"
+    depends_on:
+      - api
+
+  portal:
+    build:
+      context: ./apps/portal
+    ports:
+      - "${PORTAL_PORT:-5174}:80"
     depends_on:
       - api
 

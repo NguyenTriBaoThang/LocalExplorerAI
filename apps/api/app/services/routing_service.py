@@ -9,7 +9,7 @@ from app.services.integration_config import IntegrationSecretConfigurationError,
 
 def make_routing_provider(db: Session | None = None) -> RoutingProvider:
     try:
-        provider_name = (resolve_integration_value(db, "routing", "provider") or "goong").strip().lower()
+        provider_name = (resolve_integration_value(db, "routing", "provider") or settings.routing_provider).strip().lower()
         if provider_name == "mock":
             if settings.real_data_only:
                 raise RoutingConfigurationError("Mock routing is disabled while REAL_DATA_ONLY is enabled.")
@@ -28,7 +28,7 @@ def make_routing_provider(db: Session | None = None) -> RoutingProvider:
 
 def make_geocoding_provider(db: Session | None = None) -> GoongGeocodingProvider:
     try:
-        provider_name = (resolve_integration_value(db, "routing", "geocoding_provider") or "goong").strip().lower()
+        provider_name = (resolve_integration_value(db, "routing", "geocoding_provider") or settings.geocoding_provider).strip().lower()
         if provider_name != "goong":
             raise RoutingConfigurationError(f"Unsupported GEOCODING_PROVIDER '{provider_name}'.")
         return GoongGeocodingProvider(

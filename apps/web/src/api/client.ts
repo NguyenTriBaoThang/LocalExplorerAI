@@ -1,11 +1,75 @@
 import axios from 'axios'
-import type { AuthUser, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, RoutingCapabilities } from '../types'
+import { t } from '../i18n'
+import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatReply, ChatServiceStatus, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
-export async function login(email: string, password: string): Promise<AuthUser> {
-  const { data } = await api.post<AuthUser>('/auth/login', { email, password })
+export type WebPushStatus = { configured: boolean; enabled: boolean; device_count: number }
+
+export async function getWebPushStatus(): Promise<WebPushStatus> {
+  return (await api.get<WebPushStatus>('/notifications/push/status')).data
+}
+
+export async function getWebPushPublicKey(): Promise<string> {
+  return (await api.get<{ public_key: string }>('/notifications/push/vapid-public-key')).data.public_key
+}
+
+export async function saveWebPushSubscription(payload: { endpoint: string; keys: { p256dh: string; auth: string } }): Promise<void> {
+  await api.post('/notifications/push/subscriptions', payload)
+}
+
+export async function deleteWebPushSubscription(endpoint: string): Promise<void> {
+  await api.delete('/notifications/push/subscriptions', { data: { endpoint } })
+}
+
+/** Fired when the server says the session is over (the access token is refreshed transparently, so a 401 here is final). */
+export const AUTH_EXPIRED_EVENT = 'auth:expired'
+api.interceptors.response.use(
+  (response) => response,
+  (error: { response?: { status?: number; data?: { error?: { code?: string } } }; config?: { url?: string } }) => {
+    const url = error.config?.url ?? ''
+    if (error.response?.status === 401 && !url.startsWith('/auth/')) window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+    // An administrator without a second factor is sent to the page where one is set up.
+    if (error.response?.status === 403 && error.response.data?.error?.code === 'MFA_REQUIRED' && !window.location.pathname.startsWith('/profile')) {
+      window.location.assign('/profile')
+    }
+    return Promise.reject(error)
+  },
+)
+
+export function isMfaChallenge(value: AuthUser | MfaChallenge): value is MfaChallenge {
+  return (value as MfaChallenge).mfa_required === true
+}
+
+/** Resolves to the user, or to a challenge when the account has two-factor authentication (finish with `loginMfa`). */
+export async function login(email: string, password: string): Promise<AuthUser | MfaChallenge> {
+  const { data } = await api.post<AuthUser | MfaChallenge>('/auth/login', { email, password })
   return data
+}
+
+export async function loginMfa(mfa_ticket: string, code: string): Promise<AuthUser> {
+  const { data } = await api.post<AuthUser>('/auth/login/mfa', { mfa_ticket, code })
+  return data
+}
+
+export async function getMfaStatus(): Promise<MfaStatus> {
+  return (await api.get<MfaStatus>('/auth/mfa')).data
+}
+
+export async function beginMfaSetup(): Promise<MfaSetup> {
+  return (await api.post<MfaSetup>('/auth/mfa/setup')).data
+}
+
+export async function enableMfa(code: string): Promise<string[]> {
+  return (await api.post<{ recovery_codes: string[] }>('/auth/mfa/enable', { code })).data.recovery_codes
+}
+
+export async function regenerateRecoveryCodes(code: string): Promise<string[]> {
+  return (await api.post<{ recovery_codes: string[] }>('/auth/mfa/recovery-codes', { code })).data.recovery_codes
+}
+
+export async function disableMfa(code: string, password: string | null): Promise<void> {
+  await api.post('/auth/mfa/disable', { code, password })
 }
 
 export async function registerAccount(email: string, display_name: string, password: string): Promise<AuthUser> {
@@ -14,8 +78,9 @@ export async function registerAccount(email: string, display_name: string, passw
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {
-  const { data } = await api.get<AuthUser>('/auth/me')
-  return data
+  const { data } = await api.get<{ user: AuthUser | null }>('/auth/session')
+  if (!data.user) throw new Error('No active session')
+  return data.user
 }
 
 export async function logout(): Promise<void> {
@@ -62,13 +127,43 @@ export async function getSharedItinerary(token: string): Promise<Itinerary> {
 }
 
 export async function claimTicket(payload: {
-  share_token: string
+  claim_token: string
   email: string
   password: string
   display_name?: string
 }): Promise<AuthUser> {
   const { data } = await api.post<AuthUser>('/auth/claim-ticket', payload)
   return data
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post('/auth/password/forgot', { email })
+}
+
+export async function resetPassword(token: string, new_password: string): Promise<void> {
+  await api.post('/auth/password/reset', { token, new_password })
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post('/auth/email/verify', { token })
+}
+
+export async function resendVerification(): Promise<{ already_verified?: boolean; email_queued?: boolean }> {
+  const { data } = await api.post('/auth/email/verify/resend')
+  return data
+}
+
+export async function listSessions(): Promise<SessionInfo[]> {
+  const { data } = await api.get<SessionInfo[]>('/auth/sessions')
+  return data
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await api.delete(`/auth/sessions/${encodeURIComponent(id)}`)
+}
+
+export async function logoutAllDevices(): Promise<void> {
+  await api.post('/auth/logout-all')
 }
 
 export async function submitFeedback(itineraryId: string, rating: number, review_text: string) {
@@ -140,76 +235,6 @@ export async function compareItineraries(firstId: string, secondId: string) {
   return data
 }
 
-export const providerApi = {
-  profile: async () => (await api.get('/provider/me')).data,
-  experiences: async () => (await api.get('/provider/experiences')).data,
-  pois: async () => (await api.get<Array<POI & { data_revision: number }>>('/provider/pois')).data,
-  createPOI: async (payload: Record<string, unknown>) => (await api.post('/provider/pois', payload)).data,
-  updatePOI: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/provider/pois/${id}`, payload)).data,
-  createExperience: async (payload: Record<string, unknown>) => (await api.post('/provider/experiences', payload)).data,
-  updateExperience: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/provider/experiences/${id}`, payload)).data,
-  hideExperience: async (id: string) => (await api.delete(`/provider/experiences/${id}`)).data,
-  createSlot: async (id: string, payload: Record<string, unknown>) => (await api.post(`/provider/experiences/${id}/slots`, payload)).data,
-  updateSlot: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/provider/slots/${id}`, payload)).data,
-  submitEvidence: async (payload: Record<string, unknown>) => (await api.post('/provider/evidence', payload)).data,
-  audit: async () => (await api.get('/provider/audit')).data,
-  evidence: async () => (await api.get('/provider/evidence')).data,
-  bookings: async () => (await api.get<Booking[]>('/provider/me/bookings')).data,
-  decideBooking: async (id: string, action: 'accept' | 'reject', note = '') =>
-    (await api.post<Booking>(`/provider/me/bookings/${id}/decision`, { action, note })).data,
-  decideBookingCancellation: async (id: string, action: 'approve' | 'reject', note = '') =>
-    (await api.post<Booking>(`/provider/me/bookings/${id}/cancellation-decision`, { action, note })).data,
-  previewSlotAssistant: async (providerId: string, message: string, slotIds: string[]) =>
-    (await api.post(`/providers/${providerId}/slot-assistant/preview`, { message, slot_ids: slotIds })).data,
-  confirmSlotAssistant: async (providerId: string, confirmationToken: string, expiresAt?: string) =>
-    (await api.post(`/providers/${providerId}/slot-assistant/confirm`, {
-      confirmation_token: confirmationToken,
-      ...(expiresAt ? { expires_at: expiresAt } : {}),
-    })).data,
-}
-
-export const adminApi = {
-  dashboard: async () => (await api.get('/admin/dashboard')).data,
-  users: async () => (await api.get('/admin/users')).data,
-  providers: async () => (await api.get('/admin/providers')).data,
-  placeImports: async () => (await api.get('/admin/place-imports')).data,
-  placeImportCandidates: async (batchId: string) => (await api.get(`/admin/place-imports/${batchId}/candidates`)).data,
-  promotePlaceCandidate: async (batchId: string, candidateId: string, payload: Record<string, unknown>) =>
-    (await api.post(`/admin/place-imports/${batchId}/candidates/${candidateId}/promote`, payload)).data,
-  aiTargets: async () => (await api.get('/admin/ai/targets')).data,
-  operationsStatus: async () => (await api.get('/ops/status')).data,
-  operationsJobs: async () => (await api.get('/ops/jobs')).data,
-  operationsEvents: async () => (await api.get('/ops/events')).data,
-  operationsNotifications: async () => (await api.get('/ops/notifications')).data,
-  promptCatalog: async () => (await api.get('/ai/prompts')).data,
-  tagExperience: async (experienceId: string, additional_context: string) =>
-    (await api.post(`/experiences/${experienceId}/ai-tag`, { additional_context })).data,
-  compareIntent: async (experience_a_id: string, experience_b_id: string) =>
-    (await api.post('/ai/intent-similarity', { experience_a_id, experience_b_id })).data,
-  labelFeedback: async (itineraryId: string, review_text: string, rating: number | null) =>
-    (await api.post(`/itineraries/${itineraryId}/feedback/label`, { review_text, rating })).data,
-  weatherAdvisory: async (itineraryId: string, payload: Record<string, unknown>) =>
-    (await api.post(`/itineraries/${itineraryId}/weather-advisory`, payload)).data,
-  updateUser: async (id: string, payload: Record<string, unknown>) => (await api.patch(`/admin/users/${id}`, payload)).data,
-  createProvider: async (payload: Record<string, unknown>) => (await api.post('/admin/providers', payload)).data,
-  moderation: async (status = 'pending') => (await api.get('/admin/moderation', { params: { status } })).data,
-  review: async (kind: string, id: string, action: string, note = '') => (await api.patch(`/admin/moderation/${kind}/${id}`, { action, note })).data,
-  duplicates: async () => (await api.get('/admin/duplicates/pois')).data,
-  mergeDuplicate: async (keep_id: string, duplicate_id: string, reason: string) => (await api.post('/admin/duplicates/pois/merge', { keep_id, duplicate_id, reason })).data,
-  audit: async () => (await api.get('/admin/audit')).data,
-  integrations: async () => (await api.get('/admin/integrations')).data,
-  updateIntegration: async (service: string, values: Record<string, string>, remove_keys: string[] = []) =>
-    (await api.put('/admin/integrations/' + encodeURIComponent(service), { values, remove_keys })).data,
-  testIntegration: async (service: string) =>
-    (await api.post<{ service: string; status: string; ok: boolean; message_vi: string; detail_vi?: string }>(`/admin/integrations/${encodeURIComponent(service)}/test`)).data,
-}
-
-export const mlApi = {
-  status: async () => (await api.get('/ml/status')).data,
-  predictFloodRisk: async (samples: Array<Record<string, string | number>>) =>
-    (await api.post('/ml/flood-risk', { samples })).data,
-}
-
 export async function getExperiences(params?: Record<string, string | number | boolean>): Promise<Experience[]> {
   const { data } = await api.get<Experience[]>('/experiences', { params })
   return data
@@ -217,6 +242,11 @@ export async function getExperiences(params?: Record<string, string | number | b
 
 export async function getPOIs(): Promise<POI[]> {
   const { data } = await api.get<POI[]>('/pois')
+  return data
+}
+
+export async function getPOI(id: string): Promise<POIDetail> {
+  const { data } = await api.get<POIDetail>(`/pois/${encodeURIComponent(id)}`)
   return data
 }
 
@@ -244,10 +274,40 @@ export async function getItinerary(id: string): Promise<Itinerary> {
   const { data } = await api.get<Itinerary>(`/itineraries/${id}`)
   return data
 }
-export function apiErrorMessage(error: unknown): string {
+/** The server states password-policy failures in English; show them in the visitor's language. */
+const PASSWORD_REASONS: Array<[RegExp, string]> = [
+  [/at least \d+ characters/, 'password.reason.short'],
+  [/at most \d+ characters/, 'password.reason.long'],
+  [/commonly used/, 'password.reason.common'],
+  [/too repetitive/, 'password.reason.repetitive'],
+  [/email name/, 'password.reason.email'],
+]
+/** Error codes whose text is translated on the client (the server's messages are English). */
+const ERROR_CODES = new Set(['TOKEN_INVALID', 'INVALID_CREDENTIALS', 'EMAIL_IN_USE', 'EMAIL_RESERVED', 'VERIFICATION_RECENTLY_SENT', 'SESSION_NOT_FOUND', 'AUTH_REQUIRED', 'INVALID_SESSION', 'ACCOUNT_DISABLED', 'LOGIN_THROTTLED', 'MFA_CODE_INVALID', 'MFA_LOCKED', 'MFA_NOT_CONFIGURED', 'MFA_REQUIRED_FOR_ROLE', 'MFA_ALREADY_ENABLED', 'MFA_NOT_ENABLED', 'MFA_SETUP_REQUIRED', 'ADMIN_RESET_FORBIDDEN'])
+function weakPasswordMessage(serverMessage: string): string {
+  const reasons = PASSWORD_REASONS.filter(([pattern]) => pattern.test(serverMessage)).map(([, key]) => t(key))
+  return reasons.length ? `${t('password.weak')}: ${reasons.join('; ')}.` : t('password.weak')
+}
+
+export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: { message?: string }; detail?: string | { message?: string } } } }).response
+    const response = (error as { response?: { data?: { error?: { code?: string; message?: string }; detail?: string | { message?: string } } } }).response
+    if (response?.data?.error?.code === 'WEAK_PASSWORD') return weakPasswordMessage(response.data.error.message ?? '')
+    const code = response?.data?.error?.code
+    if (code && ERROR_CODES.has(code)) return t(`error.${code}`)
     const detail = response?.data?.detail
+    const detailCode = (error as { response?: { data?: { detail?: { code?: string } } } }).response?.data?.detail?.code
+    const planCode = code ?? detailCode
+    if (planCode === 'NO_BOOKABLE_SLOTS') {
+      return locale === 'en'
+        ? 'There are no currently bookable slots on the selected date. Choose another date or ask the provider to update availability.'
+        : 'Ngày đã chọn hiện không có ca đủ điều kiện nhận khách (có thể đã hủy, hết chỗ hoặc chưa được xác nhận mới). Hãy chọn ngày khác hoặc nhờ cơ sở cập nhật ca.'
+    }
+    if (planCode === 'NO_FEASIBLE_PLAN') {
+      return locale === 'en'
+        ? 'No itinerary fits the selected time, return route, budget, and availability. Try a wider time window, another date, or a higher budget.'
+        : 'Chưa tìm được lịch phù hợp với khung giờ, chặng về, ngân sách và tình trạng chỗ. Hãy thử ngày khác, nới khung giờ hoặc điều chỉnh ngân sách.'
+    }
     return response?.data?.error?.message ?? (typeof detail === 'string' ? detail : detail?.message) ?? 'Đang hiển thị chế độ mô phỏng trực tuyến.'
   }
   if (error instanceof Error && error.message) return error.message

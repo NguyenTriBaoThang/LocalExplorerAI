@@ -5,6 +5,7 @@ import pytest
 from app.api.routes import models_3d
 from app.models.entities import User
 from app.services.auth_service import hash_password
+from tests.helpers import sign_in
 
 VALID_PAYLOAD = {
     "latitude": 10.77981,
@@ -24,9 +25,12 @@ def isolated_calibration_file(tmp_path, monkeypatch):
 
 def _login_as(client, db_session, role: str) -> None:
     email = f"{role}-{uuid4().hex[:6]}@example.com"
-    db_session.add(User(id=str(uuid4()), email=email, display_name=role,
-                        password_hash=hash_password("long-enough-password"), role=role))
+    user = User(id=str(uuid4()), email=email, display_name=role, password_hash=hash_password("long-enough-password"), role=role)
+    db_session.add(user)
     db_session.commit()
+    if role == "admin":
+        sign_in(client, user)  # an administrator's session must carry a second factor; that has its own tests
+        return
     response = client.post("/api/auth/login", json={"email": email, "password": "long-enough-password"})
     assert response.status_code == 200
 

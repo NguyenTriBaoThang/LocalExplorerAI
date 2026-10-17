@@ -1,5 +1,6 @@
 from functools import lru_cache
 import ipaddress
+import os
 import re
 from typing import Literal
 from urllib.parse import urlparse
@@ -9,8 +10,25 @@ from pydantic import Field, model_validator
 
 
 from pathlib import Path
-_REPO_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
-_API_DIR_ENV = Path(__file__).resolve().parents[2] / ".env"
+
+_CONFIG_PATH = Path(__file__).resolve()
+_API_ROOT = _CONFIG_PATH.parents[2]
+_PROJECT_ROOT = next(
+    (
+        parent for parent in _CONFIG_PATH.parents
+        if (parent / "apps" / "api").is_dir() and (parent / "models").is_dir()
+    ),
+    _API_ROOT,
+)
+_REPO_ROOT_ENV = _PROJECT_ROOT / ".env"
+_API_DIR_ENV = _API_ROOT / ".env"
+
+
+def _default_ranker_model_dir() -> str:
+    mounted_model_dir = Path("/models/ai-ranker")
+    if os.name != "nt" and mounted_model_dir.is_dir():
+        return str(mounted_model_dir)
+    return str(_PROJECT_ROOT / "models" / "ai-ranker")
 
 
 class Settings(BaseSettings):
@@ -22,6 +40,7 @@ class Settings(BaseSettings):
     rate_limit_general_per_minute: int = Field(default=120, ge=1, le=10000)
     rate_limit_auth_per_minute: int = Field(default=10, ge=1, le=10000)
     rate_limit_chat_per_minute: int = Field(default=20, ge=1, le=10000)
+    rate_limit_costly_per_minute: int = Field(default=30, ge=1, le=10000)  # geocoding and local ML inference
     rate_limit_prefix: str = "local-explorer:rl"
     trusted_proxy_ips: str = ""
     smtp_host: str | None = None
@@ -43,6 +62,15 @@ class Settings(BaseSettings):
     goong_timeout_seconds: float = 8.0
     goong_eta_ttl_seconds: int = 300
     geocode_cache_ttl_seconds: int = 86400
+    # Open-Meteo's public endpoint is for non-commercial use; production can point at a paid customer endpoint.
+    open_meteo_forecast_url: str = "https://api.open-meteo.com/v1/forecast"
+    open_meteo_air_quality_url: str = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    open_meteo_api_key: str | None = None
+    open_meteo_cache_ttl_seconds: int = Field(default=600, ge=60, le=3600)
+    web_push_vapid_public_key: str | None = None
+    web_push_vapid_private_key: str | None = None
+    web_push_vapid_subject: str | None = None
+    web_push_allowed_hosts: str = "fcm.googleapis.com,push.services.mozilla.com,push.apple.com,web.push.apple.com,notify.windows.com,wns.windows.com,push.samsung.com"
     openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
@@ -52,14 +80,36 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
     llm_fallback_enabled: bool = False
-    admin_api_key: str | None = None
     app_signing_secret: str | None = None
-    auth_secret: str | None = None
-    session_ttl_seconds: int = 7200
+    # New auth (see docs/auth-design.md). RS256 keys are base64-encoded PEM in the environment, in every
+    # environment: generate them with `python -m scripts.generate_auth_keys`.
+    auth_issuer: str = "local-explorer-ai"
+    auth_audience: str = "local-explorer-api"
+    auth_jwt_key_id: str | None = None
+    auth_jwt_private_key_b64: str | None = None
+    auth_jwt_public_keys_b64: str | None = None  # JSON {"kid": "<base64 pem>"} for retired keys still honoured
+    auth_access_ttl_seconds: int = 900
+    auth_refresh_ttl_seconds: int = 7 * 24 * 3600
+    auth_admin_refresh_ttl_seconds: int = 24 * 3600
+    auth_absolute_ttl_seconds: int = 30 * 24 * 3600
+    auth_admin_absolute_ttl_seconds: int = 7 * 24 * 3600
+    auth_refresh_grace_seconds: int = 10
+    auth_refresh_threshold_seconds: int = 180
+    # Wrong-password throttling, counted from auth_events (works across workers, no Redis needed).
+    auth_login_window_seconds: int = 900
+    auth_login_max_failures_per_account_ip: int = Field(default=5, ge=1)   # one e-mail from one address
+    auth_login_max_failures_per_account: int = Field(default=20, ge=1)     # one e-mail from anywhere
+    auth_login_max_failures_per_ip: int = Field(default=50, ge=1)          # one address against any e-mail
+    # The old X-Provider-Access-Key is deprecated. None means "off in production, on elsewhere".
+    allow_provider_access_key: bool | None = None
+    # Administrators must pass a second factor. None means "on in production, off elsewhere" (handy for demos and local work).
+    admin_mfa_required: bool | None = None
     google_client_id: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
     web_app_url: str = "http://localhost:5173"
+    # Partner/admin portal. Account emails for provider and admin users link here; empty falls back to web_app_url.
+    portal_app_url: str = ""
     vnpay_environment: Literal["sandbox", "production"] = "sandbox"
     vnpay_tmn_code: str | None = None
     vnpay_hash_secret: str | None = None
@@ -80,11 +130,23 @@ class Settings(BaseSettings):
     demo_traveler_email: str = "baothang@gmail.com"
     demo_traveler_password: str | None = None
     e5_model_path: str | None = None
-    ranker_model_dir: str | None = None
+    ranker_model_dir: str | None = Field(default_factory=_default_ranker_model_dir)
+    enable_bootstrap_ranker: bool = False
     flood_model_dir: str | None = None
-    allow_unverified_ranker: bool = False
 
     model_config = SettingsConfigDict(env_file=(str(_REPO_ROOT_ENV), str(_API_DIR_ENV), ".env"), extra="ignore")
+
+    @model_validator(mode="after")
+    def production_defaults(self):
+        """Safer defaults in production unless the operator chose explicitly (an explicit value, either way, always wins)."""
+        production = self.app_env.lower() == "production"
+        if "rate_limit_enabled" not in self.model_fields_set and production:
+            self.rate_limit_enabled = True
+        if self.allow_provider_access_key is None:
+            self.allow_provider_access_key = not production
+        if self.admin_mfa_required is None:
+            self.admin_mfa_required = production
+        return self
 
     @model_validator(mode="after")
     def validate_smtp_transport(self):
@@ -107,6 +169,19 @@ class Settings(BaseSettings):
     @property
     def email_is_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_from_email)
+
+    @property
+    def web_push_is_configured(self) -> bool:
+        subject = (self.web_push_vapid_subject or "").strip()
+        return bool(
+            self.web_push_vapid_public_key and self.web_push_vapid_public_key.strip()
+            and self.web_push_vapid_private_key and self.web_push_vapid_private_key.strip()
+            and (subject.startswith("mailto:") or subject.startswith("https://"))
+        )
+
+    @property
+    def web_push_host_suffixes(self) -> list[str]:
+        return [host.strip().lower().rstrip(".") for host in self.web_push_allowed_hosts.split(",") if host.strip()]
 
     @property
     def vnpay_credentials_configured(self) -> bool:

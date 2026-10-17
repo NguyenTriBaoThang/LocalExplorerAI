@@ -1,0 +1,123 @@
+{
+  "origin": {
+    "latitude": 10.772,
+    "longitude": 106.698,
+    "status": "analyst_selected_scenario_origin"
+  },
+  "query_profiles": "six analyst constructed intent scenarios, not real user requests",
+  "walking_speed_kmh": 4.5,
+  "route_factor": 1.3,
+  "buffer_min": 3,
+  "eta_sensitivity": {
+    "speed_kmh": [
+      3,
+      5
+    ],
+    "route_factor": [
+      1,
+      1.6
+    ]
+  },
+  "remaining_time_min": 180,
+  "group_size": 2,
+  "budget_remaining_vnd": 600000,
+  "category_ranges": {
+    "restaurant": [
+      45,
+      90,
+      80000,
+      300000,
+      true,
+      "food"
+    ],
+    "cafe": [
+      30,
+      90,
+      35000,
+      120000,
+      true,
+      "coffee"
+    ],
+    "museum": [
+      45,
+      120,
+      30000,
+      150000,
+      true,
+      "culture"
+    ],
+    "gallery": [
+      30,
+      90,
+      0,
+      150000,
+      true,
+      "art"
+    ],
+    "cinema": [
+      90,
+      150,
+      80000,
+      200000,
+      true,
+      "entertainment"
+    ],
+    "theatre": [
+      60,
+      150,
+      100000,
+      500000,
+      true,
+      "entertainment"
+    ],
+    "park": [
+      30,
+      90,
+      0,
+      100000,
+      false,
+      "nature"
+    ],
+    "garden": [
+      30,
+      90,
+      0,
+      100000,
+      false,
+      "nature"
+    ],
+    "attraction": [
+      20,
+      90,
+      0,
+      200000,
+      null,
+      "sightseeing"
+    ],
+    "viewpoint": [
+      15,
+      45,
+      0,
+      100000,
+      false,
+      "sightseeing"
+    ],
+    "artwork": [
+      10,
+      30,
+      0,
+      50000,
+      false,
+      "art"
+    ],
+    "sports_centre": [
+      45,
+      120,
+      50000,
+      300000,
+      null,
+      "sport"
+    ]
+  },
+  "range_meaning": "analyst assumptions, not empirical confidence intervals"
+}

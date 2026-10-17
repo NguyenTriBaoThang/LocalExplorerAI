@@ -1,4 +1,4 @@
-"""Background worker for the transactional notification outbox (PostgreSQL only)."""
+"""Background worker for transactional email and web-push notifications (PostgreSQL only)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.session import SessionLocal, engine
 from app.models.entities import NotificationDelivery, OpsJobRun
-from app.services.notifications import deliver_email
+from app.services.notifications import REDACTED_BODY, SENSITIVE_KEY_PREFIX, deliver_email, deliver_webpush
 from app.services.rate_limit import _redis
 
 logger = logging.getLogger("local_explorer.worker")
@@ -44,18 +44,24 @@ def run_once() -> bool:
         row.attempts += 1
         db.commit()
         delivery_id = row.id
-        recipient, subject, body, attempt = row.recipient_email, row.subject, row.body_text, row.attempts
+        channel, recipient, subject, body, attempt = row.channel, row.recipient_email, row.subject, row.body_text, row.attempts
+        recipient_user_id = row.recipient_user_id
 
     error_type = None
     try:
-        deliver_email(recipient, subject, body)
-    except Exception as exc:  # SMTP outages are expected to retry; never log the address/body.
+        if channel == "webpush":
+            deliver_webpush(recipient_user_id, body)
+        elif channel == "email":
+            deliver_email(recipient, subject, body)
+        else:
+            raise RuntimeError("Unsupported notification channel")
+    except Exception as exc:  # Delivery outages are expected to retry; never log recipient/body.
         error_type = type(exc).__name__
 
     finished = utcnow()
     with SessionLocal() as db:
         row = db.get(NotificationDelivery, delivery_id)
-        run = OpsJobRun(id=str(uuid4()), job_name="email_outbox", status="completed" if error_type is None else "failed",
+        run = OpsJobRun(id=str(uuid4()), job_name="notification_outbox", status="completed" if error_type is None else "failed",
                         started_at=now, finished_at=finished, processed_count=1,
                         error_summary=error_type)
         db.add(run)
@@ -73,9 +79,11 @@ def run_once() -> bool:
                 else:
                     row.status = "retry"
                     row.available_at = finished + timedelta(seconds=min(3600, 15 * (2 ** (attempt - 1))))
+            if row.status in ("sent", "failed") and row.idempotency_key.startswith(SENSITIVE_KEY_PREFIX):
+                row.body_text = REDACTED_BODY  # do not keep live reset/verification links in the outbox
         db.commit()
     if error_type:
-        logger.warning("email delivery failed id=%s attempt=%s error=%s", delivery_id, attempt, error_type)
+        logger.warning("notification delivery failed id=%s attempt=%s channel=%s error=%s", delivery_id, attempt, channel, error_type)
     return True
 
 
@@ -84,7 +92,7 @@ def main() -> None:
     while True:
         try:
             try:
-                _redis().set("local-explorer:worker:email_outbox", utcnow().isoformat(), ex=30)
+                _redis().set("local-explorer:worker:notification_outbox", utcnow().isoformat(), ex=30)
             except Exception:
                 pass  # Worker remains useful during Redis outage; Redis is for rate limits/heartbeat.
             did_work = run_once()

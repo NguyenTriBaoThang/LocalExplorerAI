@@ -1,43 +1,18 @@
-# HCMC historical flood reports — raw source / Dữ liệu Báo cáo Ngập lụt Thô TP.HCM
+# Raw source data
 
-> **Tóm tắt (Vietnamese Summary):**
-> Thư mục này chứa tập dữ liệu thô các báo cáo ngập lụt tại TP. Hồ Chí Minh giai đoạn 2002–2026 được chuyển đổi sang chuẩn UTF-8 CSV từ bảng `Flood_event_locations.tab` của DataSuds. Dữ liệu bao gồm 425 quan trắc và 22 cột thuộc tính nguyên bản; không tự ý suy diễn nhãn, không tự tạo dữ liệu đường khô, và không tự gán `edge_id`. Tập tin này phục vụ lưu trữ nguồn gốc (traceability) và **chưa sẵn sàng** để nạp trực tiếp vào notebook huấn luyện mô hình Flood Colab nếu chưa có dữ liệu quan sát âm bản đối chứng.
+Files here are sources or candidates for review. They are not automatically operational data.
 
-`hcmc_flood_reports_2002_2026.csv` is a UTF-8 CSV conversion of the public
-`Flood_event_locations.tab` table from the dataset below. The conversion
-preserves its 22 source columns and 425 observation rows; it does not add
-labels, infer dates, generate non-flood examples, or map observations to this
-project's road-edge IDs.
+## Current contents
 
-`flood_training.csv` is an additional copy exported at the user's requested
-filename. Its contents are still these same raw reports; the filename does
-**not** mean it is ready for the Flood Colab notebook.
+- district1_osm_places.json: OSM candidates collected within the historical District 1 pilot polygon. This is not a complete list of every place and does not verify that a venue is open or confirm its current price, hours, or slots.
+- district1_osm_photos_manifest.json and district1_osm_places_with_local_photos.json: image metadata and candidate image associations. Use an image only when its source page, license, and credit can be checked for that specific file; not every place has a matching image.
+- Sai_Gon_Places.xlsx: a project-provided workbook with 177 rows that still need source review and field-level evidence before approval.
+- Sai_Gon_Places_v2.xlsx: a newer source workbook preserved for review. Its `Verified_District1` sheet is staged as POI candidates only; its `Experiences_Verified` sheet is not auto-imported, and it contains no slot data. The workbook's verification labels and field coverage are unreviewed claims.
+- hcmc_flood_reports_2002_2026.csv: a converted historical report dataset from DataSuds. It has no verified dry windows or road-edge labels required for flood prediction.
+- flood_training.csv: must not be assumed to be a valid training set. Check its schema and provenance; do not synthesize no-flood labels or observation times.
 
-- Dataset: Hardy, Sebastien; Radziute, Gintaré (2026), *Historical database of
-  urban flooding in Ho Chi Minh City, Vietnam (2002–2026)*, DataSuds, Version 1.
-- DOI: <https://doi.org/10.23708/8Y16HU>
-- Source file: <https://dataverse.ird.fr/api/access/datafile/50148?format=original>
-- License: CC BY-NC 4.0. Attribution is required and use is restricted to
-  non-commercial purposes; check the license before redistribution or use in a
-  commercial product.
-- Source file MD5 verified by `scripts/download_hcmc_flood_reports.py`:
-  `39de82a4ff2401e527a6dc5be13b25f0`.
+## Handling and licensing
 
-This is a collection of reported flood observations. It is **not** ready for
-the Flood Colab training notebook: some source dates are blank, it contains no
-verified no-flood observation windows, and it does not contain the project's
-`edge_id` labels. Absence of a news report is not evidence that a road was dry.
-Do not rename this raw file to `flood_training.csv` or upload it to the training
-path without collecting and validating the missing evidence.
+Keep original source files for reproducibility. Record hashes and collection dates in a manifest or report. Follow provider terms. OSM-derived data requires attribution and applicable ODbL obligations. Wikimedia images have licenses specific to each file.
 
-To download/convert the source again (requires internet access):
-
-```powershell
-python scripts/download_hcmc_flood_reports.py
-```
-
-To recreate the exact-name raw copy:
-
-```powershell
-python scripts/download_hcmc_flood_reports.py --output data/raw/flood_training.csv --force
-```
+For flood reports, see the [dataset notes](../../docs/ml-training-and-data.md). For POI intake, see [place import staging](../../docs/place-import-staging.md).

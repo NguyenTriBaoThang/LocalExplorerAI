@@ -1,4 +1,4 @@
-# Kênh Hỗ trợ Dự án (Support)
+# Project Support
 
-- **Báo cáo lỗi (Bug Report):** Sử dụng mục [GitHub Issues](https://github.com/NguyenTriBaoThang/LoaclExplorerAI/issues).
-- **Thảo luận & Đóng góp ý tưởng:** Mục [GitHub Discussions](https://github.com/NguyenTriBaoThang/LoaclExplorerAI/discussions).
+- **Bug reports:** Use [GitHub Issues](https://github.com/NguyenTriBaoThang/LoaclExplorerAI/issues).
+- **Discussion and ideas:** Use [GitHub Discussions](https://github.com/NguyenTriBaoThang/LoaclExplorerAI/discussions).

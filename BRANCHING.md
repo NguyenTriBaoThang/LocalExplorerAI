@@ -1,6 +1,6 @@
-# Quy chuẩn Nhánh Git (Branching Strategy)
+# Git Branching Strategy
 
-- `main`: Nhánh ổn định cao nhất, dùng cho triển khai production.
-- `develop`: Nhánh tích hợp các tính năng chuẩn bị phát hành.
-- `feature/*`: Nhánh phát triển tính năng mới.
-- `fix/*`: Nhánh sửa lỗi phát sinh.
+- `main`: The most stable branch, intended for production releases.
+- `develop`: The integration branch for features being prepared for release.
+- `feature/*`: Branches for developing new features.
+- `fix/*`: Branches for fixing defects.

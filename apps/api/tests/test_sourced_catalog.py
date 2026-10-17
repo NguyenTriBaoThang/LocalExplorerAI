@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from app.models.entities import ExperienceSlot, Provider, User
-from app.services.auth_service import create_session_token
+from app.adapters.routing.goong import GoongDirectionsProvider
+from app.core.config import settings
+from app.models.entities import ExperienceSlot, POI, Provider, User
+from app.auth.passwords import hash_password
+from tests.helpers import sign_in
 
 
-def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session):
+def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_session, monkeypatch):
     provider = Provider(name="Source-backed studio", status="active")
     db_session.add(provider)
     db_session.flush()
@@ -14,11 +17,13 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
         role="provider", provider_id=provider.id, is_active=True,
     )
     admin = User(id=str(uuid4()), email="source-admin@example.com", display_name="Admin", role="admin", is_active=True)
-    traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler", role="traveler", is_active=True)
+    traveler = User(id=str(uuid4()), email="source-traveler@example.com", display_name="Traveler",
+                    password_hash=hash_password("long-enough-password"), role="traveler", is_active=True,
+                    email_verified_at=datetime.now(timezone.utc))
     db_session.add_all([provider_user, admin, traveler])
     db_session.commit()
 
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     poi_response = client.post("/api/provider/pois", json={
         "name": "Verified craft studio",
         "description": "A small workshop",
@@ -30,6 +35,19 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     })
     assert poi_response.status_code == 201, poi_response.text
     poi_id = poi_response.json()["id"]
+    db_poi = db_session.get(POI, poi_id)
+    db_poi.details = {
+        "opening_hours": "Mo-Su 08:00-17:00",
+        "osm_url": "https://www.openstreetmap.org/node/123",
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "osm_tags": {"tourism": "museum"},
+        "images": [{
+            "url": "https://upload.wikimedia.org/example.jpg",
+            "source_url": "https://commons.wikimedia.org/wiki/File:Example.jpg",
+            "license": "CC BY-SA 4.0",
+        }],
+    }
+    db_session.commit()
     assert any(item["id"] == poi_id for item in client.get("/api/provider/pois").json())
 
     poi_evidence = client.post("/api/provider/evidence", json={
@@ -44,7 +62,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     poi_evidence_id = poi_evidence.json()["id"]
 
     # Evidence must be reviewed before a catalog row can be approved.
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
     blocked = client.patch(f"/api/admin/moderation/poi/{poi_id}", json={"action": "approve"})
     assert blocked.status_code == 409
     assert blocked.json()["error"]["code"] == "CATALOG_EVIDENCE_INCOMPLETE"
@@ -53,7 +71,7 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     approved_poi = client.patch(f"/api/admin/moderation/poi/{poi_id}", json={"action": "approve"})
     assert approved_poi.status_code == 200, approved_poi.text
 
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     experience_response = client.post("/api/provider/experiences", json={
         "poi_id": poi_id, "title": "Hands-on wheel pottery", "description": "Guests shape a clay cup.",
         "primary_intent": "thủ_công",
@@ -73,11 +91,11 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert experience_evidence.status_code == 201, experience_evidence.text
     experience_evidence_id = experience_evidence.json()["id"]
 
-    client.cookies.set("le_session", create_session_token(admin.id))
+    sign_in(client, admin)
     assert client.patch(f"/api/admin/moderation/evidence/{experience_evidence_id}", json={"action": "approve"}).status_code == 200
     assert client.patch(f"/api/admin/moderation/experience/{experience_id}", json={"action": "approve"}).status_code == 200
 
-    client.cookies.set("le_session", create_session_token(provider_user.id))
+    sign_in(client, provider_user)
     slot_start = datetime.now(timezone.utc) + timedelta(days=1)
     slot_response = client.post(f"/api/provider/experiences/{experience_id}/slots", json={
         "start_at": slot_start.isoformat(), "end_at": (slot_start + timedelta(minutes=90)).isoformat(),
@@ -105,13 +123,31 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert poi_detail.status_code == 200, poi_detail.text
     assert poi_detail.json()["data_mode"] == "real"
     assert poi_detail.json()["source_evidence"]
+    assert poi_detail.json()["details"]["opening_hours"] == "Mo-Su 08:00-17:00"
+    assert poi_detail.json()["details"]["images"][0]["license"] == "CC BY-SA 4.0"
+    assert [item["id"] for item in poi_detail.json()["experiences"]] == [experience_id]
+
+    monkeypatch.setattr(settings, "routing_provider", "goong")
+    monkeypatch.setattr(settings, "goong_api_key", "test-goong-key")
+
+    def fake_goong_request(_provider, path, params):
+        assert path == "/v2/direction"
+        assert params["vehicle"] == "foot"
+        return {"status": "OK", "routes": [{"legs": [{
+            "distance": {"value": 1_200}, "duration": {"value": 300},
+        }]}]}
+
+    monkeypatch.setattr(GoongDirectionsProvider, "_request_json", fake_goong_request)
 
     trip_start = slot_start - timedelta(hours=1)
-    client.cookies.set("le_session", create_session_token(traveler.id))
+    sign_in(client, traveler)
     planned = client.post("/api/itineraries/plan", json={
-        "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=95)).isoformat(),
+        "start_at": trip_start.isoformat(), "end_at": (slot_start + timedelta(minutes=110)).isoformat(),
         "group_size": 2, "budget_vnd": 1000000, "transport_mode": "walking",
         "intent_weights": {"thủ_công": 1.0}, "locked_experience_ids": [experience_id],
+        "origin_latitude": 10.76, "origin_longitude": 106.68,
+        "destination_latitude": 10.78, "destination_longitude": 106.69,
+        "origin_label": "Điểm xuất phát", "destination_label": "Điểm trở về",
     })
     assert planned.status_code == 200, planned.text
     planned_stop = planned.json()["stops"][0]
@@ -124,6 +160,33 @@ def test_catalog_requires_current_sources_and_hides_expired_slot(client, db_sess
     assert planned_stop["slot_source_evidence"][0]["target_type"] == "slot"
     assert planned_stop["slot_confirmed_at"]
     assert planned_stop["slot_expires_at"]
+    assert len(planned.json()["routes"]) == 2
+    assert [route["provider"] for route in planned.json()["routes"]] == [
+        "goong_directions_v2", "goong_directions_v2",
+    ]
+    assert planned.json()["routes"][0]["from_label"] == "Điểm xuất phát"
+    assert planned.json()["routes"][-1]["to_label"] == "Điểm trở về"
+
+    hold = client.post("/api/bookings", json={
+        "itinerary_id": planned.json()["itinerary_id"],
+        "itinerary_stop_id": planned_stop["id"],
+        "quantity": 2,
+    })
+    assert hold.status_code == 201, hold.text
+    assert hold.json()["status"] == "pending_provider"
+    assert hold.json()["amount_vnd"] == 500000
+
+    client.cookies.clear()
+    sign_in(client, provider_user)
+    confirmation = client.post(
+        f"/api/provider/me/bookings/{hold.json()['id']}/decision",
+        json={"action": "accept", "note": "Capacity checked by provider"},
+    )
+    assert confirmation.status_code == 200, confirmation.text
+    assert confirmation.json()["status"] == "awaiting_payment"
+
+    client.cookies.clear()
+    sign_in(client, traveler)
     reread = client.get(f"/api/itineraries/{planned.json()['itinerary_id']}")
     assert reread.status_code == 200, reread.text
     assert reread.json()["data_mode"] == "real"
@@ -143,7 +206,7 @@ def test_provider_edit_invalidates_previously_submitted_evidence(client, db_sess
     user = User(id=str(uuid4()), email="edit-provider@example.com", display_name="Provider", role="provider", provider_id=provider.id)
     db_session.add(user)
     db_session.commit()
-    client.cookies.set("le_session", create_session_token(user.id))
+    sign_in(client, user)
     revision = sample_experience.data_revision
     response = client.patch(f"/api/provider/experiences/{sample_experience.id}", json={
         "poi_id": sample_experience.poi_id, "title": "Updated workshop", "description": "Updated detail",

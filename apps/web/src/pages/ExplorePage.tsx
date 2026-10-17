@@ -19,6 +19,8 @@ import { MapAdapter } from '../components/map/MapAdapter'
 import { SimulatedBadge, VerificationBadge } from '../components/common/StatusBadge'
 import type { Experience } from '../types'
 import { useTranslation } from '../i18n'
+import { trackPageView } from '../analytics'
+import { ReviewsPanel } from '../components/content/ReviewsPanel'
 
 const topicSuggestions = [
   'cà phê',
@@ -39,7 +41,7 @@ const localTomorrow = () => {
 }
 
 export function ExplorePage() {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [searchParams] = useSearchParams()
   const initialIntent = searchParams.get('intent') || ''
 
@@ -66,7 +68,15 @@ export function ExplorePage() {
   const [radiusKm, setRadiusKm] = useState(15)
   const [slotId, setSlotId] = useState('')
   const [semantic, setSemantic] = useState(false)
-  const [selectedId, setSelectedId] = useState('')
+  // Place filters from the portal's place data; applied in the browser to the experiences already returned.
+  const [landmarkOnly, setLandmarkOnly] = useState(false)
+  const [placeTag, setPlaceTag] = useState('')
+  const [selectedId, setSelectedId] = useState(searchParams.get('focus') || '')
+  // A deliberate pick counts as a view of that experience (partner statistics); the automatic first pick does not.
+  const selectExperience = (id: string) => {
+    setSelectedId(id)
+    trackPageView('/explore', { entity_type: 'experience', entity_id: id })
+  }
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   useEffect(() => {
@@ -89,28 +99,31 @@ export function ExplorePage() {
       center_longitude: 106.7009,
       ...(slotId ? { slot_id: slotId } : {}),
     }
-    const request =
-      semantic && search.trim().length >= 2
-        ? searchExperiences(search.trim(), params, true)
-        : getExperiences({ ...params, ...(search.trim() ? { query: search.trim() } : {}) })
-    request
-      .then((data) => {
-        if (active) {
-          setItems(data)
-          setSelectedId((current) =>
-            data.some((item) => item.id === current) ? current : data[0]?.id || ''
-          )
-        }
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(apiErrorMessage(reason))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
+    const timer = window.setTimeout(() => {
+      const request =
+        semantic && search.trim().length >= 2
+          ? searchExperiences(search.trim(), params, true)
+          : getExperiences({ ...params, ...(search.trim() ? { query: search.trim() } : {}) })
+      request
+        .then((data) => {
+          if (active) {
+            setItems(data)
+            setSelectedId((current) =>
+              data.some((item) => item.id === current) ? current : data[0]?.id || ''
+            )
+          }
+        })
+        .catch((reason: unknown) => {
+          if (active) setError(apiErrorMessage(reason))
+        })
+        .finally(() => {
+          if (active) setLoading(false)
+        })
+    }, search.trim() ? 250 : 0)
 
     return () => {
       active = false
+      window.clearTimeout(timer)
     }
   }, [intent, date, time, groupSize, budget, indoor, topic, radiusKm, slotId, semantic, search])
 
@@ -118,26 +131,45 @@ export function ExplorePage() {
     () =>
       items.filter(
         (item) =>
-          semantic ||
-          !search.trim() ||
-          `${item.name} ${item.description} ${item.poi.name}`
-            .toLowerCase()
-            .includes(search.toLowerCase())
+          (!landmarkOnly || item.poi.is_landmark) &&
+          (!placeTag || (item.poi.tags ?? []).includes(placeTag)) &&
+          (semantic ||
+            !search.trim() ||
+            `${item.name} ${item.description} ${item.poi.name}`
+              .toLowerCase()
+              .includes(search.toLowerCase()))
       ),
-    [items, search, semantic]
+    [items, search, semantic, landmarkOnly, placeTag]
   )
 
-  const points = visible.map((item, index) => ({
-    id: item.id,
-    latitude: item.poi.latitude,
-    longitude: item.poi.longitude,
-    name: item.name,
-    category: item.poi.category,
-    number: index + 1,
-    imageUrl: item.poi.image_urls?.[0],
-    priceVnd: item.price_vnd,
-    district: item.poi.district,
-  }))
+  // The most common place tags among the current results (a tag nobody has would only lead to an empty list).
+  const placeTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    items.forEach((item) => (item.poi.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)))
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag)
+  }, [items])
+
+  const points = useMemo(() => {
+    const uniquePois = new Map<string, Experience>()
+    visible.forEach((item) => {
+      if (!uniquePois.has(item.poi.id)) uniquePois.set(item.poi.id, item)
+    })
+    return [...uniquePois.values()].map((item, index) => ({
+      // Keep an experience ID for the existing card-selection interaction,
+      // but render one map pin per physical POI instead of stacking duplicates.
+      id: item.id,
+      placeId: item.poi.id,
+      latitude: item.poi.latitude,
+      longitude: item.poi.longitude,
+      name: item.poi.name,
+      category: item.poi.category,
+      number: index + 1,
+      imageUrl: item.poi.details?.images?.find((photo) => (photo.local_url || photo.url) && photo.source_url && photo.license)?.local_url
+        || item.poi.details?.images?.find((photo) => photo.url && photo.source_url && photo.license)?.url,
+      priceVnd: item.price_vnd,
+      district: item.poi.district,
+    }))
+  }, [visible])
 
   const resetFilters = () => {
     setSearch('')
@@ -151,6 +183,8 @@ export function ExplorePage() {
     setRadiusKm(15)
     setSlotId('')
     setSemantic(false)
+    setLandmarkOnly(false)
+    setPlaceTag('')
   }
 
   const activeAdvancedCount =
@@ -158,7 +192,9 @@ export function ExplorePage() {
     (topic ? 1 : 0) +
     (radiusKm !== 15 ? 1 : 0) +
     (slotId ? 1 : 0) +
-    (semantic ? 1 : 0)
+    (semantic ? 1 : 0) +
+    (landmarkOnly ? 1 : 0) +
+    (placeTag ? 1 : 0)
 
   return (
     <div className="explore-page-3d page-wrap">
@@ -176,6 +212,7 @@ export function ExplorePage() {
           </p>
         </div>
         <div className="title-extra-badges">
+          <span className="pilot-scope-badge"><MapPin size={13} /> {locale === 'en' ? 'Pilot area: District 1' : 'Khu vực pilot: Quận 1'}</span>
           {items.some((item) => item.data_mode !== 'real') && <SimulatedBadge />}
           {items.some((item) => item.data_mode === 'real') && <VerificationBadge status="verified" />}
         </div>
@@ -201,6 +238,7 @@ export function ExplorePage() {
         <div className="search-box-3d">
           <Search size={18} className="search-icon" />
           <input
+            aria-label={t('explore.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={
@@ -235,6 +273,7 @@ export function ExplorePage() {
             </div>
             <input
               type="date"
+              aria-label={t('explore.dateDepart')}
               value={date}
               min={localToday()}
               onChange={(e) => setDate(e.target.value)}
@@ -247,7 +286,7 @@ export function ExplorePage() {
               <Clock size={13} className="text-amber" />
               <span>{t('explore.timeArrive')}</span>
             </div>
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <input type="time" aria-label={t('explore.timeArrive')} value={time} onChange={(e) => setTime(e.target.value)} />
           </div>
 
           {/* Group Size */}
@@ -258,6 +297,7 @@ export function ExplorePage() {
             </div>
             <input
               type="number"
+              aria-label={t('explore.groupLabel')}
               min={1}
               max={50}
               value={groupSize}
@@ -273,6 +313,7 @@ export function ExplorePage() {
             </div>
             <input
               type="number"
+              aria-label={t('explore.groupBudget')}
               min={0}
               step={100000}
               value={budget}
@@ -380,6 +421,27 @@ export function ExplorePage() {
                 </label>
               </div>
 
+              {/* Place filters: landmarks and tags */}
+              <div className="advanced-field-col">
+                <label className="adv-label">
+                  <span>{locale === 'vi' ? 'Địa điểm' : 'Place'}</span>
+                </label>
+                <label className="toggle-switch-card">
+                  <input type="checkbox" checked={landmarkOnly} onChange={(e) => setLandmarkOnly(e.target.checked)} className="toggle-checkbox" />
+                  <div className="toggle-slider" />
+                  <span className="toggle-label">{locale === 'vi' ? 'Chỉ danh lam thắng cảnh' : 'Landmarks only'}</span>
+                </label>
+                {placeTags.length > 0 && (
+                  <div className="topic-quick-pills">
+                    {placeTags.map((tag) => (
+                      <button key={tag} type="button" className={`topic-pill ${placeTag === tag ? 'topic-pill-active' : ''}`} onClick={() => setPlaceTag(placeTag === tag ? '' : tag)}>
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Semantic E5 Toggle */}
               <div className="advanced-field-col">
                 <label className="adv-label">
@@ -439,7 +501,7 @@ export function ExplorePage() {
                   key={experience.id}
                   experience={experience}
                   selected={selectedId === experience.id}
-                  onSelect={() => setSelectedId(experience.id)}
+                  onSelect={() => selectExperience(experience.id)}
                 />
               ))
             ) : (
@@ -472,9 +534,11 @@ export function ExplorePage() {
           <MapAdapter
             points={points}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={selectExperience}
             className="explore-map-container"
           />
+
+          {selectedId && <ReviewsPanel experienceId={selectedId} />}
 
           <div className="map-footer-caption">
             <span className="live-dot-glow" />

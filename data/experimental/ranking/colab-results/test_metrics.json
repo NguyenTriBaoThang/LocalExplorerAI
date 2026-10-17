@@ -1,0 +1,19 @@
+{
+  "selected_model": "rule_baseline",
+  "selection_rule": "validation NDCG@5; ML must exceed rule baseline by at least 0.01",
+  "rule_baseline": {
+    "NDCG@5": 1.0,
+    "NDCG@10": 1.0,
+    "Recall@5_best_grade": 0.7092911877394638,
+    "Top1_best_grade": 1.0,
+    "queries": 6
+  },
+  "selected_model_metrics": {
+    "NDCG@5": 1.0,
+    "NDCG@10": 1.0,
+    "Recall@5_best_grade": 0.7092911877394638,
+    "Top1_best_grade": 1.0,
+    "queries": 6
+  },
+  "ml_test_evaluation": "Not run: no ML candidate meaningfully beat the rule baseline on validation."
+}

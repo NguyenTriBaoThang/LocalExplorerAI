@@ -447,18 +447,15 @@ dist/
 *.db
 postgres_data/
 redis_data/
-models/e5/*
-!models/e5/.gitkeep
-models/ai-ranker/*
-!models/ai-ranker/.gitkeep
-models/flood-report-experiment/*
-!models/flood-report-experiment/.gitkeep
-models/flood-risk/*
-!models/flood-risk/.gitkeep
+# Model artifacts are intentionally tracked so they can be versioned with the project.
 
 # Notebooks / Google Colab training files
 notebooks/
+!notebooks/
+notebooks/*
 *.ipynb
+!notebooks/LocalExplorerAI_Train_Verified_Ranker_Colab.ipynb
+!notebooks/LocalExplorerAI_Bootstrap_Ranker_Colab.ipynb
 .ipynb_checkpoints/
 
 # Bot runtime store
@@ -467,6 +464,9 @@ apps/api/.local-secrets/
 
 # Heavy 3D raw models
 *.glb
+!models/**/*.glb
 models_3d/*.glb
+!models_3d/**/*.glb
 apps/web/public/models_3d/*.glb
+!apps/web/public/models_3d/*.glb
 

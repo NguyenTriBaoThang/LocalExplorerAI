@@ -1,16 +1,18 @@
-"""Durable notification outbox and SMTP delivery helpers."""
+"""Durable notification outbox, SMTP email, and opt-in Web Push helpers."""
 
 from __future__ import annotations
 
 import smtplib
 import ssl
+import json
+import hashlib
 from email.message import EmailMessage
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.entities import Booking, NotificationDelivery, User
+from app.models.entities import Booking, NotificationDelivery, User, WebPushSubscription
 
 
 def enqueue_email(
@@ -33,6 +35,39 @@ def enqueue_email(
         recipient_user_id=recipient.id if recipient else None, recipient_email=email,
         event_id=event_id, booking_id=booking_id, subject=subject[:255], body_text=body,
         status="queued",
+    ))
+    return True
+
+
+def enqueue_webpush(
+    db: Session,
+    *,
+    idempotency_key: str,
+    recipient: User | None,
+    booking_id: str,
+    title: str,
+    body: str,
+    url: str,
+) -> bool:
+    """Queue a generic, privacy-safe push only for an opted-in user and configured VAPID keys."""
+    if not settings.web_push_is_configured or recipient is None:
+        return False
+    subscribed = db.query(WebPushSubscription.id).filter(
+        WebPushSubscription.user_id == recipient.id,
+        WebPushSubscription.is_active.is_(True),
+    ).first()
+    if not subscribed:
+        return False
+    payload = json.dumps({
+        "title": title[:100],
+        "body": body[:180],
+        "url": url,
+        "tag": f"booking-update-{hashlib.sha256(idempotency_key.encode()).hexdigest()[:16]}",
+    }, ensure_ascii=False, separators=(",", ":"))
+    db.add(NotificationDelivery(
+        id=str(uuid4()), idempotency_key=idempotency_key[:128],
+        recipient_user_id=recipient.id, recipient_email="", channel="webpush",
+        booking_id=booking_id, subject=title[:255], body_text=payload, status="queued",
     ))
     return True
 
@@ -65,11 +100,42 @@ def queue_booking_status(db: Session, booking: Booking, event_type: str) -> bool
         }.get(event_type)
         if not verb:
             return False
-    return enqueue_email(
+    email_queued = enqueue_email(
         db, idempotency_key=f"booking:{booking.id}:{event_type}", recipient=destination,
         recipient_email=email, subject=f"Local Explorer AI: {verb}",
         body=f"Xin chào,\n\nThông báo: {verb}.\nMã yêu cầu: {booking.id}\nTrạng thái hiện tại: {booking.status}.\n\nVui lòng đăng nhập Local Explorer AI để xem chi tiết.",
         booking_id=booking.id,
+    )
+    push_queued = enqueue_webpush(
+        db, idempotency_key=f"booking:{booking.id}:{event_type}:webpush", recipient=destination,
+        booking_id=booking.id, title="Cập nhật đặt chỗ",
+        body="Bạn có cập nhật về yêu cầu đặt chỗ. Đăng nhập để xem chi tiết.",
+        url=("/provider-portal" if destination.role == "provider"
+             else f"/itinerary/{booking.itinerary_id}" if booking.itinerary_id else "/profile"),
+    )
+    return email_queued or push_queued
+
+
+# Outbox rows whose body carries a secret link; the worker blanks the body once the row is finished.
+SENSITIVE_KEY_PREFIX = "auth:"
+REDACTED_BODY = "[redacted after delivery]"
+
+
+def queue_account_link(db: Session, user: User, *, purpose: str, token_id: str, raw_token: str) -> bool:
+    """Email a single-use password-reset or email-verification link (``purpose`` is the auth_tokens purpose)."""
+    if purpose == "reset_password":
+        path, subject = "reset-password", "Local Explorer AI: đặt lại mật khẩu"
+        intro = "Bạn (hoặc ai đó) vừa yêu cầu đặt lại mật khẩu cho tài khoản này. Liên kết có hiệu lực trong 30 phút"
+        outro = "Nếu không phải bạn, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên."
+    else:
+        path, subject = "verify-email", "Local Explorer AI: xác minh địa chỉ email"
+        intro = "Hãy xác minh email để có thể giữ chỗ và thanh toán. Liên kết có hiệu lực trong 24 giờ"
+        outro = "Nếu bạn không tạo tài khoản này, hãy bỏ qua email."
+    base = settings.portal_app_url if user.role in {"provider", "admin"} and settings.portal_app_url else settings.web_app_url
+    link = f"{base.rstrip('/')}/{path}?token={raw_token}"
+    return enqueue_email(
+        db, idempotency_key=f"{SENSITIVE_KEY_PREFIX}{purpose}:{token_id}", recipient=user, subject=subject,
+        body=f"Xin chào {user.display_name or ''},\n\n{intro} và chỉ dùng được một lần:\n{link}\n\n{outro}",
     )
 
 
@@ -93,6 +159,72 @@ def deliver_email(recipient: str, subject: str, body: str) -> None:
                 smtp.starttls(context=context)
                 smtp.ehlo()
             _smtp_login_and_send(smtp, message)
+
+
+def deliver_webpush(user_id: str | None, body: str) -> None:
+    """Send to every active opted-in browser subscription; expired endpoints are removed."""
+    if not user_id:
+        return
+    if not settings.web_push_is_configured:
+        raise RuntimeError("Web Push is not configured")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Invalid Web Push payload") from error
+    target = payload.get("url")
+    if (not isinstance(target, str) or not target.startswith("/") or target.startswith("//")
+            or "\\" in target or "\r" in target or "\n" in target):
+        raise RuntimeError("Invalid Web Push navigation target")
+
+    try:
+        from pywebpush import WebPushException, webpush
+    except ImportError as error:
+        raise RuntimeError("pywebpush is not installed") from error
+
+    from sqlalchemy import select
+    from app.db.session import SessionLocal
+
+    with SessionLocal() as db:
+        subscriptions = db.execute(select(
+            WebPushSubscription.id,
+            WebPushSubscription.endpoint,
+            WebPushSubscription.p256dh_key,
+            WebPushSubscription.auth_key,
+        ).where(
+            WebPushSubscription.user_id == user_id,
+            WebPushSubscription.is_active.is_(True),
+        )).all()
+
+    if not subscriptions:
+        return
+    expired_ids: list[str] = []
+    transient_error: str | None = None
+    for subscription_id, endpoint, p256dh, auth in subscriptions:
+        try:
+            webpush(
+                subscription_info={"endpoint": endpoint, "keys": {"p256dh": p256dh, "auth": auth}},
+                data=json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                vapid_private_key=settings.web_push_vapid_private_key,
+                vapid_claims={"sub": settings.web_push_vapid_subject},
+                ttl=300,
+                timeout=10,
+            )
+        except WebPushException as error:
+            if getattr(error, "status_code", None) in (404, 410):
+                expired_ids.append(subscription_id)
+            else:
+                transient_error = type(error).__name__
+        except Exception as error:
+            transient_error = type(error).__name__
+
+    if expired_ids:
+        with SessionLocal() as db:
+            rows = db.scalars(select(WebPushSubscription).where(WebPushSubscription.id.in_(expired_ids))).all()
+            for row in rows:
+                row.is_active = False
+            db.commit()
+    if transient_error:
+        raise RuntimeError(transient_error)
 
 
 def _smtp_login_and_send(smtp, message: EmailMessage) -> None:

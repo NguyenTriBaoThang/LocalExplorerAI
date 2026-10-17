@@ -145,7 +145,7 @@ def generate_ai_reply_with_memory(chat_id: str, new_user_text: str, sender_name:
 
     if wants_ticket and ticket_info and ticket_info.get("ticket_code"):
         ticket_code = ticket_info["ticket_code"]
-        ticket_url = f"{PROD_WEB_DOMAIN}/shared/{ticket_code}"
+        ticket_url = ticket_info.get("claim_url_prod") or ticket_info["url_prod"]
         cost_str = f"{ticket_info.get('estimated_cost_vnd', 0):,} ₫"
         phase_instruction = (
             f"\n\n[GIAI ĐOẠN 2: KHÁCH ĐÃ ĐỒNG Ý / CHỐT LỊCH TRÌNH]:\n"
@@ -225,8 +225,8 @@ def generate_ai_reply_with_memory(chat_id: str, new_user_text: str, sender_name:
     # Fallback safety: If user explicitly asked to finalize / get ticket, ensure ticket is in reply
     if wants_ticket and ticket_info and ticket_info.get("ticket_code"):
         ticket_code = ticket_info["ticket_code"]
-        clean_url = f"{PROD_WEB_DOMAIN}/shared/{ticket_code}"
-        if ticket_code not in cleaned_reply:
+        clean_url = ticket_info.get("claim_url_prod") or ticket_info["url_prod"]
+        if clean_url not in cleaned_reply:
             cleaned_reply += (
                 f"\n\n🎫 Mã vé Smart Travel Pass: #{ticket_code}\n"
                 f"🔗 Xem trực tiếp lộ trình & bản đồ: {clean_url}\n"

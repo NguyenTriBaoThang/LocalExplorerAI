@@ -1,38 +1,51 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
-from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError, NotConfiguredLLMProvider
+from app.adapters.llm.provider import (
+    LLMNotConfigured,
+    LLMProviderError,
+    NotConfiguredLLMProvider,
+)
 from app.api.dependencies import get_llm_provider
-from app.models.entities import Event, Experience, ExperienceSlot, Itinerary, ItineraryStop, POI, Provider
+from app.models.entities import (
+    POI,
+    Event,
+    Experience,
+    ExperienceSlot,
+    Itinerary,
+    ItineraryStop,
+    Provider,
+)
 from app.services.offline_chat_fallback import build_offline_constraints
+from tests.helpers import bearer_for, make_user
 
 
 class FakeStructuredProvider:
     model_name = "test-structured"
 
     def generate(self, system_prompt, user_input, schema):
-        if "Bộ phân tích Nhu cầu" in system_prompt:
+        if "Travel Needs Parser" in system_prompt:
             return {
                 "group_size": 2, "start_time": "09:00", "return_deadline": "16:00", "budget_vnd": 500000,
                 "travel_mode": "motorcycle",
                 "intent_weights": {"thủ_công": 1.0, "ẩm_thực": 0.0, "văn_hóa": 0.0, "thư_giãn": 0.0},
                 "locked_pois": [], "is_complete": True, "missing_fields": [], "clarification_question_vi": None,
             }
-        if "Chuyên gia Thẩm định Hoạt động" in system_prompt:
+        if "Travel Activity Reviewer" in system_prompt:
             return {"experience_id": user_input["experience_id"], "is_hands_on": True, "is_indoor": False,
                     "primary_intent": "thủ_công", "intent_tags": ["handicraft"],
                     "hands_on_justification": "Khách trực tiếp làm sản phẩm.", "weather_sensitivity": "rain_sensitive"}
-        if "Chuyên gia So sánh Bản chất" in system_prompt:
+        if "Travel Experience Comparison Specialist" in system_prompt:
             a, b = user_input["activity_a"], user_input["activity_b"]
             return {"experience_a_id": a["experience_id"], "experience_b_id": b["experience_id"],
                     "semantic_score": 0.9, "tag_overlap_score": 1.0, "final_score": 0.95,
                     "can_substitute_purpose": True, "comparison_reasoning_vi": "Cả hai đều là hoạt động thủ công thực hành."}
-        if "Trợ lý Cổng Cơ Sở" in system_prompt:
+        if "Provider Portal Assistant" in system_prompt:
             return {"action": "CANCEL_SLOT", "target_time_window": "09:00 - 10:00", "new_status": "cancelled",
                     "available_reported": 0, "reason_note": "Cơ sở tạm nghỉ.",
                     "confirmation_sms_for_artisan_vi": "Xác nhận hủy ca đã chọn?"}
-        if "Cố Vấn Tái Điều Phối" in system_prompt:
+        if "Itinerary Replanning Advisor" in system_prompt:
             candidates = user_input["solver_feasible_candidates"]
             proposal_items = [{"code": item["code"], "title": item["title"],
                 "candidate_experience_id": item["candidate_experience_id"],
@@ -43,15 +56,15 @@ class FakeStructuredProvider:
                 for index, item in enumerate(candidates)]
             return {"disruption_summary": {"cancelled_experience_title": user_input["cancelled_experience"]["title"],
                     "impact_message_vi": "Ca đã bị hủy."}, "proposals": proposal_items}
-        if "Động cơ Giải thích Minh bạch" in system_prompt:
+        if "Explainable AI (XAI) Engine" in system_prompt:
             return {"headline_vi": "Giữ trải nghiệm thủ công", "core_explanation_vi": "Phương án này giữ mục đích chính. Lịch vẫn nằm trong mốc đã cung cấp.",
                     "trade_off_breakdown": {"why_selected": "Bảo toàn mục đích.", "why_rejected": "So sánh theo dữ liệu solver."},
                     "data_timestamp": user_input["data_timestamp"]}
-        if "Chuyên gia Gán Nhãn Dữ Liệu" in system_prompt:
+        if "Machine-Learning Data Labeling Specialist" in system_prompt:
             return {"itinerary_id": user_input["itinerary_id"], "relevance_grade": 3,
                     "rubric_justification_vi": "Review xác nhận khách hoàn thành đúng hoạt động.",
                     "objective_achieved_ratio": 1.0, "is_usable_for_training": True}
-        if "Cố Vấn Thích Ứng Thời Tiết" in system_prompt:
+        if "Weather Adaptation Advisor" in system_prompt:
             activity_names = [item["title"] for item in user_input["scheduled_outdoor_activities"]]
             return {"weather_condition": "rainy", "indoor_priority_boost": True,
                     "impacted_outdoor_activities": activity_names,
@@ -62,6 +75,7 @@ class FakeStructuredProvider:
 def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experience):
     ai = FakeStructuredProvider()
     client.app.dependency_overrides[get_llm_provider] = lambda: ai
+    admin = bearer_for(make_user(db_session, "admin"))  # only the administrator-tool calls below carry it
 
     catalog = client.get("/api/ai/prompts")
     assert catalog.status_code == 200
@@ -73,7 +87,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     assert chat.json()["prompt_version"] == "3.0.0"
     assert chat.json()["structured_constraints"]["travel_mode"] == "motorcycle"
 
-    tagged = client.post(f"/api/experiences/{sample_experience.id}/ai-tag", json={})
+    tagged = client.post(f"/api/experiences/{sample_experience.id}/ai-tag", json={}, headers=admin)
     assert tagged.status_code == 200, tagged.text
     assert sample_experience.primary_intent == "thủ_công"
     assert sample_experience.tagger_prompt_version == "3.0.0"
@@ -88,7 +102,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
                        verification_status="simulated")
     db_session.add(other)
     db_session.flush()
-    similarity = client.post("/api/ai/intent-similarity", json={"experience_a_id": sample_experience.id, "experience_b_id": other.id})
+    similarity = client.post("/api/ai/intent-similarity", json={"experience_a_id": sample_experience.id, "experience_b_id": other.id}, headers=admin)
     assert similarity.status_code == 200, similarity.text
     assert similarity.json()["stored_pair"] == sorted([sample_experience.id, other.id])
     assert similarity.json()["prompt_version"] == "3.0.0"
@@ -145,7 +159,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     })
     assert accepted.status_code == 200, accepted.text
 
-    feedback = client.post(f"/api/itineraries/{itinerary.id}/feedback/label", json={"review_text": "Rất hài lòng, tự tay đan giỏ.", "rating": 5})
+    feedback = client.post(f"/api/itineraries/{itinerary.id}/feedback/label", json={"review_text": "Rất hài lòng, tự tay đan giỏ.", "rating": 5}, headers=admin)
     assert feedback.status_code == 200, feedback.text
     assert feedback.json()["label"]["relevance_grade"] == 3
 
@@ -153,7 +167,7 @@ def test_all_eight_versioned_prompt_workflows(client, db_session, sample_experie
     weather = client.post(f"/api/itineraries/{itinerary.id}/weather-advisory", json={
         "rain_mm_per_hour": 14, "aqi_pm25": 80, "temperature_c": 30, "children_in_group": False,
         "observed_at": "2030-10-01T09:00:00+07:00",
-    })
+    }, headers=admin)
     assert weather.status_code == 200, weather.text
     assert weather.json()["advisory"]["indoor_priority_boost"] is True
     assert weather.json()["flood_status_inferred"] is False

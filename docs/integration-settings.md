@@ -1,6 +1,6 @@
 # Admin-managed integrations and secrets
 
-Admin users can open `/admin` → **Tích hợp & API keys** to configure the providers that are already wired into the server:
+Admin users can open `/admin` → **Integrations & API keys** (displayed in the current Vietnamese UI as **Tích hợp & API keys**) to configure the providers already wired into the server:
 
 - Payments: choose MoMo or VNPay and enter the corresponding merchant settings.
 - Routing/geocoding: choose Goong (or the existing development mock for routing) and set the Goong key.

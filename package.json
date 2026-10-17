@@ -6,6 +6,8 @@
   "scripts": {
     "dev:web": "cd apps/web && npm run dev",
     "build:web": "cd apps/web && npm run build",
+    "dev:portal": "cd apps/portal && npm run dev",
+    "build:portal": "cd apps/portal && npm run build",
     "test:api": "cd apps/api && pytest"
   },
   "devDependencies": {

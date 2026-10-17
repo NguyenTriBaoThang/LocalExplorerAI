@@ -10,11 +10,15 @@ import {
   AlertCircle,
   Route,
   Shield,
+  Bell,
 } from 'lucide-react'
-import { apiErrorMessage, changePassword, getMyItineraries, updateProfile } from '../api/client'
+import { apiErrorMessage, changePassword, deleteWebPushSubscription, getMyItineraries, getWebPushPublicKey, getWebPushStatus, saveWebPushSubscription, updateProfile, type WebPushStatus } from '../api/client'
 import { useAuth } from '../auth'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
+import { SessionsCard } from '../components/account/SessionsCard'
+import { MfaCard } from '../components/account/MfaCard'
 import { useTranslation } from '../i18n'
+import { ReviewPrompt } from '../components/content/ReviewPrompt'
 
 export function ProfilePage() {
   const { t, locale } = useTranslation()
@@ -30,6 +34,87 @@ export function ProfilePage() {
   const [error, setError] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const [pushStatus, setPushStatus] = useState<WebPushStatus | null>(null)
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushCurrentDevice, setPushCurrentDevice] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
+
+  async function refreshPushStatus() {
+    const status = await getWebPushStatus()
+    setPushStatus(status)
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      const registration = await navigator.serviceWorker.ready
+      setPushCurrentDevice(Boolean(await registration.pushManager.getSubscription()))
+    }
+  }
+
+  useEffect(() => {
+    const supported = typeof window !== 'undefined' && 'serviceWorker' in navigator
+      && 'PushManager' in window && 'Notification' in window
+    setPushSupported(supported)
+    if (supported) void refreshPushStatus().catch(() => undefined)
+  }, [])
+
+  function decodeVapidKey(value: string): Uint8Array {
+    const padding = '='.repeat((4 - value.length % 4) % 4)
+    const raw = atob(value.replace(/-/g, '+').replace(/_/g, '/') + padding)
+    return Uint8Array.from(raw, (char) => char.charCodeAt(0))
+  }
+
+  function encodeVapidKey(value: ArrayBuffer): string {
+    const bytes = new Uint8Array(value)
+    let binary = ''
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte) })
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+  }
+
+  async function enablePush() {
+    setPushBusy(true)
+    setPushError('')
+    try {
+      const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
+      if (permission !== 'granted') throw new Error(locale === 'en' ? 'Notification permission was not granted.' : 'Bạn chưa cấp quyền gửi thông báo.')
+      const publicKey = await getWebPushPublicKey()
+      const registration = await navigator.serviceWorker.ready
+      let subscription = await registration.pushManager.getSubscription()
+      const existingKey = subscription?.options.applicationServerKey
+      if (subscription && (!existingKey || encodeVapidKey(existingKey) !== publicKey)) {
+        await deleteWebPushSubscription(subscription.endpoint).catch(() => undefined)
+        await subscription.unsubscribe()
+        subscription = null
+      }
+      subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: new Uint8Array(decodeVapidKey(publicKey)).buffer as ArrayBuffer })
+      const payload = subscription.toJSON()
+      if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys.auth) throw new Error('The browser returned an incomplete push subscription.')
+      await saveWebPushSubscription({ endpoint: payload.endpoint, keys: { p256dh: payload.keys.p256dh, auth: payload.keys.auth } })
+      await refreshPushStatus()
+    } catch (reason) {
+      setPushError(reason instanceof DOMException
+        ? (locale === 'en' ? 'The browser could not enable notifications. Check the permission and try again.' : 'Không thể bật thông báo trên trình duyệt. Hãy kiểm tra quyền rồi thử lại.')
+        : apiErrorMessage(reason, locale))
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  async function disablePush() {
+    setPushBusy(true)
+    setPushError('')
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+      if (subscription) {
+        await deleteWebPushSubscription(subscription.endpoint)
+        await subscription.unsubscribe()
+      }
+      await refreshPushStatus()
+    } catch (reason) {
+      setPushError(apiErrorMessage(reason, locale))
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (user?.role !== 'traveler') {
@@ -170,6 +255,36 @@ export function ProfilePage() {
             </form>
           </section>
 
+          {/* Booking notifications */}
+          <section className="profile-card-3d">
+            <div className="profile-card-title-row">
+              <div className="profile-title-icon-box text-emerald"><Bell size={18} /></div>
+              <div>
+                <h2>{locale === 'en' ? 'Booking notifications' : 'Thông báo đặt chỗ'}</h2>
+                <p>{locale === 'en' ? 'Receive booking status updates on this device.' : 'Nhận cập nhật trạng thái đặt chỗ trên thiết bị này.'}</p>
+              </div>
+            </div>
+            <div className="profile-form">
+              {!pushSupported ? (
+                <p>{locale === 'en' ? 'This browser does not support web push notifications.' : 'Trình duyệt này chưa hỗ trợ thông báo đẩy.'}</p>
+              ) : !pushStatus ? (
+                <p>{locale === 'en' ? 'Could not load notification settings. Refresh this page and try again.' : 'Chưa tải được cài đặt thông báo. Hãy tải lại trang rồi thử lại.'}</p>
+              ) : !pushStatus.configured ? (
+                <p>{locale === 'en' ? 'Web push has not been configured on this server yet.' : 'Máy chủ chưa cấu hình Web Push.'}</p>
+              ) : (
+                <>
+                  <p>{pushCurrentDevice
+                    ? (locale === 'en' ? `Enabled on this device · ${pushStatus?.device_count ?? 1} device(s) on this account.` : `Đang bật trên thiết bị này · tài khoản có ${pushStatus?.device_count ?? 1} thiết bị.`)
+                    : (locale === 'en' ? 'Notifications are off on this device.' : 'Thiết bị này đang tắt thông báo.')}</p>
+                  {pushError && <p role="alert" className="text-sm text-amber-300">{pushError}</p>}
+                  <button type="button" className={pushCurrentDevice ? 'btn-secondary-3d' : 'btn-primary-3d'} disabled={pushBusy || !pushStatus?.configured} onClick={() => void (pushCurrentDevice ? disablePush() : enablePush())}>
+                    <span>{pushBusy ? (locale === 'en' ? 'Saving…' : 'Đang cập nhật…') : pushCurrentDevice ? (locale === 'en' ? 'Turn off on this device' : 'Tắt trên thiết bị này') : (locale === 'en' ? 'Turn on notifications' : 'Bật thông báo')}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
+
           {/* Change Password Card */}
           <section className="profile-card-3d">
             <div className="profile-card-title-row">
@@ -210,6 +325,10 @@ export function ProfilePage() {
               </button>
             </form>
           </section>
+
+          <MfaCard />
+          <SessionsCard />
+          {user?.role === 'traveler' && <ReviewPrompt />}
         </div>
 
         {/* Right Column: Saved Itineraries Gallery */}

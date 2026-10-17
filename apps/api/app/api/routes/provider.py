@@ -6,22 +6,43 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from geoalchemy2.elements import WKTElement
 
-from app.api.dependencies import get_db, require_roles
+from app.api.dependencies import get_db
 from app.core.request_context import current_request_id
 from app.models.entities import AuditLog, Booking, BookingEvent, Event, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PaymentTransaction, POI, Provider, User
 from app.schemas.management import EvidenceCreateRequest, ExperienceDraftRequest, POIDraftRequest, SlotCreateRequest, SlotUpdateRequest
-from app.services.auth_service import hash_password
+from app.schemas.partner import PartnerApplicationUpdate, apply_application_fields
+from app.auth import hash_password
 from app.services.evidence_service import REQUIRED_FIELDS, target_revision, utc_now
 from app.services.notifications import enqueue_email, queue_booking_status
+from app.api.guards import require_user
+from app.api.permissions import P
 
 router = APIRouter(prefix="/api/provider", tags=["provider portal"])
 
 
-def _provider(db: Session, user: User) -> Provider:
+# A partner may sign in and read its own data while in these states, but cannot publish anything.
+NOT_APPROVED_STATUSES = frozenset({"pending", "rejected", "suspended"})
+
+
+def _provider(db: Session, user: User, *, require_approved: bool = True) -> Provider:
     provider = db.get(Provider, user.provider_id) if user.provider_id else None
-    if provider is None or not provider.is_active:
+    if provider is None or (not provider.is_active and provider.verification_status != "suspended"):
         raise HTTPException(status_code=403, detail={"code": "PROVIDER_PROFILE_REQUIRED", "message": "This account has no active provider profile."})
+    if require_approved and (not provider.is_active or provider.verification_status in NOT_APPROVED_STATUSES):
+        raise HTTPException(status_code=403, detail={"code": "PROVIDER_NOT_APPROVED", "message": "This partner account has not been approved yet.",
+                                                      "verification_status": provider.verification_status})
     return provider
+
+
+def provider_profile_payload(provider: Provider) -> dict:
+    return {"id": provider.id, "name": provider.name, "slug": provider.slug, "description": provider.description,
+            "contact_phone": provider.contact_phone, "contact_email": provider.contact_email, "address": provider.address,
+            "verification_status": provider.verification_status, "is_active": provider.is_active,
+            "can_publish": provider.is_active and provider.verification_status not in NOT_APPROVED_STATUSES,
+            "business_type": provider.business_type, "tax_code": provider.tax_code,
+            "business_license_no": provider.business_license_no, "website": provider.website,
+            "document_urls": provider.document_urls or [], "application_note": provider.application_note,
+            "applied_at": provider.applied_at, "review_note": provider.review_note, "reviewed_at": provider.reviewed_at}
 
 
 def _audit(db: Session, actor: User, action: str, target_type: str, target_id: str, details: dict | None = None) -> None:
@@ -32,16 +53,27 @@ def _audit(db: Session, actor: User, action: str, target_type: str, target_id: s
 
 
 @router.get("/me")
-def provider_profile(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
-    provider = _provider(db, user)
-    return {"id": provider.id, "name": provider.name, "slug": provider.slug, "description": provider.description,
-            "contact_phone": provider.contact_phone, "contact_email": provider.contact_email, "address": provider.address,
-            "verification_status": provider.verification_status}
+def provider_profile(user: User = Depends(require_user(P.PROVIDER_PROFILE)), db: Session = Depends(get_db)):
+    return provider_profile_payload(_provider(db, user, require_approved=False))
+
+
+@router.put("/me/application")
+def resubmit_application(payload: PartnerApplicationUpdate, user: User = Depends(require_user(P.PROVIDER_PROFILE)), db: Session = Depends(get_db)):
+    """A pending or rejected partner edits its application; a rejected one goes back into the review queue."""
+    provider = _provider(db, user, require_approved=False)
+    if provider.verification_status not in {"pending", "rejected"}:
+        raise HTTPException(status_code=409, detail={"code": "APPLICATION_CLOSED", "message": "Only pending or rejected applications can be edited."})
+    apply_application_fields(provider, payload)
+    provider.verification_status = "pending"
+    provider.applied_at = datetime.now(timezone.utc)
+    _audit(db, user, "partner.application_resubmitted", "provider", provider.id)
+    db.commit()
+    return provider_profile_payload(provider)
 
 
 @router.get("/experiences")
-def list_provider_experiences(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
-    provider = _provider(db, user)
+def list_provider_experiences(user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
+    provider = _provider(db, user, require_approved=False)
     items = db.scalars(select(Experience).where(Experience.provider_id == provider.id).options(joinedload(Experience.poi))).unique().all()
     return [{"id": item.id, "poi_id": item.poi_id, "title": item.title, "description": item.description,
              "primary_intent": item.primary_intent, "intent_tags": item.intent_tags,
@@ -56,8 +88,8 @@ def list_provider_experiences(user: User = Depends(require_roles("provider")), d
 
 
 @router.get("/pois")
-def list_provider_pois(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
-    provider = _provider(db, user)
+def list_provider_pois(user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
+    provider = _provider(db, user, require_approved=False)
     experience_poi_ids = select(Experience.poi_id).where(Experience.provider_id == provider.id)
     items = db.scalars(select(POI).where(
         (POI.submitted_by_provider_id == provider.id) | POI.id.in_(experience_poi_ids)
@@ -69,7 +101,7 @@ def list_provider_pois(user: User = Depends(require_roles("provider")), db: Sess
 
 
 @router.post("/pois", status_code=201)
-def create_poi(payload: POIDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_poi(payload: POIDraftRequest, user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = POI(
         id=str(uuid4()), name=payload.name.strip(), description=payload.description.strip(),
@@ -85,7 +117,7 @@ def create_poi(payload: POIDraftRequest, user: User = Depends(require_roles("pro
 
 
 @router.patch("/pois/{poi_id}")
-def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(require_user(P.PROVIDER_POI)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = db.get(POI, poi_id)
     if poi is None:
@@ -103,11 +135,12 @@ def update_poi(poi_id: str, payload: POIDraftRequest, user: User = Depends(requi
         poi.verification_status = "pending"
     _audit(db, user, "poi.updated", "poi", poi.id, {"data_revision": poi.data_revision, "previous_evidence_invalidated": True})
     db.commit()
-    return {"id": poi.id, "verification_status": poi.verification_status, "data_revision": poi.data_revision}
+    # Editing always voids the previous evidence, so the place stops being public until new evidence is accepted.
+    return {"id": poi.id, "verification_status": poi.verification_status, "data_revision": poi.data_revision, "evidence_invalidated": True}
 
 
 @router.post("/evidence", status_code=201)
-def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require_user(P.PROVIDER_EVIDENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     target = db.get(POI if payload.target_type == "poi" else Experience, payload.target_id)
     if target is None:
@@ -147,7 +180,7 @@ def submit_evidence(payload: EvidenceCreateRequest, user: User = Depends(require
 
 
 @router.post("/experiences", status_code=201)
-def create_experience(payload: ExperienceDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_experience(payload: ExperienceDraftRequest, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     poi = db.get(POI, payload.poi_id)
     if poi is None:
@@ -165,7 +198,7 @@ def create_experience(payload: ExperienceDraftRequest, user: User = Depends(requ
 
 
 @router.patch("/experiences/{experience_id}")
-def update_experience(experience_id: str, payload: ExperienceDraftRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_experience(experience_id: str, payload: ExperienceDraftRequest, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -190,11 +223,11 @@ def update_experience(experience_id: str, payload: ExperienceDraftRequest, user:
         "previous_evidence_invalidated": True,
     })
     db.commit()
-    return {"id": item.id, "verification_status": item.verification_status}
+    return {"id": item.id, "verification_status": item.verification_status, "evidence_invalidated": True}
 
 
 @router.delete("/experiences/{experience_id}")
-def hide_experience(experience_id: str, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def hide_experience(experience_id: str, user: User = Depends(require_user(P.PROVIDER_EXPERIENCE)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -206,7 +239,7 @@ def hide_experience(experience_id: str, user: User = Depends(require_roles("prov
 
 
 @router.post("/experiences/{experience_id}/slots", status_code=201)
-def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Depends(require_user(P.PROVIDER_SLOT)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     item = db.scalar(select(Experience).where(Experience.id == experience_id, Experience.provider_id == provider.id))
     if item is None:
@@ -215,12 +248,13 @@ def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Dep
         raise HTTPException(status_code=422, detail={"code": "INVALID_SLOT_RANGE", "message": "Slot end must be after start."})
     now = utc_now()
     expires_at = payload.expires_at.astimezone(now.tzinfo)
-    start_at = payload.start_at.astimezone(now.tzinfo)
+    start_at = payload.start_at.astimezone(timezone.utc)
+    end_at = payload.end_at.astimezone(timezone.utc)
     if expires_at <= now or expires_at > start_at:
         raise HTTPException(status_code=422, detail={"code": "INVALID_SLOT_EXPIRY", "message": "Slot confirmation must expire after now and no later than the slot start."})
     if payload.available_reported > payload.capacity_total:
         raise HTTPException(status_code=422, detail={"code": "CAPACITY_EXCEEDED", "message": "Available seats cannot exceed total capacity."})
-    slot = ExperienceSlot(id=str(uuid4()), experience_id=item.id, start_at=payload.start_at, end_at=payload.end_at,
+    slot = ExperienceSlot(id=str(uuid4()), experience_id=item.id, start_at=start_at, end_at=end_at,
                           capacity_total=payload.capacity_total, available_reported=payload.available_reported,
                           confirmed_at=now, expires_at=expires_at,
                           status="open" if payload.available_reported else "full", version=1)
@@ -240,7 +274,7 @@ def create_slot(experience_id: str, payload: SlotCreateRequest, user: User = Dep
 
 
 @router.patch("/slots/{slot_id}")
-def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
+def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(require_user(P.PROVIDER_SLOT)), db: Session = Depends(get_db)):
     provider = _provider(db, user)
     slot = db.scalar(select(ExperienceSlot).join(Experience).where(ExperienceSlot.id == slot_id, Experience.provider_id == provider.id).with_for_update())
     if slot is None:
@@ -362,8 +396,8 @@ def update_slot(slot_id: str, payload: SlotUpdateRequest, user: User = Depends(r
 
 
 @router.get("/audit")
-def provider_audit(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
-    provider = _provider(db, user)
+def provider_audit(user: User = Depends(require_user(P.PROVIDER_AUDIT)), db: Session = Depends(get_db)):
+    provider = _provider(db, user, require_approved=False)
     experience_ids = db.scalars(select(Experience.id).where(Experience.provider_id == provider.id)).all()
     slot_ids = db.scalars(select(ExperienceSlot.id).join(Experience).where(Experience.provider_id == provider.id)).all()
     poi_ids = db.scalars(select(POI.id).where(
@@ -373,16 +407,24 @@ def provider_audit(user: User = Depends(require_roles("provider")), db: Session 
     target_ids = [*experience_ids, *slot_ids, *poi_ids, *evidence_ids]
     if not target_ids:
         return []
-    logs = db.scalars(select(AuditLog).where(
+    rows = db.execute(select(AuditLog, User.display_name, User.provider_id).outerjoin(User, User.id == AuditLog.actor_id).where(
         AuditLog.target_id.in_(target_ids)
     ).order_by(AuditLog.created_at.desc()).limit(100)).all()
+
+    def actor(log: AuditLog, name: str | None, actor_provider_id: str | None) -> str:
+        # Partners see who on their own team acted; platform staff are not named to them.
+        if not log.actor_id:
+            return "Hệ thống"
+        return (name or "Thành viên") if actor_provider_id == provider.id else "Quản trị viên"
+
     return [{"id": log.id, "action": log.action, "target_type": log.target_type, "target_id": log.target_id,
-             "details": log.details, "created_at": log.created_at} for log in logs]
+             "actor_name": actor(log, name, actor_provider_id), "details": log.details, "created_at": log.created_at}
+            for log, name, actor_provider_id in rows]
 
 
 @router.get("/evidence")
-def provider_evidence(user: User = Depends(require_roles("provider")), db: Session = Depends(get_db)):
-    _provider(db, user)
+def provider_evidence(user: User = Depends(require_user(P.PROVIDER_EVIDENCE)), db: Session = Depends(get_db)):
+    _provider(db, user, require_approved=False)
     items = db.scalars(select(Evidence).where(Evidence.submitted_by == user.id).order_by(Evidence.created_at.desc()).limit(500)).all()
     return [{"id": item.id, "target_type": item.target_type, "target_id": item.target_id,
              "source_uri": item.source_uri, "source_type": item.source_type, "source_label": item.source_label,

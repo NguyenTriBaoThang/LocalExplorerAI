@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { Sparkles, Compass, Eye, Sun, Moon } from 'lucide-react'
+import { getPOIs } from '../../api/client'
+import type { POI } from '../../types'
 import { useTheme } from '../../theme'
 import { useTranslation } from '../../i18n'
 
 interface HoveredPoint {
   name: string
   category: string
-  time: string
   district: string
   x: number
   y: number
@@ -15,6 +16,7 @@ interface HoveredPoint {
 
 export function CityHero3D() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [pois, setPois] = useState<POI[]>([])
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPoint | null>(null)
   const theme = useTheme()
   const { t } = useTranslation()
@@ -22,6 +24,16 @@ export function CityHero3D() {
   // Follow the global theme; the Moon/Sun buttons still override locally.
   useEffect(() => setThemeMode(theme === 'light' ? 'day' : 'night'), [theme])
   const [activeDistrict, setActiveDistrict] = useState('Quận 1')
+
+  useEffect(() => {
+    let active = true
+    void getPOIs().then((rows) => {
+      if (active) setPois(rows)
+    }).catch(() => {
+      if (active) setPois([])
+    })
+    return () => { active = false }
+  }, [])
 
   const themeRef = useRef(themeMode)
   themeRef.current = themeMode
@@ -167,13 +179,19 @@ export function CityHero3D() {
     scene.add(buildingGroup)
 
     // Interactive 3D POI Pins
-    const poiData = [
-      { name: 'Góc thủ công giấy', category: 'Thủ công', time: '09:00 - 10:15', district: 'Quận 1', pos: [-2.8, 1.2, 1.5] },
-      { name: 'Bếp món Nam Bộ', category: 'Ẩm thực', time: '11:30 - 13:00', district: 'Quận 1', pos: [-0.5, 1.4, -0.8] },
-      { name: 'Chuyện phố qua ảnh', category: 'Văn hóa', time: '14:30 - 15:30', district: 'Quận 3', pos: [2.5, 1.5, -2.2] },
-      { name: 'Bàn trải nghiệm gốm', category: 'Thủ công', time: '10:00 - 11:30', district: 'Bình Thạnh', pos: [3.8, 1.3, 1.8] },
-      { name: 'Khoảng nghỉ thảo mộc', category: 'Thư giãn', time: '16:00 - 17:00', district: 'Quận 1', pos: [-4.2, 1.1, -1.8] },
-    ]
+    const mapPois = pois.length <= 12
+      ? pois
+      : Array.from({ length: 12 }, (_, index) => pois[Math.round(index * (pois.length - 1) / 11)])
+    const poiData = mapPois.map((poi) => ({
+      name: poi.name,
+      category: poi.category,
+      district: poi.district || 'Quận 1',
+      pos: [
+        Math.max(-6, Math.min(6, (poi.longitude - 106.7009) * 150)),
+        1.2,
+        Math.max(-6, Math.min(6, (10.7769 - poi.latitude) * 150)),
+      ],
+    }))
 
     const pinGroup = new THREE.Group()
     const pinInteractiveObjects: THREE.Object3D[] = []
@@ -275,7 +293,6 @@ export function CityHero3D() {
         setHoveredPoint({
           name: poi.name,
           category: poi.category,
-          time: poi.time,
           district: poi.district,
           x: sx,
           y: sy,
@@ -350,7 +367,7 @@ export function CityHero3D() {
         container.removeChild(renderer.domElement)
       }
     }
-  }, [themeMode])
+  }, [themeMode, pois])
 
   return (
     <div className="city-hero-3d-wrapper" ref={containerRef}>
@@ -398,7 +415,7 @@ export function CityHero3D() {
             <strong className="tooltip-title">{hoveredPoint.name}</strong>
             <span className="tooltip-meta">
               <Sparkles size={12} className="text-amber" />
-              {hoveredPoint.time} · {hoveredPoint.district}
+              {hoveredPoint.district}
             </span>
           </div>
         </div>

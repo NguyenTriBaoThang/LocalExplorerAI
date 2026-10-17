@@ -1,4 +1,4 @@
-from app.api.dependencies import get_current_user
+from tests.helpers import sign_in
 from app.core.config import settings
 from app.models.entities import AuditLog, Evidence, IntegrationSecret, PlaceImportBatch, PlaceImportCandidate, POI, User
 from cryptography.fernet import Fernet
@@ -15,7 +15,7 @@ def _admin_session(client, db_session):
     admin = User(id=str(uuid4()), email=f"admin-{uuid4().hex[:8]}@example.org", display_name="Admin", role="admin")
     db_session.add(admin)
     db_session.commit()
-    client.app.dependency_overrides[get_current_user] = lambda: admin
+    sign_in(client, admin)
     return admin
 
 
@@ -143,6 +143,45 @@ def test_admin_routing_connection_test_checks_geocoding_and_directions(client, d
     assert response.json()["ok"] is True
 
 
+def test_payment_integration_check_validates_https_callbacks_without_claiming_live_payment(client, db_session, monkeypatch):
+    _admin_session(client, db_session)
+    monkeypatch.setattr(settings, "payment_provider", "vnpay")
+    monkeypatch.setattr(settings, "vnpay_environment", "sandbox")
+    monkeypatch.setattr(settings, "vnpay_tmn_code", "TESTTMN1")
+    monkeypatch.setattr(settings, "vnpay_hash_secret", "test-vnpay-secret")
+    monkeypatch.setattr(settings, "vnpay_payment_url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+    monkeypatch.setattr(settings, "vnpay_return_url", "https://api.staging.localexplorer.ai/api/payments/vnpay/return")
+    monkeypatch.setattr(settings, "vnpay_ipn_url", "https://api.staging.localexplorer.ai/api/payments/vnpay/ipn")
+
+    configured = client.post("/api/admin/integrations/payments/test")
+
+    assert configured.status_code == 200
+    assert configured.json()["status"] == "configured"
+    assert configured.json()["ok"] is True
+    assert configured.json()["check_type"] == "configuration_only"
+    assert "sandbox" in configured.json()["message_vi"].lower()
+
+    monkeypatch.setattr(settings, "vnpay_ipn_url", "http://api.staging.localexplorer.ai/api/payments/vnpay/ipn")
+    invalid_callback = client.post("/api/admin/integrations/payments/test")
+    assert invalid_callback.json()["status"] == "not_configured"
+
+
+def test_google_oauth_integration_check_validates_https_callback_without_claiming_login(client, db_session, monkeypatch):
+    # app_env stays "test": the session/permission caches switch to Redis in production, which CI does not run.
+    _admin_session(client, db_session)
+    monkeypatch.setattr(settings, "google_client_id", "client-id-for-test")
+    monkeypatch.setattr(settings, "google_client_secret", "client-secret-for-test")
+    monkeypatch.setattr(settings, "google_redirect_uri", "https://api.staging.localexplorer.ai/api/auth/google/callback")
+
+    configured = client.post("/api/admin/integrations/google_oauth/test")
+
+    assert configured.status_code == 200
+    assert configured.json()["status"] == "configured"
+    assert configured.json()["ok"] is True
+    assert configured.json()["check_type"] == "configuration_only"
+    assert "client-secret-for-test" not in configured.text
+
+
 def test_admin_can_promote_candidate_only_with_current_full_evidence(client, db_session):
     admin = _admin_session(client, db_session)
     batch = PlaceImportBatch(
@@ -190,3 +229,42 @@ def test_admin_can_promote_candidate_only_with_current_full_evidence(client, db_
     db_session.refresh(poi)
     assert poi.verification_status == "verified"
     assert entity_is_operationally_verified(db_session, "poi", poi)
+
+
+def test_catalogue_only_names_real_fields_and_lists_every_service():
+    from app.services.integration_config import INTEGRATION_CATALOG, INTEGRATION_FIELDS
+    assert set(INTEGRATION_CATALOG) == set(INTEGRATION_FIELDS)
+    for service, spec in INTEGRATION_CATALOG.items():
+        known = set(INTEGRATION_FIELDS[service])
+        named = set(spec.shared_fields) | set(spec.required) | ({spec.provider_key} if spec.provider_key else set())
+        for provider in (spec.providers or {}).values():
+            named |= set(provider.fields) | set(provider.required)
+            assert set(provider.required) <= set(provider.fields)
+        assert named <= known, (service, named - known)
+
+
+def test_listing_reports_status_per_service_and_follows_the_selected_provider(client, db_session, monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "integration_secrets_key", __import__("cryptography.fernet", fromlist=["Fernet"]).Fernet.generate_key().decode())
+    for name in ("momo_partner_code", "momo_access_key", "momo_secret_key", "momo_return_url", "momo_ipn_url", "vnpay_tmn_code", "vnpay_hash_secret",
+                 "vnpay_return_url", "vnpay_ipn_url", "goong_api_key", "gemini_api_key", "openai_api_key", "google_client_id", "google_client_secret"):
+        monkeypatch.setattr(settings, name, None)
+    monkeypatch.setattr(settings, "payment_provider", "momo")
+    _admin_session(client, db_session)
+
+    def view():
+        return {item["service"]: item for item in client.get("/api/admin/integrations").json()}
+
+    payments = view()["payments"]
+    assert payments["title"] and payments["active_provider"] == "momo" and payments["status"] == "inactive"
+    assert {p["id"] for p in payments["providers"]} == {"momo", "vnpay"}
+
+    client.put("/api/admin/integrations/payments", json={"values": {"momo_partner_code": "ABC"}})
+    assert view()["payments"]["status"] == "incomplete" and "momo_secret_key" in view()["payments"]["missing"]
+
+    client.put("/api/admin/integrations/payments", json={"values": {"provider": "vnpay"}})
+    switched = view()["payments"]
+    assert switched["active_provider"] == "vnpay" and switched["status"] == "inactive"   # MoMo values do not count for VNPay
+    assert view()["routing"]["simulated"] == (view()["routing"]["active_provider"] == "mock") and set(view()["payments"]["relevant_fields"]) == {"vnpay_environment", "vnpay_tmn_code", "vnpay_hash_secret", "vnpay_payment_url", "vnpay_return_url", "vnpay_ipn_url"}
+    google = view()["google_oauth"]
+    assert google["status"] == "incomplete" and google["missing"] == ["client_id", "client_secret"]   # the redirect URI has a default

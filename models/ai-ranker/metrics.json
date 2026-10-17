@@ -1,0 +1,65 @@
+{
+  "dataset_status": "bootstrap_weak_labeled",
+  "model_mode": "bootstrap_pilot",
+  "warning": "Bootstrap pilot trained on deterministic weak labels and synthetic scenario/ETA/slot/capacity fixtures. This is rule imitation only, not evidence of real traveler preference or operational availability. Planner hard constraints remain authoritative; collect consented real outcomes and human-reviewed labels before any production promotion.",
+  "split_method": "70/15/15 by scenario_family_id; all query variants in a family stay together",
+  "split_counts": {
+    "train": {
+      "scenario_families": 42,
+      "queries": 84,
+      "rows": 672
+    },
+    "validation": {
+      "scenario_families": 9,
+      "queries": 18,
+      "rows": 144
+    },
+    "test": {
+      "scenario_families": 9,
+      "queries": 18,
+      "rows": 144
+    }
+  },
+  "validation": {
+    "xgboost_ndcg_at_5_mean": 1.0,
+    "xgboost_ndcg_at_5_std": 0.0,
+    "rule_baseline_ndcg_at_5_mean": 0.5717464950969843,
+    "rule_baseline_ndcg_at_5_std": 0.3539629462007304,
+    "xgboost_ndcg_at_10_mean": 1.0,
+    "xgboost_ndcg_at_10_std": 0.0,
+    "rule_baseline_ndcg_at_10_mean": 0.7027545211661906,
+    "rule_baseline_ndcg_at_10_std": 0.23632260963205623,
+    "selected_runtime": "bootstrap_xgboost_pilot",
+    "minimum_ndcg_at_5_gain_to_recommend_model": 0.01
+  },
+  "test_after_validation_selection": {
+    "xgboost_ndcg_at_5_mean": 0.6666666666666666,
+    "xgboost_ndcg_at_5_std": 0.4714045207910317,
+    "rule_baseline_ndcg_at_5_mean": 0.49323543530367,
+    "rule_baseline_ndcg_at_5_std": 0.39681364313484513,
+    "xgboost_ndcg_at_10_mean": 0.6666666666666666,
+    "xgboost_ndcg_at_10_std": 0.4714045207910317,
+    "rule_baseline_ndcg_at_10_mean": 0.5541938065439334,
+    "rule_baseline_ndcg_at_10_std": 0.4125395503289445
+  },
+  "source_data": {
+    "file_name": "experience_ranker_verified.csv",
+    "sha256": "5efa033271eba2fac3353216c45515c614fb2f347975551c66fc6b70f51f8145",
+    "rows": 960,
+    "queries": 120,
+    "scenario_families": 60,
+    "pois": 11,
+    "grade_distribution": {
+      "0": 510,
+      "1": 280,
+      "2": 113,
+      "3": 57
+    },
+    "training_eligible_field_ignored": true,
+    "all_rows_are_weak_and_estimated": true
+  },
+  "model_size_bytes": 160567,
+  "model_inference_runtime_ms_per_query_median": 1.7606945000352425,
+  "model_inference_runtime_ms_per_query_p95": 1.8978717499976483,
+  "note": "No real-user, booking, verified-route, provider-slot, or capacity evidence is present."
+}
