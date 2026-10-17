@@ -248,12 +248,6 @@ def run_replan(db: Session, user: User, trip_id: int, changes: dict, message: st
     return guarded(db, _replan_job(db, user, trip_id, changes, message))
 
 
-GROUP_REVIEW_ERRORS = {
-    "stale_base": "Lịch trình đã có bản mới, hãy tạo lại góp ý trên bản mới nhất.",
-    "review_pending": "Đang có một góp ý nhóm chờ xử lý, hãy áp dụng hoặc huỷ nó trước khi tạo góp ý mới.",
-}
-
-
 def _group_review(db: Session, user: User, trip_id: int, source_version: int, feedback: str):
     row = store.trip_row(db, user.id, trip_id)
     source = store.load_itinerary(db, trip_id, source_version)
@@ -278,8 +272,9 @@ def _group_review(db: Session, user: User, trip_id: int, source_version: int, fe
                 continue
             candidate = event["candidate"]
             saved = store.add_group_review(db, trip_id, source_number, base_number, feedback, candidate)
-            if isinstance(saved, str):
-                yield sse({"type": "error", "code": saved, "status": 409, "message": GROUP_REVIEW_ERRORS[saved]})
+            if saved is None:
+                yield sse({"type": "error", "code": "stale_base", "status": 409,
+                           "message": "Lịch trình đã có bản mới, hãy tạo lại góp ý trên bản mới nhất."})
                 return
             db.commit()
             review = {"review_id": saved.id, "source_version": source_number, "base_version": base_number,

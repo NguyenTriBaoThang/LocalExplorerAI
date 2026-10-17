@@ -93,21 +93,17 @@ def locked_review(db: Session, trip_id: int, review_id: int) -> TripGroupReview 
 
 
 def add_group_review(db: Session, trip_id: int, source_version: int, base_version: int, feedback: str,
-                     candidate: dict) -> TripGroupReview | str:
-    """Stage a pending review and the feedback message (the caller commits); returns an error code instead when the
-    base is no longer the latest version ("stale_base") or the trip already has a pending review ("review_pending").
-    The trip row lock plays the part of Travility's partial unique index (one pending review per trip)."""
+                     candidate: dict) -> TripGroupReview | None:
+    """Stage a pending review and the feedback message (the caller commits); None when the base is no longer the
+    latest version. A new preview supersedes every other pending review of the trip: the trip row lock plays the
+    part of a partial unique index (one pending review per trip) and an abandoned preview must not block new ones."""
     db.execute(select(TripRow.id).where(TripRow.id == trip_id).with_for_update())
     latest = db.scalar(select(func.max(TripItinerary.version)).where(TripItinerary.trip_id == trip_id))
-    pending = list(db.scalars(select(TripGroupReview).where(TripGroupReview.trip_id == trip_id,
-                                                            TripGroupReview.status == "pending")))
     if latest != base_version:
         db.rollback()
-        return "stale_base"
-    if any(r.base_version == base_version for r in pending):
-        db.rollback()
-        return "review_pending"
-    for r in pending:  # built on an older version, so it can never be applied: don't let it block new feedback
+        return None
+    for r in db.scalars(select(TripGroupReview).where(TripGroupReview.trip_id == trip_id,
+                                                      TripGroupReview.status == "pending")):
         r.status = "cancelled"
     review = TripGroupReview(trip_id=trip_id, source_version=source_version, base_version=base_version,
                              feedback=feedback, candidate=candidate)

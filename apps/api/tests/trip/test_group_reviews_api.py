@@ -173,19 +173,21 @@ def test_preview_stale_base_does_not_persist_review(client, db_session, trip_pla
     assert client.get(f"/api/trips/{tid}/messages", headers=h).json() == messages_before
 
 
-def test_second_review_while_one_is_pending_is_rejected(client, db_session, trip_places, monkeypatch):
+def test_new_review_supersedes_the_pending_one(client, db_session, trip_places, monkeypatch):
     h, tid, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
     first = create_pending_review(client, h, tid, monkeypatch)
-    messages_before = client.get(f"/api/trips/{tid}/messages", headers=h).json()
     evs = create_review(client, h, tid, monkeypatch, "Một góp ý khác")
-    assert evs[-1]["type"] == "error" and evs[-1]["code"] == "review_pending" and evs[-1]["status"] == 409
-    assert count(db_session, TripGroupReview) == 1
-    assert client.get(f"/api/trips/{tid}/messages", headers=h).json() == messages_before
-    client.post(f"/api/trips/{tid}/group-reviews/{first['review_id']}/cancel", headers=h, json={})
-    assert create_review(client, h, tid, monkeypatch, "Một góp ý khác")[-1]["type"] == "group_review_preview"
+    assert evs[-1]["type"] == "group_review_preview"
+    second = evs[-1]["review"]
+    assert db_session.get(TripGroupReview, first["review_id"]).status == "cancelled"
+    assert db_session.get(TripGroupReview, second["review_id"]).status == "pending"
+    assert client.post(f"/api/trips/{tid}/group-reviews/{first['review_id']}/apply", headers=h,
+                       json={}).status_code == 409
+    assert client.post(f"/api/trips/{tid}/group-reviews/{second['review_id']}/apply", headers=h,
+                       json={}).status_code == 200
 
 
-def test_review_left_pending_on_an_old_base_is_cancelled_by_the_next_one(client, db_session, trip_places, monkeypatch):
+def test_new_review_on_a_newer_base_also_supersedes_the_pending_one(client, db_session, trip_places, monkeypatch):
     h, tid, _ = trip_with_itinerary(client, db_session, monkeypatch, trip_places)
     first = create_pending_review(client, h, tid, monkeypatch)
     use_llm(monkeypatch, [reply(("search_places", {"query": "cafe rẻ"})),
