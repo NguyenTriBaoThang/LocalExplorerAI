@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     gemini_model: str = "gemini-2.5-flash"
+    gemini_embed_model: str = "gemini-embedding-001"
     llm_provider: Literal["openai", "gemini"] = "openai"
     openai_timeout_seconds: float = 30.0
     llm_fallback_enabled: bool = False
