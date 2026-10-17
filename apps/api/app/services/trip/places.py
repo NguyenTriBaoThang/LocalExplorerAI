@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.trip_entities import TripDestination, TripPlace
 from app.services.chat_response_service import _fold
+from app.services.trip.domain import Place
 
 EmbedFn = Callable[[list[str]], list[list[float]] | None]
 
@@ -15,8 +16,12 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b)) / (na * nb) if na and nb else 0.0
 
 
+def _place(row: TripPlace) -> Place:
+    return Place.model_validate(row, from_attributes=True)
+
+
 def search_places(db: Session, destination: str, query: str, embed_fn: EmbedFn, kind: str | None = None,
-                  required_tags=(), avoided_tags=(), limit: int = 8) -> list[TripPlace]:
+                  required_tags=(), avoided_tags=(), limit: int = 8) -> list[Place]:
     # ponytail: whole destination is loaded and scored in Python; fine for ~200 places, needs pgvector beyond ~10k
     stmt = select(TripPlace).where(TripPlace.destination == destination).order_by(TripPlace.id)
     if kind:
@@ -26,7 +31,7 @@ def search_places(db: Session, destination: str, query: str, embed_fn: EmbedFn, 
     vecs = embed_fn([query]) if rows and all(p.embedding for p in rows) else None
     if vecs:
         rows.sort(key=lambda p: -_cosine(vecs[0], p.embedding))  # stable: ties keep id order
-        return rows[:limit]
+        return [_place(p) for p in rows[:limit]]
     words = set(_fold(query).split())
 
     def score(p: TripPlace) -> int:
@@ -34,10 +39,10 @@ def search_places(db: Session, destination: str, query: str, embed_fn: EmbedFn, 
         return len(words & text)
 
     rows.sort(key=lambda p: -score(p))
-    return rows[:limit]
+    return [_place(p) for p in rows[:limit]]
 
 
-def similar_places(db: Session, place_id: int, kind: str, exclude_ids=(), exclude_tags=(), limit: int = 20) -> list[TripPlace]:
+def similar_places(db: Session, place_id: int, kind: str, exclude_ids=(), exclude_tags=(), limit: int = 20) -> list[Place]:
     """Places like place_id from stored embeddings only — no embedding API call, works offline."""
     base = db.get(TripPlace, place_id)
     if base is None:
@@ -51,11 +56,11 @@ def similar_places(db: Session, place_id: int, kind: str, exclude_ids=(), exclud
     else:
         tags = set(base.tags or [])
         rows.sort(key=lambda p: (-len(tags & set(p.tags or [])), (p.lat - base.lat) ** 2 + (p.lon - base.lon) ** 2))
-    return rows[:limit]
+    return [_place(p) for p in rows[:limit]]
 
 
-def get_places(db: Session, ids) -> dict[int, TripPlace]:
-    return {p.id: p for p in db.scalars(select(TripPlace).where(TripPlace.id.in_(list(ids))))}
+def get_places(db: Session, ids) -> dict[int, Place]:
+    return {p.id: _place(p) for p in db.scalars(select(TripPlace).where(TripPlace.id.in_(list(ids))))}
 
 
 def list_destinations(db: Session) -> list[dict]:

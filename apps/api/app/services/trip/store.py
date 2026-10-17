@@ -1,0 +1,69 @@
+"""Trip persistence (the SQL half of Travility's trips.py)."""
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.models.trip_entities import Trip as TripRow, TripItinerary, TripMessage
+from app.services.trip.domain import Hub, Itinerary, Trip
+from app.services.trip.places import get_places, list_destinations
+
+
+def trip_row(db: Session, user_id: str, trip_id: int) -> TripRow | None:
+    return db.scalar(select(TripRow).where(TripRow.id == trip_id, TripRow.user_id == user_id))
+
+
+def hub_for(dest: dict, trip: Trip) -> Hub | None:
+    h = dest["hubs"].get(trip.arrival_mode) if trip.arrival_mode else None
+    return Hub.model_validate(h) if h else None
+
+
+def save_itinerary(db: Session, trip_id: int, itinerary: dict, places: dict) -> int:
+    """Lưu một version Itinerary mới (bất biến) và trả số version."""
+    # Row lock serialises concurrent saves on Postgres; SQLite ignores FOR UPDATE (it locks the whole file).
+    db.execute(select(TripRow.id).where(TripRow.id == trip_id).with_for_update())
+    version = (db.scalar(select(func.max(TripItinerary.version)).where(TripItinerary.trip_id == trip_id)) or 0) + 1
+    db.add(TripItinerary(trip_id=trip_id, version=version, data={"itinerary": itinerary, "places": places}))
+    db.commit()
+    return version
+
+
+def log_message(db: Session, trip_id: int, role: str, text: str, version: int | None = None) -> None:
+    db.add(TripMessage(trip_id=trip_id, role=role, text=text, version=version))
+    db.commit()
+
+
+def load_itinerary(db: Session, trip_id: int, version: int | None = None) -> tuple[int, Itinerary, dict] | None:
+    """Đọc một version (mặc định bản mới nhất); stop.pinned lấy từ trips.pinned_place_ids, không từ data đã lưu."""
+    stmt = select(TripItinerary).where(TripItinerary.trip_id == trip_id)
+    if version is not None:
+        stmt = stmt.where(TripItinerary.version == version)
+    row = db.scalar(stmt.order_by(TripItinerary.version.desc()).limit(1))
+    if not row:
+        return None
+    itin = Itinerary.model_validate(row.data["itinerary"])
+    pins = set(db.get(TripRow, trip_id).pinned_place_ids or [])
+    for d in itin.days:
+        for s in d.stops:
+            s.pinned = s.place_id in pins
+    return row.version, itin, row.data["places"]
+
+
+def latest_itinerary(db: Session, trip_id: int) -> tuple[int, Itinerary] | None:
+    r = load_itinerary(db, trip_id)
+    return (r[0], r[1]) if r else None
+
+
+def itinerary_places(db: Session, itin: Itinerary) -> dict:
+    ids = {s.place_id for d in itin.days for s in d.stops} | ({itin.stay_place_id} - {None})
+    return get_places(db, list(ids))
+
+
+def versions(db: Session, trip_id: int) -> list[int]:
+    return list(db.scalars(select(TripItinerary.version).where(TripItinerary.trip_id == trip_id)
+                           .order_by(TripItinerary.version)))
+
+
+def list_trips(db: Session, user_id: str) -> list[dict]:
+    names = {d["slug"]: d["name"] for d in list_destinations(db)}
+    rows = db.scalars(select(TripRow).where(TripRow.user_id == user_id).order_by(TripRow.id.desc()))
+    return [{"id": r.id, "spec": r.spec, "created_at": r.created_at, "destination_name": names.get(r.spec.get("destination"))}
+            for r in rows]

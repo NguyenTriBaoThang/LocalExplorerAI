@@ -21,6 +21,8 @@ from app.schemas.ai import (
     ChatIntentDecision,
     ChatMessage,
     ChatReply,
+    ChatRoute,
+    ChatTopic,
     ChatTripContext,
     ChatWeatherForecast,
     StructuredConstraints,
@@ -291,14 +293,14 @@ def _out_of_scope_reply(language: str) -> str:
     return "Mình hỗ trợ lập lịch trình và thông tin du lịch. Bạn có thể hỏi về kế hoạch đi chơi, thời tiết, địa điểm, ăn uống hoặc phương tiện."
 
 
-def route_chat_message(payload: ChatMessage, provider: StructuredOutputProvider, db: Session) -> ChatReply:
-    runner = PromptRunner(provider)
-    reason: str | None = None
-    decision: ChatIntentDecision | None = None
+def classify_chat_intent(
+    message: str, has_planning_context: bool, provider: StructuredOutputProvider
+) -> tuple[ChatRoute, ChatTopic | None, str | None]:
+    """(intent, topic, fallback reason) from the LLM router; the offline keyword router when the LLM fails."""
     try:
-        decision = runner.run(
+        decision = PromptRunner(provider).run(
             "CHAT_INTENT_ROUTER",
-            {"message": payload.message, "has_planning_context": bool(payload.trip_context and payload.trip_context.has_planning_context)},
+            {"message": message, "has_planning_context": has_planning_context},
             ChatIntentDecision,
         )
     except LLMNotConfigured:
@@ -307,11 +309,17 @@ def route_chat_message(payload: ChatMessage, provider: StructuredOutputProvider,
         reason = "llm_unavailable"
     except InvalidStructuredOutput:
         reason = "invalid_model_output"
-
-    if decision is None:
-        intent, topic = _offline_intent(payload.message, bool(payload.trip_context and payload.trip_context.has_planning_context))
     else:
-        intent, topic = decision.intent, decision.topic
+        return decision.intent, decision.topic, None
+    intent, topic = _offline_intent(message, has_planning_context)
+    return intent, topic, reason
+
+
+def route_chat_message(payload: ChatMessage, provider: StructuredOutputProvider, db: Session) -> ChatReply:
+    runner = PromptRunner(provider)
+    intent, topic, reason = classify_chat_intent(
+        payload.message, bool(payload.trip_context and payload.trip_context.has_planning_context), provider
+    )
 
     if intent == "out_of_scope":
         return _reply(payload, intent, _out_of_scope_reply(payload.language), provider=provider, prompt_version=catalog.version, reason=reason)
@@ -368,7 +376,7 @@ def route_chat_message(payload: ChatMessage, provider: StructuredOutputProvider,
         )
         return _reply(payload, "travel_information", unavailable, provider=provider, reason=reason or "llm_unavailable")
 
-    if decision is None:
+    if reason is not None:  # the LLM router already failed: skip the answer call too
         return _reply(payload, "travel_information", _catalog_fallback_reply(payload.message, catalog_pois, payload.language), provider=provider, reason=reason)
     try:
         answer = runner.run(
