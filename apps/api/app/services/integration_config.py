@@ -90,6 +90,9 @@ INTEGRATION_FIELDS: dict[str, dict[str, IntegrationField]] = {
         "gemini_base_url": IntegrationField("Gemini OpenAI-compatible base URL", fallback_setting="gemini_base_url"),
         "gemini_model": IntegrationField("Gemini model", fallback_setting="gemini_model"),
     },
+    "google_places": {
+        "api_key": IntegrationField("Google Places API key", secret=True, fallback_setting="google_places_api_key"),
+    },
     "google_oauth": {
         "client_id": IntegrationField("Google OAuth client ID", fallback_setting="google_client_id"),
         "client_secret": IntegrationField("Google OAuth client secret", secret=True, fallback_setting="google_client_secret"),
@@ -137,6 +140,9 @@ INTEGRATION_CATALOG: dict[str, ServiceSpec] = {
             "gemini": ProviderSpec("Google Gemini", ("gemini_api_key", "gemini_base_url", "gemini_model"), ("gemini_api_key",)),
             "openai": ProviderSpec("OpenAI hoặc tương thích", ("openai_api_key", "openai_base_url", "openai_model"), ("openai_api_key",)),
         }),
+    "google_places": ServiceSpec(
+        "Đánh giá Google Maps", "Lấy điểm sao và số lượt đánh giá của địa điểm từ Google Maps để hiển thị cạnh đánh giá của du khách.",
+        testable=True, required=("api_key",)),
     "google_oauth": ServiceSpec(
         "Đăng nhập Google", "Cho phép du khách đăng nhập bằng tài khoản Google.", testable=True,
         required=("client_id", "client_secret", "redirect_uri")),

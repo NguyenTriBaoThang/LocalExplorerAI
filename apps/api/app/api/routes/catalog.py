@@ -16,6 +16,7 @@ from app.services.e5_search_service import (
     E5SearchService,
 )
 from app.services.experience_service import ExperienceService
+from app.services.review_common import ranking_score
 from app.services.pilot_area import is_pilot_location
 
 router = APIRouter(prefix="/api", tags=["catalog"])
@@ -120,7 +121,7 @@ def list_partners(q: str | None = Query(default=None, max_length=80), db: Sessio
             cover_url=next((url for it in items for url in it.poi.image_urls[:1]), None), categories=sorted({it.poi.category for it in items})[:4],
             experience_count=len(items), min_price_vnd=min(it.price_vnd for it in items),
             rating_average=round(average, 1) if average is not None else None, rating_count=count))
-    rows.sort(key=lambda r: (-(r.rating_average or 0), -r.rating_count, -r.experience_count, r.name))
+    rows.sort(key=lambda r: (-ranking_score(r.rating_average, r.rating_count), -r.rating_count, -r.experience_count, r.name))
     return rows
 
 
