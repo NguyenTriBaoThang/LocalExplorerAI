@@ -5,6 +5,9 @@ import { divIcon } from 'leaflet'
 import { MapPin, Layers, Sparkles, Box, Maximize2, Minimize2, RotateCcw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CityHero3D } from '../3d/CityHero3D'
+import { Map3DLandmarkViewer } from '../3d/Map3DLandmarkViewer'
+import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../3d/landmark/types'
+import { api } from '../../api/client'
 
 export const LEG_COLORS = [
   '#10b981', // 1: Emerald
@@ -136,6 +139,9 @@ export function MapAdapter({
   showJourneyTracker = true,
   isExpanded = false,
   onExpandToggle,
+  webgl3d = false,
+  selectedLandmarkId,
+  onLandmarkChange,
 }: {
   points: MapPoint[]
   selectedId?: string
@@ -147,12 +153,35 @@ export function MapAdapter({
   showJourneyTracker?: boolean
   isExpanded?: boolean
   onExpandToggle?: () => void
+  webgl3d?: boolean
+  selectedLandmarkId?: string
+  onLandmarkChange?: (modelId: string) => void
 }) {
   const [styleMode, setStyleMode] = useState<string>('goong_streets')
   const [resetCounter, setResetCounter] = useState(0)
   const [is3D, setIs3D] = useState(false)
+  const [landmarkCalibrations, setLandmarkCalibrations] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
   const selected = points.find((point) => point.id === selectedId)
+  const activeLandmarkId = selectedLandmarkId && landmarkCalibrations[selectedLandmarkId]
+    ? selectedLandmarkId
+    : 'nhathoducba'
+  const activeLandmark = landmarkCalibrations[activeLandmarkId] ?? DEFAULT_CALIBRATIONS.nhathoducba
   const center: LatLngExpression = [10.775, 106.7]
+
+  useEffect(() => {
+    if (!webgl3d) return
+    let active = true
+    api.get<Record<string, ModelCalibration>>('/models-3d/calibration')
+      .then(({ data }) => {
+        if (active && data && typeof data === 'object') {
+          setLandmarkCalibrations({ ...DEFAULT_CALIBRATIONS, ...data })
+        }
+      })
+      .catch(() => {
+        // Built-in landmark models remain available when the API is offline.
+      })
+    return () => { active = false }
+  }, [webgl3d])
 
   const allPositions: [number, number][] = [
     ...points.map((p) => [p.latitude, p.longitude] as [number, number]),
@@ -227,13 +256,23 @@ export function MapAdapter({
       {/* Main Map View Canvas */}
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         {is3D ? (
-          <CityHero3D
-            journeyPoints={points}
-            routes={routes}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            variant="inline"
-          />
+          webgl3d ? (
+            <Map3DLandmarkViewer
+              key={activeLandmarkId}
+              modelId={activeLandmarkId}
+              defaultCalibration={activeLandmark}
+              readOnly
+              className="h-full"
+            />
+          ) : (
+            <CityHero3D
+              journeyPoints={points}
+              routes={routes}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              variant="inline"
+            />
+          )
         ) : (
         <MapContainer
           center={center}
@@ -430,6 +469,19 @@ export function MapAdapter({
         {/* Floating Top Controls (Neat Top-Right Stack) */}
         <div className="map-floating-top-right">
           <div className="map-control-btn-group">
+            {is3D && webgl3d && (
+              <select
+                aria-label="Chọn mô hình WebGL 3D"
+                title="Chọn địa danh để xem mô hình WebGL 3D"
+                className="map-float-btn map-float-select"
+                value={activeLandmarkId}
+                onChange={(event) => onLandmarkChange?.(event.target.value)}
+              >
+                {Object.entries(landmarkCalibrations).map(([id, landmark]) => (
+                  <option key={id} value={id}>{landmark.display_name}</option>
+                ))}
+              </select>
+            )}
             {!is3D && <>
             <button
               type="button"
@@ -473,26 +525,30 @@ export function MapAdapter({
               onClick={() => setIs3D((current) => !current)}
               aria-pressed={is3D}
               className="map-float-btn map-float-btn-accent"
-              title={is3D ? 'Quay lại bản đồ 2D' : 'Xem hành trình trên bản đồ 3D'}
+              title={is3D ? 'Quay lại bản đồ 2D' : (webgl3d ? 'Xem mô hình WebGL 3D ngay trên bản đồ khám phá' : 'Xem hành trình trên bản đồ 3D')}
             >
               {is3D ? <Layers size={14} /> : <Box size={14} />}
-              <span>{is3D ? 'Bản đồ 2D' : '3D Sài Gòn'}</span>
+              <span>{is3D ? 'Bản đồ 2D' : (webgl3d ? 'WebGL 3D' : '3D Sài Gòn')}</span>
             </button>
           </div>
         </div>
 
         {/* Top-Left Provider Status Pill */}
-        <div className="map-floating-top-left">
-          <div className="map-provider-pill">
-            <span className="badge-live-pulse" />
-            <span>{is3D ? 'Bản đồ 3D hành trình · TP.HCM' : 'Bản đồ hành trình · TP.HCM'}</span>
+        {!(is3D && webgl3d) && (
+          <div className="map-floating-top-left">
+            <div className="map-provider-pill">
+              <span className="badge-live-pulse" />
+              <span>{is3D ? 'Bản đồ 3D hành trình · TP.HCM' : 'Bản đồ hành trình · TP.HCM'}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bottom Route Legend Overlay */}
-        <div className="map-3d-bottom-info">
-          <span>{mapFooterLabel || (is3D ? 'Mô hình 3D minh họa · Tuyến nối theo các điểm hành trình' : 'Vị trí theo danh mục · Kiểm tra nguồn thông tin trước chuyến đi')}</span>
-        </div>
+        {!(is3D && webgl3d) && (
+          <div className="map-3d-bottom-info">
+            <span>{mapFooterLabel || (is3D ? 'Mô hình 3D minh họa · Tuyến nối theo các điểm hành trình' : 'Vị trí theo danh mục · Kiểm tra nguồn thông tin trước chuyến đi')}</span>
+          </div>
+        )}
       </div>
     </div>
   )

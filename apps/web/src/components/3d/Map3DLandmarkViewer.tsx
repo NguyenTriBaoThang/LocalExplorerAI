@@ -161,18 +161,21 @@ export function Map3DLandmarkViewer({
   modelId = 'nhathoducba',
   previewJobId,
   defaultCalibration: providedCalibration,
+  readOnly = false,
   className = '',
 }: {
   modelId?: string
   previewJobId?: string
   defaultCalibration?: ModelCalibration
+  readOnly?: boolean
   className?: string
 }) {
   const { user } = useAuth()
-  const canEdit =
+  const canEdit = !readOnly && (
     user?.role === 'admin' ||
     !user ||
     (import.meta as unknown as { env?: Record<string, unknown> }).env?.DEV === true
+  )
 
   const fallbackCalibration = providedCalibration ?? getDefaultCalibration(modelId)
 

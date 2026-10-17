@@ -12103,6 +12103,17 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
   transition: all 0.2s ease;
 }
 
+.map-float-select {
+  max-width: min(280px, calc(100vw - 48px));
+  color: var(--text-secondary);
+  outline: none;
+}
+
+.map-float-select option {
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
 .map-float-btn:hover {
   background: rgba(30, 41, 59, 0.95);
   color: #ffffff;
