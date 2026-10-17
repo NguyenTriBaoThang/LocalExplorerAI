@@ -1,7 +1,9 @@
 {
-  "model_version": "local-explorer-ranker-v1-20261003T014631Z",
-  "model_type": "xgboost.XGBRanker",
-  "objective": "rank:ndcg",
+  "model_version": "localexplorer-bootstrap-xgb-20261009T182735Z",
+  "model_family": "xgboost",
+  "model_file": "xgboost_ranker.json",
+  "model_sha256": "ba76e88b040ac34a04862c4824fa37b544d71ffa84542c4e60499062ba70614f",
+  "feature_version": "ranker-features-v2",
   "feature_names": [
     "tag_jaccard",
     "intent_match",
@@ -15,31 +17,35 @@
     "outdoor_rain_mm",
     "temperature_c",
     "pm2_5",
-    "european_aqi"
+    "european_aqi",
+    "is_hands_on_known",
+    "is_indoor_known"
   ],
-  "dataset_status": "unverified_user_dataset",
-  "dataset_filename": "dataset_ranking_tphcm.csv",
-  "dataset_sha256": "511fd0f6ed83030ee038ab0404a34e5b809eb0b355e89b0aa996e45c60110a3d",
-  "rows_after_hard_filter": 639,
-  "queries": 170,
-  "grade_distribution": {
-    "0": 69,
-    "1": 170,
-    "2": 199,
-    "3": 201
+  "dataset_status": "bootstrap_weak_labeled",
+  "model_mode": "bootstrap_pilot",
+  "pilot_runtime_eligible": true,
+  "deployment_eligible": false,
+  "production_eligible": false,
+  "runtime_recommendation_by_validation_ndcg_at_5": "bootstrap_xgboost_pilot",
+  "label_provenance": "bootstrap_rule_v1; deterministic weak labels; not traveler feedback",
+  "source_dataset_name": "experience_ranker_verified.csv",
+  "source_dataset_sha256": "5efa033271eba2fac3353216c45515c614fb2f347975551c66fc6b70f51f8145",
+  "model_parameters": {
+    "objective": "rank:ndcg",
+    "n_estimators": 160,
+    "max_depth": 3,
+    "learning_rate": 0.04,
+    "subsample": 0.85,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 2.0,
+    "tree_method": "hist",
+    "random_seed": 41
   },
-  "test_metrics": {
-    "NDCG@5": 0.9515685477650228,
-    "NDCG@2": 0.9031223855823671,
-    "Recall@5_best_grade": 1.0,
-    "Top1_best_grade": 0.5294117647058824,
-    "MRR_best_grade": 0.7549019607843137,
-    "queries": 34
-  },
-  "notes": [
-    "Scores are relative ranks, not probabilities.",
-    "Hard constraints run before inference.",
-    "This notebook did not synthesize training samples.",
-    "Query-level split only; there is no timestamp field for temporal holdout."
-  ]
+  "estimated_columns_preserved": true,
+  "created_at_utc": "2026-10-09T18:27:35.942786+00:00",
+  "warning": "Bootstrap pilot trained on deterministic weak labels and synthetic scenario/ETA/slot/capacity fixtures. This is rule imitation only, not evidence of real traveler preference or operational availability. Planner hard constraints remain authoritative; collect consented real outcomes and human-reviewed labels before any production promotion.",
+  "reproducibility": {
+    "random_seed": 41,
+    "xgboost_version": "3.4.1"
+  }
 }

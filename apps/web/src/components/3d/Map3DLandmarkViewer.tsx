@@ -40,16 +40,6 @@ const GOONG_STYLES = {
   dark: 'https://tiles.goong.io/assets/goong_map_dark.json',
 }
 
-// The first project assets were committed as Git LFS pointers. Keep the deployed
-// binary revision in the request URL so browsers do not reuse that stale response.
-const MODEL_ASSET_REVISION = '20261015'
-
-function getModelAssetUrl(fileUrl: string): string {
-  const url = new URL(fileUrl, window.location.origin)
-  url.searchParams.set('asset_rev', MODEL_ASSET_REVISION)
-  return url.toString()
-}
-
 const round = (v: number, digits: number) => Number(v.toFixed(digits))
 
 function toNumber(raw: string, fallback: number): number {
@@ -390,7 +380,7 @@ export function Map3DLandmarkViewer({
 
     const loader = new GLTFLoader()
     loader.load(
-      getModelAssetUrl(calibrationRef.current.file_url),
+      calibrationRef.current.file_url,
       (gltf) => {
         if (cancelled) return
         const raw = gltf.scene

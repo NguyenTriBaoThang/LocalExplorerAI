@@ -7,9 +7,9 @@ WORKDIR /app
 ARG INSTALL_E5=false
 ARG INSTALL_ML=false
 COPY requirements.txt requirements-e5.txt requirements-ml.txt ./
-RUN pip install --no-cache-dir --timeout=120 --retries=5 -r requirements.txt \
-    && if [ "$INSTALL_E5" = "true" ]; then pip install --no-cache-dir --timeout=120 --retries=5 -r requirements-e5.txt; fi
-RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir --timeout=120 --retries=5 -r requirements-ml.txt; fi
+RUN pip install --no-cache-dir -r requirements.txt \
+    && if [ "$INSTALL_E5" = "true" ]; then pip install --no-cache-dir -r requirements-e5.txt; fi
+RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir -r requirements-ml.txt; fi
 COPY . .
 
 EXPOSE 8000

@@ -33,9 +33,9 @@ services:
         INSTALL_ML: ${INSTALL_ML:-false}
     environment:
       APP_ENV: ${APP_ENV:-development}
-      REAL_DATA_ONLY: ${REAL_DATA_ONLY:-true}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/local_explorer}
       REDIS_URL: redis://redis:6379/0
+      REAL_DATA_ONLY: ${REAL_DATA_ONLY:-true}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-false}
       RATE_LIMIT_GENERAL_PER_MINUTE: ${RATE_LIMIT_GENERAL_PER_MINUTE:-120}
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
@@ -113,7 +113,7 @@ services:
         condition: service_healthy
     volumes:
       - ./models:/models:ro
-    command: ["sh", "-c", "alembic upgrade head && if [ \"$$REAL_DATA_ONLY\" != \"true\" ]; then python -m scripts.seed_db; fi && python -m scripts.sync_rbac && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536"]
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed_db && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
       interval: 20s

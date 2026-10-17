@@ -285,7 +285,7 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
             {sourceUrl && <li className="break-words">URL nguồn trong file (chưa xác minh): {sourceUrlIsHttps
               ? <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">Mở nguồn HTTPS</a>
               : sourceUrl}</li>}
-            {Boolean(raw.photo_url) && (() => {
+            {raw.photo_url && (() => {
               const photoUrl = String(raw.photo_url)
               const safePhotoUrl = isSafeHttpsUrl(photoUrl)
               return <li className="break-words">URL ảnh trong file (chưa xác minh): {safePhotoUrl
