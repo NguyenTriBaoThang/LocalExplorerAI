@@ -1,6 +1,6 @@
-# AI prompt catalog — PRD 3.0 / catalog 3.1.0
+# AI prompt catalog — PRD 3.0 / catalog 3.2.0
 
-The active catalog is `3.1.0`, declared in `apps/api/app/prompts/manifest.json`. The original `v3_0_0` templates remain unchanged; the active templates live under `apps/api/app/prompts/v3_1_0/`. Create a new version directory and change the manifest to revise prompt behavior. `PromptRunner` loads the active template and validates its result against the corresponding Pydantic schema before any write. The OpenAI-compatible adapter sends deterministic JSON-mode requests; provider errors, missing configuration, and invalid output fail closed.
+The active catalog is `3.2.0`, declared in `apps/api/app/prompts/manifest.json`. The original `v3_0_0` templates remain unchanged; the active templates live under `apps/api/app/prompts/v3_2_0/` (the ten `v3_1_0` templates copied unchanged, plus four trip-planner prompts). Create a new version directory and change the manifest to revise prompt behavior. `PromptRunner` loads the active template and validates its result against the corresponding Pydantic schema before any write. The OpenAI-compatible adapter sends deterministic JSON-mode requests; provider errors, missing configuration, and invalid output fail closed.
 
 ## Prompt/API/data mapping
 
@@ -17,6 +17,10 @@ The active catalog is `3.1.0`, declared in `apps/api/app/prompts/manifest.json`.
 | `PROVIDER_ASSISTANT` | Provider `/slot-assistant/preview` then `/confirm` | Preview scopes the action to explicit provider-owned slot IDs. A short-lived signed token plus slot versions prevents unconfirmed or stale writes. Confirm updates `experience_slots`; cancellations also emit `SLOT_CANCELLED` `events`, which feed re-planning. |
 | `FEEDBACK_LABELER` | `POST /api/itineraries/{id}/feedback/label` | Adds `feedbacks` row with rubric grade, justification, objective ratio, training flag and `labeler_prompt_version`; original review/rating is retained. |
 | `WEATHER_AQI_ADVISOR` | `POST /api/itineraries/{id}/weather-advisory` | Considers only actual outdoor itinerary stops and caller-provided measurements, returns an advisory, and writes expiring `WEATHER_ALERT` events against affected POIs with measurements and prompt version in event metadata. It never infers flooding. |
+| `TRIP_PARSER` | `parse_trip` in `app/services/trip/agent.py` | Turns a trip request into a `Trip` via the `record_trip` tool (forced tool call, not JSON mode). Inputs: `{today}` and `{dests}` (supported destination slugs and names), then the user message. Supported destination is TP. Hồ Chí Minh only; anything else becomes `unsupported` and raises `UnsupportedDestination`. Malformed times are dropped and the result is validated by the `Trip` model; nothing is persisted. |
+| `TRIP_PLANNER` | `plan` in `app/services/trip/agent.py` | Tool loop over `search_places` (real places only) and `submit_itinerary` with a trip brief as input. Code, not the model, computes cost, legs and conflicts; a draft using an unseen place is rejected once and retried. Emits `tool_call`, `thinking`, `itinerary` or `error` events. |
+| `TRIP_FOLLOWUP` | Trip follow-up messages (`app/services/trip/followup.py`, later task) | Picks exactly one tool for a message on an existing itinerary: `answer`, `edit_itinerary` (minimal ops, may call `search_places`), or `change_trip` (asks for confirmation before re-planning). Uses only the supplied facts; pinned stops are never changed. |
+| `TRIP_GROUP_REVIEW` | Group feedback review (`app/services/trip/followup.py`, later task) | Turns group feedback into a preview via `review_group_feedback` (`search_places` allowed) applied to the latest base version; conflicting opinions go to `unresolved_feedback` rather than being decided by majority. Cost, legs and conflicts are recomputed by code. |
 
 ## Alignment notes and deliberate constraints
 
