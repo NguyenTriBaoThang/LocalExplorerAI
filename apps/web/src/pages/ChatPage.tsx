@@ -161,8 +161,10 @@ export function ChatPage() {
   const userTurns = messages.filter((message) => message.role === 'user')
   const [storedConstraints, setConstraints] = useAssistantField('constraints')
   const constraints = chatContext(trip, storedConstraints)
-  const [draft, setDraft] = useState('')
   const [busy, setBusy] = useAssistantField('busy')
+  // Place and experience pages link here with ?q=<question> to start the conversation about that place.
+  const [searchParams] = useSearchParams()
+  const [draft, setDraft] = useState(() => (searchParams.get('q') ?? '').slice(0, 500))
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [pois, setPois] = useState<POI[]>([])

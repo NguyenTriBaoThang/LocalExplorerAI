@@ -60,9 +60,13 @@ export function PlannerPage() {
   const [transport, setTransport] = useTripField('transport')
   const [selectedIntents, setSelectedIntents] = useTripField('intents')
   const [pois, setPois] = useState<POI[]>([])
+  const [lockedPois, setLockedPois] = useTripField('lockedPois')
   // Place and experience pages link here with ?poi=<id> so the chosen place is already on the list.
   const [searchParams] = useSearchParams()
-  const [lockedPois, setLockedPois] = useState<string[]>(() => searchParams.getAll('poi'))
+  useEffect(() => {
+    const ids = searchParams.getAll('poi')
+    if (ids.length) setLockedPois((current) => [...new Set([...current, ...ids])])
+  }, [searchParams, setLockedPois])
   const [poiSearch, setPoiSearch] = useState('')
   const [originId, setOriginId] = useTripField('originId')
   const [destinationId, setDestinationId] = useTripField('destinationId')
