@@ -9,19 +9,27 @@ import {
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTripField } from '../journey'
 import { api } from '../api/client'
+import { useAuth } from '../auth'
 import { contentApi } from '../api/content'
 import type { POI } from '../types'
 import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../components/3d/landmark/types'
 
 export function Map3DPage() {
+  const { user, loading: authLoading } = useAuth()
   const [search] = useSearchParams()
   const previewJobId = search.get("meshyPreview") || undefined
   const [draft, setDraft] = useState<ModelCalibration | null>(null)
   const [draftError, setDraftError] = useState("")
   useEffect(() => {
-    if (!previewJobId) return
-    api.get<ModelCalibration>(`/admin/meshy/jobs/${previewJobId}/calibration`).then(r => setDraft(r.data)).catch(() => setDraftError("Không thể mở model nháp. Hãy đăng nhập tài khoản có quyền quản lý mô hình 3D."))
-  }, [previewJobId])
+    setDraft(null)
+    setDraftError('')
+    if (!previewJobId || authLoading || !user) return
+    let active = true
+    api.get<ModelCalibration>(`/admin/meshy/jobs/${previewJobId}/calibration`)
+      .then(r => { if (active) setDraft(r.data) })
+      .catch(() => { if (active) setDraftError('Không thể mở bản nháp. Kiểm tra quyền quản lý mô hình 3D và mã mô hình.') })
+    return () => { active = false }
+  }, [previewJobId, authLoading, user?.id])
   const [selectedLandmark, setSelectedLandmark] = useTripField('modelId')
   const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
 
@@ -59,8 +67,13 @@ export function Map3DPage() {
 
   if (previewJobId) return <div className="p-3">
     <p className="rounded-lg bg-amber-50 p-3 text-amber-900">Bản nháp riêng tư · Mô hình do AI tạo. Căn vị trí rồi lưu trước khi quay về Portal xuất bản.</p>
+    {authLoading ? <p>Đang kiểm tra phiên đăng nhập…</p> : !user && <section className="rounded-xl bg-white p-6 my-4">
+      <h1 className="text-xl font-bold">Đăng nhập để mở mô hình 3D</h1>
+      <p className="my-3">Website và Portal có phiên đăng nhập riêng. Đăng nhập bằng tài khoản quản trị đã tạo mô hình; bạn sẽ quay lại đúng bản nháp này.</p>
+      <Link className="btn-primary-3d" to="/login" state={{ from: `/map-3d?${search.toString()}` }}>Đăng nhập và mở mô hình</Link>
+    </section>}
     {draftError && <p role="alert">{draftError}</p>}
-    {!draft && !draftError && <p>Đang tải bản nháp…</p>}
+    {!authLoading && user && !draft && !draftError && <p>Đang tải bản nháp…</p>}
     {draft && <Map3DLandmarkViewer key={previewJobId} modelId={draft.model_name} previewJobId={previewJobId} defaultCalibration={draft} className="h-[80vh]" />}
   </div>
 

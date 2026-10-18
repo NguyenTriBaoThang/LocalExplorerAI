@@ -2,6 +2,7 @@ import { MeshyChat } from './MeshyChat'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { http, errorMessage } from '../../lib/api'
+import { webOrigin } from '../../lib/webOrigin'
 const MeshyModelPreview = lazy(() => import('./MeshyModelPreview'))
 
 type Placement = { display_name: string; latitude: number; longitude: number; scale: number; heading: number; altitude: number; poi_id?: string }
@@ -10,7 +11,6 @@ type Place = { id: string; name: string; latitude: number; longitude: number }
 const field = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900'
 const button = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 disabled:opacity-40'
 const states: Record<string, string> = { submitting: 'Đang gửi', pending: 'Đang chờ', running: 'Đang tạo', ready: 'Sẵn sàng', failed: 'Không hoàn thành', uncertain: 'Cần đối chiếu Meshy', timeout: 'Hết thời gian theo dõi' }
-const webOrigin = ['localhost', '127.0.0.1'].includes(location.hostname) ? `${location.protocol}//${location.hostname}:8080` : location.origin
 export function AdminMeshyPage() {
   const [previewId, setPreviewId] = useState<string | null | undefined>(undefined)
   const [jobs, setJobs] = useState<Job[]>([])

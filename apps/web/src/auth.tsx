@@ -74,12 +74,15 @@ export function CustomerRoute() {
 
 export function GuestRoute() {
   const { user, loading } = useAuth()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from
+  const destination = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') && !from.includes('\\') && !/^\/(login|register)([/?#]|$)/.test(from) ? from : undefined
   if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>
-  if (user) return <Navigate to={roleHome(user.role)} replace />
+  if (user) return <Navigate to={destination || '/'} replace />
   return <Outlet />
 }
 
-/** The home page is public. Staff stay on it: only signing in (GuestRoute) sends them to the portal. */
+/** The home page is public. Staff can browse the website and open private 3D previews here. */
 export function RoleHome({ children }: { children: ReactNode }) {
   const { loading } = useAuth()
   if (loading) return <div className="page-wrap page-loading-3d"><span className="loader-orbit" /><p>Đang kiểm tra phiên đăng nhập…</p></div>

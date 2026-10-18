@@ -1,4 +1,6 @@
 import { AdminMeshyPage } from './pages/admin/AdminMeshyPage'
+import { useEffect } from 'react'
+import { webOrigin } from './lib/webOrigin'
 import { AdminLandmarkStoriesPage } from './pages/admin/AdminLandmarkStoriesPage'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
@@ -42,12 +44,21 @@ import { PartnerProfilePage } from './pages/partner/PartnerProfilePage'
 const loadPartnerAudit = () => partnerApi.audit()
 const loadAdminAudit = () => adminApi.audit(300)
 
+function MapPreviewRedirect() {
+  const target = `${webOrigin}/map-3d${location.search}${location.hash}`
+  useEffect(() => {
+    if (webOrigin !== location.origin) window.location.replace(target)
+  }, [target])
+  return <p>Đang mở bản đồ 3D… <a href={target}>Mở bản đồ</a></p>
+}
+
 export function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
           <Routes>
+            <Route path="/map-3d" element={<MapPreviewRedirect />} />
             <Route element={<GuestOnly />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
