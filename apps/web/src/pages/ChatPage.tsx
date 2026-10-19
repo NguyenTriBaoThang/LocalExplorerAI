@@ -28,9 +28,9 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, apiErrorMessage, confirmItinerary, getChatServiceStatus, getRoutingCapabilities, previewItinerary, sendChatMessage } from '../api/client'
-import type { ChatConstraints, ChatServiceStatus, PlanPreview, PlanRequest, POI, RoutingCapabilities } from '../types'
+import type { ChatConstraints, ChatServiceStatus, Itinerary, PlanPreview, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
 import { useJourney, useTripField, useAssistantField, chatContext } from '../journey'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
@@ -148,6 +148,7 @@ function FormattedChatMessage({ content }: { content: string }) {
 export function ChatPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { trip, applyConstraints } = useJourney()
 
   const initialMessage = useMemo<ChatLine>(() => ({
@@ -177,6 +178,7 @@ export function ChatPage() {
   const [date, setDate] = useTripField('date')
   const [originId, setOriginId] = useTripField('originId')
   const [destinationId, setDestinationId] = useTripField('destinationId')
+  const [, setJourneyLockedPois] = useTripField('lockedPois')
   const [lockedOverrides, setLockedOverrides] = useState<Record<number, string>>({})
   const [mobileTab, setMobileTab] = useState<'chat' | 'preview' | 'hud'>('chat')
   const [planPreview, setPlanPreview] = useState<PlanPreview | null>(null)
@@ -185,6 +187,71 @@ export function ChatPage() {
   const feedContainerRef = useRef<HTMLDivElement>(null)
   const feedEndRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const editSource = (location.state as { editItinerary?: Itinerary } | null)?.editItinerary
+  const appliedEditId = useRef('')
+
+  useEffect(() => {
+    if (!editSource || !pois.length || appliedEditId.current === editSource.itinerary_id) return
+    appliedEditId.current = editSource.itinerary_id
+    const localDateTime = (value: string) => new Date(value)
+    const startValue = editSource.start_at || editSource.stops[0]?.start_at
+    if (startValue) {
+      setDate(localDate(localDateTime(startValue)))
+    }
+    const localTime = (value: string | undefined) => value ? new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(new Date(value)) : null
+    const sourceDate = startValue ? localDate(localDateTime(startValue)) : date
+    const intentWeights = editSource.intent_weights ?? {}
+    const transportMode: ChatConstraints['travel_mode'] = editSource.transport_mode === 'driving'
+      ? 'car'
+      : editSource.transport_mode === 'bicycling' ? 'motorcycle'
+        : editSource.transport_mode || 'motorcycle'
+    const editConstraints: ChatConstraints = {
+      trip_date: sourceDate,
+      group_size: editSource.group_size ?? trip.groupSize,
+      start_time: localTime(editSource.start_at || editSource.stops[0]?.start_at) || trip.startTime,
+      return_deadline: localTime(editSource.return_deadline) || trip.endTime,
+      budget_vnd: editSource.budget_vnd ?? trip.budget,
+      travel_mode: transportMode,
+      travel_mode_confirmed: true,
+      intent_weights: intentWeights,
+      locked_pois: editSource.stops.map((stop) => stop.poi.name),
+      is_complete: true,
+      missing_fields: [],
+      clarification_question_vi: null,
+    }
+    applyConstraints(editConstraints)
+    setJourneyLockedPois(editSource.stops.map((stop) => stop.poi.id))
+    const closestPoi = (latitude: number | null | undefined, longitude: number | null | undefined, label: string | null | undefined) => {
+      const byName = findMatchingPoi(label || '', pois)
+      if (byName) return byName.id
+      if (latitude == null || longitude == null) return ''
+      const nearest = [...pois].sort((a, b) =>
+        Math.hypot(a.latitude - latitude, a.longitude - longitude) - Math.hypot(b.latitude - latitude, b.longitude - longitude),
+      )[0]
+      return nearest && Math.hypot(nearest.latitude - latitude, nearest.longitude - longitude) <= 0.005 ? nearest.id : ''
+    }
+    setOriginId(closestPoi(editSource.origin_latitude, editSource.origin_longitude, editSource.origin_label))
+    setDestinationId(closestPoi(editSource.destination_latitude, editSource.destination_longitude, editSource.destination_label))
+    setLockedOverrides(Object.fromEntries(editSource.stops.map((stop, index) => [index, stop.poi.id])))
+    setConversationId(makeConversationId())
+    setPlanningTurns([locale === 'en' ? 'I want to adjust this saved itinerary.' : 'Tôi muốn điều chỉnh lịch trình đã lưu này.'])
+    setMessages([
+      { id: 'edit-request', role: 'user', text: locale === 'en' ? 'I want to adjust this saved itinerary.' : 'Tôi muốn điều chỉnh lịch trình đã lưu này.', time: t('chat.justNow') },
+      {
+        id: 'edit-context', role: 'assistant', time: t('chat.justNow'),
+        text: locale === 'en'
+          ? `I loaded your saved route from ${editSource.origin_label || 'the starting point'} to ${editSource.destination_label || 'the destination'}. The current stops, time, group size, budget, and interests are ready. Tell me what to add, remove, or change; the planner will recheck time, budget, route, and availability.`
+          : `Mình đã nạp tuyến đã lưu từ ${editSource.origin_label || 'điểm xuất phát'} đến ${editSource.destination_label || 'điểm đến'}. Các điểm dừng, thời gian, số người, ngân sách và sở thích đã sẵn sàng. Bạn hãy nhắn muốn thêm, bỏ hoặc đổi điểm nào; hệ thống sẽ kiểm tra lại thời gian, ngân sách, tuyến đường và ca hoạt động.`,
+      },
+    ])
+    setDraft('')
+    setError('')
+    setPlanPreview(null)
+    setPreviewRequest(null)
+    setMobileTab('chat')
+  }, [applyConstraints, date, editSource, locale, pois, setConversationId, setDate, setDestinationId, setDraft, setError, setJourneyLockedPois, setMessages, setOriginId, setPlanningTurns, setPreviewRequest, setPlanPreview, setLockedOverrides, setMobileTab, t, trip.budget, trip.endTime, trip.groupSize, trip.startTime])
 
   const scrollToBottom = (smooth = true) => {
     const el = feedContainerRef.current
@@ -462,6 +529,7 @@ export function ChatPage() {
       const effectiveDate = planningConstraints?.trip_date || date
       if (planningConstraints) {
         applyConstraints(planningConstraints)
+        setLockedOverrides({})
         if (planningConstraints.trip_date) setDate(planningConstraints.trip_date)
         setPlanPreview(null)
         setPreviewRequest(null)

@@ -19,6 +19,7 @@ import {
   History,
   X,
   ShieldAlert,
+  MessageSquareText,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -27,6 +28,7 @@ import {
   apiErrorMessage,
   beginBookingCheckout,
   cancelBooking,
+  completeItinerary,
   createCollaborationInvite,
   createShareLink,
   getOwnerCollaborationProposals,
@@ -64,6 +66,10 @@ const getReasonCopy = (code: string, locale: string): string => {
     RULE_BASELINE_RANKER: 'Xếp hạng dùng quy tắc nhóm mục đích; chưa được kiểm chứng bằng lựa chọn thật của du khách.',
     ML_RANKER: 'Mô hình học máy chỉ sắp xếp các phương án đã vượt qua kiểm tra khả thi.',
     BOOTSTRAP_PILOT_RANKER: 'Ranker pilot học từ nhãn quy tắc yếu; đây là thử nghiệm, chưa chứng minh chất lượng với lựa chọn thật của du khách.',
+    COMMUNITY_RATING_SIGNAL: 'Điểm sao cộng đồng là tín hiệu phụ có làm trơn theo số lượt đánh giá; các ràng buộc thời gian, ngân sách và ca vẫn được kiểm tra riêng.',
+    WEATHER_FORECAST_USED: 'Dùng dự báo mưa theo ngày của Open-Meteo để Ranker cân nhắc trải nghiệm trong nhà/ngoài trời.',
+    RAIN_FORECAST: 'Dự báo có mưa; trải nghiệm trong nhà có thể được ưu tiên hơn.',
+    WEATHER_FORECAST_UNAVAILABLE: 'Không có dự báo thời tiết cho ngày này nên thời tiết không được dùng để xếp hạng.',
   }
   const en: Record<string, string> = {
     INTENT_MATCH: 'Prioritized experience perfectly matching your chosen preferences.',
@@ -80,6 +86,10 @@ const getReasonCopy = (code: string, locale: string): string => {
     RULE_BASELINE_RANKER: 'Ranking uses intent/category rules; it has not been validated against real traveler choices.',
     ML_RANKER: 'The machine-learning model only orders candidates that already passed feasibility checks.',
     BOOTSTRAP_PILOT_RANKER: 'This pilot ranker learned from weak rule-generated labels; it is experimental and not validated against real traveler choices.',
+    COMMUNITY_RATING_SIGNAL: 'Published traveler ratings are a small, sample-smoothed ranking signal; time, budget, and slot feasibility remain separate hard checks.',
+    WEATHER_FORECAST_USED: 'Open-Meteo daily rain forecast is used to help the ranker account for indoor and outdoor experiences.',
+    RAIN_FORECAST: 'Rain is forecast; indoor experiences may receive a preference adjustment.',
+    WEATHER_FORECAST_UNAVAILABLE: 'No forecast was available for this trip date, so weather was not used in ranking.',
   }
   const dict = locale === 'en' ? en : vi
   return dict[code] ?? code.replaceAll('_', ' ')
@@ -154,6 +164,7 @@ export function ItineraryPage() {
   >([])
   const [reviewText, setReviewText] = useState('')
   const [rating, setRating] = useState(5)
+  const [completionBusy, setCompletionBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [bookingQuantity, setBookingQuantity] = useState(1)
@@ -406,6 +417,25 @@ export function ItineraryPage() {
     }
   }
 
+  async function handleCompleteItinerary() {
+    setCompletionBusy(true)
+    try {
+      const completed = await completeItinerary(id)
+      setItinerary((current) => current ? {
+        ...current,
+        feasibility_status: completed.status,
+        completed_at: completed.completed_at,
+      } : current)
+      setNotice(locale === 'en'
+        ? 'Trip saved as completed. You can now review each place you visited.'
+        : 'Đã lưu chuyến đi là hoàn tất. Giờ bạn có thể đánh giá từng địa điểm đã ghé.')
+    } catch (reason) {
+      setNotice(apiErrorMessage(reason, locale))
+    } finally {
+      setCompletionBusy(false)
+    }
+  }
+
   async function holdStop(stopId: string) {
     setBookingBusyStopId(stopId)
     try {
@@ -546,6 +576,7 @@ export function ItineraryPage() {
   const lastStop = itinerary.stops[itinerary.stops.length - 1]
   const tripStartAt = itinerary.start_at || itinerary.stops[0]?.start_at
   const estimatedReturnAt = itinerary.estimated_return_at || lastStop?.end_at
+  const canCompleteTrip = Boolean(lastStop && new Date(lastStop.end_at).getTime() <= currentTimeMs)
   const totalMinutes = lastStop
     ? Math.round(
         (new Date(estimatedReturnAt || lastStop.end_at).getTime() -
@@ -558,10 +589,14 @@ export function ItineraryPage() {
     <div className="itinerary-page-3d page-wrap">
       {/* Top Navigation & Actions */}
       <div className="itinerary-topbar">
-        <Link to="/planner" className="btn-back-link">
+        <Link to="/planner" state={{ editItinerary: itinerary }} className="btn-back-link">
           <ArrowLeft size={16} /> {t('itinerary.backToEdit')}
         </Link>
         <div className="topbar-actions">
+          <Link to="/chat" state={{ editItinerary: itinerary }} className="btn-action-icon" title={locale === 'en' ? 'Adjust this itinerary in chat' : 'Điều chỉnh lịch trình bằng chatbox'}>
+            <MessageSquareText size={15} />
+            <span>{locale === 'en' ? 'Adjust in chat' : 'Sửa bằng chatbox'}</span>
+          </Link>
           <button
             type="button"
             className="btn-action-icon"
@@ -936,6 +971,37 @@ export function ItineraryPage() {
                       )}
                     </div>
 
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm" onClick={(event) => event.stopPropagation()}>
+                      {stop.poi.community_rating_average != null && (stop.poi.community_rating_count ?? 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-amber-500" title={locale === 'en' ? 'Local Explorer traveler rating' : 'Đánh giá của du khách Local Explorer'}>
+                          <Star size={14} fill="currentColor" /> {stop.poi.community_rating_average.toFixed(1)}
+                          <span className="text-slate-400">({stop.poi.community_rating_count} {locale === 'en' ? 'reviews' : 'đánh giá'})</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">{locale === 'en' ? 'No traveler ratings yet' : 'Chưa có đánh giá từ du khách'}</span>
+                      )}
+                      {stop.ranking_score != null && (
+                        <span className="text-slate-400" title={locale === 'en' ? 'Normalized ordering score, not a probability' : 'Điểm dùng để sắp thứ tự, không phải xác suất'}>
+                          {locale === 'en' ? 'Ranking score' : 'Điểm xếp hạng'}: {stop.ranking_score.toFixed(2)}/1
+                        </span>
+                      )}
+                      {itinerary.completed_at && (
+                        <Link className="font-semibold text-emerald-400 underline" to={`/places/${encodeURIComponent(stop.poi.id)}#pr-title`}>
+                          {locale === 'en' ? 'Review this place' : 'Đánh giá địa điểm này'}
+                        </Link>
+                      )}
+                    </div>
+                    {(stop.ranking_reasons?.length ?? 0) > 0 && (
+                      <details className="mt-2 text-xs text-slate-400" onClick={(event) => event.stopPropagation()}>
+                        <summary className="w-fit cursor-pointer font-semibold text-emerald-300">
+                          {locale === 'en' ? 'Why this stop was suggested' : 'Vì sao gợi ý điểm này?'}
+                        </summary>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {stop.ranking_reasons?.map((code) => <li key={code}>{getReasonCopy(code, locale)}</li>)}
+                        </ul>
+                      </details>
+                    )}
+
                     <div className="stop-provenance">
                       <span className={`provenance-state provenance-${stop.data_status}`}>
                         {locale === 'en'
@@ -1222,6 +1288,40 @@ export function ItineraryPage() {
           </div>
         </div>
 
+        <div className="my-5 grid gap-3 md:grid-cols-2">
+          {itinerary.explanation.weather_forecast ? (
+            <section className="rounded-xl border border-sky-500/30 bg-sky-950/30 p-4" aria-label={locale === 'en' ? 'Weather forecast' : 'Dự báo thời tiết'}>
+              <strong>{locale === 'en' ? 'Weather for this trip' : 'Thời tiết ngày đi'}</strong>
+              <p className="mt-2 text-sm">
+                {itinerary.explanation.weather_forecast.forecast_date}: {locale === 'en' ? 'rain chance' : 'khả năng mưa'}{' '}
+                {itinerary.explanation.weather_forecast.precipitation_probability_pct}% ·{' '}
+                {itinerary.explanation.weather_forecast.precipitation_sum_mm.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')} mm
+              </p>
+              <p className="mt-1 text-xs text-slate-400">{locale === 'en' ? 'A forecast, not a guarantee. Updated' : 'Đây là dự báo, không phải cam kết. Cập nhật'} {dateTimeLabel(itinerary.explanation.weather_forecast.retrieved_at, locale)}.</p>
+              <a className="mt-1 inline-block text-xs text-sky-300 underline" href={itinerary.explanation.weather_forecast.source_url} target="_blank" rel="noreferrer">
+                {itinerary.explanation.weather_forecast.source} · {locale === 'en' ? 'source' : 'nguồn'}
+              </a>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-slate-500/30 bg-slate-900/40 p-4" aria-label={locale === 'en' ? 'Weather forecast unavailable' : 'Chưa có dự báo thời tiết'}>
+              <strong>{locale === 'en' ? 'Weather forecast unavailable' : 'Chưa có dự báo thời tiết'}</strong>
+              <p className="mt-2 text-sm text-slate-300">{getReasonCopy('WEATHER_FORECAST_UNAVAILABLE', locale)}</p>
+            </section>
+          )}
+          {itinerary.explanation.flood_risk && (
+            <section className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4" aria-label={locale === 'en' ? 'Flood status' : 'Tình trạng ngập'}>
+              <strong>{locale === 'en' ? 'Flood status: unknown' : 'Tình trạng ngập: chưa rõ'}</strong>
+              <p className="mt-2 text-sm text-slate-300">
+                {locale === 'en' ? itinerary.explanation.flood_risk.message_en : itinerary.explanation.flood_risk.message_vi}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">{locale === 'en' ? 'Rain forecast is not used as a flood observation; no route-segment flood probability was calculated.' : 'Dự báo mưa không được xem là báo cáo ngập; chưa tính xác suất ngập cho từng đoạn đường.'}</p>
+              {!itinerary.explanation.flood_risk.model_available && (
+                <p className="mt-1 text-xs text-amber-300">{locale === 'en' ? 'A verified flood model is not available for operational use.' : 'Chưa có mô hình ngập đủ xác minh để dùng vận hành.'}</p>
+              )}
+            </section>
+          )}
+        </div>
+
         <div className="reason-code-grid">
           {itinerary.explanation.reason_codes.map((code) => (
             <div key={code} className="reason-code-item">
@@ -1271,6 +1371,22 @@ export function ItineraryPage() {
         </div>
       </div>
 
+      {user?.role === 'traveler' && !itinerary.completed_at && (
+        <section className="feedback-section-card" aria-label={locale === 'en' ? 'Complete trip' : 'Hoàn tất chuyến đi'}>
+          <div className="feedback-header">
+            <CheckCircle2 size={20} className="text-emerald" />
+            <div>
+              <h3>{locale === 'en' ? 'Confirm that you completed this trip' : 'Xác nhận chuyến đi đã hoàn tất'}</h3>
+              <p>{locale === 'en' ? 'This itinerary is already saved in your history. After the last scheduled place, mark it complete to unlock a rating for each visited place.' : 'Lịch trình đã được lưu tự động trong lịch sử. Sau khi kết thúc địa điểm cuối cùng, đánh dấu hoàn tất để mở đánh giá từng nơi đã ghé.'}</p>
+            </div>
+          </div>
+          <button type="button" className="btn-primary-3d btn-sm" disabled={!canCompleteTrip || completionBusy} onClick={() => void handleCompleteItinerary()}>
+            {completionBusy ? (locale === 'en' ? 'Saving…' : 'Đang lưu…') : (locale === 'en' ? 'Mark trip complete' : 'Đánh dấu chuyến đi hoàn tất')}
+          </button>
+          {!canCompleteTrip && <p className="mt-2 text-sm text-slate-400">{locale === 'en' ? 'Available after the last scheduled stop ends.' : 'Nút sẽ mở khi khung giờ địa điểm cuối cùng kết thúc.'}</p>}
+        </section>
+      )}
+
       {/* Post-trip Review Section */}
       <div className="feedback-section-card">
         <div className="feedback-header">
@@ -1281,7 +1397,7 @@ export function ItineraryPage() {
           </div>
         </div>
 
-        {user?.role === 'traveler' ? (
+        {user?.role === 'traveler' && itinerary.completed_at ? (
           <form onSubmit={handleFeedback} className="feedback-form-layout">
             <div className="feedback-rating-row">
               <span className="rating-label">{t('itinerary.satisfactionLevel')}</span>
@@ -1331,6 +1447,8 @@ export function ItineraryPage() {
               <ArrowRight size={16} />
             </button>
           </form>
+        ) : user?.role === 'traveler' ? (
+          <p className="feedback-guest-notice">{locale === 'en' ? 'Complete this itinerary before sending a trip review.' : 'Hãy đánh dấu lịch trình hoàn tất trước khi gửi đánh giá chuyến đi.'}</p>
         ) : (
           <div className="feedback-guest-notice">
             <p>

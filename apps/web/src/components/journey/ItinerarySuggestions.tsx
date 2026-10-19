@@ -22,9 +22,13 @@ export function ItinerarySuggestions({ data, locale, busy, onChoose, onCustomize
       <p className="mt-2 text-sm">{en ? 'Compare stops, experience costs and travel time. Choose an option to recheck availability and open its route, or customize it first.' : 'So sánh điểm dừng, chi phí trải nghiệm và thời gian di chuyển. Chọn một phương án để kiểm tra lại chỗ và xem tuyến đường, hoặc tùy chỉnh trước.'}</p>
       <p className="mt-2 text-sm">{en ? 'Experience prices exclude transport and personal spending. Travel times are estimates; availability is not reserved.' : 'Chi phí dưới đây là chi phí trải nghiệm, chưa gồm đi lại và chi tiêu cá nhân. Thời gian di chuyển là ước tính; chỗ chưa được giữ.'}</p>
       <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700" role="status">
-        {data.ranking_source === 'gemini'
-          ? (en ? 'Gemini ranked feasible options' : 'Gemini xếp hạng các phương án khả thi')
-          : (en ? 'Rule-based feasibility ranking' : 'Xếp hạng theo logic và điều kiện khả thi')}
+        {data.ranking_source === 'ranker+gemini'
+          ? (en ? 'Ranker ordering · Gemini explanations' : 'Ranker xếp thứ tự · Gemini giải thích')
+          : data.ranking_source === 'ranker'
+            ? (en ? 'Ranker ordered feasible itineraries' : 'Ranker xếp hạng lịch trình khả thi')
+            : data.ranking_source === 'gemini'
+              ? (en ? 'Gemini ranked feasible options' : 'Gemini xếp hạng các phương án khả thi')
+              : (en ? 'Rule-based feasibility ranking' : 'Xếp hạng theo logic và điều kiện khả thi')}
       </p>
       {data.returned_count < 5 && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{en ? `Found ${data.returned_count} distinct feasible options within your constraints. To find more, widen the time window or remove optional pinned stops.` : `Hiện tìm được ${data.returned_count} phương án khác nhau đáp ứng điều kiện. Để có thêm lựa chọn, bạn có thể mở rộng khung giờ hoặc bỏ bớt điểm đã ghim.`}</p>}
     </div>
@@ -43,6 +47,7 @@ export function ItinerarySuggestions({ data, locale, busy, onChoose, onCustomize
             <span className="rounded-lg bg-emerald-50 px-2 py-1">{plan.estimated_cost_vnd.toLocaleString('vi-VN')} ₫ / {en ? 'group' : 'nhóm'}</span>
             <span className="rounded-lg bg-slate-100 px-2 py-1">{plan.total_travel_min} {en ? 'min travel' : 'phút di chuyển'}</span>
             <span className="rounded-lg bg-slate-100 px-2 py-1">{plan.stops.length} {en ? 'stops' : 'điểm dừng'}</span>
+            {option.ranker_score != null && <span className="rounded-lg bg-violet-50 px-2 py-1 text-violet-800" title={en ? 'Mean Ranker and traveler-rating score across ranked stops; not a probability' : 'Điểm Ranker và đánh giá du khách trung bình; không phải xác suất'}>{en ? 'Ranker' : 'Ranker'} {option.ranker_score.toFixed(2)}/1</span>}
           </div>
           <p className="text-xs text-slate-500">{en ? 'From' : 'Xuất phát'}: {plan.origin_label}</p>
           <ol className="my-3 flex-1 space-y-3">

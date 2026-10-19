@@ -1,6 +1,6 @@
 """Place reviews written by travelers, the Google Maps rating shown beside them, and review moderation for administrators.
 
-Who may review a place: a signed-in traveler who has planned an itinerary that includes it. The two sources are never
+Who may review a place: a signed-in traveler who completed an itinerary that includes it. The two sources are never
 merged into one score: the page shows the community's reviews and Google's rating as separate blocks.
 """
 
@@ -36,10 +36,11 @@ def _public_poi(db: Session, poi_id: str) -> POI:
     return poi
 
 
-def has_planned(db: Session, user_id: str, poi_id: str) -> bool:
-    """The user owns an itinerary that has a stop at this place."""
+def has_completed_visit(db: Session, user_id: str, poi_id: str) -> bool:
+    """The traveler owns a completed itinerary that included this place."""
     return db.scalar(select(ItineraryStop.id).join(Itinerary, Itinerary.id == ItineraryStop.itinerary_id)
-                     .where(Itinerary.user_id == user_id, ItineraryStop.poi_id == poi_id).limit(1)) is not None
+                     .where(Itinerary.user_id == user_id, Itinerary.completed_at.is_not(None),
+                            ItineraryStop.status == "completed", ItineraryStop.poi_id == poi_id).limit(1)) is not None
 
 
 def _own_view(review: PlaceReview) -> dict:
@@ -76,8 +77,8 @@ def place_reviews(poi_id: str, db: Session = Depends(get_db), limit: int = Query
 def my_place_review(poi_id: str, user: User = Depends(require_user(P.REVIEW_WRITE)), db: Session = Depends(get_db)):
     _public_poi(db, poi_id)
     mine = db.scalar(select(PlaceReview).where(PlaceReview.poi_id == poi_id, PlaceReview.user_id == user.id))
-    allowed = mine is not None or has_planned(db, user.id, poi_id)
-    return {"can_review": allowed, "reason": None if allowed else "no_itinerary", "review": _own_view(mine) if mine else None}
+    allowed = mine is not None or has_completed_visit(db, user.id, poi_id)
+    return {"can_review": allowed, "reason": None if allowed else "no_completed_visit", "review": _own_view(mine) if mine else None}
 
 
 @router.put("/pois/{poi_id}/review")
@@ -88,8 +89,8 @@ def write_place_review(poi_id: str, payload: PlaceReviewWrite, user: User = Depe
     comment = check_comment(payload.comment)
     review = db.scalar(select(PlaceReview).where(PlaceReview.poi_id == poi_id, PlaceReview.user_id == user.id))
     if review is None:
-        if not has_planned(db, user.id, poi_id):
-            raise HTTPException(status_code=403, detail={"code": "REVIEW_NOT_ALLOWED", "message": "Plan an itinerary that includes this place to review it."})
+        if not has_completed_visit(db, user.id, poi_id):
+            raise HTTPException(status_code=403, detail={"code": "REVIEW_NOT_ALLOWED", "message": "Complete an itinerary that includes this place before reviewing it."})
         review = PlaceReview(id=str(uuid4()), poi_id=poi_id, user_id=user.id, rating=payload.rating, comment=comment,
                              visited_on=payload.visited_on, created_at=_now())
         db.add(review)

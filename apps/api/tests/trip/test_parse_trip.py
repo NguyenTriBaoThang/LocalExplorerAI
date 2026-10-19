@@ -10,8 +10,8 @@ DESTS = {"tp-hcm": "TP. Hồ Chí Minh"}
 TODAY = dt.date(2026, 9, 25)
 
 
-def run(args):
-    return parse_trip(FakeClient([reply(("record_trip", args))]), "m", "...", DESTS, TODAY)
+def run(args, message="..."):
+    return parse_trip(FakeClient([reply(("record_trip", args))]), "m", message, DESTS, TODAY)
 
 
 def test_parses_trip():
@@ -27,6 +27,25 @@ def test_unsupported_destination_message():
 def test_unsupported_marker_is_rejected():
     with pytest.raises(UnsupportedDestination, match="Hiện mình chỉ hỗ trợ lịch trình ở TP. Hồ Chí Minh."):
         run({"destination": "unsupported", "days": 3, "budget": 1})
+
+
+@pytest.mark.parametrize("message", [
+    "Sài Gòn 2 ngày, thích cafe",
+    "Sai Gon 2 ngay, thich cafe",
+    "TPHCM 2 ngày",
+    "HCMC 2 ngày",
+    "Thành phố Hồ Chí Minh 2 ngày",
+])
+def test_hcm_alias_resolves_unsupported_model_output(message):
+    trip = run({"destination": "unsupported", "days": 2, "budget": 1_000_000}, message)
+    assert trip.destination == "tp-hcm"
+
+
+def test_empty_destination_catalog_is_reported_before_calling_ai():
+    client = FakeClient([])
+    with pytest.raises(TripParseError, match="Danh mục địa điểm lập lịch trình chưa được nạp"):
+        parse_trip(client, "m", "Sài Gòn 2 ngày", {}, TODAY)
+    assert client.calls == []
 
 
 def test_too_many_days():

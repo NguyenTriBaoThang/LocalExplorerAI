@@ -47,7 +47,7 @@ export function createLandmarkScene(container: HTMLElement, origin: GeoPoint): L
   const transform = new TransformControls(camera, renderer.domElement)
   transform.setSpace('world')
   transform.setSize(1.1)
-  scene.add(transform.getHelper())
+  scene.add(transform)
   transform.addEventListener('dragging-changed', (event) => { orbit.enabled = !event.value })
 
   scene.add(new THREE.HemisphereLight('#dbeafe', '#334155', 1.1))

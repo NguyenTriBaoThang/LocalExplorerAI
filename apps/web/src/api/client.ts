@@ -352,8 +352,8 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanRequest; preview: Itinerary }
-export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' }
+export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; ranker_score?: number | null; request: PlanRequest; preview: Itinerary }
+export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' | 'ranker' | 'ranker+gemini' }
 
 export async function getItinerarySuggestions(payload: PlanRequest): Promise<ItinerarySuggestions> {
   const { data } = await api.post<ItinerarySuggestions>('/itineraries/suggestions', payload, { timeout: 180000 })
@@ -377,6 +377,11 @@ export async function confirmItinerary(payload: PlanRequest, confirmation_token:
 
 export async function getItinerary(id: string): Promise<Itinerary> {
   const { data } = await api.get<Itinerary>(`/itineraries/${id}`)
+  return data
+}
+
+export async function completeItinerary(id: string): Promise<{ itinerary_id: string; status: string; completed_at: string }> {
+  const { data } = await api.post<{ itinerary_id: string; status: string; completed_at: string }>(`/itineraries/${encodeURIComponent(id)}/complete`)
   return data
 }
 /** The server states password-policy failures in English; show them in the visitor's language. */

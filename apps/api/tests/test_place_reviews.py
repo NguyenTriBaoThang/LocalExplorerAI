@@ -18,9 +18,8 @@ from tests.test_portal_platform import _attended_booking
 
 def _plan(db_session, user, experience):
     """An itinerary of this user that includes the experience's place."""
-    slot = add_slot(db_session, experience)
-    now = datetime.now(timezone.utc)
-    itinerary = Itinerary(user_id=user.id, group_size=1, budget_vnd=500_000, travel_mode="driving", start_at=now, end_at=now + timedelta(hours=4),
+    slot = add_slot(db_session, experience, start="2020-10-01T02:00:00+00:00")
+    itinerary = Itinerary(user_id=user.id, group_size=1, budget_vnd=500_000, travel_mode="driving", start_at=slot.start_at, end_at=slot.start_at + timedelta(hours=4),
                           status="feasible", constraints={}, estimated_cost_vnd=100_000)
     db_session.add(itinerary)
     db_session.flush()
@@ -28,6 +27,13 @@ def _plan(db_session, user, experience):
                                  arrival_at=slot.start_at, departure_at=slot.end_at, start_at=slot.start_at, end_at=slot.end_at,
                                  activity_duration_min=60, cost_vnd=100_000))
     db_session.commit()
+    return itinerary
+
+
+def _complete(client, itinerary):
+    response = client.post(f"/api/itineraries/{itinerary.id}/complete")
+    assert response.status_code == 200, response.text
+    assert response.json()["completed_at"] is not None
 
 
 # ---------------------------------------------------------------- writing and reading place reviews
@@ -43,11 +49,15 @@ def test_only_a_traveler_who_planned_the_place_may_review_it(client, db_session,
     traveler = make_user(db_session, "traveler")
     sign_in(client, traveler)
     status = client.get(f"/api/pois/{poi}/reviews/mine").json()
-    assert status == {"can_review": False, "reason": "no_itinerary", "review": None}
+    assert status == {"can_review": False, "reason": "no_completed_visit", "review": None}
     refused = client.put(f"/api/pois/{poi}/review", json={"rating": 5, "comment": "Tuyệt"})
     assert refused.status_code == 403 and refused.json()["error"]["code"] == "REVIEW_NOT_ALLOWED"
 
-    _plan(db_session, traveler, sample_experience)
+    itinerary = _plan(db_session, traveler, sample_experience)
+    planned = client.get(f"/api/pois/{poi}/reviews/mine").json()
+    assert planned == {"can_review": False, "reason": "no_completed_visit", "review": None}
+    assert client.put(f"/api/pois/{poi}/review", json={"rating": 4}).status_code == 403
+    _complete(client, itinerary)
     assert client.get(f"/api/pois/{poi}/reviews/mine").json()["can_review"] is True
     created = client.put(f"/api/pois/{poi}/review", json={"rating": 4, "comment": "Rất đẹp", "visited_on": date.today().isoformat()})
     assert created.status_code == 200 and created.json()["rating"] == 4
@@ -63,8 +73,9 @@ def test_only_a_traveler_who_planned_the_place_may_review_it(client, db_session,
 def test_one_review_per_user_that_can_be_edited_and_removed(client, db_session, sample_experience):
     poi = sample_experience.poi_id
     traveler = make_user(db_session, "traveler")
-    _plan(db_session, traveler, sample_experience)
+    itinerary = _plan(db_session, traveler, sample_experience)
     sign_in(client, traveler)
+    _complete(client, itinerary)
     client.put(f"/api/pois/{poi}/review", json={"rating": 3, "comment": "Tạm được"})
     edited = client.put(f"/api/pois/{poi}/review", json={"rating": 5, "comment": "Đẹp hơn mong đợi"}).json()
     assert edited["rating"] == 5 and edited["updated_at"] is not None
@@ -86,8 +97,9 @@ def test_one_review_per_user_that_can_be_edited_and_removed(client, db_session, 
 def test_links_and_future_visit_dates_are_refused(client, db_session, sample_experience):
     poi = sample_experience.poi_id
     traveler = make_user(db_session, "traveler")
-    _plan(db_session, traveler, sample_experience)
+    itinerary = _plan(db_session, traveler, sample_experience)
     sign_in(client, traveler)
+    _complete(client, itinerary)
     spam = client.put(f"/api/pois/{poi}/review", json={"rating": 5, "comment": "Xem thêm tại https://spam.example"})
     assert spam.status_code == 422 and spam.json()["error"]["code"] == "REVIEW_REJECTED"
     future = client.put(f"/api/pois/{poi}/review", json={"rating": 5, "visited_on": (date.today() + timedelta(days=3)).isoformat()})
@@ -97,9 +109,10 @@ def test_links_and_future_visit_dates_are_refused(client, db_session, sample_exp
 
 def test_my_reviews_lists_places_and_experiences(client, db_session, sample_experience):
     traveler = make_user(db_session, "traveler")
-    _plan(db_session, traveler, sample_experience)
+    itinerary = _plan(db_session, traveler, sample_experience)
     booking = _attended_booking(db_session, sample_experience, traveler)
     sign_in(client, traveler)
+    _complete(client, itinerary)
     client.put(f"/api/pois/{sample_experience.poi_id}/review", json={"rating": 4})
     client.post(f"/api/bookings/{booking.id}/review", json={"rating": 5, "comment": "Hay"})
     mine = client.get("/api/me/reviews").json()
@@ -129,8 +142,9 @@ def test_author_edits_and_deletes_their_experience_review(client, db_session, sa
 
 def _review_as(client, db_session, experience, rating=5, comment="Bình luận"):
     traveler = make_user(db_session, "traveler")
-    _plan(db_session, traveler, experience)
+    itinerary = _plan(db_session, traveler, experience)
     sign_in(client, traveler)
+    _complete(client, itinerary)
     client.put(f"/api/pois/{experience.poi_id}/review", json={"rating": rating, "comment": comment})
     return traveler
 

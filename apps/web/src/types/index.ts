@@ -149,6 +149,8 @@ export interface POI {
   data_revision?: number
   data_mode?: DataMode
   data_status?: 'verified' | 'stale' | 'simulated' | 'unverified'
+  community_rating_average?: number | null
+  community_rating_count?: number
 }
 
 export interface SourcePhoto {
@@ -292,6 +294,8 @@ export interface ItineraryStop {
   data_status: 'verified' | 'stale' | 'simulated' | 'unverified'
   slot_confirmed_at?: string | null
   slot_expires_at?: string | null
+  ranking_score?: number | null
+  ranking_reasons?: string[]
   source_evidence: SourceEvidence[]
   slot_source_evidence: SourceEvidence[]
   poi: POI
@@ -306,6 +310,10 @@ export interface Itinerary {
   estimated_cost_vnd: number
   total_travel_min: number
   group_size?: number
+  budget_vnd?: number
+  transport_mode?: PlanRequest['transport_mode']
+  intent_weights?: Record<string, number>
+  completed_at?: string | null
   start_at?: string
   return_deadline?: string
   estimated_return_at?: string
@@ -325,6 +333,22 @@ export interface Itinerary {
     uncertainty: string[]
     ranking_model_version?: string | null
     ranking_source?: 'rule_baseline' | 'ml_model' | 'bootstrap_ml_model' | null
+    weather_forecast?: {
+      location: string
+      forecast_date: string
+      precipitation_probability_pct: number
+      precipitation_sum_mm: number
+      retrieved_at: string
+      source: string
+      source_url: string
+      attribution: string
+    } | null
+    flood_risk?: {
+      status: 'unknown'
+      model_available: boolean
+      message_vi: string
+      message_en: string
+    } | null
   }
 }
 
@@ -540,7 +564,7 @@ export interface PlaceReviewsResponse {
 
 export interface MyPlaceReviewState {
   can_review: boolean
-  reason: 'no_itinerary' | null
+  reason: 'no_completed_visit' | null
   review: {
     id: string
     rating: number

@@ -9,6 +9,7 @@ from app.api.dependencies import get_llm_provider
 from app.adapters.llm.provider import StructuredOutputProvider
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError, UnsupportedTravelMode
 from app.db.session import get_db
+from app.core.enums import ItineraryStatus
 from app.models.entities import Event, Experience, ExperienceSlot, Feedback, Itinerary, ItineraryStop, ItineraryVersion, User
 from app.schemas.ai import FeedbackLabelRequest
 from app.schemas.planner import ItinerarySuggestionsResponse, PlanConfirmationRequest, PlanPreviewResponse, PlanRequest, PlanResponse
@@ -168,7 +169,33 @@ def list_my_itineraries(user: User = Depends(require_user(P.ITINERARY_LIST)), db
     records = db.scalars(select(Itinerary).where(Itinerary.user_id == user.id).order_by(Itinerary.created_at.desc())).all()
     return [{"id": item.id, "planned_date": item.planned_date, "start_time": item.start_time,
              "return_deadline": item.return_deadline, "status": item.status, "estimated_cost_vnd": item.estimated_cost_vnd,
-             "current_version": item.current_version, "share_enabled": bool(item.share_token)} for item in records]
+             "completed_at": item.completed_at, "current_version": item.current_version,
+             "share_enabled": bool(item.share_token)} for item in records]
+
+
+@router.post("/itineraries/{itinerary_id}/complete")
+def complete_itinerary(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_FEEDBACK)), db: Session = Depends(get_db)):
+    itinerary = db.get(Itinerary, itinerary_id)
+    if itinerary is None:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
+    _owner_only(itinerary, user)
+    if itinerary.completed_at is not None:
+        return {"itinerary_id": itinerary.id, "status": itinerary.status, "completed_at": itinerary.completed_at}
+    stops = db.scalars(select(ItineraryStop).where(ItineraryStop.itinerary_id == itinerary.id)).all()
+    if not stops:
+        raise HTTPException(status_code=409, detail={"code": "ITINERARY_EMPTY", "message": "An itinerary without stops cannot be completed."})
+    last_stop_end = max(stop.departure_at or stop.end_at for stop in stops)
+    if last_stop_end.tzinfo is None or last_stop_end.utcoffset() is None:
+        last_stop_end = last_stop_end.replace(tzinfo=timezone.utc)
+    if last_stop_end > datetime.now(timezone.utc):
+        raise HTTPException(status_code=409, detail={"code": "TRIP_NOT_FINISHED", "message": "You can mark the trip complete after its last scheduled stop."})
+    completed_at = datetime.now(timezone.utc)
+    itinerary.completed_at = completed_at
+    itinerary.status = ItineraryStatus.COMPLETED.value
+    for stop in stops:
+        stop.status = "completed"
+    db.commit()
+    return {"itinerary_id": itinerary.id, "status": itinerary.status, "completed_at": completed_at}
 
 
 @router.get("/itinerary-comparisons")
@@ -254,8 +281,8 @@ def submit_feedback(itinerary_id: str, payload: FeedbackLabelRequest, user: User
     if itinerary is None:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Itinerary not found."})
     _owner_only(itinerary, user)
-    if itinerary.end_at and itinerary.end_at.replace(tzinfo=itinerary.end_at.tzinfo or timezone.utc) > datetime.now(timezone.utc):
-        raise HTTPException(status_code=409, detail={"code": "TRIP_NOT_FINISHED", "message": "Feedback is available after the itinerary has finished."})
+    if itinerary.completed_at is None:
+        raise HTTPException(status_code=409, detail={"code": "TRIP_NOT_FINISHED", "message": "Mark the itinerary complete before sending post-trip feedback."})
     feedback = Feedback(id=secrets.token_hex(16), itinerary_id=itinerary.id, user_id=user.id,
                         rating=payload.rating, comment=payload.review_text)
     db.add(feedback)

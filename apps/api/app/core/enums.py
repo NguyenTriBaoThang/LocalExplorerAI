@@ -45,6 +45,7 @@ class ItineraryStatus(StrEnum):
     TENTATIVE = "tentative"
     ACCEPTED = "accepted"
     INVALIDATED = "invalidated"
+    COMPLETED = "completed"
 
 
 class PriceBasis(StrEnum):

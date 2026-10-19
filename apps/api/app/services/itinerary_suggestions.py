@@ -13,6 +13,29 @@ from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 STYLES = ('balanced', 'budget', 'nearby', 'relaxed', 'interests')
 
 
+def _rank_options_by_model_score(options: list[dict]) -> bool:
+    """Keep the five options ordered by their mean per-stop Ranker score."""
+    found_ranker_score = False
+    for option in options:
+        preview = option["preview"]
+        scores = [
+            float(stop["ranking_score"])
+            for stop in preview.get("stops", [])
+            if stop.get("ranking_score") is not None
+        ]
+        source = (preview.get("explanation") or {}).get("ranking_source")
+        option["ranker_score"] = round(sum(scores) / len(scores), 4) if scores else None
+        option["_has_ranker"] = source is not None and bool(scores)
+        found_ranker_score = found_ranker_score or option["_has_ranker"]
+    options.sort(key=lambda option: (
+        bool(option.get("_has_ranker")),
+        option.get("ranker_score") if option.get("ranker_score") is not None else -1,
+    ), reverse=True)
+    for option in options:
+        option.pop("_has_ranker", None)
+    return found_ranker_score
+
+
 def suggest_itineraries(db, request: PlanRequest):
     """Find distinct feasible previews, keeping as many explicit experience picks as possible."""
     original_experience_locks = request.locked_experience_ids
@@ -106,7 +129,9 @@ def suggest_itineraries(db, request: PlanRequest):
 
     if not options and last_error:
         raise last_error
-    return {'options': options, 'requested_count': 5, 'returned_count': len(options), 'ranking_source': 'heuristic'}
+    has_ranker = _rank_options_by_model_score(options)
+    return {'options': options, 'requested_count': 5, 'returned_count': len(options),
+            'ranking_source': 'ranker' if has_ranker else 'heuristic'}
 
 
 def rank_suggestions_with_gemini(db, request: PlanRequest, result: dict, provider: StructuredOutputProvider):
@@ -167,5 +192,6 @@ def rank_suggestions_with_gemini(db, request: PlanRequest, result: dict, provide
         {**by_id[item.option_id], 'recommendation_reason': item.reason_vi}
         for item in ranked.ranked_options
     ]
-    result['ranking_source'] = 'gemini'
+    has_ranker = _rank_options_by_model_score(result['options'])
+    result['ranking_source'] = 'ranker+gemini' if has_ranker else 'gemini'
     return result

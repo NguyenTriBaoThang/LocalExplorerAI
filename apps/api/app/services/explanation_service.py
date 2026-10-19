@@ -11,6 +11,10 @@ class ExplanationService:
         "STALE_DATA": "Một phần bằng chứng dữ liệu đã cũ hoặc hết hạn; cần xác minh lại.",
         "UNVERIFIED_DATA": "Một phần dữ liệu chưa được xác minh nguồn.",
         "LOCKED_ACTIVITY": "Hoạt động bạn khóa đã được giữ lại.",
+        "COMMUNITY_RATING_SIGNAL": "Điểm sao cộng đồng là tín hiệu phụ được làm trơn theo số lượt đánh giá; các ràng buộc khả thi vẫn được kiểm tra riêng.",
+        "WEATHER_FORECAST_USED": "Dùng dự báo mưa theo ngày từ Open-Meteo để Ranker cân nhắc trải nghiệm trong nhà và ngoài trời.",
+        "RAIN_FORECAST": "Dự báo có mưa; trải nghiệm trong nhà có thể được ưu tiên hơn.",
+        "WEATHER_FORECAST_UNAVAILABLE": "Không lấy được dự báo cho ngày đi; thời tiết không được dùng để xếp hạng.",
     }
 
     def explain(self, reason_codes: list[str], preserved: list[str], lost: list[str]) -> dict:
@@ -19,5 +23,5 @@ class ExplanationService:
             "lost_intents": lost,
             "reason_codes": reason_codes,
             "evidence_refs": [],
-            "uncertainty": [self.friendly_reasons[code] for code in reason_codes if code in {"CAPACITY_UNKNOWN", "MOCK_ROUTING", "GOONG_ROUTING", "SIMULATED_DATA", "STALE_DATA", "UNVERIFIED_DATA"}],
+            "uncertainty": [self.friendly_reasons[code] for code in reason_codes if code in {"CAPACITY_UNKNOWN", "MOCK_ROUTING", "GOONG_ROUTING", "SIMULATED_DATA", "STALE_DATA", "UNVERIFIED_DATA", "RAIN_FORECAST", "WEATHER_FORECAST_UNAVAILABLE"}],
         }

@@ -82,6 +82,8 @@ class POIRead(ORMModel):
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     data_mode: str = "simulated"
     data_status: str = "simulated"
+    community_rating_average: float | None = None
+    community_rating_count: int = 0
 
 
 class PartnerSummary(BaseModel):

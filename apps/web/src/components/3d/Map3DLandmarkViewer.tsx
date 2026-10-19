@@ -29,6 +29,7 @@ import {
 } from './landmark/types'
 import { offsetGeo } from './landmark/geo'
 import { loadSiteConfig } from '../../api/siteConfig'
+import { installMissingStyleImageFallback } from '../map/missingStyleImages'
 
 export type { ModelCalibration } from './landmark/types'
 import { GOONG_MAPTILES_KEY } from '../map/goongConfig'
@@ -369,6 +370,7 @@ export function Map3DLandmarkViewer({
       bearing: 0,
     })
     mapRef.current = map
+    const removeMissingImageFallback = installMissingStyleImageFallback(map)
 
     map.on('render', renderFrame)
     map.on('move', renderFrame)
@@ -419,6 +421,7 @@ export function Map3DLandmarkViewer({
       map.off('pitch', renderFrame)
       map.off('rotate', renderFrame)
       map.off('click', handleMapClick)
+      removeMissingImageFallback()
       map.remove()
       mapRef.current = null
     }

@@ -424,6 +424,7 @@ class Itinerary(Base):
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(24), default=ItineraryStatus.DRAFT.value)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     constraints: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
     estimated_cost_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
     data_mode: Mapped[str] = mapped_column(String(24), default="simulated")

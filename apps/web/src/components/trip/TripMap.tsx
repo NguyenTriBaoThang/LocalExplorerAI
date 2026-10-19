@@ -9,6 +9,7 @@ import { selectedPlace, tourStops, type Selected } from './place'
 import PlacePopup from './PlacePopup'
 import { DEFAULT_CALIBRATIONS, sanitizeCalibration } from '../3d/landmark/types'
 import { createLandmarkLayer } from './landmarkLayer'
+import { installMissingStyleImageFallback } from '../map/missingStyleImages'
 
 const COLORS = ['#047857', '#b45309', '#2563eb', '#be123c', '#7c3aed', '#0f766e']
 const duration = (ms: number) => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms
@@ -42,6 +43,7 @@ export default function TripMap(props: Props) {
     goongjs.accessToken = key
     const m = new goongjs.Map({ container: container.current!, style: 'https://tiles.goong.io/assets/goong_map_web.json', center: latest.current.center, zoom: 12.5, pitch: 45 })
     map.current = m
+    const removeMissingImageFallback = installMissingStyleImageFallback(m)
     // Goong must track layout changes as well as browser window resizes.
     const resizeObserver = new ResizeObserver(() => m.resize())
     resizeObserver.observe(container.current!)
@@ -58,7 +60,7 @@ export default function TripMap(props: Props) {
     })
     m.on('dragstart', stop)
     m.on('error', () => setError('Bản đồ đang gặp lỗi tải. Lịch trình vẫn được giữ lại.'))
-    return () => { disposed = true; resizeObserver.disconnect(); run.current++; m.remove(); map.current = null }
+    return () => { disposed = true; resizeObserver.disconnect(); run.current++; removeMissingImageFallback(); m.remove(); map.current = null }
   }, [])
   useEffect(() => {
     if (!ready) return

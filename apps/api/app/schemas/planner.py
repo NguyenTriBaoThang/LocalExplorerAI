@@ -89,6 +89,8 @@ class ItineraryStopRead(BaseModel):
     data_status: Literal["verified", "stale", "simulated", "unverified"] = "simulated"
     slot_confirmed_at: datetime | None = None
     slot_expires_at: datetime | None = None
+    ranking_score: float | None = None
+    ranking_reasons: list[str] = Field(default_factory=list)
     source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     slot_source_evidence: list[SourceEvidenceRead] = Field(default_factory=list)
     poi: POIRead
@@ -109,6 +111,8 @@ class Explanation(BaseModel):
     uncertainty: list[str] = Field(default_factory=list)
     ranking_model_version: str | None = None
     ranking_source: Literal["rule_baseline", "ml_model", "bootstrap_ml_model"] | None = None
+    weather_forecast: dict | None = None
+    flood_risk: dict | None = None
 
 
 class PlanResponse(BaseModel):
@@ -120,6 +124,10 @@ class PlanResponse(BaseModel):
     estimated_cost_vnd: int
     total_travel_min: int
     group_size: int = Field(ge=1)
+    budget_vnd: int = Field(default=0, ge=0)
+    transport_mode: str = "driving"
+    intent_weights: dict[str, float] = Field(default_factory=dict)
+    completed_at: datetime | None = None
     start_at: datetime | None = None
     return_deadline: datetime | None = None
     estimated_return_at: datetime | None = None
@@ -140,7 +148,7 @@ class PlanResponse(BaseModel):
             return value.replace(tzinfo=timezone.utc)
         return value
 
-    @field_validator("start_at", "return_deadline", "estimated_return_at", mode="before")
+    @field_validator("start_at", "return_deadline", "estimated_return_at", "completed_at", mode="before")
     @classmethod
     def require_aware_trip_times(cls, value):
         if isinstance(value, datetime) and (value.tzinfo is None or value.utcoffset() is None):
@@ -153,6 +161,7 @@ class ItinerarySuggestion(BaseModel):
     relaxed_experience_names: list[str] = Field(default_factory=list)
     relaxed_poi_names: list[str] = Field(default_factory=list)
     recommendation_reason: str | None = Field(default=None, max_length=400)
+    ranker_score: float | None = None
     request: PlanRequest
     preview: PlanResponse
 
@@ -161,7 +170,7 @@ class ItinerarySuggestionsResponse(BaseModel):
     options: list[ItinerarySuggestion]
     requested_count: int
     returned_count: int
-    ranking_source: Literal['gemini', 'heuristic'] = 'heuristic'
+    ranking_source: Literal['gemini', 'heuristic', 'ranker', 'ranker+gemini'] = 'heuristic'
 
 
 class ItineraryOptionRank(BaseModel):

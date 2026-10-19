@@ -3,14 +3,14 @@ import json
 from zoneinfo import ZoneInfo
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.adapters.routing.provider import MockRoutingProvider, NoRouteFound, RoutingConfigurationError, RoutingProvider
 from app.core.config import settings
 from app.core.pilot_area import PILOT_DISTRICT
 from app.core.enums import ItineraryStatus, PriceBasis, normalize_intent_tag
-from app.models.entities import DecisionLog, Experience, ExperienceSlot, Itinerary, ItineraryStop, ItineraryVersion
+from app.models.entities import DecisionLog, Experience, ExperienceSlot, Itinerary, ItineraryStop, ItineraryVersion, PlaceReview
 from app.repositories.experience_repository import ExperienceRepository
 from app.schemas.planner import PlanRequest
 from app.services.explanation_service import ExplanationService
@@ -21,6 +21,8 @@ from app.services.planner_engine import HeuristicPlanner, PlannerEngine, Suggest
 from app.services.recommendation_service import RecommendationService
 from app.services.routing_service import RoutingService
 from app.services.plan_preview_token import plan_fingerprint
+from app.services.open_meteo_service import OpenMeteoUnavailable, daily_forecast
+from app.services.flood_model_service import flood_model_service
 
 
 class NoFeasiblePlan(Exception):
@@ -61,9 +63,11 @@ class PlannerService:
 
     def _rank_feasible_candidates(self, candidates: list[dict], request: PlanRequest,
                                   cursor: datetime, end_at: datetime,
-                                  budget_remaining_vnd: int) -> tuple[str, str] | None:
+                                  budget_remaining_vnd: int,
+                                  weather_forecast: dict | None = None) -> tuple[str, str] | None:
         """Rank only the planner-approved candidates; feasibility stays planner-owned."""
-        if (len(candidates) < 2 or any(item["locked"] for item in candidates)
+        rankable_candidates = [item for item in candidates if not item["locked"]]
+        if (len(rankable_candidates) < 2
                 or not isinstance(self.engine, HeuristicPlanner)
                 or getattr(self.ranker, "available", True) is False):
             return None
@@ -76,9 +80,12 @@ class PlannerService:
             "group_size": request.group_size,
             "budget_remaining_vnd": max(0, budget_remaining_vnd),
         }
+        if weather_forecast is not None:
+            # The ranker feature contract already includes rain/outdoor exposure.
+            query["rain_mm"] = weather_forecast["precipitation_sum_mm"]
         rows = []
         candidates_by_key = {}
-        for item in candidates:
+        for item in rankable_candidates:
             experience = item["experience"]
             slot = item["slot"]
             key = (experience.id, slot.id)
@@ -104,7 +111,7 @@ class PlannerService:
 
         # If the model/service disagrees with the already-validated candidate set,
         # keep the deterministic planner unchanged instead of dropping choices.
-        if filtered_ids or len(ranked) != len(candidates):
+        if filtered_ids or len(ranked) != len(rankable_candidates):
             return None
         scores = {
             (row["candidate_experience_id"], row["candidate_slot_id"]): row["rank_score"]
@@ -114,10 +121,72 @@ class PlannerService:
             return None
         for key, item in candidates_by_key.items():
             item["score"] = float(scores[key])
+            item["ranker_applied"] = True
         return (
             status.get("model_version") or "local-ranker",
             status.get("ranking_source") or "ml_model",
         )
+
+    def _apply_community_rating_prior(self, candidates: list[dict]) -> bool:
+        """Use published traveler ratings as a small, explainable reranking signal.
+
+        Ratings do not change feasibility and are not passed into the trained model:
+        the current model artifact was not trained with this feature.
+        """
+        poi_ids = {item["experience"].poi_id for item in candidates}
+        if not poi_ids:
+            return False
+        aggregates = self.db.execute(
+            select(PlaceReview.poi_id, func.count(PlaceReview.id), func.avg(PlaceReview.rating))
+            .where(PlaceReview.poi_id.in_(poi_ids), PlaceReview.status == "published")
+            .group_by(PlaceReview.poi_id)
+        ).all()
+        by_poi = {poi_id: (int(count), float(average)) for poi_id, count, average in aggregates if count and average is not None}
+        used = False
+        for item in candidates:
+            count, average = by_poi.get(item["experience"].poi_id, (0, 0.0))
+            item["community_rating_average"] = round(average, 1) if count else None
+            item["community_rating_count"] = count
+            if item["locked"]:
+                continue
+            if count:
+                # A neutral 3.5-star prior reduces the effect of very small samples.
+                smoothed = ((average * count) + (3.5 * 5)) / (count + 5)
+                rating_signal = (smoothed - 1) / 4
+                item["score"] = 0.92 * float(item["score"]) + 0.08 * rating_signal
+                item["reasons"] = [*item["reasons"], "COMMUNITY_RATING_SIGNAL"]
+                used = True
+        return used
+
+    @staticmethod
+    def _apply_weather_fallback(candidates: list[dict], forecast: dict | None) -> bool:
+        """Small rule fallback for rain when no model ranking result is available."""
+        if not forecast or not (
+            forecast["precipitation_probability_pct"] >= 40 or forecast["precipitation_sum_mm"] >= 1
+        ):
+            return False
+        used = False
+        for item in candidates:
+            if item["locked"]:
+                continue
+            # Keep the adjustment modest; forecast data is a daily estimate, not a stop-time guarantee.
+            if item["experience"].is_indoor:
+                item["score"] = min(1.0, float(item["score"]) + 0.04)
+            else:
+                item["score"] = max(0.0, float(item["score"]) - 0.08)
+            item["reasons"] = [*item["reasons"], "RAIN_FORECAST"]
+            used = True
+        return used
+
+    @staticmethod
+    def _flood_advisory() -> dict:
+        model_status = flood_model_service.status()
+        return {
+            "status": "unknown",
+            "model_available": bool(model_status.get("deployment_allowed")),
+            "message_vi": "Chưa có xác nhận ngập theo từng đoạn đường trong lịch trình. Không có dữ liệu không đồng nghĩa với không ngập.",
+            "message_en": "No verified flood status is available for route segments. Missing data does not mean no flooding.",
+        }
 
     def plan(
         self,
@@ -171,6 +240,25 @@ class PlannerService:
                 code="PINNED_STOP_NOT_AVAILABLE",
                 diagnostics={"reason_codes": ["PINNED_STOP_NOT_AVAILABLE"]},
             )
+
+        forecast_coordinates = (
+            (request.origin_latitude, request.origin_longitude)
+            if request.origin_latitude is not None and request.origin_longitude is not None
+            else (request.destination_latitude, request.destination_longitude)
+            if request.destination_latitude is not None and request.destination_longitude is not None
+            else (experiences[0].poi.latitude, experiences[0].poi.longitude)
+            if experiences else None
+        )
+        weather_forecast = None
+        if forecast_coordinates is not None:
+            forecast_date = start_at.astimezone(LOCAL_TIMEZONE).date()
+            try:
+                weather_forecast = daily_forecast(
+                    forecast_coordinates[0], forecast_coordinates[1], forecast_date,
+                    request.origin_label or "TP. Hồ Chí Minh",
+                )
+            except OpenMeteoUnavailable:
+                weather_forecast = None
 
         chosen: list[dict] = []
         chosen_experience_ids: set[str] = set()
@@ -280,8 +368,22 @@ class PlannerService:
                         "return_travel": return_travel,
                     })
             ranker_result = self._rank_feasible_candidates(
-                candidates, request, cursor, end_at, request.budget_vnd - total_cost,
+                candidates, request, cursor, end_at, request.budget_vnd - total_cost, weather_forecast,
             )
+            if ranker_result is None and self._apply_weather_fallback(candidates, weather_forecast):
+                reason_codes.add("RAIN_FORECAST")
+            elif ranker_result:
+                for item in candidates:
+                    if not item["locked"]:
+                        item["reasons"].append("ML_RANKER")
+                if weather_forecast is not None and (
+                    weather_forecast["precipitation_probability_pct"] >= 40 or weather_forecast["precipitation_sum_mm"] >= 1
+                ):
+                    for item in candidates:
+                        if not item["locked"]:
+                            item["reasons"].append("RAIN_FORECAST")
+            if self._apply_community_rating_prior(candidates):
+                reason_codes.add("COMMUNITY_RATING_SIGNAL")
             if ranker_result:
                 ranking_model_version, ranking_source = ranker_result
                 reason_codes.add({
@@ -472,6 +574,12 @@ class PlannerService:
                 reason_codes.add("MOCK_ROUTING" if route.provider == "mock" else "GOONG_ROUTING")
 
         requested_intents = {tag for tag, weight in request.intent_weights.items() if weight > 0}
+        if weather_forecast is not None:
+            reason_codes.add("WEATHER_FORECAST_USED")
+            if weather_forecast["precipitation_probability_pct"] >= 40 or weather_forecast["precipitation_sum_mm"] >= 1:
+                reason_codes.add("RAIN_FORECAST")
+        else:
+            reason_codes.add("WEATHER_FORECAST_UNAVAILABLE")
         provided_intents = {normalize_intent_tag(tag) for item in chosen for tag in item["experience"].intent_tags}
         preserved = sorted(tag for tag in requested_intents if normalize_intent_tag(tag) in provided_intents)
         lost = sorted(requested_intents - set(preserved))
@@ -502,6 +610,9 @@ class PlannerService:
                          "origin_latitude": request.origin_latitude, "origin_longitude": request.origin_longitude,
                          "destination_latitude": request.destination_latitude, "destination_longitude": request.destination_longitude,
                          "origin_label": request.origin_label, "destination_label": request.destination_label,
+                         "ranking_source": ranking_source, "ranking_model_version": ranking_model_version if ranking_source else None,
+                         "weather_forecast": weather_forecast,
+                         "reason_codes": sorted(reason_codes),
                          "route_snapshot": json.loads(json.dumps(routes, default=str)) if request.routing_mode != "demo" else None},
             estimated_cost_vnd=total_cost, data_mode="real" if itinerary_data_mode == "verified" else "simulated" if itinerary_data_mode == "simulated" else "mixed",
         )
@@ -519,12 +630,23 @@ class PlannerService:
                 cost_vnd=item["cost"], status="planned", is_locked=item["locked"], locked=item["locked"],
             )
             stop_records.append(stop)
-            response_stops.append(self._stop_dict(stop, experience, slot, position))
+            stop_data = self._stop_dict(stop, experience, slot, position)
+            stop_data["ranking_score"] = (
+                round(float(item.get("score", 0.0)), 4)
+                if item.get("ranker_applied") and not item["locked"] else None
+            )
+            stop_reasons = [*item["reasons"], "SLOT_AVAILABLE"]
+            if item["locked"]:
+                stop_reasons.append("LOCKED_ACTIVITY")
+            stop_data["ranking_reasons"] = list(dict.fromkeys(stop_reasons))
+            response_stops.append(stop_data)
             version_snapshot.append({
                 "stop_id": stop.id, "stop_order": position, "poi_id": experience.poi_id,
                 "experience_id": experience.id, "slot_id": slot.id,
                 "arrival_at": stop.arrival_at.isoformat(), "departure_at": stop.departure_at.isoformat(),
                 "cost_vnd": stop.cost_vnd, "is_locked": stop.is_locked,
+                "ranking_score": stop_data["ranking_score"],
+                "ranking_reasons": stop_data["ranking_reasons"],
             })
         version_record = ItineraryVersion(
             itinerary_id=itinerary.id, version_number=1, stops_snapshot=version_snapshot,
@@ -534,6 +656,8 @@ class PlannerService:
         explanation = self.explainer.explain(sorted(reason_codes), preserved, lost)
         explanation["ranking_model_version"] = ranking_model_version if ranking_source else None
         explanation["ranking_source"] = ranking_source
+        explanation["weather_forecast"] = weather_forecast
+        explanation["flood_risk"] = self._flood_advisory()
         explanation["evidence_refs"] = sorted({
             evidence["id"]
             for item in response_stops
@@ -555,6 +679,10 @@ class PlannerService:
             "estimated_cost_vnd": total_cost,
             "total_travel_min": total_travel,
             "group_size": request.group_size,
+            "budget_vnd": request.budget_vnd,
+            "transport_mode": request.transport_mode,
+            "intent_weights": request.intent_weights,
+            "completed_at": None,
             "start_at": start_at,
             "return_deadline": end_at,
             "estimated_return_at": estimated_return_at,
@@ -596,6 +724,11 @@ class PlannerService:
         poi_evidence = self.repository.source_evidence("poi", experience.poi.id, experience.poi.data_revision)
         experience_evidence = self.repository.source_evidence("experience", experience.id, experience.data_revision)
         slot_evidence = self.repository.source_evidence("slot", slot.id, slot.version)
+        rating_count, rating_average = self.db.execute(
+            select(func.count(PlaceReview.id), func.avg(PlaceReview.rating)).where(
+                PlaceReview.poi_id == experience.poi_id, PlaceReview.status == "published",
+            )
+        ).one()
         return {
             "id": stop.id or str(uuid4()), "experience_id": experience.id, "slot_id": slot.id,
             "position": position, "name": experience.name, "category": experience.poi.category,
@@ -612,6 +745,8 @@ class PlannerService:
                     "latitude": experience.poi.latitude, "longitude": experience.poi.longitude,
                     "category": experience.poi.category, "address": experience.poi.address,
                     "verification_status": experience.poi.verification_status,
+                    "community_rating_average": round(float(rating_average), 1) if rating_average is not None else None,
+                    "community_rating_count": int(rating_count or 0),
                     "data_mode": "real" if poi_verified else "simulated",
                     "data_status": "simulated" if experience.poi.verification_status == "simulated" else "verified" if poi_verified else "stale" if experience.poi.verification_status == "verified" else "unverified",
                     "source_evidence": poi_evidence},
@@ -623,7 +758,24 @@ class PlannerService:
         )
         if itinerary is None:
             return None
+        latest_version = self.db.scalar(
+            select(ItineraryVersion).where(ItineraryVersion.itinerary_id == itinerary.id)
+            .order_by(ItineraryVersion.version_number.desc()).limit(1)
+        )
+        saved_scores = {
+            row.get("stop_id"): row.get("ranking_score")
+            for row in (latest_version.stops_snapshot if latest_version else [])
+            if row.get("stop_id")
+        }
+        saved_reasons = {
+            row.get("stop_id"): row.get("ranking_reasons", [])
+            for row in (latest_version.stops_snapshot if latest_version else [])
+            if row.get("stop_id")
+        }
         stops = [self._stop_dict(stop, stop.experience, stop.slot, stop.position) for stop in itinerary.stops]
+        for stop in stops:
+            stop["ranking_score"] = saved_scores.get(stop["id"])
+            stop["ranking_reasons"] = saved_reasons.get(stop["id"], [])
         routes = []
         travel = 0
         mode = itinerary.constraints.get("transport_mode", "driving")
@@ -674,6 +826,9 @@ class PlannerService:
             reasons.append("UNVERIFIED_DATA")
         if any(not stop["availability_known"] for stop in stops):
             reasons.append("CAPACITY_UNKNOWN")
+        reasons.extend(itinerary.constraints.get("reason_codes", []))
+        if any((stop.get("poi", {}).get("community_rating_count") or 0) > 0 for stop in stops):
+            reasons.append("COMMUNITY_RATING_SIGNAL")
         intents = itinerary.constraints.get("intent_weights", {})
         requested_intents = {tag for tag, weight in intents.items() if weight > 0}
         provided_intents = {normalize_intent_tag(tag) for stop in itinerary.stops for tag in stop.experience.intent_tags}
@@ -688,7 +843,9 @@ class PlannerService:
             "data_mode": current_data_mode,
             "data_as_of": itinerary.created_at, "feasibility_status": itinerary.status,
             "estimated_cost_vnd": itinerary.estimated_cost_vnd, "total_travel_min": travel,
-            "group_size": itinerary.group_size, "stops": stops,
+            "group_size": itinerary.group_size, "budget_vnd": itinerary.budget_vnd,
+            "transport_mode": itinerary.travel_mode, "intent_weights": itinerary.constraints.get("intent_weights", {}),
+            "completed_at": itinerary.completed_at, "stops": stops,
             "start_at": as_aware(itinerary.start_time or itinerary.start_at),
             "return_deadline": as_aware(itinerary.return_deadline or itinerary.end_at),
             "estimated_return_at": (as_aware(stops[-1]["end_at"]) if stops else as_aware(itinerary.end_at)) + timedelta(minutes=(routes[-1]["duration_min"] if routes and routes[-1].get("to_experience_id") is None else 0)),
@@ -700,6 +857,10 @@ class PlannerService:
             "destination_label": itinerary.constraints.get("destination_label"),
             "routes": routes, "explanation": {
                 **self.explainer.explain(reasons, preserved, sorted(requested_intents - set(preserved))),
+                "ranking_model_version": itinerary.constraints.get("ranking_model_version"),
+                "ranking_source": itinerary.constraints.get("ranking_source"),
+                "weather_forecast": itinerary.constraints.get("weather_forecast"),
+                "flood_risk": self._flood_advisory(),
                 "evidence_refs": sorted({
                     evidence["id"]
                     for item in stops

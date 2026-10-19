@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 import re
+import unicodedata
 from collections.abc import Iterator
 from typing import get_args
 
@@ -44,7 +45,24 @@ def _trip_tool(dest_slugs: list[str]) -> dict:
     }}
 
 
+def _fold_destination(value: str) -> str:
+    value = value.replace("đ", "d").replace("Đ", "D")
+    folded = "".join(char for char in unicodedata.normalize("NFKD", value)
+                     if not unicodedata.combining(char)).lower()
+    return re.sub(r"[^a-z0-9]+", " ", folded).strip()
+
+
+def _mentions_ho_chi_minh(message: str) -> bool:
+    normalized = f" {_fold_destination(message)} "
+    return any(f" {alias} " in normalized for alias in (
+        "sai gon", "saigon", "tp hcm", "tphcm", "hcm", "hcmc", "ho chi minh",
+        "thanh pho ho chi minh",
+    ))
+
+
 def parse_trip(client, model: str, message: str, destinations: dict[str, str], today: dt.date) -> Trip:
+    if not destinations:
+        raise TripParseError("Danh mục địa điểm lập lịch trình chưa được nạp. Vui lòng thử lại sau.")
     dests = ", ".join(f"{slug} ({name})" for slug, name in destinations.items())
     r = client.chat.completions.create(
         model=model,
@@ -63,6 +81,10 @@ def parse_trip(client, model: str, message: str, destinations: dict[str, str], t
     for k in ("arrival_time", "departure_time", "last_day_end"):
         if not re.fullmatch(HHMM, str(args.get(k) or "")):
             args.pop(k, None)  # LLM có thể trả "2pm"/"14h" → coi như chưa nói
+    if args.get("destination") not in destinations and _mentions_ho_chi_minh(message):
+        # Common Vietnamese names are often returned as "unsupported" even when tp-hcm is in the tool enum.
+        if "tp-hcm" in destinations:
+            args["destination"] = "tp-hcm"
     if args.get("destination") not in destinations:
         raise UnsupportedDestination(
             "Hiện mình chỉ hỗ trợ lịch trình ở TP. Hồ Chí Minh.")

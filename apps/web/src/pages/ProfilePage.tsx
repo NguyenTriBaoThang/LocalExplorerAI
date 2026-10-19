@@ -504,7 +504,11 @@ export function ProfilePage() {
                       {trip.planned_date || (locale === 'en' ? 'Date unassigned' : 'Chưa ấn định ngày')}
                     </span>
                     <span className="trip-status-chip">
-                      {trip.status === 'confirmed' ? (locale === 'en' ? 'Confirmed' : 'Đã xác nhận') : (locale === 'en' ? 'Optimized Draft' : 'Bản nháp tối ưu')}
+                      {trip.status === 'completed'
+                        ? (locale === 'en' ? 'Completed' : 'Đã đi')
+                        : trip.status === 'confirmed'
+                          ? (locale === 'en' ? 'Confirmed' : 'Đã xác nhận')
+                          : (locale === 'en' ? 'Optimized Draft' : 'Bản nháp tối ưu')}
                     </span>
                   </div>
 

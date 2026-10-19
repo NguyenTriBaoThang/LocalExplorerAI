@@ -13,7 +13,7 @@ export function reviewErrorMessage(error: unknown, vi: boolean): string {
   const code = resp?.data?.error?.code
   if (code === 'REVIEW_REJECTED') return vi ? 'Nội dung đánh giá không được chứa liên kết.' : 'Reviews cannot contain links.'
   if (code === 'VISIT_DATE_IN_FUTURE') return vi ? 'Ngày ghé thăm không được ở tương lai.' : 'The visit date cannot be in the future.'
-  if (code === 'REVIEW_NOT_ALLOWED') return vi ? 'Bạn cần có lịch trình chứa địa điểm này để đánh giá.' : 'You need an itinerary containing this place to review it.'
+  if (code === 'REVIEW_NOT_ALLOWED') return vi ? 'Bạn cần hoàn tất lịch trình có địa điểm này trước khi đánh giá.' : 'Complete an itinerary containing this place before reviewing it.'
   if (resp?.status === 401) return vi ? 'Vui lòng đăng nhập để tiếp tục.' : 'Please sign in to continue.'
   return vi ? 'Không thể thực hiện. Vui lòng thử lại.' : 'Something went wrong. Please try again.'
 }
@@ -106,7 +106,7 @@ export function PlaceReviews({ poiId }: { poiId: string }) {
   const maxBar = Math.max(1, ...[1, 2, 3, 4, 5].map((n) => community.distribution[String(n)] ?? 0))
   const safeMaps = google?.maps_uri && /^https?:\/\//i.test(google.maps_uri) ? google.maps_uri : null
   const own = mine?.review ?? null
-  const showForm = isTraveler && mine && (editing || (!own && mine.can_review && mine.reason !== 'no_itinerary'))
+  const showForm = isTraveler && mine && (editing || (!own && mine.can_review))
 
   return (
     <section className="pr-section" aria-labelledby="pr-title">
@@ -114,6 +114,7 @@ export function PlaceReviews({ poiId }: { poiId: string }) {
       <div className={`pr-grid${google ? '' : ' pr-grid-single'}`}>
         <div className="pr-card">
           <h3 className="pr-card-title">{vi ? 'Du khách Local Explorer' : 'Local Explorer travelers'}</h3>
+          <p className="pr-note">{vi ? 'Đánh giá được mở sau khi du khách tự đánh dấu lịch trình đã kết thúc; ứng dụng không xác minh GPS.' : 'Reviews open after a traveler marks an itinerary complete; the app does not verify visits by GPS.'}</p>
           <div className="pr-summary">
             <div className="pr-score">
               <strong>{community.average != null ? community.average.toFixed(1) : '–'}</strong>
@@ -141,13 +142,13 @@ export function PlaceReviews({ poiId }: { poiId: string }) {
             </Link>
           )}
           {isStaff && <p className="pr-note">{vi ? 'Tài khoản quản trị/đối tác không thể đánh giá địa điểm.' : 'Staff accounts cannot review places.'}</p>}
-          {isTraveler && mine && !own && mine.reason === 'no_itinerary' && (
+          {isTraveler && mine && !own && mine.reason === 'no_completed_visit' && (
             <p className="pr-note">
-              {vi ? 'Hãy lên lịch trình có địa điểm này để có thể đánh giá. ' : 'Create an itinerary that includes this place to be able to review it. '}
-              <Link to="/planner">{vi ? 'Mở trình lập lịch' : 'Open planner'}</Link>
+              {vi ? 'Bạn chỉ có thể đánh giá sau khi chuyến đi có địa điểm này đã kết thúc và được đánh dấu hoàn tất. ' : 'Reviews open after an itinerary containing this place has ended and been marked complete. '}
+              <Link to="/profile">{vi ? 'Mở lịch sử chuyến đi' : 'Open trip history'}</Link>
             </p>
           )}
-          {isTraveler && mine && !own && !mine.can_review && mine.reason !== 'no_itinerary' && (
+          {isTraveler && mine && !own && !mine.can_review && mine.reason !== 'no_completed_visit' && (
             <p className="pr-note">{vi ? 'Bạn chưa thể đánh giá địa điểm này.' : 'You cannot review this place yet.'}</p>
           )}
           {own && !editing && (

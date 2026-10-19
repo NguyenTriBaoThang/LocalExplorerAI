@@ -1,5 +1,6 @@
 Hôm nay là {today}. Chuyển yêu cầu du lịch của người dùng thành Trip bằng tool record_trip.
 Destination hỗ trợ: {dests}. Nếu người dùng muốn đi nơi khác, destination = "unsupported".
+Destination là thành phố lập lịch trình, không phải nơi xuất phát. "Sài Gòn", "TP.HCM", "TPHCM", "HCMC", "Ho Chi Minh City" và "Thành phố Hồ Chí Minh" đều là tp-hcm khi slug này có trong danh sách hỗ trợ. Chỉ điền origin_city nếu người dùng nói rõ nơi họ khởi hành.
 Budget tính bằng VND cho cả nhóm ("3 triệu" = 3000000). Nếu không nói, ước lượng 1500000 × số người × số ngày.
 Chỉ điền start_date (YYYY-MM-DD) khi người dùng nói rõ ngày đi.
 Pace: "nhẹ nhàng/thong thả" = thong-tha, "đi nhiều/khám phá hết" = day, còn lại = vua.

@@ -14,10 +14,10 @@ import {
   Lock,
   Search,
 } from 'lucide-react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities, getItinerarySuggestions, type ItinerarySuggestion, type ItinerarySuggestions } from '../api/client'
 import { TiltCard3D } from '../components/3d/TiltCard3D'
-import type { GeocodeResponse, PlanRequest, POI, RoutingCapabilities } from '../types'
+import type { GeocodeResponse, Itinerary, PlanRequest, POI, RoutingCapabilities } from '../types'
 import { useTranslation } from '../i18n'
 import { useJourney, useTripField } from '../journey'
 import { ItinerarySuggestions as SuggestionsPanel } from '../components/journey/ItinerarySuggestions'
@@ -31,6 +31,7 @@ const today = () =>
 export function PlannerPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { trip, setTrip } = useJourney()
 
   const intents = useMemo(() => [
@@ -83,6 +84,55 @@ export function PlannerPage() {
   const [suggestions, setSuggestions] = useState<{ key: string; data: ItinerarySuggestions } | null>(null)
   const [customizing, setCustomizing] = useState(false)
   const suggestionsRef = useRef<HTMLElement>(null)
+  const editSource = (location.state as { editItinerary?: Itinerary } | null)?.editItinerary
+  const appliedEditId = useRef('')
+  useEffect(() => {
+    if (!editSource || appliedEditId.current === editSource.itinerary_id) return
+    appliedEditId.current = editSource.itinerary_id
+    const zone = 'Asia/Ho_Chi_Minh'
+    const localDate = (value: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date(value))
+    const localTime = (value: string) => new Intl.DateTimeFormat('en-GB', {
+      timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(new Date(value))
+    const sourceStartAt = editSource.start_at ?? editSource.stops[0]?.start_at
+    setDate(localDate(sourceStartAt || new Date().toISOString()))
+    if (sourceStartAt) setStartTime(localTime(sourceStartAt))
+    if (editSource.return_deadline) setEndTime(localTime(editSource.return_deadline))
+    if (editSource.group_size) setGroupSize(editSource.group_size)
+    if (editSource.budget_vnd != null) setBudget(editSource.budget_vnd)
+    if (editSource.transport_mode) setTransport(editSource.transport_mode)
+    if (editSource.intent_weights) setSelectedIntents(Object.entries(editSource.intent_weights).filter(([, weight]) => weight > 0).map(([intent]) => intent))
+    setLockedPois([])
+    setTrip((current) => ({
+      ...current,
+      demo: editSource.data_mode !== 'real',
+      selected: editSource.stops.map((stop) => ({ id: stop.experience_id, name: stop.name, poiId: stop.poi.id })),
+    }))
+    setOriginId('')
+    setDestinationId('')
+    const originText = editSource.origin_label || (locale === 'en' ? 'Current trip origin' : 'Điểm xuất phát của lịch trình')
+    const destinationText = editSource.destination_label || (locale === 'en' ? 'Current trip destination' : 'Điểm đến của lịch trình')
+    if (editSource.origin_latitude != null && editSource.origin_longitude != null) {
+      setOriginAddress(originText)
+      setOriginResolved({ formatted_address: originText, latitude: editSource.origin_latitude, longitude: editSource.origin_longitude, place_id: null })
+      setOriginGeocode(null)
+    } else {
+      setOriginAddress('')
+      setOriginResolved(null)
+      setOriginGeocode(null)
+    }
+    if (editSource.destination_latitude != null && editSource.destination_longitude != null) {
+      setDestinationAddress(destinationText)
+      setDestinationResolved({ formatted_address: destinationText, latitude: editSource.destination_latitude, longitude: editSource.destination_longitude, place_id: null })
+      setDestinationGeocode(null)
+    } else {
+      setDestinationAddress('')
+      setDestinationResolved(null)
+      setDestinationGeocode(null)
+    }
+    setCustomizing(true)
+    setSuggestions(null)
+  }, [editSource, locale, setBudget, setDate, setEndTime, setGroupSize, setLockedPois, setOriginId, setSelectedIntents, setStartTime, setDestinationId, setTransport, setTrip])
   const inputKey = JSON.stringify([trip, originAddress, destinationAddress, originResolved, destinationResolved])
   const currentSuggestions = suggestions?.key === inputKey ? suggestions.data : null
   useEffect(() => {
@@ -269,6 +319,24 @@ export function PlannerPage() {
           ? <button form="planner-form" type="submit" disabled={loading} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white disabled:opacity-50">{loading ? (locale === 'en' ? 'Finding options…' : 'Đang tìm phương án…') : (locale === 'en' ? 'Suggest 5 itineraries' : 'Gợi ý 5 lịch trình')}</button>
           : <button type="button" onClick={() => document.getElementById('planner-endpoints')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white">{locale === 'en' ? 'Choose departure and return first' : 'Chọn điểm xuất phát và điểm về trước'}</button>}
       </div>
+      {trip.selected.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-slate-800" aria-label={locale === 'en' ? 'Pinned itinerary stops' : 'Các điểm đang ghim'}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <strong>{locale === 'en' ? 'Stops currently pinned in this itinerary' : 'Các địa điểm đang được giữ trong lịch trình'}</strong>
+            <button type="button" className="text-sm font-semibold text-emerald-800 underline" onClick={() => setTrip((current) => ({ ...current, selected: [] }))}>
+              {locale === 'en' ? 'Remove all pins' : 'Bỏ ghim tất cả'}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {trip.selected.map((item) => (
+              <button key={item.id} type="button" className="rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-sm hover:bg-emerald-100"
+                onClick={() => setTrip((current) => ({ ...current, selected: current.selected.filter((selected) => selected.id !== item.id) }))}>
+                {item.name} <span aria-hidden="true">×</span><span className="sr-only">{locale === 'en' ? 'Remove stop' : 'Bỏ địa điểm'}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {currentSuggestions && <section ref={suggestionsRef} aria-label={locale === 'en' ? 'Suggested itineraries' : 'Lịch trình gợi ý'} className="mb-8 scroll-mt-24">
         <SuggestionsPanel data={currentSuggestions} locale={locale} busy={loading} onChoose={(option) => void chooseSuggestion(option)} onCustomize={customizeSuggestion} />
         {error && <p role="alert" className="form-alert-3d">{error}</p>}

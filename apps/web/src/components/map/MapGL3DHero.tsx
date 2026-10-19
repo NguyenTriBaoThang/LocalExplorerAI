@@ -6,6 +6,7 @@ import { getPOIs } from '../../api/client'
 import type { POI } from '../../types'
 import { useTheme } from '../../theme'
 import { useTranslation } from '../../i18n'
+import { installMissingStyleImageFallback } from './missingStyleImages'
 
 const GOONG_MAPTILES_KEY =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_GOONG_MAPTILES_KEY ||
@@ -123,6 +124,7 @@ export function MapGL3DHero() {
       antialias: true,
     })
     mapRef.current = map
+    const removeMissingImageFallback = installMissingStyleImageFallback(map)
 
     const onLoad = () => {
       if (!active) return
@@ -144,6 +146,7 @@ export function MapGL3DHero() {
       resizeObserver.disconnect()
       map.off('load', onLoad)
       map.off('error', onError)
+      removeMissingImageFallback()
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
       map.remove()
