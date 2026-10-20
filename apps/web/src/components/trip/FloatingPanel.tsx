@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 /** Khung nổi trên bản đồ; thu gọn thành nút nhỏ ghi tiêu đề (+ badge). Không biết gì về nội dung. */
 export default function FloatingPanel({ side, title, subtitle, open, onToggle, badge = 0, children }: {
@@ -25,7 +26,7 @@ export default function FloatingPanel({ side, title, subtitle, open, onToggle, b
         </div>
         <button type="button" onClick={onToggle} aria-expanded aria-label={`Thu gọn ${title}`} title="Thu gọn"
           className="grid size-7 place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-muted)]">
-          {side === 'left' ? '‹' : '›'}
+          {side === 'left' ? <ChevronLeft size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
         </button>
       </header>
       {children}

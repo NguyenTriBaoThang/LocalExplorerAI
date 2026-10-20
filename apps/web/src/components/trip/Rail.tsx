@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { FolderOpen, Plus } from 'lucide-react'
 import { tripLabel, type TripSummary } from '../../api/trips'
 
 const BTN = 'grid size-11 place-items-center rounded-xl text-xl text-[var(--text-main)] hover:bg-[var(--bg-surface)] hover:text-emerald-600 disabled:opacity-40'
@@ -17,15 +18,15 @@ export default function Rail({ busy, trips, currentId, onNewTrip, onOpenTrip }: 
   return (
     <>
       <nav aria-label="Điều hướng" className="absolute inset-y-0 left-0 z-20 flex w-16 flex-col items-center gap-2 bg-[var(--bg-surface)] py-4">
-        <div title="Local Explorer AI" className="mb-3 grid size-10 place-items-center rounded-xl bg-amber-400 text-[var(--text-main)]">
+        <div title="Local Explorer AI" className="mb-3 grid size-10 place-items-center rounded-xl bg-[var(--brand-primary)] text-[var(--brand-contrast)]">
           <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinejoin="round">
             <path d="M4 18l5-8 3 4 3-5 5 9z M4 18h16" />
           </svg>
         </div>
         <button type="button" className={BTN} aria-label="Chuyến mới" title="Chuyến mới"
-          disabled={busy || !onNewTrip} onClick={onNewTrip}>＋</button>
+          disabled={busy || !onNewTrip} onClick={onNewTrip}><Plus size={20} strokeWidth={1.8} aria-hidden="true" /></button>
         <button type="button" className={`${BTN} ${open ? 'bg-emerald-700 text-white' : ''}`} aria-label="Chuyến đi của tôi"
-          title="Chuyến đi của tôi" aria-expanded={open} onClick={() => setOpen((o) => !o)}>🗂</button>
+          title="Chuyến đi của tôi" aria-expanded={open} onClick={() => setOpen((o) => !o)}><FolderOpen size={19} strokeWidth={1.8} aria-hidden="true" /></button>
         <div className="flex-1" />
       </nav>
       {open && (

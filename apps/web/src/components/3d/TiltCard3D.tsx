@@ -12,8 +12,8 @@ interface TiltCard3DProps {
 export function TiltCard3D({
   children,
   className = '',
-  maxTilt = 10,
-  scale = 1.02,
+  maxTilt = 4,
+  scale = 1.008,
   glare = true,
   onClick,
 }: TiltCard3DProps) {
@@ -37,7 +37,7 @@ export function TiltCard3D({
     
     if (glare) {
       setGlareStyle({
-        opacity: 0.25,
+        opacity: 0.1,
         x: (x / rect.width) * 100,
         y: (y / rect.height) * 100,
       })
@@ -64,7 +64,7 @@ export function TiltCard3D({
       onClick={onClick}
       style={{
         transform: transform || undefined,
-        transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        transition: isHovered ? 'transform 0.16s ease-out' : 'transform 0.22s ease-out',
         transformStyle: 'preserve-3d',
         position: 'relative',
       }}

@@ -283,13 +283,13 @@ function CandidateRow({ candidate, onPromote }: { candidate: PlaceImportCandidat
           <ul className="space-y-1">
             {lines.map((line, index) => <li key={index} className="break-words">{line}</li>)}
             {sourceUrl && <li className="break-words">URL nguồn trong file (chưa xác minh): {sourceUrlIsHttps
-              ? <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">Mở nguồn HTTPS</a>
+              ? <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-brand-700 underline">Mở nguồn HTTPS</a>
               : sourceUrl}</li>}
             {Boolean(raw.photo_url) && (() => {
               const photoUrl = String(raw.photo_url)
               const safePhotoUrl = isSafeHttpsUrl(photoUrl)
               return <li className="break-words">URL ảnh trong file (chưa xác minh): {safePhotoUrl
-                ? <a href={photoUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">Mở ảnh</a>
+                ? <a href={photoUrl} target="_blank" rel="noreferrer" className="text-brand-700 underline">Mở ảnh</a>
                 : photoUrl}</li>
             })()}
           </ul>

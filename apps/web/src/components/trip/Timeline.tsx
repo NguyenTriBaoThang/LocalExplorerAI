@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Pin, Utensils } from 'lucide-react'
 import { intentChips, mealOf, rainable, viewingOld, vnd, type Day, type DisruptionReq, type Itinerary, type Place } from '../../api/trips'
 import type { Selected } from './place'
 import PlaceThumb from './PlaceThumb'
@@ -202,7 +203,7 @@ export default function Timeline({ itinerary, places, budget, busy = false, chan
                   changed.some(([d, k]) => d === i && k === j) ? 'ring-2 ring-amber-400' : ''}`}>
                 <PlaceThumb kind={p?.kind ?? ''} photo={p?.photo_url} />
                 <div className="min-w-0 flex-1">
-                  {meal && <div className="mb-0.5 text-xs font-medium text-amber-700">🍜 {meal}</div>}
+                  {meal && <div className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-medium text-amber-700"><Utensils size={13} aria-hidden="true" /> {meal}</div>}
                   <div className="flex justify-between gap-2">
                     <button type="button" className="min-w-0 truncate text-left font-semibold"
                       onClick={(e) => { e.stopPropagation(); onSelect?.({ day: i, stop: j }) }}>
@@ -228,7 +229,7 @@ export default function Timeline({ itinerary, places, budget, busy = false, chan
                           onClick={() => onPin(s.place_id, !pinned)}
                           className={`rounded border px-2 py-0.5 disabled:opacity-40 ${
                             pinned ? 'border-[var(--border)] bg-emerald-700 text-white' : 'border-stone-300 hover:bg-[var(--bg-elevated)]'}`}>
-                          📌 {pinned ? 'Đã ghim' : 'Ghim'}
+                          <Pin size={13} aria-hidden="true" /> {pinned ? 'Đã ghim' : 'Ghim'}
                         </button>
                       )}
                       {onDisrupt && on && (['closed', 'disliked'] as const).map((k) => (
