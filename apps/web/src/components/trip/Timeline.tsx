@@ -1,7 +1,63 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { intentChips, mealOf, rainable, viewingOld, vnd, type DisruptionReq, type Itinerary, type Place } from '../../api/trips'
+import { intentChips, mealOf, rainable, viewingOld, vnd, type Day, type DisruptionReq, type Itinerary, type Place } from '../../api/trips'
 import type { Selected } from './place'
 import PlaceThumb from './PlaceThumb'
+
+const WEATHER_LABELS: Record<number, string> = {
+  0: 'Trời quang', 1: 'Ít mây', 2: 'Có mây từng lúc', 3: 'Nhiều mây', 45: 'Sương mù', 48: 'Sương mù đóng băng',
+  51: 'Mưa phùn nhẹ', 53: 'Mưa phùn', 55: 'Mưa phùn dày', 56: 'Mưa phùn đóng băng nhẹ', 57: 'Mưa phùn đóng băng',
+  61: 'Mưa nhẹ', 63: 'Mưa vừa', 65: 'Mưa lớn', 66: 'Mưa đóng băng nhẹ', 67: 'Mưa đóng băng lớn',
+  71: 'Tuyết nhẹ', 73: 'Tuyết vừa', 75: 'Tuyết lớn', 77: 'Hạt tuyết',
+  80: 'Mưa rào nhẹ', 81: 'Mưa rào', 82: 'Mưa rào lớn', 85: 'Mưa tuyết nhẹ', 86: 'Mưa tuyết lớn',
+  95: 'Dông', 96: 'Dông có mưa đá', 99: 'Dông mạnh',
+}
+function FloodRouteNotice({ day, places }: { day: Day; places: Record<string, Place> }) {
+  const chance = day.weather_forecast?.precipitation_probability_pct ?? day.rain_chance
+  const amount = day.weather_forecast?.precipitation_sum_mm
+  const weatherCode = day.weather_forecast?.weather_code
+  const forecastKnown = chance != null || amount != null || weatherCode != null
+  const rainCode = weatherCode != null && ((weatherCode >= 51 && weatherCode <= 67)
+    || (weatherCode >= 80 && weatherCode <= 82) || (weatherCode >= 95 && weatherCode <= 99))
+  const rainExpected = (chance ?? 0) > 0 || (amount ?? 0) > 0 || rainCode
+  const segments = day.legs.map((leg, index) => {
+    const from = leg.from_place_id == null ? (index === 0 ? 'Điểm xuất phát' : 'Điểm kết nối')
+      : places[leg.from_place_id]?.name ?? `Địa điểm ${leg.from_place_id}`
+    const to = leg.to_place_id == null ? 'Điểm kết thúc'
+      : places[leg.to_place_id]?.name ?? `Địa điểm ${leg.to_place_id}`
+    return `${from} → ${to}`
+  })
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/5 p-2.5 text-xs">
+      <div className="font-semibold text-[var(--text-main)]">Tuyến đường khi trời mưa</div>
+      {!forecastKnown ? (
+        <p className="mt-1 text-[var(--text-muted)]">Chưa có dự báo mưa cho ngày này nên chưa thể đánh giá nguy cơ ngập.</p>
+      ) : rainExpected ? (
+        <>
+          <p className="mt-1 text-[var(--text-muted)]">
+            {rainCode || (amount ?? 0) > 0 || (chance ?? 0) >= 50
+              ? 'Dự báo có mưa'
+              : 'Dự báo có khả năng mưa'}{chance != null ? ` ${chance}%` : ''}{amount != null ? ` · lượng mưa ${amount.toFixed(1)} mm` : ''}.
+          </p>
+          <div className="mt-2 space-y-1">
+            {segments.length ? segments.map((segment, index) => (
+              <div key={`${index}-${segment}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[var(--bg-elevated)] px-2 py-1.5">
+                <span>{segment}</span><span className="text-amber-700">Chưa thể dự đoán</span>
+              </div>
+            )) : <p className="text-[var(--text-muted)]">Lịch trình chưa có đoạn đường để kiểm tra.</p>}
+          </div>
+          <p className="mt-2 text-[var(--text-muted)]">
+            Mô hình Flood hiện có được huấn luyện từ dữ liệu mô phỏng và chưa có dữ liệu đã xác minh theo từng chặng. Vì vậy chưa thể kết luận đoạn nào ngập hoặc nói rằng không có đoạn ngập.
+          </p>
+        </>
+      ) : (
+        <p className="mt-1 text-[var(--text-muted)]">
+          Dự báo ngày này không có mưa. Điều đó không chứng minh tuyến đường sẽ an toàn nếu thời tiết chuyển mưa.
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function Timeline({ itinerary, places, budget, busy = false, changed = [], onDisrupt,
   versions = [], version = null, latest = null, pins = [], onView, onRestore, onPin, onExportPdf,
@@ -98,6 +154,33 @@ export default function Timeline({ itinerary, places, budget, busy = false, chan
               </button>
             )}
           </div>
+          <div className="mb-2 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-semibold text-[var(--text-main)]">
+                  Thời tiết dự báo{day.weather_forecast?.location && ` · ${day.weather_forecast.location}`}
+                </div>
+                {day.weather_forecast ? (
+                  <p className="mt-1 text-[var(--text-muted)]">
+                    {WEATHER_LABELS[day.weather_forecast.weather_code ?? -1] ?? 'Điều kiện trời'}
+                    {day.weather_forecast.temperature_2m_min_c != null && day.weather_forecast.temperature_2m_max_c != null
+                      && ` · ${Math.round(day.weather_forecast.temperature_2m_min_c)}–${Math.round(day.weather_forecast.temperature_2m_max_c)}°C`}
+                    {' · '}mưa {day.weather_forecast.precipitation_probability_pct}%
+                    {day.weather_forecast.precipitation_sum_mm != null && ` · khoảng ${day.weather_forecast.precipitation_sum_mm.toFixed(1)} mm`}
+                  </p>
+                ) : !day.date ? (
+                  <p className="mt-1 text-[var(--text-muted)]">
+                    Chưa có ngày khởi hành nên chưa thể lấy dự báo theo ngày đi. Hãy nhắn ngày bắt đầu chuyến đi trong khung chat. Thời tiết và AQI trên bản đồ là số liệu hiện tại tại tọa độ, không thay thế dự báo cho ngày đi.
+                  </p>
+                ) : day.rain_chance != null ? (
+                  <p className="mt-1 text-[var(--text-muted)]">Xác suất mưa {day.rain_chance}% · chưa có lượng mưa dự báo.</p>
+                ) : (
+                  <p className="mt-1 text-[var(--text-muted)]">Chưa lấy được dự báo cho ngày này. Ngày đi có thể nằm ngoài khoảng dự báo hiện hỗ trợ hoặc nguồn thời tiết chưa trả dữ liệu.</p>
+                )}
+              </div>
+            </div>
+            <FloodRouteNotice day={day} places={places} />
+          </div>
           <ol className="space-y-2">
             {day.stops.map((s, j) => {
               const p = places[s.place_id]
@@ -121,6 +204,15 @@ export default function Timeline({ itinerary, places, budget, busy = false, chan
                     <span className="shrink-0 tabular-nums">{vnd(s.est_cost)}</span>
                   </div>
                   <p className="mt-0.5 text-xs text-[var(--text-muted)]">{s.reason}</p>
+                  {p && (
+                    <div className="mt-2">
+                      <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        Ranker: {p.rank_position != null
+                          ? `hạng ${p.rank_position}/${p.rank_candidate_count ?? '—'}`
+                          : 'chưa xếp hạng'}
+                      </span>
+                    </div>
+                  )}
                   {!old && (onPin || (onDisrupt && on)) && (
                     <div className="mt-2 flex flex-wrap gap-2 text-xs" onClick={(e) => e.stopPropagation()}>
                       {onPin && (

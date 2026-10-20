@@ -33,7 +33,8 @@ PUBLIC_ROUTES = {
     ("journey", "GET", "/api/journey/pilot"), ("journey", "GET", "/api/journey/landmarks/{model_id}"),
     ("health", "GET", "/health"), ("health", "GET", "/ready"),
     ("main", "GET", "/"),
-    ("ml", "GET", "/api/ml/status"), ("ml", "POST", "/api/ml/flood-risk"), ("ml", "POST", "/api/ml/rank-experiences"),
+    ("ml", "GET", "/api/ml/status"), ("ml", "GET", "/api/ml/location-context"),
+    ("ml", "POST", "/api/ml/flood-risk"), ("ml", "POST", "/api/ml/rank-experiences"),
     ("models_3d", "GET", "/models-3d/calibration"), ("models_3d", "GET", "/models-3d/calibration/{model_id}"),
     ("planner", "GET", "/api/shared/itineraries/{share_token}"),
     # The high-entropy invite is the credential for read-only access; proposing still needs a traveler session.

@@ -129,10 +129,22 @@ def get_trip(trip_id: int, version: int | None = None, db: Session = Depends(get
     if version is not None and not it:
         raise HTTPException(404, "Không tìm thấy phiên bản lịch trình")
     dest = db.get(TripDestination, row.spec["destination"])
+    itinerary_data, place_data = (it[1].model_dump(mode="json"), it[2]) if it else (None, {})
+    if it:
+        required_ids = {stop.place_id for day in it[1].days for stop in day.stops}
+        if it[1].stay_place_id is not None:
+            required_ids.add(it[1].stay_place_id)
+        if any(place_data.get(str(place_id), {}).get("rank_score") is None for place_id in required_ids):
+            current_places = store.itinerary_places(db, it[1], place_data)
+            if required_ids.issubset(current_places):
+                scored = itinerary_event(
+                    it[1], current_places, trip=Trip.model_validate(row.spec),
+                    rank_query=" ".join(row.user_messages or []),
+                )
+                itinerary_data, place_data = scored["itinerary"], scored["places"]
     return {"trip_id": row.id, "trip": row.spec, "center": [dest.lon, dest.lat],
-            "version": it[0] if it else None,
-            "itinerary": it[1].model_dump(mode="json") if it else None,
-            "places": it[2] if it else {}, "versions": store.versions(db, trip_id),
+            "version": it[0] if it else None, "itinerary": itinerary_data,
+            "places": place_data, "versions": store.versions(db, trip_id),
             "pinned_place_ids": row.pinned_place_ids}
 
 
@@ -169,14 +181,14 @@ def restore(trip_id: int, version: int, db: Session = Depends(get_db),
     if len(itin.days) != trip.days:
         raise HTTPException(422, f"Bản {version} có {len(itin.days)} ngày nhưng chuyến đi hiện là {trip.days} ngày "
                                  "— hãy đổi lại số ngày trước khi quay lại bản này.")
-    places = store.itinerary_places(db, itin)
+    places = store.itinerary_places(db, itin, old[2])
     used = _stop_ids(itin)
     pins = [p for p in row.pinned_place_ids or [] if p in used]
     dropped = get_places(db, [p for p in row.pinned_place_ids or [] if p not in used])
     dest = next(d for d in list_destinations(db) if d["slug"] == trip.destination)
     try:
         new = build_itinerary(trip, to_draft(itin), places, [d.rain_chance for d in itin.days],
-                              store.hub_for(dest, trip))
+                              store.hub_for(dest, trip), weather_forecasts=[d.weather_forecast for d in itin.days])
     except InvalidDraft as e:  # vd Place trong bản cũ đã bị xoá khỏi dữ liệu
         raise HTTPException(422, f"Không quay lại được bản {version}: {e}") from None
     ev = itinerary_event(new, places)
@@ -199,8 +211,7 @@ def create_disruption(trip_id: int, body: DisruptionIn, db: Session = Depends(ge
     if body.version != store.versions(db, trip_id)[-1]:
         raise HTTPException(409, STALE)
     trip, itin = Trip.model_validate(row.spec), loaded[1]
-    ids = _stop_ids(itin) | ({itin.stay_place_id} - {None})
-    places = get_places(db, ids)
+    places = store.itinerary_places(db, itin, loaded[2])
     dest = next(d for d in list_destinations(db) if d["slug"] == trip.destination)
     try:
         result = propose(trip, itin, places, body,

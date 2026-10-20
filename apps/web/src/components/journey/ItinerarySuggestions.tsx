@@ -47,7 +47,11 @@ export function ItinerarySuggestions({ data, locale, busy, onChoose, onCustomize
             <span className="rounded-lg bg-emerald-50 px-2 py-1">{plan.estimated_cost_vnd.toLocaleString('vi-VN')} ₫ / {en ? 'group' : 'nhóm'}</span>
             <span className="rounded-lg bg-slate-100 px-2 py-1">{plan.total_travel_min} {en ? 'min travel' : 'phút di chuyển'}</span>
             <span className="rounded-lg bg-slate-100 px-2 py-1">{plan.stops.length} {en ? 'stops' : 'điểm dừng'}</span>
-            {option.ranker_score != null && <span className="rounded-lg bg-violet-50 px-2 py-1 text-violet-800" title={en ? 'Mean Ranker and traveler-rating score across ranked stops; not a probability' : 'Điểm Ranker và đánh giá du khách trung bình; không phải xác suất'}>{en ? 'Ranker' : 'Ranker'} {option.ranker_score.toFixed(2)}/1</span>}
+            {(data.ranking_source === 'ranker' || data.ranking_source === 'ranker+gemini') && (
+              <span className="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-800">
+                Ranker: {en ? `rank ${index + 1}/${data.options.length}` : `hạng ${index + 1}/${data.options.length}`}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500">{en ? 'From' : 'Xuất phát'}: {plan.origin_label}</p>
           <ol className="my-3 flex-1 space-y-3">

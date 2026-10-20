@@ -52,7 +52,6 @@ class FloodModelService:
         self._calibrator: dict[str, Any] = {}
         self._threshold = 0.5
         self._error: str | None = None
-
     @property
     def configured(self) -> bool:
         if not self.artifact_dir:

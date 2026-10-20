@@ -135,6 +135,72 @@ def test_ranker_baseline_orders_intent_matches_and_filters_infeasible():
     assert status["model_version"] == "rule-baseline-v1"
 
 
+def test_location_context_uses_selected_coordinates_and_marks_flood_unknown(client, monkeypatch):
+    from app.api.routes import ml
+
+    def conditions(latitude, longitude):
+        return {
+            "latitude": latitude, "longitude": longitude, "temperature_c": 28 + latitude,
+            "observed_at": "2026-10-20T10:00:00+07:00", "source": "Open-Meteo",
+            "air_quality": {"european_aqi": longitude, "european_aqi_label": "fair"},
+        }
+
+    monkeypatch.setattr(ml, "current_conditions", conditions)
+    first = client.get("/api/ml/location-context?latitude=10.77&longitude=106.70")
+    second = client.get("/api/ml/location-context?latitude=10.88&longitude=106.81")
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["coordinates"] == {"latitude": 10.77, "longitude": 106.7}
+    assert first.json()["conditions"]["temperature_c"] != second.json()["conditions"]["temperature_c"]
+    assert first.json()["conditions"]["air_quality"]["european_aqi"] != second.json()["conditions"]["air_quality"]["european_aqi"]
+    assert first.json()["flood"]["status"] == "not_assessed"
+    assert first.json()["flood"]["probability"] is None
+    assert first.json()["flood"]["prediction_available"] is False
+    assert "does not establish" in first.json()["flood"]["message_en"]
+
+
+def test_location_context_maps_provider_failure_to_a_retryable_error(client, monkeypatch):
+    from app.api.routes import ml
+    from app.services.open_meteo_service import OpenMeteoUnavailable
+
+    def unavailable(_latitude, _longitude):
+        raise OpenMeteoUnavailable("provider offline")
+
+    monkeypatch.setattr(ml, "current_conditions", unavailable)
+    response = client.get("/api/ml/location-context?latitude=10.77&longitude=106.70")
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "LOCATION_CONTEXT_UNAVAILABLE"
+    assert "provider offline" not in response.text
+
+
+def test_rank_experiences_api_returns_candidates_in_ranker_order(client, monkeypatch):
+    from app.services.ml_ranker_service import ranker_service
+
+    monkeypatch.setattr(ranker_service, "artifact_dir", None)
+    monkeypatch.setattr(ranker_service, "_model", None)
+    monkeypatch.setattr(ranker_service, "_error", None)
+    monkeypatch.setattr(ranker_service, "_load_failed", False)
+    response = client.post("/api/ml/rank-experiences", json={
+        "query": {
+            "user_intent_text": "craft workshop",
+            "user_intent_tags": ["handicraft"],
+            "remaining_time_min": 180, "group_size": 2, "budget_remaining_vnd": 800000,
+        },
+        "candidates": [
+            {"candidate_experience_id": "museum", "candidate_name": "Museum", "candidate_tags": ["culture"],
+             "duration_min": 45, "price_vnd_per_person": 50000, "is_hands_on": False, "is_indoor": True, "eta_min": 10},
+            {"candidate_experience_id": "workshop", "candidate_name": "Craft workshop", "candidate_tags": ["handicraft"],
+             "duration_min": 60, "price_vnd_per_person": 100000, "is_hands_on": True, "is_indoor": True, "eta_min": 10},
+        ],
+    })
+    assert response.status_code == 200
+    result = response.json()
+    assert result["ranking_source"] == "rule_baseline"
+    assert [row["candidate_experience_id"] for row in result["ranked_candidates"]] == ["workshop", "museum"]
+    assert result["score_type"] == "relative_ranking_score_not_probability"
+    assert result["warning"]
+
+
 def test_ranker_status_rejects_corrupt_model_checksum():
     metadata = {
         "model_version": "test-human-model",

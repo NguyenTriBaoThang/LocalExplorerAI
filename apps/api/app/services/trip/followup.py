@@ -178,9 +178,11 @@ def review_group_feedback(
         db, client, model: str, trip: Trip, source_version: int, source: Itinerary,
         base_version: int, base: Itinerary, places: dict[int, Place], feedback: str,
         rain: list[int | None] | None, hub: Hub | None, embed_fn,
+        weather_forecasts: list[dict | None] | None = None,
 ) -> Iterator[dict]:
     """Tạo candidate review bằng dữ liệu do code kiểm tra và tính lại."""
     seen = dict(places)
+    rankings = {p.id: p for p in seen.values() if p.rank_score is not None}
     review_prompt = catalog.get("TRIP_GROUP_REVIEW").system_prompt
     context = (
         f"{review_prompt}\n\nVersion nguồn: {source_version}\n"
@@ -202,7 +204,7 @@ def review_group_feedback(
             if not isinstance(args, dict):
                 raise InvalidEdit("arguments không phải JSON object hợp lệ")
             if call.function.name == "search_places":
-                ev, result = run_search(db, trip, embed_fn, args, seen)
+                ev, result = run_search(db, trip, embed_fn, args, seen, rankings)
                 yield ev
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
                 continue
@@ -217,7 +219,9 @@ def review_group_feedback(
                 raise InvalidEdit("unresolved_feedback phải là danh sách chuỗi")
             draft, changed = apply_ops(base, args["ops"], set(seen))
             draft.summary = args["summary"]
-            candidate = itinerary_event(build_itinerary(trip, draft, seen, rain, hub), seen)
+            candidate = itinerary_event(build_itinerary(trip, draft, seen, rain, hub,
+                                                        weather_forecasts=weather_forecasts), seen, rankings,
+                                        trip, feedback)
             yield {"type": "group_review_candidate", "candidate": {
                 "summary": draft.summary,
                 "unresolved_feedback": unresolved,
@@ -230,8 +234,10 @@ def review_group_feedback(
 
 
 def followup(db, client, model: str, trip: Trip, itin: Itinerary, places: dict[int, Place], message: str,
-             rain: list[int | None] | None, hub: Hub | None, embed_fn, pending: dict | None = None) -> Iterator[dict]:
+             rain: list[int | None] | None, hub: Hub | None, embed_fn, pending: dict | None = None,
+             weather_forecasts: list[dict | None] | None = None) -> Iterator[dict]:
     seen = dict(places)  # Place đang có trong lịch + Place AI tìm thêm
+    rankings = {p.id: p for p in seen.values() if p.rank_score is not None}
     tools = [PLAN_TOOLS[0], ANSWER_TOOL, EDIT_TOOL, CHANGE_TOOL] + ([CONFIRM_TOOL] if pending else [])
     waiting = (f"\n\nĐang chờ người dùng xác nhận: «{pending['text']}» (thay đổi {pending['changes']}). "
                "Tin nhắn mới là đồng ý (oke, ừ, được, tiếp tục…) → gọi confirm_replan; từ chối → answer."
@@ -253,7 +259,7 @@ def followup(db, client, model: str, trip: Trip, itin: Itinerary, places: dict[i
             if not isinstance(args, dict):
                 result = "Lỗi: arguments không phải JSON object hợp lệ."
             elif c.function.name == "search_places":
-                ev, result = run_search(db, trip, embed_fn, args, seen)
+                ev, result = run_search(db, trip, embed_fn, args, seen, rankings)
                 yield ev
             elif c.function.name == "answer":
                 yield {"type": "answer", "text": str(args.get("text", ""))}
@@ -277,7 +283,8 @@ def followup(db, client, model: str, trip: Trip, itin: Itinerary, places: dict[i
                 try:
                     draft, changed = apply_ops(itin, args.get("ops") or [], set(seen))
                     draft.summary = str(args.get("summary") or itin.summary)
-                    new = build_itinerary(trip, draft, seen, rain, hub)
+                    new = build_itinerary(trip, draft, seen, rain, hub,
+                                          weather_forecasts=weather_forecasts)
                 except (InvalidEdit, InvalidDraft) as e:
                     invalid += 1
                     if invalid > MAX_INVALID:
@@ -287,7 +294,7 @@ def followup(db, client, model: str, trip: Trip, itin: Itinerary, places: dict[i
                 else:
                     extra = [x for x in new.conflicts if (x.kind, x.day_index, x.place_id) not in _hard(itin)]
                     if not extra or last is not None:  # Conflict mới chỉ được gửi lại sửa 1 lần
-                        yield {**itinerary_event(new, seen), "changed": changed}
+                        yield {**itinerary_event(new, seen, rankings, trip, message), "changed": changed}
                         return
                     last = (new, changed)
                     result = ("Conflict mới: " + "; ".join(x.message for x in extra)
@@ -296,6 +303,6 @@ def followup(db, client, model: str, trip: Trip, itin: Itinerary, places: dict[i
                 result = f"Lỗi: không có tool {c.function.name}."
             messages.append({"role": "tool", "tool_call_id": c.id, "content": result})
     if last:
-        yield {**itinerary_event(last[0], seen), "changed": last[1]}
+        yield {**itinerary_event(last[0], seen, rankings, trip, message), "changed": last[1]}
     else:
         yield {"type": "error", "message": "AI chưa xử lý xong tin nhắn, bạn thử lại nhé."}

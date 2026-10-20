@@ -53,9 +53,17 @@ def latest_itinerary(db: Session, trip_id: int) -> tuple[int, Itinerary] | None:
     return (r[0], r[1]) if r else None
 
 
-def itinerary_places(db: Session, itin: Itinerary) -> dict:
+def itinerary_places(db: Session, itin: Itinerary, stored_places: dict | None = None) -> dict:
     ids = {s.place_id for d in itin.days for s in d.stops} | ({itin.stay_place_id} - {None})
-    return get_places(db, list(ids))
+    places = get_places(db, list(ids))
+    ranking_fields = ("rank_score", "rank_position", "rank_candidate_count", "ranker_source", "ranker_version", "rank_scope",
+                      "ranker_warning", "rank_matched_tags", "rank_price_per_person_vnd")
+    for place_id, place in places.items():
+        saved = (stored_places or {}).get(str(place_id), {})
+        ranking = {field: saved[field] for field in ranking_fields if saved.get(field) is not None}
+        if ranking:
+            places[place_id] = place.model_copy(update=ranking)
+    return places
 
 
 def versions(db: Session, trip_id: int) -> list[int]:
