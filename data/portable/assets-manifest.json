@@ -1,0 +1,482 @@
+[
+  {
+    "path": "apps/web/public/models_3d/Ben_Thanh_Market.glb",
+    "bytes": 100630128,
+    "sha256": "d3d87f6babaad6f13255ef5545ed0f4350c73429740308a8cca6e51da22808dd"
+  },
+  {
+    "path": "apps/web/public/models_3d/Bitexco_Tower.glb",
+    "bytes": 48332468,
+    "sha256": "09cc9b369cbf51a4362794c172d2dba7af71dba2910506aa6014ff0c35812c42"
+  },
+  {
+    "path": "apps/web/public/models_3d/HoiAn_ChuaCau_web.glb",
+    "bytes": 122303984,
+    "sha256": "5b13acc473fc84dcb9519bbf3be95e991a6207648d829d775fa7e95458f5259d"
+  },
+  {
+    "path": "apps/web/public/models_3d/Independence_Palace.glb",
+    "bytes": 80230936,
+    "sha256": "9436f77b817ac00c64c9c1711ebea696379a2402b562416871f5d6d0402332d2"
+  },
+  {
+    "path": "apps/web/public/models_3d/Landmark_81.glb",
+    "bytes": 36652672,
+    "sha256": "dbd2ed0de24d751530eceb32fe09662abc7b989e95224c777c7051323faea68f"
+  },
+  {
+    "path": "apps/web/public/models_3d/NhaThoDucBa2_cathedral_textured_1004080927_texture.glb",
+    "bytes": 95414660,
+    "sha256": "f1b0662f4c2c1d9844ff74ba98b1e0e2bc485e6e5aaa965779805d3b055ac8d3"
+  },
+  {
+    "path": "apps/web/public/models_3d/Saigon_Opera_House.glb",
+    "bytes": 79414552,
+    "sha256": "5d58ea9d59e89fdec10bf614869131590d3312f22a1fe67a013382895e922b7a"
+  },
+  {
+    "path": "apps/web/public/models_3d/VungTauChristDiorama3_web.glb",
+    "bytes": 79050720,
+    "sha256": "42e7476ed070310c055ce2075904f270dc2949b5a8d051589a4c45713bb6a465"
+  },
+  {
+    "path": "apps/web/public/images/skyline.jpg",
+    "bytes": 285402,
+    "sha256": "808a65d5d852a974038fd3d68313d4b7bed7b513d8ea6be80f4e9f884f7dd70a"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/node_14159026501.jpg",
+    "bytes": 301906,
+    "sha256": "62b5a642bc24d9f758f864ba9d930502783ef4db36aa0960bc6852c1b5b12d47"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/node_2286005166.jpg",
+    "bytes": 624384,
+    "sha256": "882496d9367eb295c0d8a227de21c8c9b7eb5e2b976eb6fd0c3aa5b890e2b256"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/node_5238614066.jpg",
+    "bytes": 534606,
+    "sha256": "e8231fe3fcbe90e5ac27ccf946e807219df5606cba6c416b174de9c1373298e6"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/node_9587486349.jpg",
+    "bytes": 355256,
+    "sha256": "037b6d9279bb0d3c068ec99cef767a0ea6d849dc5f1606ae87cff6cb03f2b406"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/relation_11084516.jpg",
+    "bytes": 552263,
+    "sha256": "c2ff84054fd35e29eb0cb959d8ca626c30f37c91f9e9f827025343393d94c975"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/relation_14939719.jpg",
+    "bytes": 580799,
+    "sha256": "560eef2287643eb11d856285881ad93470c4eaa76b6c4ed3d9d8d729f2f43672"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/relation_17758150.jpg",
+    "bytes": 294082,
+    "sha256": "0b60b6f5c299c94d7536ebd0850e3d775efe8a04830a126038ac0231bd5f9211"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_1056572948.jpg",
+    "bytes": 349160,
+    "sha256": "95e7d2061be240b064c176df176785ba3f93baddf8d40ea7bcfe8763cddf35d9"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_1085962671.jpg",
+    "bytes": 397145,
+    "sha256": "945d466ebfed1264d10d67b773397e0403be7548f318942bb0566c3505e261c4"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_1272651080.jpg",
+    "bytes": 605028,
+    "sha256": "5bb667c59ba7ed034cf52f5850fe80f0538ca5aff1589512e935e0734810cf5a"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_165491089.jpg",
+    "bytes": 410289,
+    "sha256": "6350e1f6d9d5aa7eb7ec3cadf72cbcbf8ff5056e76f2b3215f82433f4f659de3"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_165491103.jpg",
+    "bytes": 526547,
+    "sha256": "4a6aa2b1924127c5ade45362dc52e263f85c01ce731b0607efbb600001edc248"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_187895161.jpg",
+    "bytes": 367144,
+    "sha256": "c8ddb612b2410a231bf667fa75aad1e6cdbb72690be4b2798fc8bb0aa2abae70"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_187895176.jpg",
+    "bytes": 330990,
+    "sha256": "f09bf2510220e7b8364a4c6743e1efbc0eaeb4015ee62a6aa546148ac6623f85"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_187895181.jpg",
+    "bytes": 431650,
+    "sha256": "76ace215ed55ae69a06158adaf7c033b30a8e6fecd8304017dd1185664eaf4b3"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_187949834.jpg",
+    "bytes": 403153,
+    "sha256": "47b62f1161c8f96bf8d59c347fb1ab550970f798e18fbe43c5327cbc21debaf2"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_193142038.jpg",
+    "bytes": 208215,
+    "sha256": "5dd365dfb592e0db57c8bf3fb3137136951d8f639d7eb0073cb32eb7bf46159e"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_263352329.jpg",
+    "bytes": 581958,
+    "sha256": "eef680cc769b2234a107410d5f60e325a161b5b59ca47f06f3d19436026025e3"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_263505858.jpg",
+    "bytes": 462672,
+    "sha256": "bae98ab99855ba15c958be77c493e6a5c49d73dc120468162a71da349f2b9cf3"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_286297477.jpg",
+    "bytes": 337017,
+    "sha256": "0c4e2ffece5beb70e33335dffbd4065ce2f8a466effc9a4623b9f01f49d6e6a2"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_290222665.jpg",
+    "bytes": 698126,
+    "sha256": "8f4f9be23c094cd476609145d1eab13a7ac214c4c05f617aa71165390f6c58c5"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_292076575.jpg",
+    "bytes": 531432,
+    "sha256": "a5d47537b521fd37f748ae18d9911a7145ff9ed7f0f46900dec3d5883f947b7f"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_32735038.jpg",
+    "bytes": 592451,
+    "sha256": "6de457105af9bde18c441418c00a710df1bd55329be4d1d757d1bf76139c2e8d"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_32735082.jpg",
+    "bytes": 336396,
+    "sha256": "e4d04b04c3569d07e73dc2876084e1334861fa5308fcdbbeed5466e1afe8e6cb"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_341504305.jpg",
+    "bytes": 257091,
+    "sha256": "d62072fc399d1271dfd4dc09e9454cc0b84b5845ce55e96f6ec0ecbd9ccf8e7a"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_39514793.jpg",
+    "bytes": 380020,
+    "sha256": "96408697c8e07dbcadfff6d90fb658ca9196fc2d531253938a47362438caf623"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_39514795.jpg",
+    "bytes": 265401,
+    "sha256": "f94a7333092756f8a0052f534300141e46136db4bf9bfb08980efed94fe59da8"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_39598493.jpg",
+    "bytes": 283372,
+    "sha256": "5d1eac356818df4c8d16ecf06925a4c12c0caf481322862db8fb5bfedb007dc9"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_409004249.jpg",
+    "bytes": 544024,
+    "sha256": "3965c8f65e653288c17a5e68075f4449a58489f568008aefa80802167ab821a0"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_472074784.jpg",
+    "bytes": 349160,
+    "sha256": "95e7d2061be240b064c176df176785ba3f93baddf8d40ea7bcfe8763cddf35d9"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_500888743.jpg",
+    "bytes": 1046921,
+    "sha256": "29b568169e0a76a530d16603b6c18669ebbf0fa3858093ee4e4598cf05778ff5"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_801710792.jpg",
+    "bytes": 356129,
+    "sha256": "0ba4e0be0010013894dcd4b45f5d8fbd3949bb598975f4a9af9627768d1f0b99"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_801950766.jpg",
+    "bytes": 583759,
+    "sha256": "fee83ccfa596825a458bb08246d57f036f136035ea644ba3acbff5c4eb084cd0"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_802105041.jpg",
+    "bytes": 550478,
+    "sha256": "40db81efb9161427c0fc2426f9f3a1b3645f71205445a1ad393f37ef7943f7c1"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_802157425.jpg",
+    "bytes": 289574,
+    "sha256": "be088067a3785f7c710b7c21d70d8b711e5a2dc79bf86611e35fd8db2297f023"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_806860787.jpg",
+    "bytes": 658648,
+    "sha256": "f738e9c4b5c1c49a9b2413148b1ba122901bbdcfbc66ee72fb38ce155cbf16f7"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_807577739.jpg",
+    "bytes": 507871,
+    "sha256": "83086489a22b815a8ab85e3db2e7d4f14cbe6dff8b798b581f1da23d21394fed"
+  },
+  {
+    "path": "apps/web/public/images/places/district1/way_907280822.jpg",
+    "bytes": 494348,
+    "sha256": "30952e79849b2b2414d7a3f478e6cf9588224722e5ae990bb4d0d2bcc500f246"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-bao-tang-chung-tich-chien-tranh.jpg",
+    "bytes": 461612,
+    "sha256": "b204e16b9f8804a8cd09ec21ee92c15be373c6ad9f482c01cccf1c265514a928"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-ben-nha-rong.jpg",
+    "bytes": 258159,
+    "sha256": "36fdb5dfc84272a24d05e97856e383e40a0bc8cb394ecf17850a23a9bb032e88"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-bitexco-financial-tower.jpg",
+    "bytes": 288264,
+    "sha256": "6df86f2a412612b6da71001e71d1bb6d9ebb5ace0429f9998470355abd8c871d"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-cho-binh-tay.jpg",
+    "bytes": 325145,
+    "sha256": "4c9d47d367504203a6a1824ea8ef1b0e83181f9396d5423027d5a354de2f0a3e"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-chua-ba-thien-hau.jpg",
+    "bytes": 453073,
+    "sha256": "1fcc86cfecb69f71455f471a32ebb8e4b0ade02469e4f36b346bc6ca82cf833f"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-chua-giac-lam.jpg",
+    "bytes": 407121,
+    "sha256": "347c54d424e5a8e5c2ca5970044e66949851111982f1e753e0bf432ac3b157f6"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-chua-vinh-nghiem.jpg",
+    "bytes": 370624,
+    "sha256": "67f4f561ec6aa6e245f2b8434978f9bebde189ab7829cf8d40652c7398425663"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-dam-sen.jpg",
+    "bytes": 337461,
+    "sha256": "e708362aec1ca958fc774256a423e5e6c9e14e28a965556149ef26e4c83fc75b"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-dia-dao-cu-chi-ben-duoc.jpg",
+    "bytes": 208988,
+    "sha256": "cf34856d673d9fd9a8a4a4605a11b75ef45a12459c4e40359b6b57331b4741f1"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-dinh-doc-lap.jpg",
+    "bytes": 355934,
+    "sha256": "531dde0b1cdf7be2ac45a1eb27f5f394ed25b3820cda9af8b8d326542dfbed85"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-hoi-quan-nghia-an.jpg",
+    "bytes": 270301,
+    "sha256": "110766f7d8656d1222437bd92fa99706745872da49be4c51721c686b1413f6bb"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-landmark-81.png",
+    "bytes": 1473046,
+    "sha256": "81a94ee490c7ee443277bb637da5960a76027df10ad8dcd49953a35490ddd0c4"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-nha-hat-thanh-pho-ho-chi-minh.jpg",
+    "bytes": 316442,
+    "sha256": "0e1f064ec0b4e642c55101960a4c4923cb2baa14e684926f477a29a1cb4cde9b"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-nha-tho-tan-dinh.jpg",
+    "bytes": 406117,
+    "sha256": "d17d740b61ca7e1cf6806529e0700b87bb4222757f55050fde02c3515af3e4e9"
+  },
+  {
+    "path": "apps/web/public/images/places/hcmc/sai-gon-pho-di-bo-nguyen-hue.jpg",
+    "bytes": 328935,
+    "sha256": "1f9fcfd458b0181ef89a3709ec5a6f9c3ac37d814b16a7f32590b40c5124756d"
+  },
+  {
+    "path": "models_3d/calibration.json",
+    "bytes": 4365,
+    "sha256": "4489860991416f21d9db460056e687d958e14f015503daf8a8cd31429d65ce81"
+  },
+  {
+    "path": "models/README.md",
+    "bytes": 1665,
+    "sha256": "047f226655b335f75b7fd80f87c6ea14cb20a5514ae938fb2bf44fda690f8526"
+  },
+  {
+    "path": "models/ai-ranker/.gitkeep",
+    "bytes": 2,
+    "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+  },
+  {
+    "path": "models/ai-ranker/feature_schema.json",
+    "bytes": 856,
+    "sha256": "2b5f5080463ed241a6e74874eeaea792fe8829257434673a3ca11a93f70b4fed"
+  },
+  {
+    "path": "models/ai-ranker/metrics.json",
+    "bytes": 2555,
+    "sha256": "cf970dbe6a9f4e49b60c04996f91d1868d4ea216f9dd27729b1b1da9b31cee29"
+  },
+  {
+    "path": "models/ai-ranker/model_card.md",
+    "bytes": 1562,
+    "sha256": "d707cdc5f0dcb7ef104be438b606dc4e6d31e9b24f7aefce457647a7c176c942"
+  },
+  {
+    "path": "models/ai-ranker/model_metadata.json",
+    "bytes": 1939,
+    "sha256": "4c4f7556b851b44f348078afbbfceec9490cddd979a96b306c9b55e1bd9f24ed"
+  },
+  {
+    "path": "models/ai-ranker/preprocessing.json",
+    "bytes": 309,
+    "sha256": "649bb62959a322d134f485756c3ad7044ae5ae64425723ca03564d8de150ab11"
+  },
+  {
+    "path": "models/ai-ranker/test_predictions.csv",
+    "bytes": 15426,
+    "sha256": "eea7b25b4796bf701bc7208434986d9110a9e961575d92c1983fb01b80e56d8c"
+  },
+  {
+    "path": "models/ai-ranker/validation_comparison.csv",
+    "bytes": 286,
+    "sha256": "df1692500b6421f1ace1921b0039ef300d66827fc1a6205fb837cf971b0737a6"
+  },
+  {
+    "path": "models/ai-ranker/xgboost_ranker.json",
+    "bytes": 160567,
+    "sha256": "ba76e88b040ac34a04862c4824fa37b544d71ffa84542c4e60499062ba70614f"
+  },
+  {
+    "path": "models/behavior-ranker-experiment/feature_schema.json",
+    "bytes": 532,
+    "sha256": "a5fae7ab36f8ef62ab229805dbe322b9e1fbcdb8f802081f19bf6100b18eb44c"
+  },
+  {
+    "path": "models/behavior-ranker-experiment/model_metadata.json",
+    "bytes": 3023,
+    "sha256": "917a8a2b98f3268e38f0b357256fef3b04cb5055931cb4098679ddd7f723f187"
+  },
+  {
+    "path": "models/behavior-ranker-experiment/README.md",
+    "bytes": 1346,
+    "sha256": "b00f9c2b9e4728b96983b746682b4939d8fdeaf62f8375db8851c5589de29598"
+  },
+  {
+    "path": "models/behavior-ranker-experiment/xgb_ranker.json",
+    "bytes": 437906,
+    "sha256": "5a2e2af074b50a629f01ad21034e14812fbe5897de29cecd5a13c8370fef8a39"
+  },
+  {
+    "path": "models/dataset-17-experiment/experiment_report.json",
+    "bytes": 4531,
+    "sha256": "b346463a7d7c11901e5da6a77ab9838be6abd1dafa368edd190fa7a4aab71f1c"
+  },
+  {
+    "path": "models/dataset-17-experiment/MODEL_CARD.md",
+    "bytes": 2408,
+    "sha256": "490fba38d83dfa7658a1d921e68b7ca64607b219081b84a882c58d2b1c31f2b8"
+  },
+  {
+    "path": "models/e5/.gitkeep",
+    "bytes": 2,
+    "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+  },
+  {
+    "path": "models/flood-report-experiment/metadata.json",
+    "bytes": 1539,
+    "sha256": "f92abc51c87c000270a9b99635f3bf4c874b66494d38dc22d1e4f0cbe70082d5"
+  },
+  {
+    "path": "models/flood-report-experiment/report_presence_model.joblib",
+    "bytes": 12954,
+    "sha256": "bc64af6152b98e58fb132139817e3cf71500c32117839d0e456730cd951e09c3"
+  },
+  {
+    "path": "models/flood-risk/.gitkeep",
+    "bytes": 2,
+    "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/calibration.json",
+    "bytes": 119,
+    "sha256": "6406bc4260a2f6372451b70f96ee4e745d8aa9a61ea1647031fe838e1b5321ad"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/feature_schema.json",
+    "bytes": 406,
+    "sha256": "d8b298a1ac897ca25ed1a6f4e4eb833bc9c2d25a167e68a77b7fc873f4f7d482"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/flood_metrics.json",
+    "bytes": 1624,
+    "sha256": "a1dde6d463b58daf5e1b1c0da08c2f7e7aa1523b4fc75857740a172e0b35e9e7"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/flood_model.pkl",
+    "bytes": 20940,
+    "sha256": "59b85f8dae96348aec561616aeb03c8dc7040a0688d378ac730bb466e75f329f"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/metadata.json",
+    "bytes": 995,
+    "sha256": "44497cd51a502fdfbc3c227cde4372de0f493adc979fd6fefd0f3fe7b3cafc92"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/model.joblib",
+    "bytes": 20940,
+    "sha256": "59b85f8dae96348aec561616aeb03c8dc7040a0688d378ac730bb466e75f329f"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/preprocessor.joblib",
+    "bytes": 763,
+    "sha256": "ea0b65e283c4a1617d0e0bb038c7793e19664bb9239a5397832783d582cbe617"
+  },
+  {
+    "path": "models/dataset-17-experiment/flood-risk/threshold.json",
+    "bytes": 95,
+    "sha256": "eb5d8229e3bfbf966b85547283d3a491ccc96d00d5bdbf3ff6f8d70d019b1269"
+  },
+  {
+    "path": "models/dataset-17-experiment/ranker/feature_schema.json",
+    "bytes": 659,
+    "sha256": "e328d0752e8cae3cb55a23032f1f31b7f14b2c36ab5a8a5bd0f656646cee355c"
+  },
+  {
+    "path": "models/dataset-17-experiment/ranker/model_metadata.json",
+    "bytes": 1289,
+    "sha256": "f5445a96da49beefb7b9519fbeb5834cdbcc9c77d29c6854ed31c8816f43d133"
+  },
+  {
+    "path": "models/dataset-17-experiment/ranker/ranker_metrics.json",
+    "bytes": 1808,
+    "sha256": "3360ef8a1156dd365d9f198f9fce6251cb80dbe892872121d5c3126ac8d09119"
+  },
+  {
+    "path": "models/dataset-17-experiment/ranker/ranker_model.pkl",
+    "bytes": 67747,
+    "sha256": "2f2b6e0ca1b83eed02984501b7aede17a0b896af864d3c034927d9928130a359"
+  },
+  {
+    "path": "models/dataset-17-experiment/ranker/ranker_model.txt",
+    "bytes": 178109,
+    "sha256": "baef7c63b6cbd5c135e32231fb0ddafa516cfa1edf16893a05ccea23ac4a448f"
+  }
+]
