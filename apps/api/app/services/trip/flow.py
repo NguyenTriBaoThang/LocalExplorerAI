@@ -78,9 +78,12 @@ def _trip_event(trip_id: int, trip: Trip, dest: dict) -> str:
 
 
 def _plan_and_save(db, client, model, trip_id: int, trip: Trip, dest: dict, user_messages: list[str], previous=None):
-    rain = forecast.get_rain_chance(dest["lat"], dest["lon"], trip.start_date, trip.days, today=_today())
+    weather_forecasts = forecast.get_daily_forecasts(dest["lat"], dest["lon"], trip.start_date, trip.days,
+                                                     today=_today(), location_name=dest["name"])
+    rain = ([item.get("precipitation_probability_pct") if item else None for item in weather_forecasts]
+            if weather_forecasts is not None else None)
     for ev in plan(db, client, model, trip, lambda texts: llm.embed(db, texts), rain, store.hub_for(dest, trip),
-                   user_messages, previous):
+                   user_messages, previous, weather_forecasts):
         if ev["type"] == "itinerary":
             version = store.save_itinerary(db, trip_id, ev["itinerary"], ev["places"])
             store.log_message(db, trip_id, "ai", ev["itinerary"]["summary"], version)
@@ -107,7 +110,8 @@ def _replan(db, client, model, trip_id: int, trip: Trip, user_messages: list[str
     db.commit()
     dest = _dest(db, trip.destination)
     latest = store.latest_itinerary(db, trip_id)
-    previous = (latest[1], store.itinerary_places(db, latest[1])) if latest else None
+    loaded = store.load_itinerary(db, trip_id) if latest else None
+    previous = (latest[1], store.itinerary_places(db, latest[1], loaded[2] if loaded else None)) if latest else None
     yield _trip_event(trip_id, trip, dest)
     yield from _plan_and_save(db, client, model, trip_id, trip, dest, user_messages, previous)
 
@@ -116,11 +120,14 @@ def _follow_up(db, client, model, prev: TripRow, itin, dest: dict, message: str)
     """Trip đã có lịch trình: trả lời / sửa, không lập lại từ đầu (#22)."""
     trip = Trip.model_validate(prev.spec)
     rain = [d.rain_chance for d in itin.days]
+    weather_forecasts = [d.weather_forecast for d in itin.days]
+    loaded = store.load_itinerary(db, prev.id)
+    places = store.itinerary_places(db, itin, loaded[2] if loaded else None)
     pending = prev.pending_replan
     prev.pending_replan = None  # chỉ sống 1 lượt
     db.commit()
-    for ev in followup(db, client, model, trip, itin, store.itinerary_places(db, itin), message, rain,
-                       store.hub_for(dest, trip), lambda texts: llm.embed(db, texts), pending):
+    for ev in followup(db, client, model, trip, itin, places, message, rain,
+                       store.hub_for(dest, trip), lambda texts: llm.embed(db, texts), pending, weather_forecasts):
         if ev["type"] == "replan_confirmed":
             yield from _replan(db, client, model, prev.id, trip, prev.user_messages, pending["changes"],
                                pending["message"])
@@ -265,14 +272,16 @@ def _group_review(db: Session, user: User, trip_id: int, source_version: int, fe
     source_number, source_itinerary, _ = source
     base_number, base_itinerary, _ = base
     trip = Trip.model_validate(row.spec)
-    places = store.itinerary_places(db, source_itinerary) | store.itinerary_places(db, base_itinerary)
+    places = (store.itinerary_places(db, source_itinerary, source[2])
+              | store.itinerary_places(db, base_itinerary, base[2]))
     rain = [day.rain_chance for day in base_itinerary.days]
+    weather_forecasts = [day.weather_forecast for day in base_itinerary.days]
     yield sse({"type": "thinking", "text": "Đang đọc góp ý của nhóm…"})
     try:
         for event in review_group_feedback(db, client, model, trip, source_number, source_itinerary, base_number,
                                            base_itinerary, places, feedback, rain,
                                            store.hub_for(_dest(db, trip.destination), trip),
-                                           lambda texts: llm.embed(db, texts)):
+                                           lambda texts: llm.embed(db, texts), weather_forecasts):
             if event["type"] != "group_review_candidate":
                 yield sse(event)
                 continue

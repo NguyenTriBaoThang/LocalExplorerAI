@@ -4,6 +4,29 @@ import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatMessageR
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
 
+export type LocationContext = {
+  coordinates: { latitude: number; longitude: number }
+  conditions: {
+    latitude: number; longitude: number; observed_at: string; air_quality_observed_at?: string | null
+    temperature_c: number | null; apparent_temperature_c: number | null; relative_humidity_pct: number | null
+    rain_mm_per_hour: number | null; precipitation_mm: number | null; weather_code: number | null
+    cloud_cover_pct: number | null; wind_speed_kmh: number | null
+    air_quality: {
+      european_aqi: number | null; european_aqi_label: string | null; us_aqi: number | null; us_aqi_pm25: number | null
+      pm25_ug_m3: number | null; pm10_ug_m3: number | null; nitrogen_dioxide_ug_m3: number | null
+      ozone_ug_m3: number | null; sulphur_dioxide_ug_m3: number | null
+    }
+  }
+  flood: {
+    status: 'not_assessed'; probability: null; risk_state: 'unknown'; prediction_available: false
+    model_deployment_allowed: boolean; model_version: string | null; message_vi: string; message_en: string
+  }
+}
+
+export async function getLocationContext(latitude: number, longitude: number, signal?: AbortSignal): Promise<LocationContext> {
+  return (await api.get<LocationContext>('/ml/location-context', { params: { latitude, longitude }, signal, timeout: 12000 })).data
+}
+
 export type WebPushStatus = { configured: boolean; enabled: boolean; device_count: number }
 
 export async function getWebPushStatus(): Promise<WebPushStatus> {
@@ -352,7 +375,7 @@ export async function getPOI(id: string): Promise<POIDetail> {
   return data
 }
 
-export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; ranker_score?: number | null; request: PlanRequest; preview: Itinerary }
+export type ItinerarySuggestion = { style: string; relaxed_experience_names?: string[]; relaxed_poi_names?: string[]; recommendation_reason?: string | null; request: PlanRequest; preview: Itinerary }
 export type ItinerarySuggestions = { options: ItinerarySuggestion[]; requested_count: number; returned_count: number; ranking_source?: 'gemini' | 'heuristic' | 'ranker' | 'ranker+gemini' }
 
 export async function getItinerarySuggestions(payload: PlanRequest): Promise<ItinerarySuggestions> {

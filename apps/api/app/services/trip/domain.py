@@ -103,6 +103,15 @@ class Place(BaseModel):
     tags: list[str]
     description: str = ""
     photo_url: str | None = None
+    rank_score: float | None = None
+    rank_position: int | None = None
+    rank_candidate_count: int | None = None
+    ranker_source: str | None = None
+    ranker_version: str | None = None
+    ranker_warning: str | None = None
+    rank_scope: str | None = None
+    rank_matched_tags: list[str] = []
+    rank_price_per_person_vnd: int | None = None
 
 
 class DraftStop(BaseModel):
@@ -142,6 +151,7 @@ class Day(BaseModel):
     stops: list[Stop]
     legs: list[Leg]
     rain_chance: int | None = None
+    weather_forecast: dict | None = None
 
 
 class Conflict(BaseModel):

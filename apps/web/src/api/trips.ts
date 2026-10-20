@@ -9,6 +9,7 @@ export type Place = {
   id: number; name: string; kind: string; lat: number; lon: number
   photo_url: string | null; outdoor: boolean; price: number
   open_hours?: Record<string, [string, string] | null>; description?: string  // thiếu ở Itinerary lưu trước T4
+  rank_position?: number | null; rank_candidate_count?: number | null
 }
 export type Stop = {
   place_id: number; start_time: string; duration_min: number; reason: string; pinned: boolean; est_cost: number
@@ -19,7 +20,15 @@ export type Leg = {
 }
 export type Question = { field: 'travel_mode' | 'arrival'; text: string; options: { value: string; label: string }[] }
 export type Answers = { travel_mode?: string; arrival_mode?: string; arrival_time?: string; departure_time?: string }
-export type Day = { date: string | null; stops: Stop[]; legs: Leg[]; rain_chance: number | null }
+export type WeatherForecast = {
+  location?: string; forecast_date: string; precipitation_probability_pct: number; precipitation_sum_mm?: number
+  temperature_2m_max_c?: number; temperature_2m_min_c?: number; weather_code?: number
+  retrieved_at?: string
+}
+export type Day = {
+  date: string | null; stops: Stop[]; legs: Leg[]; rain_chance: number | null
+  weather_forecast?: WeatherForecast | null
+}
 export type Conflict = { kind: string; message: string; day_index: number | null; place_id: number | null }
 export type Itinerary = {
   stay_place_id: number | null; days: Day[]; total_cost: number; conflicts: Conflict[]; summary: string

@@ -130,6 +130,25 @@ export function AboutPage() {
         </div>
       </div>
 
+      <section className="mx-auto my-8 max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 text-sm text-[var(--text-muted)]">
+        <h2 className="mb-2 font-semibold text-[var(--text-main)]">
+          {locale === 'en' ? 'Data acknowledgements' : 'Ghi nhận nguồn dữ liệu'}
+        </h2>
+        <p>
+          {locale === 'en'
+            ? 'Weather data provided by Open-Meteo (CC BY 4.0). Air-quality data from CAMS ENSEMBLE, distributed through Open-Meteo.'
+            : 'Dữ liệu thời tiết do Open-Meteo cung cấp (CC BY 4.0). Dữ liệu chất lượng không khí từ CAMS ENSEMBLE, phân phối qua Open-Meteo.'}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <a className="underline" href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">
+            {locale === 'en' ? 'Weather data details' : 'Thông tin dữ liệu thời tiết'}
+          </a>
+          <a className="underline" href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noreferrer">
+            {locale === 'en' ? 'Air-quality data details' : 'Thông tin dữ liệu chất lượng không khí'}
+          </a>
+        </div>
+      </section>
+
       {/* CTA Box */}
       <div className="about-cta-card-3d">
         <div className="about-cta-glow" />

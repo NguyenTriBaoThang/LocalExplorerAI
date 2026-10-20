@@ -980,11 +980,6 @@ export function ItineraryPage() {
                       ) : (
                         <span className="text-slate-400">{locale === 'en' ? 'No traveler ratings yet' : 'Chưa có đánh giá từ du khách'}</span>
                       )}
-                      {stop.ranking_score != null && (
-                        <span className="text-slate-400" title={locale === 'en' ? 'Normalized ordering score, not a probability' : 'Điểm dùng để sắp thứ tự, không phải xác suất'}>
-                          {locale === 'en' ? 'Ranking score' : 'Điểm xếp hạng'}: {stop.ranking_score.toFixed(2)}/1
-                        </span>
-                      )}
                       {itinerary.completed_at && (
                         <Link className="font-semibold text-emerald-400 underline" to={`/places/${encodeURIComponent(stop.poi.id)}#pr-title`}>
                           {locale === 'en' ? 'Review this place' : 'Đánh giá địa điểm này'}

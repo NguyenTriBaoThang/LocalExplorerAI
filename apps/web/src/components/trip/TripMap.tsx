@@ -7,6 +7,7 @@ import '@goongmaps/goong-js/dist/goong-js.css'
 import type { Itinerary, Place } from '../../api/trips'
 import { selectedPlace, tourStops, type Selected } from './place'
 import PlacePopup from './PlacePopup'
+import LocationConditions from './LocationConditions'
 import { DEFAULT_CALIBRATIONS, sanitizeCalibration } from '../3d/landmark/types'
 import { createLandmarkLayer } from './landmarkLayer'
 import { installMissingStyleImageFallback } from '../map/missingStyleImages'
@@ -24,6 +25,8 @@ export default function TripMap(props: Props) {
   const [tour, setTour] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [roadStatus, setRoadStatus] = useState('')
+  const [mapPoint, setMapPoint] = useState<{ lat: number; lon: number } | null>(null)
+  const [inspectSearchPin, setInspectSearchPin] = useState<Place | null>(null)
   const roadCache = useRef(new Map<string, { at: number; coordinates: number[][] }>())
   const profile = ['grab', 'o-to-rieng'].includes(props.travelMode ?? '') ? 'car' : 'motorcycle'
   const stop = () => { run.current++; setTour(null) }
@@ -59,6 +62,11 @@ export default function TripMap(props: Props) {
       })).then(cals => { if (!disposed) m.addLayer(createLandmarkLayer('trip-landmarks', cals)) })
     })
     m.on('dragstart', stop)
+    m.on('click', (event: any) => {
+      setInspectSearchPin(null)
+      latest.current.onSelect(null)
+      setMapPoint({ lat: event.lngLat.lat, lon: event.lngLat.lng })
+    })
     m.on('error', () => setError('Bản đồ đang gặp lỗi tải. Lịch trình vẫn được giữ lại.'))
     return () => { disposed = true; resizeObserver.disconnect(); run.current++; removeMissingImageFallback(); m.remove(); map.current = null }
   }, [])
@@ -73,12 +81,17 @@ export default function TripMap(props: Props) {
         const p = places[s.place_id]; if (!p) return
         const el = document.createElement('button'); el.type = 'button'; el.className = 'trip-pin'
         el.textContent = `${day + 1}.${index + 1}`; el.style.backgroundColor = COLORS[day % COLORS.length]; el.title = p.name
-        el.addEventListener('click', () => { stop(); latest.current.onSelect({ day, stop: index }) })
+        el.addEventListener('click', event => { event.stopPropagation(); stop(); setMapPoint(null); setInspectSearchPin(null); latest.current.onSelect({ day, stop: index }) })
         markers.push(new goongjs.Marker(el).setLngLat([p.lon, p.lat]).addTo(m))
       })
     })
     props.searchPins.forEach(p => {
-      const el = document.createElement('span'); el.className = 'trip-pin trip-pin--searching'; el.textContent = '•'; el.title = p.name
+      const el = document.createElement('button'); el.type = 'button'; el.className = 'trip-pin trip-pin--searching';
+      el.textContent = p.rank_position == null ? '•' : String(p.rank_position)
+      el.title = p.rank_position == null ? `Ranker: chưa xếp hạng · ${p.name}`
+        : `Ranker: hạng ${p.rank_position}/${p.rank_candidate_count ?? '—'} · ${p.name}`
+      el.setAttribute('aria-label', `Xem thông tin ${p.name}; ${el.title}`)
+      el.addEventListener('click', event => { event.stopPropagation(); stop(); setMapPoint(null); setInspectSearchPin(p); latest.current.onSelect(null) })
       markers.push(new goongjs.Marker(el).setLngLat([p.lon, p.lat]).addTo(m))
     })
     if (itinerary) fit()
@@ -135,6 +148,13 @@ export default function TripMap(props: Props) {
   }, [ready, props.itinerary, props.places, profile])
   const selectedId = selectedPlace(props.itinerary, props.selected)
   const selected = selectedId == null ? undefined : props.places[selectedId]
+  const popupPlace = inspectSearchPin ?? selected
+  useEffect(() => {
+    if (props.selected != null) { setMapPoint(null); setInspectSearchPin(null) }
+  }, [props.selected])
+  useEffect(() => {
+    if (inspectSearchPin && !props.searchPins.some(place => place.id === inspectSearchPin.id)) setInspectSearchPin(null)
+  }, [props.searchPins, inspectSearchPin])
   useEffect(() => {
     if (ready && selected) map.current.flyTo({ center: [selected.lon, selected.lat], zoom: 16, pitch: 60, duration: duration(1800) })
   }, [ready, selected])
@@ -160,6 +180,17 @@ export default function TripMap(props: Props) {
         {tour == null ? '▶ Xem hành trình' : `■ Dừng · Ngày ${(tourPoint?.day ?? 0) + 1} · Điểm ${tour + 1} · ${selected?.name ?? ''}`}
       </button>}
     </div>
-    {selected && <aside className="trip-place-popup"><button aria-label="Đóng thông tin địa điểm" onClick={() => props.onSelect(null)}>✕</button><PlacePopup place={selected} date={props.selected && props.selected !== 'stay' ? props.itinerary?.days[props.selected.day]?.date ?? null : null} pinned={props.pins.includes(selected.id)} onPin={props.onPin ? p => props.onPin!(selected.id, p) : undefined} /></aside>}
+    {(popupPlace || mapPoint) && <aside className="trip-place-popup">
+      <button aria-label="Đóng thông tin địa điểm" onClick={() => { setMapPoint(null); setInspectSearchPin(null); props.onSelect(null) }}>✕</button>
+      {popupPlace ? <PlacePopup place={popupPlace} date={props.selected && props.selected !== 'stay' ? props.itinerary?.days[props.selected.day]?.date ?? null : null}
+        pinned={!inspectSearchPin && props.pins.includes(popupPlace.id)}
+        onPin={!inspectSearchPin && props.onPin ? p => props.onPin!(popupPlace.id, p) : undefined} /> : (
+          <div className="grid max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] gap-2 overflow-y-auto bg-[var(--bg-surface)] p-3 text-[var(--text-main)]">
+            <h3 className="text-sm font-bold">Điều kiện tại điểm bản đồ</h3>
+            <p className="text-[10px] text-[var(--text-muted)]">{mapPoint!.lat.toFixed(5)}, {mapPoint!.lon.toFixed(5)}</p>
+            <LocationConditions latitude={mapPoint!.lat} longitude={mapPoint!.lon} />
+          </div>
+      )}
+    </aside>}
   </>
 }

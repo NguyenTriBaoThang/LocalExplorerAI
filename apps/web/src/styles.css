@@ -13207,7 +13207,7 @@ h1, h2, h3, .page-heading-3d, .section-title-3d { text-wrap: balance; }
 .trip-map-controls { position: absolute; z-index: 5; bottom: 12px; left: 80px; right: 16px; display: flex; align-items: center; flex-direction: column; gap: 6px; pointer-events: none; }
 .trip-map-controls > * { pointer-events: auto; background: var(--bg-surface); color: var(--text-main); padding: 6px 10px; border-radius: 10px; max-width: 540px; text-align: center; }
 .trip-map-notice { position: absolute; left: 80px; right: 16px; top: 0; z-index: 6; background: var(--bg-surface); padding: 8px; }
-.trip-place-popup { position: absolute; z-index: 25; bottom: 90px; left: 50%; transform: translateX(-50%); border-radius: 16px; overflow: hidden; background: var(--bg-surface); box-shadow: 0 8px 40px #0004; }
+.trip-place-popup { position: absolute; z-index: 25; bottom: 90px; left: 50%; transform: translateX(-50%); width: min(22rem, calc(100vw - 24px)); max-height: 70vh; overflow: auto; border-radius: 16px; background: var(--bg-surface); box-shadow: 0 8px 40px #0004; }
 .trip-place-popup > button { position: absolute; right: 6px; top: 6px; z-index: 1; background: var(--bg-surface); border-radius: 50%; padding: 4px 9px; }
 @media (prefers-reduced-motion: reduce) { .trip-pin--searching { animation: none; } }
 @media print { body:has(.trip-print) nav, body:has(.trip-print) .app-header, body:has(.trip-print) footer { display: none !important; } }

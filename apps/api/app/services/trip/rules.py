@@ -90,7 +90,8 @@ def _check_draft(trip: Trip, draft: Draft, places: dict[int, Place], pinned=froz
 
 
 def build_itinerary(trip: Trip, draft: Draft, places: dict[int, Place],
-                    rain: list[int | None] | None = None, hub: Hub | None = None, pinned=frozenset()) -> Itinerary:
+                    rain: list[int | None] | None = None, hub: Hub | None = None, pinned=frozenset(),
+                    weather_forecasts: list[dict | None] | None = None) -> Itinerary:
     _check_draft(trip, draft, places, pinned)
     stay = places.get(draft.stay_place_id) if draft.stay_place_id is not None else None
     mode = trip.travel_mode or DEFAULT_TRAVEL_MODE
@@ -112,7 +113,10 @@ def build_itinerary(trip: Trip, draft: Draft, places: dict[int, Place],
         distance.prefetch(route[:-1], route[1:], mode)
         legs = [make_leg(a, b, mode, trip.travelers) for a, b in zip(route, route[1:])]
         date = trip.start_date + dt.timedelta(days=i) if trip.start_date else None
-        days.append(Day(date=date, stops=stops, legs=legs, rain_chance=rain[i] if rain else None))
+        forecast = weather_forecasts[i] if weather_forecasts and i < len(weather_forecasts) else None
+        rain_chance = rain[i] if rain and i < len(rain) else (
+            forecast.get("precipitation_probability_pct") if forecast else None)
+        days.append(Day(date=date, stops=stops, legs=legs, rain_chance=rain_chance, weather_forecast=forecast))
         total += sum(s.est_cost for s in stops) + sum(leg.cost for leg in legs)
 
     itin = Itinerary(stay_place_id=draft.stay_place_id, days=days, total_cost=total, summary=draft.summary)

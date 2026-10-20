@@ -255,7 +255,8 @@ def _variant(trip: Trip, itin: Itinerary, places: dict[int, Place], d: Disruptio
         day.stops = kept_stops
 
     new = build_itinerary(trip, draft, places | {c.id: c for c in pick.values()},
-                          [x.rain_chance for x in itin.days], hub)
+                          [x.rain_chance for x in itin.days], hub,
+                          weather_forecasts=[x.weather_forecast for x in itin.days])
     pinned = {s.place_id for x in itin.days for s in x.stops if s.pinned}
     # Conflict trên Stop ghim không do engine gây ra (engine không đổi Stop ghim) → không loại phương án
     extra = {x for x in _hard(new) - _hard(itin) if x[2] is None or x[2] not in pinned}

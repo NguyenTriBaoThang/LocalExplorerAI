@@ -43,7 +43,10 @@ def daily_forecast(
     with _CACHE_LOCK:
         cached = _FORECAST_CACHE.get(key)
         if cached and cached[0] > now:
-            return dict(cached[1])
+            result = dict(cached[1])
+            if location_name:
+                result["location"] = location_name
+            return result
 
     params: dict[str, str | float | int] = {
         "latitude": latitude,
@@ -51,7 +54,7 @@ def daily_forecast(
         "timezone": _TIMEZONE,
         "timeformat": "iso8601",
         "forecast_days": 16,
-        "daily": "precipitation_probability_max,precipitation_sum",
+        "daily": "precipitation_probability_max,precipitation_sum,temperature_2m_max,temperature_2m_min,weather_code",
     }
     if settings.open_meteo_api_key:
         params["apikey"] = settings.open_meteo_api_key.strip()
@@ -68,6 +71,9 @@ def daily_forecast(
     dates = daily.get("time") if isinstance(daily, dict) else None
     probabilities = daily.get("precipitation_probability_max") if isinstance(daily, dict) else None
     amounts = daily.get("precipitation_sum") if isinstance(daily, dict) else None
+    temperature_max_values = daily.get("temperature_2m_max") if isinstance(daily, dict) else None
+    temperature_min_values = daily.get("temperature_2m_min") if isinstance(daily, dict) else None
+    weather_codes = daily.get("weather_code") if isinstance(daily, dict) else None
     if not all(isinstance(values, list) for values in (dates, probabilities, amounts)):
         raise OpenMeteoUnavailable("Open-Meteo returned an incomplete daily forecast.")
     try:
@@ -90,6 +96,22 @@ def daily_forecast(
         "source_url": "https://open-meteo.com/en/docs",
         "attribution": "Weather forecast data: Open-Meteo (CC BY 4.0).",
     }
+    for key, values in (("temperature_2m_max_c", temperature_max_values),
+                        ("temperature_2m_min_c", temperature_min_values)):
+        if isinstance(values, list) and index < len(values) and values[index] is not None:
+            try:
+                temperature = float(values[index])
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(temperature):
+                result[key] = temperature
+    if isinstance(weather_codes, list) and index < len(weather_codes) and weather_codes[index] is not None:
+        try:
+            code = int(weather_codes[index])
+        except (TypeError, ValueError):
+            code = -1
+        if 0 <= code <= 99:
+            result["weather_code"] = code
     with _CACHE_LOCK:
         for cache_key, (expires_at, _) in list(_FORECAST_CACHE.items()):
             if expires_at <= now:
@@ -102,26 +124,34 @@ def daily_forecast(
 
 def current_conditions(latitude: float, longitude: float) -> dict[str, Any]:
     """Return current model data, cached briefly to limit requests to the provider."""
-    key = (round(latitude, 2), round(longitude, 2))
+    if (not math.isfinite(latitude) or not math.isfinite(longitude)
+            or not -90 <= latitude <= 90 or not -180 <= longitude <= 180):
+        raise OpenMeteoUnavailable("The requested coordinates are invalid.")
+
+    # Keep nearby places distinct while still coalescing repeat map requests.
+    key = (round(latitude, 3), round(longitude, 3))
     now = time.monotonic()
     with _CACHE_LOCK:
         cached = _CACHE.get(key)
         if cached and cached[0] > now:
-            return dict(cached[1])
+            result = dict(cached[1])
+            result["latitude"] = latitude
+            result["longitude"] = longitude
+            return result
 
     params: dict[str, str | float] = {
         "latitude": latitude,
         "longitude": longitude,
         "timezone": _TIMEZONE,
         "timeformat": "iso8601",
-        "current": "temperature_2m,precipitation,rain",
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,rain,weather_code,cloud_cover,wind_speed_10m",
     }
     air_params: dict[str, str | float] = {
         "latitude": latitude,
         "longitude": longitude,
         "timezone": _TIMEZONE,
         "timeformat": "iso8601",
-        "current": "us_aqi_pm2_5,pm2_5",
+        "current": "european_aqi,us_aqi,pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,us_aqi_pm2_5",
     }
     if settings.open_meteo_api_key:
         params["apikey"] = settings.open_meteo_api_key.strip()
@@ -143,26 +173,84 @@ def current_conditions(latitude: float, longitude: float) -> dict[str, Any]:
     if not isinstance(current_weather, dict) or not isinstance(current_air, dict):
         raise OpenMeteoUnavailable("Open-Meteo returned an incomplete current-conditions response.")
 
-    rain = current_weather.get("precipitation")
-    if rain is None:
-        rain = current_weather.get("rain")
-    values = (rain, current_weather.get("temperature_2m"), current_air.get("us_aqi_pm2_5"))
-    try:
-        rain_value, temperature, aqi = (float(value) for value in values)
-    except (TypeError, ValueError) as error:
-        raise OpenMeteoUnavailable("Open-Meteo omitted a required rain, temperature, or PM2.5 AQI value.") from error
-    if not all(math.isfinite(value) for value in (rain_value, temperature, aqi)):
-        raise OpenMeteoUnavailable("Open-Meteo returned a non-finite current-conditions value.")
     observed_at = current_weather.get("time")
     if not isinstance(observed_at, str) or not observed_at.strip():
         raise OpenMeteoUnavailable("Open-Meteo omitted the observation timestamp.")
 
+    def optional_number(payload: dict[str, Any], field: str, *, nonnegative: bool = False):
+        value = payload.get(field)
+        if value is None:
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(number) or (nonnegative and number < 0):
+            return None
+        return number
+
+    precipitation = optional_number(current_weather, "precipitation", nonnegative=True)
+    rain = optional_number(current_weather, "rain", nonnegative=True)
+    if rain is None:
+        rain = precipitation
+    temperature = optional_number(current_weather, "temperature_2m")
+    if temperature is None:
+        raise OpenMeteoUnavailable("Open-Meteo omitted the current temperature.")
+
+    european_aqi = optional_number(current_air, "european_aqi", nonnegative=True)
+    us_aqi_pm25 = optional_number(current_air, "us_aqi_pm2_5", nonnegative=True)
+
+    def european_aqi_label(value: float | None) -> str | None:
+        if value is None:
+            return None
+        if value <= 20:
+            return "good"
+        if value <= 40:
+            return "fair"
+        if value <= 60:
+            return "moderate"
+        if value <= 80:
+            return "poor"
+        if value <= 100:
+            return "very_poor"
+        return "extremely_poor"
+
+    air_fields = {
+        "pm25_ug_m3": "pm2_5",
+        "pm10_ug_m3": "pm10",
+        "nitrogen_dioxide_ug_m3": "nitrogen_dioxide",
+        "ozone_ug_m3": "ozone",
+        "sulphur_dioxide_ug_m3": "sulphur_dioxide",
+    }
+    air_quality = {name: optional_number(current_air, field, nonnegative=True)
+                   for name, field in air_fields.items()}
+    air_quality.update({
+        "european_aqi": european_aqi,
+        "european_aqi_label": european_aqi_label(european_aqi),
+        "us_aqi": optional_number(current_air, "us_aqi", nonnegative=True),
+        "us_aqi_pm25": us_aqi_pm25,
+    })
+
     data = {
-        "rain_mm_per_hour": max(0.0, rain_value),
-        "aqi_pm25": max(0, min(1000, round(aqi))),
-        "pm25_ug_m3": current_air.get("pm2_5"),
+        "latitude": latitude,
+        "longitude": longitude,
+        "rain_mm_per_hour": rain,
+        "precipitation_mm": precipitation,
+        "aqi_pm25": round(us_aqi_pm25) if us_aqi_pm25 is not None else None,
+        "pm25_ug_m3": air_quality["pm25_ug_m3"],
         "temperature_c": temperature,
+        "apparent_temperature_c": optional_number(current_weather, "apparent_temperature"),
+        "relative_humidity_pct": optional_number(current_weather, "relative_humidity_2m", nonnegative=True),
+        "weather_code": (
+            int(current_weather["weather_code"])
+            if str(current_weather.get("weather_code", "")).isdigit()
+            and 0 <= int(current_weather["weather_code"]) <= 99 else None
+        ),
+        "cloud_cover_pct": optional_number(current_weather, "cloud_cover", nonnegative=True),
+        "wind_speed_kmh": optional_number(current_weather, "wind_speed_10m", nonnegative=True),
+        "air_quality": air_quality,
         "observed_at": observed_at,
+        "air_quality_observed_at": current_air.get("time"),
         "timezone": _TIMEZONE,
         "source": "Open-Meteo",
         "weather_source_url": "https://open-meteo.com/en/docs",
