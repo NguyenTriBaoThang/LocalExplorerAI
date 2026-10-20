@@ -1,5 +1,5 @@
 import { useAuth } from '../auth'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import {
   ApiError, applyGroupReview, applyProposal, cancelGroupReview, clarifyAfter, confirmAfter, getMessages, getTrip,
@@ -21,9 +21,12 @@ import TripPrintView from '../components/trip/TripPrintView'
 import { NARROW, setPanel, type Panels } from '../components/trip/layout'
 import { type Selected } from '../components/trip/place'
 import { buildTripPrintModel, type TripPrintModel } from '../components/trip/tripPrint'
+import { useJourney } from '../journey'
 
 function TripWorkspace() {
   const { user, setUser } = useAuth()
+  const navigate = useNavigate()
+  const { syncChatTrip, syncChatItinerary } = useJourney()
   const [chat, setChat] = useState<ChatItem[]>([])
   const [busy, setBusy] = useState(false)
   const [center, setCenter] = useState<[number, number]>([106.7009, 10.7769])
@@ -95,6 +98,7 @@ function TripWorkspace() {
           setVersions([]); setPins([]); setLatest(null)
           setGroupReview(null); setGroupReviewStale(false); setGroupReviewRetry(null)
         }
+        syncChatTrip(e.trip_id, e.trip)
         setTripId(e.trip_id); setVersion(null); setProposal(null)
         setCenter(e.center); setBudget(e.trip.budget); setItinerary(null)
         break
@@ -103,6 +107,7 @@ function TripWorkspace() {
         setSearchPins((p) => [...p, ...e.places.filter((x) => !p.some((y) => y.id === x.id))])
         break
       case 'itinerary':
+        syncChatItinerary(e.itinerary, e.places)
         setPlaces(e.places); setItinerary(e.itinerary); setVersion(e.version); setChanged(e.changed ?? []); setSearchPins([])
         setSelected(null); openPanel('timeline', true)
         setLatest(e.version); setVersions((vs) => vs.includes(e.version) ? vs : [...vs, e.version])
@@ -150,6 +155,8 @@ function TripWorkspace() {
   }
 
   function syncLatestTrip(t: Awaited<ReturnType<typeof getTrip>>) {
+    syncChatTrip(t.trip_id, t.trip)
+    syncChatItinerary(t.itinerary, t.places, t.hub)
     setCenter(t.center); setBudget(t.trip.budget); setVersions(t.versions); setLatest(t.version); setPins(t.pinned_place_ids)
     showView(t)
   }
@@ -172,6 +179,8 @@ function TripWorkspace() {
   async function openTrip(id: number, withChat = true) {
     const t = await call(() => getTrip(id))
     if (!t) return
+    syncChatTrip(t.trip_id, t.trip)
+    syncChatItinerary(t.itinerary, t.places, t.hub)
     if (id !== tripId) {
       setGroupReview(null); setGroupReviewStale(false); setGroupReviewRetry(null)
     }
@@ -302,6 +311,7 @@ function TripWorkspace() {
     setChanged(proposal!.options?.[option]?.changed ?? [])
     setProposal(null); setSearchPins([]); setSelected(null)
     setPlaces(ev.places); setItinerary(ev.itinerary); setVersion(ev.version)
+    syncChatItinerary(ev.itinerary, ev.places)
     setLatest(ev.version); setVersions((vs) => [...vs, ev.version])
     add({ role: 'ai', text: `Đã áp dụng phương án — lịch trình bản ${ev.version}.` })
   }
@@ -320,6 +330,17 @@ function TripWorkspace() {
   const answer = (tripId: number, a: Answers) => run((on) => streamPlan(tripId, a, on))
 
   const current = trips.find((t) => t.id === tripId)
+  async function openPlanner() {
+    if (itinerary) syncChatItinerary(itinerary, places)
+    if (tripId != null) {
+      const view = await call(() => getTrip(tripId, version ?? undefined))
+      if (view) {
+        syncChatTrip(view.trip_id, view.trip, current?.destination_name)
+        syncChatItinerary(view.itinerary, view.places, view.hub)
+      }
+    }
+    navigate('/planner')
+  }
   const exportPdf = () => {
     if (!current || !itinerary || version == null) return
     setPrintModel(buildTripPrintModel(current, version, itinerary, places, new Date().toISOString()))
@@ -329,7 +350,7 @@ function TripWorkspace() {
   return (
     <>
       <div className="trip-workspace app-shell bg-stone-200 font-sans text-[var(--text-main)]">
-        <MapView travelMode={current?.spec.travel_mode} center={center} searchPins={searchPins} itinerary={itinerary} places={places}
+        <MapView travelMode={current?.spec.travel_mode ?? undefined} center={center} searchPins={searchPins} itinerary={itinerary} places={places}
           selected={selected} onSelect={setSelected} padding={{ left, right }} pins={pins}
           onPin={tripId != null && version != null && !proposal && !busy && !viewingOld(version, latest) ? pin : undefined} />
         <Rail busy={busy} trips={trips} currentId={tripId} onNewTrip={tripId != null ? newTrip : undefined}
@@ -357,6 +378,7 @@ function TripWorkspace() {
               versions={versions} version={version} latest={latest} pins={pins}
               onView={viewVersion} onRestore={restore} onPin={tripId != null && version != null && !proposal ? pin : undefined}
               onExportPdf={current && version != null ? exportPdf : undefined}
+              onOpenPlanner={() => void openPlanner()}
               selected={selected} onSelect={setSelected}>
               {proposal && <ProposalPanel proposal={proposal} busy={busy} onApply={apply}
                 onClose={() => { setProposal(null); setSearchPins([]) }} />}

@@ -12,6 +12,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { SharedItineraryPage } from './pages/SharedItineraryPage'
 import { CollaborativeItineraryPage } from './pages/CollaborativeItineraryPage'
 import { ComparePage } from './pages/ComparePage'
+import { TripHistoryPage } from './pages/TripHistoryPage'
 import ChatPage from './pages/TripChatPage'
 import { Map3DPage } from './pages/Map3DPage'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from './pages/RecoveryPages'
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([{
     ] },
     { element: <RoleRoute roles={['traveler']} />, children: [
       { path: '/compare', element: <ComparePage /> },
+      { path: '/history', element: <TripHistoryPage /> },
     ] },
     { element: <RoleRoute roles={['provider']} />, children: [
       { path: '/provider-portal', element: <PortalRedirect area="partner" /> },

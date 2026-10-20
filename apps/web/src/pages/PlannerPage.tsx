@@ -21,24 +21,33 @@ import type { GeocodeResponse, Itinerary, PlanRequest, POI, RoutingCapabilities 
 import { useTranslation } from '../i18n'
 import { useJourney, useTripField } from '../journey'
 import { ItinerarySuggestions as SuggestionsPanel } from '../components/journey/ItinerarySuggestions'
+import { PlannerChatBrief } from '../components/journey/PlannerChatBrief'
 
 const budgetPresets = [500000, 1000000, 2000000, 3500000]
 
 const today = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
 
+const addDays = (value: string, days: number) => {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
+}
 
 export function PlannerPage() {
   const { t, locale } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
-  const { trip, setTrip } = useJourney()
+  const { trip, setTrip, toggleChatRouteStop } = useJourney()
 
   const intents = useMemo(() => [
     { id: 'food', label: t('home.catFood'), glyph: '🍜', desc: t('home.catFoodDesc') },
+    { id: 'coffee', label: locale === 'en' ? 'Cafe' : 'Cafe', glyph: '☕', desc: locale === 'en' ? 'Cafes and coffee stops' : 'Quán cafe và điểm dừng uống cà phê' },
     { id: 'handicraft', label: t('home.catCraft'), glyph: '🎨', desc: t('home.catCraftDesc') },
     { id: 'culture', label: t('home.catCulture'), glyph: '🏛️', desc: t('home.catCultureDesc') },
     { id: 'nature', label: t('home.catNature'), glyph: '🌿', desc: t('home.catNatureDesc') },
+    { id: 'sightseeing', label: locale === 'en' ? 'Sightseeing' : 'Tham quan', glyph: '📍', desc: locale === 'en' ? 'Landmarks and photo stops' : 'Địa danh và điểm ngắm cảnh, chụp ảnh' },
+    { id: 'entertainment', label: locale === 'en' ? 'Entertainment' : 'Giải trí', glyph: '🎭', desc: locale === 'en' ? 'Shows and lively activities' : 'Biểu diễn và hoạt động sôi động' },
+    { id: 'shopping', label: locale === 'en' ? 'Shopping' : 'Mua sắm', glyph: '🛍️', desc: locale === 'en' ? 'Markets and shopping stops' : 'Chợ và điểm mua sắm' },
     {
       id: 'relaxation',
       label: locale === 'en' ? 'Wellness & Relaxation' : 'Thư giãn & Phục hồi',
@@ -54,6 +63,7 @@ export function PlannerPage() {
   ], [locale])
 
   const [date, setDate] = useTripField('date')
+  const [durationDays, setDurationDays] = useTripField('durationDays')
   const [startTime, setStartTime] = useTripField('startTime')
   const [endTime, setEndTime] = useTripField('endTime')
   const [groupSize, setGroupSize] = useTripField('groupSize')
@@ -84,6 +94,8 @@ export function PlannerPage() {
   const [suggestions, setSuggestions] = useState<{ key: string; data: ItinerarySuggestions } | null>(null)
   const [customizing, setCustomizing] = useState(false)
   const suggestionsRef = useRef<HTMLElement>(null)
+  const appliedChatRouteTrip = useRef<number | null>(null)
+  const autoSuggestedChatTrip = useRef<number | null>(null)
   const editSource = (location.state as { editItinerary?: Itinerary } | null)?.editItinerary
   const appliedEditId = useRef('')
   useEffect(() => {
@@ -102,9 +114,12 @@ export function PlannerPage() {
     if (editSource.budget_vnd != null) setBudget(editSource.budget_vnd)
     if (editSource.transport_mode) setTransport(editSource.transport_mode)
     if (editSource.intent_weights) setSelectedIntents(Object.entries(editSource.intent_weights).filter(([, weight]) => weight > 0).map(([intent]) => intent))
+    setDurationDays(1)
     setLockedPois([])
     setTrip((current) => ({
       ...current,
+      durationDays: 1,
+      chatContext: null,
       demo: editSource.data_mode !== 'real',
       selected: editSource.stops.map((stop) => ({ id: stop.experience_id, name: stop.name, poiId: stop.poi.id })),
     }))
@@ -132,7 +147,7 @@ export function PlannerPage() {
     }
     setCustomizing(true)
     setSuggestions(null)
-  }, [editSource, locale, setBudget, setDate, setEndTime, setGroupSize, setLockedPois, setOriginId, setSelectedIntents, setStartTime, setDestinationId, setTransport, setTrip])
+  }, [editSource, locale, setBudget, setDate, setDurationDays, setEndTime, setGroupSize, setLockedPois, setOriginId, setSelectedIntents, setStartTime, setDestinationId, setTransport, setTrip])
   const inputKey = JSON.stringify([trip, originAddress, destinationAddress, originResolved, destinationResolved])
   const currentSuggestions = suggestions?.key === inputKey ? suggestions.data : null
   useEffect(() => {
@@ -185,6 +200,13 @@ export function PlannerPage() {
     )
   }
 
+  const chooseTransport = (mode: string) => {
+    setTransport(mode)
+    setTrip((current) => current.chatContext
+      ? { ...current, chatContext: { ...current.chatContext, travelMode: mode } }
+      : current)
+  }
+
   const toggleLockPoi = (id: string) => {
     setLockedPois((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
@@ -195,12 +217,85 @@ export function PlannerPage() {
     parseInt(startTime.split(':')[0], 10) + parseInt(startTime.split(':')[1], 10) / 60
   const endHour =
     parseInt(endTime.split(':')[0], 10) + parseInt(endTime.split(':')[1], 10) / 60
-  const totalHours = Math.max(1, Math.round((endHour - startHour) * 10) / 10)
+  const totalHours = Math.max(0, Math.round(((durationDays - 1) * 24 + endHour - startHour) * 10) / 10)
+  const durationLabel = durationDays > 1
+    ? (locale === 'en' ? `${durationDays} days · return by ${endTime} on the final day` : `${durationDays} ngày · về trước ${endTime} ngày cuối`)
+    : totalHours > 0 ? t('planner.durationHours', { hours: totalHours }) : t('planner.checkHours')
+  const chatContext = trip.chatContext
+  const hasOrigin = Boolean(originResolved || originId)
+  const hasReturnPoint = Boolean(destinationResolved || destinationId)
+  const plannerRequirements = chatContext ? [
+    { id: 'date', label: locale === 'en' ? 'Departure date' : 'Ngày khởi hành', complete: Boolean(date), anchor: 'planner-trip-date' },
+    { id: 'transport', label: locale === 'en' ? 'Transport mode' : 'Phương tiện', complete: Boolean(chatContext.travelMode), anchor: 'planner-transport' },
+    { id: 'origin', label: locale === 'en' ? 'Start point' : 'Điểm xuất phát', complete: hasOrigin, anchor: 'planner-endpoints' },
+    { id: 'return', label: locale === 'en' ? 'Return point' : 'Điểm quay về', complete: hasReturnPoint, anchor: 'planner-endpoints' },
+  ] : []
+  const tripEndDate = date ? addDays(date, durationDays - 1) : ''
+
+  useEffect(() => {
+    if (!chatContext?.routeStart || !chatContext.routeEnd || appliedChatRouteTrip.current === chatContext.tripId) return
+    appliedChatRouteTrip.current = chatContext.tripId
+    setOriginId('')
+    setDestinationId('')
+    setOriginAddress('')
+    setDestinationAddress('')
+    setOriginGeocode(null)
+    setDestinationGeocode(null)
+    setOriginResolved({ formatted_address: chatContext.routeStart.name, latitude: chatContext.routeStart.latitude,
+      longitude: chatContext.routeStart.longitude, place_id: null })
+    setDestinationResolved({ formatted_address: chatContext.routeEnd.name, latitude: chatContext.routeEnd.latitude,
+      longitude: chatContext.routeEnd.longitude, place_id: null })
+  }, [chatContext?.tripId, chatContext?.routeStart, chatContext?.routeEnd, setOriginId, setDestinationId])
+
+  useEffect(() => {
+    if (!chatContext || !chatContext.routeStops.length || !chatContext.routeStart || !chatContext.routeEnd
+      || !originResolved || !destinationResolved || !date || date < today() || !chatContext.travelMode
+      || autoSuggestedChatTrip.current === chatContext.tripId) return
+    autoSuggestedChatTrip.current = chatContext.tripId
+    const timer = window.setTimeout(() => (document.getElementById('planner-form') as HTMLFormElement | null)?.requestSubmit(), 0)
+    return () => window.clearTimeout(timer)
+  }, [chatContext, originResolved, destinationResolved, date])
 
   const filteredPois = pois.filter((poi) =>
     poi.name.toLowerCase().includes(poiSearch.toLowerCase()) ||
     poi.address.toLowerCase().includes(poiSearch.toLowerCase())
   )
+  const filteredChatStops = (chatContext?.routeStops ?? []).filter((stop) =>
+    stop.name.toLowerCase().includes(poiSearch.toLowerCase()) || stop.kind.toLowerCase().includes(poiSearch.toLowerCase())
+  )
+
+  const endpointSelectValue = (point: GeocodeResponse['results'][number] | null, side: 'origin' | 'destination') => {
+    if (!chatContext || !point) return ''
+    const endpoint = side === 'origin' ? chatContext.routeStart : chatContext.routeEnd
+    if (endpoint && Math.abs(point.latitude - endpoint.latitude) < 0.000001 && Math.abs(point.longitude - endpoint.longitude) < 0.000001) {
+      return 'chat-route-endpoint'
+    }
+    const stop = chatContext.routeStops.find((item) => Math.abs(point.latitude - item.latitude) < 0.000001
+      && Math.abs(point.longitude - item.longitude) < 0.000001)
+    return stop ? `chat-stop:${stop.placeId}` : ''
+  }
+
+  function chooseRoutePoint(side: 'origin' | 'destination', value: string) {
+    const isOrigin = side === 'origin'
+    const endpoint = isOrigin ? chatContext?.routeStart : chatContext?.routeEnd
+    const selectedStopId = value.startsWith('chat-stop:') ? Number(value.slice('chat-stop:'.length)) : null
+    const stop = selectedStopId == null ? undefined : chatContext?.routeStops.find((item) => item.placeId === selectedStopId)
+    const point = value === 'chat-route-endpoint' ? endpoint : stop
+    if (point) {
+      const resolved = { formatted_address: point.name, latitude: point.latitude, longitude: point.longitude, place_id: null }
+      if (isOrigin) {
+        setOriginId(''); setOriginAddress(''); setOriginResolved(resolved); setOriginGeocode(null)
+      } else {
+        setDestinationId(''); setDestinationAddress(''); setDestinationResolved(resolved); setDestinationGeocode(null)
+      }
+      return
+    }
+    if (isOrigin) {
+      setOriginId(value); setOriginAddress(''); setOriginResolved(null); setOriginGeocode(null)
+    } else {
+      setDestinationId(value); setDestinationAddress(''); setDestinationResolved(null); setDestinationGeocode(null)
+    }
+  }
 
   async function resolveAddress(which: 'origin' | 'destination') {
     const address = which === 'origin' ? originAddress.trim() : destinationAddress.trim()
@@ -235,7 +330,17 @@ export function PlannerPage() {
     setError('')
     setSuggestions(null)
     try {
-      const toIso = (value: string) => new Date(`${date}T${value}:00+07:00`).toISOString()
+      if (chatContext && !chatContext.travelMode) {
+        throw new Error(locale === 'en' ? 'Choose a transport mode before requesting route suggestions.' : 'Hãy chọn phương tiện trước khi tìm tuyến gợi ý.')
+      }
+      if (!date) throw new Error(locale === 'en' ? 'Choose a departure date first.' : 'Hãy chọn ngày khởi hành trước.')
+      const finalDate = addDays(date, durationDays - 1)
+      const toIso = (value: string, atDate: string) => new Date(`${atDate}T${value}:00+07:00`).toISOString()
+      const startAt = toIso(startTime, date)
+      const endAt = toIso(endTime, finalDate)
+      if (new Date(endAt) <= new Date(startAt)) {
+        throw new Error(locale === 'en' ? 'The return deadline must be after the trip starts.' : 'Giờ về phải sau thời điểm bắt đầu chuyến đi.')
+      }
       const origin = pois.find((poi) => poi.id === originId)
       const destination = pois.find((poi) => poi.id === destinationId)
       if (originAddress.trim() && !originResolved) {
@@ -252,8 +357,8 @@ export function PlannerPage() {
           : 'Hãy chọn cả điểm xuất phát và điểm về để kiểm tra đủ lộ trình và giờ về.')
       }
       const result = await getItinerarySuggestions({
-        start_at: toIso(startTime),
-        end_at: toIso(endTime),
+        start_at: startAt,
+        end_at: endAt,
         group_size: groupSize,
         budget_vnd: budget,
         transport_mode: transport as PlanRequest['transport_mode'],
@@ -295,10 +400,16 @@ export function PlannerPage() {
             <span className="eyebrow-dot" /> {t('planner.eyebrow')}
           </span>
           <h1 className="page-heading-3d">
-            {t('planner.headingMain')} <em>{t('planner.headingHighlight')}</em>
+            {chatContext
+              ? (locale === 'en' ? 'Plan your trip in' : 'Lập lịch trình tại')
+              : t('planner.headingMain')} <em>{chatContext ? chatContext.destinationName : t('planner.headingHighlight')}</em>
           </h1>
           <p className="page-subtext-3d">
-            {t('planner.headingLead')}
+            {chatContext
+              ? (locale === 'en'
+                ? `${chatContext.days} days, ${chatContext.travelers} travelers, and your chat preferences are ready to edit.`
+                : `${chatContext.days} ngày, ${chatContext.travelers} người và các sở thích từ Chat đã sẵn sàng để chỉnh sửa.`)
+              : t('planner.headingLead')}
           </p>
         </div>
         <div className="planner-badge-wrap">
@@ -309,16 +420,22 @@ export function PlannerPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-slate-800">
-        <div>
-          <strong>{locale === 'en' ? 'Start with your saved choices' : 'Bắt đầu từ những lựa chọn của bạn'}</strong>
-          <p className="mt-1 text-sm">{date} · {startTime}–{endTime} · {groupSize} {locale === 'en' ? 'people' : 'người'} · {budget.toLocaleString('vi-VN')} ₫</p>
-          <p className="mt-1 text-sm">{locale === 'en' ? 'Compare suggested itineraries, then adjust the one you like.' : 'Xem các lịch trình gợi ý, rồi tùy chỉnh phương án bạn thích.'}</p>
+      {chatContext && <PlannerChatBrief context={chatContext} locale={locale} date={date} endDate={tripEndDate}
+        durationDays={durationDays} startTime={startTime} endTime={endTime} durationLabel={durationLabel}
+        groupSize={groupSize} budget={budget} travelModeLabel={transportModes.find((mode) => mode.id === transport)?.label ?? ''}
+        requirements={plannerRequirements} onReturnChat={() => navigate('/chat')}
+        onGoTo={(requirement) => document.getElementById(requirement.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
+
+      {!chatContext && (
+        <div className="planner-standalone-summary">
+          <div>
+            <strong>{locale === 'en' ? 'Start with your saved choices' : 'Bắt đầu từ lựa chọn đã lưu'}</strong>
+            <p>{date || (locale === 'en' ? 'Departure date needed' : 'Chưa chọn ngày đi')} · {durationDays} {locale === 'en' ? 'days' : 'ngày'} · {startTime}–{endTime} · {groupSize} {locale === 'en' ? 'people' : 'người'} · {budget.toLocaleString('vi-VN')} ₫</p>
+            <small>{locale === 'en' ? 'Compare feasible suggestions and customize the option you like.' : 'So sánh các lịch trình khả thi rồi tùy chỉnh phương án bạn thích.'}</small>
+          </div>
+          <span className="planner-city-badge"><MapPin size={14} />{locale === 'en' ? 'Pilot area: District 1' : 'Khu vực pilot: Quận 1'}</span>
         </div>
-        {(originResolved || originId) && (destinationResolved || destinationId)
-          ? <button form="planner-form" type="submit" disabled={loading} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white disabled:opacity-50">{loading ? (locale === 'en' ? 'Finding options…' : 'Đang tìm phương án…') : (locale === 'en' ? 'Suggest 5 itineraries' : 'Gợi ý 5 lịch trình')}</button>
-          : <button type="button" onClick={() => document.getElementById('planner-endpoints')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white">{locale === 'en' ? 'Choose departure and return first' : 'Chọn điểm xuất phát và điểm về trước'}</button>}
-      </div>
+      )}
       {trip.selected.length > 0 && (
         <section className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-slate-800" aria-label={locale === 'en' ? 'Pinned itinerary stops' : 'Các điểm đang ghim'}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -337,10 +454,6 @@ export function PlannerPage() {
           </div>
         </section>
       )}
-      {currentSuggestions && <section ref={suggestionsRef} aria-label={locale === 'en' ? 'Suggested itineraries' : 'Lịch trình gợi ý'} className="mb-8 scroll-mt-24">
-        <SuggestionsPanel data={currentSuggestions} locale={locale} busy={loading} onChoose={(option) => void chooseSuggestion(option)} onCustomize={customizeSuggestion} />
-        {error && <p role="alert" className="form-alert-3d">{error}</p>}
-      </section>}
       <div className="planner-grid-3d">
         {/* Main Form */}
         <form id="planner-form" className="planner-form-3d" onSubmit={submit}>
@@ -355,16 +468,12 @@ export function PlannerPage() {
               </div>
               <div className="duration-preview-chip">
                 <Clock3 size={13} className="text-emerald" />
-                <span>
-                  {totalHours > 0
-                    ? t('planner.durationHours', { hours: totalHours })
-                    : t('planner.checkHours')}
-                </span>
+                <span>{durationLabel}</span>
               </div>
             </div>
 
             <div className="form-fields-grid-3">
-              <label className="field-group-3d">
+              <label id="planner-trip-date" className="field-group-3d">
                 <span>
                   <CalendarDays size={14} className="text-emerald" /> {t('planner.dateLabel')}
                 </span>
@@ -402,7 +511,7 @@ export function PlannerPage() {
               </label>
             </div>
 
-            <div className="form-fields-grid-2">
+            <div className="form-fields-grid-3">
               <div className="field-group-3d">
                 <span>
                   <Users size={14} className="text-cyan" /> {t('planner.groupSize')}
@@ -426,6 +535,18 @@ export function PlannerPage() {
                     <Plus size={15} />
                   </button>
                 </div>
+              </div>
+
+              <div className="field-group-3d">
+                <span>
+                  <CalendarDays size={14} className="text-cyan" /> {locale === 'en' ? 'Trip duration' : 'Thời lượng chuyến đi'}
+                </span>
+                <select aria-label={locale === 'en' ? 'Trip duration in days' : 'Số ngày chuyến đi'} value={durationDays}
+                  onChange={(event) => setDurationDays(Number(event.target.value))}>
+                  {Array.from({ length: 7 }, (_, index) => index + 1).map((days) => (
+                    <option key={days} value={days}>{days} {locale === 'en' ? (days === 1 ? 'day' : 'days') : 'ngày'}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="field-group-3d">
@@ -497,14 +618,21 @@ export function PlannerPage() {
           </div>
 
           {/* Section 03: Phương tiện di chuyển */}
-          <div className="form-card-3d">
+          <div id="planner-transport" className="form-card-3d scroll-mt-24">
             <div className="form-card-header">
               <span className="step-num">{t('planner.step3Num')}</span>
               <div>
-                <h2>{t('planner.step3Title')}</h2>
-                <p>{t('planner.step3Desc')}</p>
+                <h2>{locale === 'en' ? 'Choose how to travel between stops' : 'Chọn cách di chuyển giữa các điểm'}</h2>
+                <p>{locale === 'en' ? 'This mode is used to estimate route duration for each suggested itinerary.' : 'Phương tiện này được dùng để ước tính thời gian đi giữa các điểm trong từng tuyến gợi ý.'}</p>
               </div>
             </div>
+
+            {chatContext && <div className="planner-step-chat-note">
+              <Sparkles size={15} />
+              <span>{locale === 'en' ? 'Received from AI Chat' : 'Thông tin từ AI Chat'}</span>
+              <strong>{transportModes.find((mode) => mode.id === transport)?.label ?? transport}</strong>
+              <small>{locale === 'en' ? 'Change it here if needed.' : 'Có thể đổi trước khi tìm tuyến.'}</small>
+            </div>}
 
             <div className="transport-mode-grid">
               {visibleTransportModes.map((mode) => (
@@ -512,7 +640,7 @@ export function PlannerPage() {
                   key={mode.id}
                   type="button"
                   className={`transport-btn-3d ${transport === mode.id ? 'transport-active' : ''}`}
-                  onClick={() => setTransport(mode.id)}
+                  onClick={() => chooseTransport(mode.id)}
                 >
                   <span className="transport-icon">{mode.icon}</span>
                   <div>
@@ -537,28 +665,54 @@ export function PlannerPage() {
             <div className="form-card-header">
               <span className="step-num">{t('planner.step4Num')}</span>
               <div>
-                <h2>{t('planner.step4Title')}</h2>
-                <p>{t('planner.step4Desc')}</p>
+                <h2>{locale === 'en' ? 'Set the route start, finish and stops' : 'Chọn điểm đi, điểm đến và điểm ghé'}</h2>
+                <p>{locale === 'en' ? 'Start and finish define the route. Pinned places are included when the planner can fit them.' : 'Điểm đi và điểm đến tạo khung tuyến. Địa điểm được ghim sẽ được ưu tiên đưa vào nếu phù hợp thời gian.'}</p>
               </div>
             </div>
+
+            <div className="planner-route-endpoint-flow" aria-label={locale === 'en' ? 'Route endpoints' : 'Hai đầu tuyến'}>
+              <div><small>{locale === 'en' ? 'START' : 'ĐIỂM ĐI'}</small><strong>{originResolved?.formatted_address || pois.find((poi) => poi.id === originId)?.name || (originAddress.trim() || (chatContext?.originCity ? `${chatContext.originCity} · ${locale === 'en' ? 'choose exact point below' : 'chọn điểm cụ thể bên dưới'}` : (locale === 'en' ? 'Choose a start point' : 'Chưa chọn điểm đi')))}</strong>
+                {chatContext?.routeStart && <small className="planner-route-source">{chatContext.routeStart.source === 'arrival_hub' ? (locale === 'en' ? 'AI Chat arrival hub' : 'Bến/sân bay từ AI Chat') : chatContext.routeStart.source === 'stay' ? (locale === 'en' ? 'AI Chat accommodation' : 'Chỗ ở từ AI Chat') : (locale === 'en' ? 'First Chat activity' : 'Hoạt động đầu từ AI Chat')}</small>}</div>
+              <ArrowRight size={18} />
+              <div><small>{locale === 'en' ? 'FINISH' : 'ĐIỂM ĐẾN'}</small><strong>{destinationResolved?.formatted_address || pois.find((poi) => poi.id === destinationId)?.name || (destinationAddress.trim() || (locale === 'en' ? 'Choose a finish point' : 'Chưa chọn điểm đến'))}</strong>
+                {chatContext?.routeEnd && <small className="planner-route-source">{chatContext.routeEnd.source === 'arrival_hub' ? (locale === 'en' ? 'AI Chat return hub' : 'Bến/sân bay về từ AI Chat') : chatContext.routeEnd.source === 'stay' ? (locale === 'en' ? 'AI Chat accommodation' : 'Chỗ ở từ AI Chat') : (locale === 'en' ? 'Last Chat activity' : 'Hoạt động cuối từ AI Chat')}</small>}</div>
+            </div>
+
+            {chatContext && <div className="planner-chat-route-stops">
+              <div className="planner-chat-route-stops-heading">
+                <div><Sparkles size={15} /><strong>{locale === 'en' ? 'Stops from your AI Chat itinerary' : 'Danh sách điểm từ lịch trình AI Chat'}</strong></div>
+                <span>{chatContext.routeStops.length} {locale === 'en' ? 'stops' : 'điểm ghé'}</span>
+              </div>
+              {chatContext.routeStops.length ? <ol>
+                {chatContext.routeStops.map((stop, index) => <li key={`${stop.day}-${stop.placeId}-${index}`}>
+                  <div className="planner-chat-route-stop-time"><span>{locale === 'en' ? `Day ${stop.day}` : `Ngày ${stop.day}`}{stop.date ? ` · ${stop.date.split('-').reverse().slice(0, 2).join('/')}` : ''}</span><strong>{stop.startTime}</strong></div>
+                  <div className="planner-chat-route-stop-main"><strong>{stop.name}</strong><small>{stop.durationMin} {locale === 'en' ? 'min' : 'phút'} · {stop.costVnd.toLocaleString('vi-VN')} ₫</small></div>
+                  {stop.rankPosition != null && <span className="planner-chat-route-rank">Ranker: {locale === 'en' ? `rank ${stop.rankPosition}/${stop.rankCandidateCount ?? '—'}` : `hạng ${stop.rankPosition}/${stop.rankCandidateCount ?? '—'}`}</span>}
+                </li>)}
+              </ol> : <p className="planner-chat-route-stops-empty">{locale === 'en' ? 'The current Chat itinerary has no stops to transfer.' : 'Lịch trình hiện tại trong AI Chat chưa có điểm ghé để chuyển.'}</p>}
+              <small className="planner-chat-route-stops-note">{locale === 'en' ? 'These are the stops already planned in Chat. Ranked alternatives appear below after the route request.' : 'Đây là các điểm đã có trong Chat. Danh sách phương án xếp hạng sẽ hiện bên dưới sau khi Planner tính tuyến.'}</small>
+            </div>}
 
             <div className="form-fields-grid-2">
               <div className="field-group-3d">
                 <span>
                   <MapPin size={14} className="text-emerald" /> {t('planner.originLabel')}
                 </span>
-                <select aria-label={locale === 'en' ? 'Start point' : 'Điểm xuất phát'} value={originId} onChange={(e) => {
-                  setOriginId(e.target.value)
-                  setOriginAddress('')
-                  setOriginResolved(null)
-                  setOriginGeocode(null)
-                }}>
+                <select aria-label={locale === 'en' ? 'Start point' : 'Điểm xuất phát'} value={originId || endpointSelectValue(originResolved, 'origin')} onChange={(e) => chooseRoutePoint('origin', e.target.value)}>
                   <option value="">{t('planner.originDefault')}</option>
+                  {chatContext && <optgroup label={locale === 'en' ? 'From AI Chat' : 'Điểm từ AI Chat'}>
+                    {chatContext.routeStart && <option value="chat-route-endpoint">{chatContext.routeStart.name} · {locale === 'en' ? 'Chat route start' : 'điểm đi từ Chat'}</option>}
+                    {chatContext.routeStops.map((stop) => <option key={`origin-${stop.placeId}`} value={`chat-stop:${stop.placeId}`}>
+                      {stop.name} · {locale === 'en' ? `Day ${stop.day}, ${stop.startTime}` : `Ngày ${stop.day}, ${stop.startTime}`}
+                    </option>)}
+                  </optgroup>}
+                  <optgroup label={locale === 'en' ? 'Other places' : 'Địa điểm khác'}>
                   {pois.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
+                  </optgroup>
                 </select>
                 <div className="address-resolve-row">
                   <input aria-label={locale === 'en' ? 'Start address' : 'Địa chỉ xuất phát'} value={originAddress} placeholder={locale === 'en' ? 'Or enter a street address' : 'Hoặc nhập địa chỉ'} onChange={(event) => {
@@ -583,18 +737,21 @@ export function PlannerPage() {
                 <span>
                   <MapPin size={14} className="text-amber" /> {t('planner.destinationLabel')}
                 </span>
-                <select aria-label={locale === 'en' ? 'End point' : 'Điểm kết thúc'} value={destinationId} onChange={(e) => {
-                  setDestinationId(e.target.value)
-                  setDestinationAddress('')
-                  setDestinationResolved(null)
-                  setDestinationGeocode(null)
-                }}>
+                <select aria-label={locale === 'en' ? 'End point' : 'Điểm kết thúc'} value={destinationId || endpointSelectValue(destinationResolved, 'destination')} onChange={(e) => chooseRoutePoint('destination', e.target.value)}>
                   <option value="">{t('planner.destDefault')}</option>
+                  {chatContext && <optgroup label={locale === 'en' ? 'From AI Chat' : 'Điểm từ AI Chat'}>
+                    {chatContext.routeEnd && <option value="chat-route-endpoint">{chatContext.routeEnd.name} · {locale === 'en' ? 'Chat route finish' : 'điểm về từ Chat'}</option>}
+                    {chatContext.routeStops.map((stop) => <option key={`destination-${stop.placeId}`} value={`chat-stop:${stop.placeId}`}>
+                      {stop.name} · {locale === 'en' ? `Day ${stop.day}, ${stop.startTime}` : `Ngày ${stop.day}, ${stop.startTime}`}
+                    </option>)}
+                  </optgroup>}
+                  <optgroup label={locale === 'en' ? 'Other places' : 'Địa điểm khác'}>
                   {pois.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
+                  </optgroup>
                 </select>
                 <div className="address-resolve-row">
                   <input aria-label={locale === 'en' ? 'End address' : 'Địa chỉ điểm về'} value={destinationAddress} placeholder={locale === 'en' ? 'Or enter a return address' : 'Hoặc nhập địa chỉ điểm về'} onChange={(event) => {
@@ -616,55 +773,67 @@ export function PlannerPage() {
               </div>
             </div>
 
-            {/* POI Locking Section with Card Selection */}
-            <div className="poi-lock-section">
-              <div className="poi-lock-header">
-                <div className="poi-lock-title-col">
-                  <span className="poi-lock-label">
-                    <Lock size={14} className="text-cyan" /> {t('planner.pinTitle')}
-                  </span>
-                  <small>
-                    {t('planner.pinDesc')}
-                  </small>
-                </div>
-                {pois.length > 6 && (
-                  <div className="poi-search-box-mini">
-                    <Search size={14} />
-                    <input
-                      placeholder={t('planner.searchPoiPlaceholder')}
-                      value={poiSearch}
-                      onChange={(e) => setPoiSearch(e.target.value)}
-                    />
+            {chatContext ? (
+              <div className="poi-lock-section">
+                <div className="poi-lock-header">
+                  <div className="poi-lock-title-col">
+                    <span className="poi-lock-label">
+                      <Lock size={14} className="text-cyan" /> {locale === 'en' ? 'Choose stops from your AI Chat itinerary' : 'Chọn điểm ghé từ lịch trình AI Chat'}
+                      <span className="planner-stop-count">{chatContext.selectedRouteStopIds.length}/{chatContext.routeStops.length}</span>
+                    </span>
+                    <small>{locale === 'en' ? 'These options come from the itinerary above. Select the stops you want to keep.' : 'Danh sách lấy trực tiếp từ lịch trình AI Chat phía trên. Chọn các điểm bạn muốn giữ.'}</small>
                   </div>
-                )}
-              </div>
-
-              <div className="poi-lock-cards-grid">
-                {filteredPois.slice(0, 8).map((poi) => {
-                  const locked = lockedPois.includes(poi.id)
-                  return (
-                    <button
-                      key={poi.id}
-                      type="button"
-                      className={`poi-lock-card ${locked ? 'poi-locked-active' : ''}`}
-                      onClick={() => toggleLockPoi(poi.id)}
-                    >
-                      <div className="poi-lock-status">
-                        {locked ? (
-                          <CheckCircle2 size={16} className="text-emerald" />
-                        ) : (
-                          <span className="poi-lock-empty-dot" />
-                        )}
-                      </div>
+                  {chatContext.routeStops.length > 6 && (
+                    <div className="poi-search-box-mini">
+                      <Search size={14} />
+                      <input placeholder={locale === 'en' ? 'Search Chat stops...' : 'Tìm điểm trong Chat...'} value={poiSearch}
+                        onChange={(event) => setPoiSearch(event.target.value)} />
+                    </div>
+                  )}
+                </div>
+                <div className="poi-lock-cards-grid">
+                  {filteredChatStops.map((stop, index) => {
+                    const selected = chatContext.selectedRouteStopIds.includes(stop.placeId)
+                    return <button key={`${stop.day}-${stop.placeId}-${index}`} type="button" aria-pressed={selected}
+                      className={`poi-lock-card ${selected ? 'poi-locked-active' : ''}`} onClick={() => toggleChatRouteStop(stop.placeId)}>
+                      <div className="poi-lock-status">{selected ? <CheckCircle2 size={16} className="text-emerald" /> : <span className="poi-lock-empty-dot" />}</div>
                       <div className="poi-lock-info">
-                        <strong>{poi.name}</strong>
-                        <small>{poi.address}</small>
+                        <strong>{stop.name}</strong>
+                        <small>{locale === 'en' ? `Day ${stop.day} · ${stop.startTime}` : `Ngày ${stop.day} · ${stop.startTime}`} · {stop.durationMin} {locale === 'en' ? 'min' : 'phút'} · {stop.costVnd.toLocaleString('vi-VN')} ₫</small>
                       </div>
+                      {stop.rankPosition != null && <span className="planner-chat-route-rank">{locale === 'en' ? `Rank ${stop.rankPosition}/${stop.rankCandidateCount ?? '—'}` : `Hạng ${stop.rankPosition}/${stop.rankCandidateCount ?? '—'}`}</span>}
                     </button>
-                  )
-                })}
+                  })}
+                  {!chatContext.routeStops.length && <p className="planner-poi-empty">{locale === 'en' ? 'No Chat stops are available to choose.' : 'AI Chat chưa chuyển qua điểm dừng nào.'}</p>}
+                  {chatContext.routeStops.length > 0 && !filteredChatStops.length && <p className="planner-poi-empty">{locale === 'en' ? 'No Chat stops match this search.' : 'Không tìm thấy điểm Chat phù hợp.'}</p>}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="poi-lock-section">
+                <div className="poi-lock-header">
+                  <div className="poi-lock-title-col">
+                    <span className="poi-lock-label"><Lock size={14} className="text-cyan" /> {locale === 'en' ? 'Places to include in the route' : 'Địa điểm muốn ghé trên tuyến'}
+                      <span className="planner-stop-count">{lockedPois.length}</span>
+                    </span>
+                    <small>{locale === 'en' ? 'Choose optional stops. The route list will show which ones fit your time and budget.' : 'Chọn điểm ghé tùy chọn. Danh sách tuyến bên dưới sẽ cho biết điểm nào xếp được theo thời gian và ngân sách.'}</small>
+                  </div>
+                  {pois.length > 6 && <div className="poi-search-box-mini"><Search size={14} />
+                    <input placeholder={t('planner.searchPoiPlaceholder')} value={poiSearch} onChange={(event) => setPoiSearch(event.target.value)} />
+                  </div>}
+                </div>
+                <div className="poi-lock-cards-grid">
+                  {filteredPois.slice(0, 8).map((poi) => {
+                    const locked = lockedPois.includes(poi.id)
+                    return <button key={poi.id} type="button" className={`poi-lock-card ${locked ? 'poi-locked-active' : ''}`} onClick={() => toggleLockPoi(poi.id)}>
+                      <div className="poi-lock-status">{locked ? <CheckCircle2 size={16} className="text-emerald" /> : <span className="poi-lock-empty-dot" />}</div>
+                      <div className="poi-lock-info"><strong>{poi.name}</strong><small>{poi.address}</small></div>
+                    </button>
+                  })}
+                  {!pois.length && <p className="planner-poi-empty">{locale === 'en' ? 'No places are available for this area right now.' : 'Hiện chưa tải được danh sách địa điểm cho khu vực này.'}</p>}
+                  {pois.length > 0 && filteredPois.length === 0 && <p className="planner-poi-empty">{locale === 'en' ? 'No places match this search.' : 'Không tìm thấy địa điểm phù hợp từ khóa.'}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           {error && <div className="form-alert-3d">{error}</div>}
@@ -678,7 +847,7 @@ export function PlannerPage() {
               <small>{t('planner.submitEngine')}</small>
             </div>
             <button className="btn-planner-submit" type="submit" disabled={loading}>
-              <span>{loading ? (locale === 'en' ? 'Finding feasible options…' : 'Đang tìm phương án phù hợp…') : (locale === 'en' ? 'Suggest 5 itineraries' : 'Gợi ý 5 lịch trình')}</span>
+              <span>{loading ? (locale === 'en' ? 'Finding routes…' : 'Đang tìm tuyến…') : (locale === 'en' ? 'Find ranked routes' : 'Tìm tuyến đường phù hợp')}</span>
               <ArrowRight size={18} />
             </button>
           </div>
@@ -692,8 +861,8 @@ export function PlannerPage() {
                 <img src="/logo-icon.png" alt="Local Explorer AI" className="brand-logo-img" />
               </div>
               <div>
-                <span className="preview-kicker">{t('planner.previewKicker')}</span>
-                <h3 className="preview-main-title">{t('planner.previewMainTitle')}</h3>
+                <span className="preview-kicker">{chatContext ? (locale === 'en' ? 'AI CHAT PLAN' : 'LỊCH TRÌNH TỪ AI CHAT') : t('planner.previewKicker')}</span>
+                <h3 className="preview-main-title">{chatContext?.destinationName ?? t('planner.previewMainTitle')}</h3>
               </div>
             </div>
 
@@ -701,9 +870,8 @@ export function PlannerPage() {
               <div className="preview-stat-cell">
                 <small>{t('planner.previewDuration')}</small>
                 <strong>
-                  {totalHours > 0
-                    ? `${totalHours} ${locale === 'en' ? 'hrs' : 'giờ'}`
-                    : t('planner.checkHours')}
+                  {durationDays > 1 ? `${durationDays} ${locale === 'en' ? 'days' : 'ngày'}`
+                    : totalHours > 0 ? `${totalHours} ${locale === 'en' ? 'hrs' : 'giờ'}` : t('planner.checkHours')}
                 </strong>
               </div>
               <div className="preview-stat-cell">
@@ -761,6 +929,19 @@ export function PlannerPage() {
           </div>
         </aside>
       </div>
+
+      <section ref={suggestionsRef} id="planner-routes" className="planner-routes-section scroll-mt-24" aria-labelledby="planner-routes-title">
+        {currentSuggestions ? <SuggestionsPanel data={currentSuggestions} locale={locale} busy={loading}
+          onChoose={(option) => void chooseSuggestion(option)} onCustomize={customizeSuggestion} /> : (
+          <div className="planner-route-empty-state">
+            <div className="planner-route-empty-copy">
+              <span className="planner-route-kicker"><Navigation size={14} /> {locale === 'en' ? 'ROUTE OPTIONS' : 'TUYẾN ĐƯỜNG GỢI Ý'}</span>
+              <h2 id="planner-routes-title">{locale === 'en' ? 'Your ranked routes will appear here' : 'Danh sách tuyến đường sẽ hiện ở đây'}</h2>
+              <p>{locale === 'en' ? 'Choose a departure and finish point, then find feasible routes ranked by your time, group size, budget and interests.' : 'Chọn điểm đi và điểm đến, sau đó tìm các tuyến khả thi được xếp hạng theo thời gian, số người, ngân sách và sở thích.'}</p>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

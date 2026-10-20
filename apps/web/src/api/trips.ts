@@ -11,6 +11,7 @@ export type Place = {
   open_hours?: Record<string, [string, string] | null>; description?: string  // thiếu ở Itinerary lưu trước T4
   rank_position?: number | null; rank_candidate_count?: number | null
 }
+export type Hub = { name: string; lat: number; lon: number }
 export type Stop = {
   place_id: number; start_time: string; duration_min: number; reason: string; pinned: boolean; est_cost: number
 }
@@ -41,7 +42,7 @@ export type GroupReview = {
 }
 export type AgentEvent =
   | { type: 'thinking'; text: string }
-  | { type: 'trip'; trip_id: number; trip: { budget: number }; center: [number, number] }
+  | { type: 'trip'; trip_id: number; trip: ChatTripSpec; center: [number, number] }
   | { type: 'tool_call'; name: string; query: string; places: Place[]; agent?: string }  // agent: role chuyên gia khi lập lịch đa agent
   | { type: 'clarify'; trip_id: number; questions: Question[] }
   | {
@@ -208,11 +209,17 @@ export const signed = (n: number, unit: (x: number) => string) =>
   n === 0 ? 'như cũ' : (n > 0 ? '+' : '−') + unit(Math.abs(n))
 
 export type TripSummary = {
-  id: number; spec: { destination: string; days: number; travel_mode?: string }; created_at: string; destination_name: string | null
+  id: number; spec: ChatTripSpec; created_at: string; destination_name: string | null
+}
+export type ChatTripSpec = {
+  destination: string; days: number; start_date: string | null; budget: number; travelers: number
+  required_tags: string[]; preferred_tags: string[]; avoided_tags: string[]
+  pace: 'thong-tha' | 'vua' | 'day'; travel_mode: string | null; origin_city: string | null
+  arrival_mode: string | null; arrival_time: string | null; departure_time: string | null; last_day_end: string | null
 }
 export type TripView = {
-  trip_id: number; trip: { budget: number }; center: [number, number]; version: number | null
-  itinerary: Itinerary | null; places: Record<string, Place>; versions: number[]; pinned_place_ids: number[]
+  trip_id: number; trip: ChatTripSpec; center: [number, number]; version: number | null
+  hub: Hub | null; itinerary: Itinerary | null; places: Record<string, Place>; versions: number[]; pinned_place_ids: number[]
 }
 export type Message = { role: 'user' | 'ai'; text: string; version: number | null }
 export type RestoreEvent = ItineraryEvent & { pinned_place_ids: number[] }

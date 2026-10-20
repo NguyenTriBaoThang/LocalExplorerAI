@@ -9,6 +9,7 @@ import {
   User,
   LogOut,
   GitCompare,
+  History,
   ChevronDown,
   CheckCircle2,
   Sun,
@@ -51,7 +52,6 @@ export function AppLayout() {
     ...(isStaff ? [] : [{ to: '/chat', label: t('nav.chat') }]),
     { to: '/places', label: t('nav.places') },
     { to: '/explore', label: t('nav.explore') },
-    ...(isStaff ? [] : [{ to: '/planner', label: t('nav.planner') }]),
     { to: '/map-3d', label: t('nav.map3d') },
     { to: '/guides', label: t('nav.guides') },
     { to: '/provider', label: t('nav.provider') },
@@ -135,7 +135,7 @@ export function AppLayout() {
             {/* Quick CTA */}
             {!loading && (!user || user.role === 'traveler') && (
               <NavLink to="/chat" className="header-cta-3d">
-                <span>{t('nav.planNow')}</span>
+                <span>{t('nav.chat')}</span>
                 <Sparkles size={15} />
               </NavLink>
             )}
@@ -206,6 +206,20 @@ export function AppLayout() {
                           <div>
                             <span>{t('nav.compare')}</span>
                             <small>{t('nav.compareDesc')}</small>
+                          </div>
+                        </NavLink>
+                      )}
+
+                      {user.role === 'traveler' && (
+                        <NavLink
+                          to="/history"
+                          className="dropdown-menu-item"
+                          onClick={() => setUserDropdown(false)}
+                        >
+                          <History size={16} className="text-emerald" />
+                          <div>
+                            <span>{t('nav.tripHistory')}</span>
+                            <small>{t('nav.tripHistoryDesc')}</small>
                           </div>
                         </NavLink>
                       )}
@@ -299,6 +313,16 @@ export function AppLayout() {
                       <span>{t('nav.compare')}</span>
                     </NavLink>
                   )}
+                  {user.role === 'traveler' && (
+                    <NavLink
+                      to="/history"
+                      onClick={() => setOpen(false)}
+                      className="mobile-nav-item"
+                    >
+                      <History size={16} className="text-emerald" />
+                      <span>{t('nav.tripHistory')}</span>
+                    </NavLink>
+                  )}
                   <button
                     type="button"
                     className="mobile-nav-item text-rose"
@@ -366,7 +390,7 @@ export function AppLayout() {
               {loading ? null : (!user || user.role === 'traveler') ? (
                 <>
                   <NavLink to="/explore">{t('nav.explore')}</NavLink>
-                  <NavLink to="/planner">{t('nav.planner')}</NavLink>
+                  <NavLink to="/chat">{t('nav.chat')}</NavLink>
                   <NavLink to="/provider">{t('nav.provider')}</NavLink>
                   <NavLink to="/about">{t('nav.about')}</NavLink>
                   {user && <NavLink to="/compare">{t('nav.compare')}</NavLink>}
