@@ -8,6 +8,15 @@ import {
   X,
   ShieldCheck,
   Building2,
+  Utensils,
+  Coffee,
+  Landmark,
+  Drama,
+  Palette,
+  Trees,
+  HeartPulse,
+  Sparkles,
+  MapPin as PlacePin,
 } from 'lucide-react'
 import { getPOIs } from '../api/client'
 import { useTranslation } from '../i18n'
@@ -41,6 +50,23 @@ const CATEGORY_META: Record<string, { icon: string }> = {
   handicraft: { icon: '🎨' },
   nature: { icon: '🌿' },
   relaxation: { icon: '🍵' },
+}
+
+const placeCategoryIcons = {
+  all: Sparkles,
+  'an-uong': Utensils,
+  food: Utensils,
+  cafe: Coffee,
+  'tham-quan': Landmark,
+  culture: Landmark,
+  heritage: Landmark,
+  local_life: Landmark,
+  accommodation: Building2,
+  'cho-o': Building2,
+  'giai-tri': Drama,
+  handicraft: Palette,
+  nature: Trees,
+  relaxation: HeartPulse,
 }
 
 /** Imported descriptions say "thuộc nhóm an-uong"; show the category's label instead of its slug. */
@@ -127,6 +153,7 @@ export function PlacesPage() {
             const active = selectedCategory === cat.id
             const count = places.filter((p) => inTab(p.category, cat.id)).length
             if (cat.id !== 'all' && count === 0 && !active) return null
+            const CategoryIcon = placeCategoryIcons[cat.id as keyof typeof placeCategoryIcons] ?? Sparkles
 
             return (
               <button
@@ -135,7 +162,7 @@ export function PlacesPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`places-cat-btn ${active ? 'active' : ''}`}
               >
-                <span>{cat.icon}</span>
+                <CategoryIcon size={16} strokeWidth={1.8} aria-hidden="true" />
                 <span>{t(`places.cat.${cat.id}`)}</span>
                 <span className="cat-count-badge">{count}</span>
               </button>
@@ -205,6 +232,7 @@ export function PlacesPage() {
               icon: CATEGORY_META[place.category]?.icon ?? '📍',
               label: CATEGORY_META[place.category] ? catLabel(place.category) : place.category,
             }
+            const CategoryIcon = placeCategoryIcons[place.category as keyof typeof placeCategoryIcons] ?? PlacePin
 
             return (
               <Link
@@ -234,7 +262,7 @@ export function PlacesPage() {
                     className="place-card-fallback"
                     style={{ display: photoUrl ? 'none' : 'flex' }}
                   >
-                    <span className="text-3xl mb-1">{catInfo.icon}</span>
+                    <CategoryIcon size={30} strokeWidth={1.6} aria-hidden="true" />
                     <span className="text-xs font-semibold text-slate-300">{catInfo.label}</span>
                   </div>
 
@@ -248,7 +276,7 @@ export function PlacesPage() {
                   {/* Top Badges */}
                   <div className="place-card-top-badges">
                     <span className="place-cat-pill">
-                      <span>{catInfo.icon}</span> {catInfo.label}
+                      <CategoryIcon size={14} strokeWidth={1.8} aria-hidden="true" /> {catInfo.label}
                     </span>
                     <span className="place-action-circle">
                       <ArrowUpRight size={14} />

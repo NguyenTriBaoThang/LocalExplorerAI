@@ -13,6 +13,18 @@ import {
   CheckCircle2,
   Lock,
   Search,
+  Utensils,
+  Coffee,
+  Palette,
+  Landmark,
+  Trees,
+  MapPin as PlannerPin,
+  Drama,
+  ShoppingBag,
+  HeartPulse,
+  Bike,
+  Car,
+  Footprints,
 } from 'lucide-react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage, createItinerary, geocodeAddress, getPOIs, getRoutingCapabilities, getItinerarySuggestions, type ItinerarySuggestion, type ItinerarySuggestions } from '../api/client'
@@ -24,6 +36,24 @@ import { ItinerarySuggestions as SuggestionsPanel } from '../components/journey/
 import { PlannerChatBrief } from '../components/journey/PlannerChatBrief'
 
 const budgetPresets = [500000, 1000000, 2000000, 3500000]
+
+const plannerIntentIcons = {
+  food: Utensils,
+  coffee: Coffee,
+  handicraft: Palette,
+  culture: Landmark,
+  nature: Trees,
+  sightseeing: PlannerPin,
+  entertainment: Drama,
+  shopping: ShoppingBag,
+  relaxation: HeartPulse,
+}
+
+const transportIcons = {
+  motorcycle: Bike,
+  car: Car,
+  walking: Footprints,
+}
 
 const today = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
@@ -598,6 +628,7 @@ export function PlannerPage() {
             <div className="intent-selector-grid">
               {intents.map((item) => {
                 const active = selectedIntents.includes(item.id)
+                const IntentIcon = plannerIntentIcons[item.id as keyof typeof plannerIntentIcons]
                 return (
                   <button
                     key={item.id}
@@ -605,7 +636,7 @@ export function PlannerPage() {
                     className={`intent-btn-3d ${active ? 'intent-btn-active' : ''}`}
                     onClick={() => toggleIntent(item.id)}
                   >
-                    <span className="intent-btn-glyph">{item.glyph}</span>
+                    <span className="intent-btn-glyph"><IntentIcon size={20} strokeWidth={1.8} aria-hidden="true" /></span>
                     <div className="intent-btn-info">
                       <strong>{item.label}</strong>
                       <small>{item.desc}</small>
@@ -642,7 +673,10 @@ export function PlannerPage() {
                   className={`transport-btn-3d ${transport === mode.id ? 'transport-active' : ''}`}
                   onClick={() => chooseTransport(mode.id)}
                 >
-                  <span className="transport-icon">{mode.icon}</span>
+                  <span className="transport-icon">{(() => {
+                    const ModeIcon = transportIcons[mode.id as keyof typeof transportIcons]
+                    return <ModeIcon size={20} strokeWidth={1.8} aria-hidden="true" />
+                  })()}</span>
                   <div>
                     <strong>{mode.label}</strong>
                     <small>{mode.note}</small>
@@ -891,9 +925,10 @@ export function PlannerPage() {
                 {selectedIntents.length > 0 ? (
                   selectedIntents.map((id) => {
                     const found = intents.find((i) => i.id === id)
+                    const IntentIcon = plannerIntentIcons[id as keyof typeof plannerIntentIcons]
                     return (
                       <span key={id} className="vibe-pill-active">
-                        {found?.glyph} {found?.label}
+                        <IntentIcon size={14} strokeWidth={1.8} aria-hidden="true" /> {found?.label}
                       </span>
                     )
                   })

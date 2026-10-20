@@ -12,6 +12,11 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Zap,
+  Utensils,
+  Palette,
+  Landmark,
+  Trees,
+  Coffee,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
@@ -79,6 +84,15 @@ function uniqueSimulatedPlaces(items: Experience[]) {
     }
   }
   return unique
+}
+
+const exploreCategoryIcons = {
+  '': Sparkles,
+  food: Utensils,
+  handicraft: Palette,
+  culture: Landmark,
+  nature: Trees,
+  relaxation: Coffee,
 }
 
 export function ExplorePage() {
@@ -470,17 +484,20 @@ export function ExplorePage() {
       </div>
       {/* Category Pills Strip */}
       <div className="category-pills-strip">
-        {categories.map((cat) => (
-          <button
-            key={cat.value}
-            type="button"
-            className={`cat-pill-btn ${intent === cat.value ? 'cat-pill-active' : ''}`}
-            onClick={() => setIntent(cat.value)}
-          >
-            <span>{cat.icon}</span>
-            <span>{cat.label}</span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const CategoryIcon = exploreCategoryIcons[cat.value as keyof typeof exploreCategoryIcons] ?? Sparkles
+          return (
+            <button
+              key={cat.value}
+              type="button"
+              className={`cat-pill-btn ${intent === cat.value ? 'cat-pill-active' : ''}`}
+              onClick={() => setIntent(cat.value)}
+            >
+              <CategoryIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+              <span>{cat.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Modern Glassmorphic Toolbar */}
