@@ -173,6 +173,31 @@ def list_my_itineraries(user: User = Depends(require_user(P.ITINERARY_LIST)), db
              "share_enabled": bool(item.share_token)} for item in records]
 
 
+@router.get("/me/itineraries/history")
+def list_completed_itineraries(user: User = Depends(require_user(P.ITINERARY_LIST)), db: Session = Depends(get_db)):
+    records = db.scalars(
+        select(Itinerary).where(Itinerary.user_id == user.id, Itinerary.completed_at.is_not(None))
+        .order_by(Itinerary.completed_at.desc())
+    ).all()
+    stop_names: dict[str, list[str]] = {item.id: [] for item in records}
+    if records:
+        stop_rows = db.execute(
+            select(ItineraryStop.itinerary_id, ItineraryStop.position, Experience.title)
+            .join(Experience, Experience.id == ItineraryStop.experience_id)
+            .where(ItineraryStop.itinerary_id.in_([item.id for item in records]))
+            .order_by(ItineraryStop.itinerary_id, ItineraryStop.position)
+        ).all()
+        for itinerary_id, _, name in stop_rows:
+            stop_names[itinerary_id].append(name)
+    return [{"id": item.id, "planned_date": item.planned_date, "start_time": item.start_time,
+             "return_deadline": item.return_deadline, "status": item.status, "estimated_cost_vnd": item.estimated_cost_vnd,
+             "completed_at": item.completed_at, "current_version": item.current_version,
+             "share_enabled": bool(item.share_token), "city": item.city, "group_size": item.group_size,
+             "origin_label": (item.constraints or {}).get("origin_label"),
+             "destination_label": (item.constraints or {}).get("destination_label") or (stop_names[item.id][-1] if stop_names[item.id] else None),
+             "stop_count": len(stop_names[item.id]), "stop_names": stop_names[item.id]} for item in records]
+
+
 @router.post("/itineraries/{itinerary_id}/complete")
 def complete_itinerary(itinerary_id: str, user: User = Depends(require_user(P.ITINERARY_FEEDBACK)), db: Session = Depends(get_db)):
     itinerary = db.get(Itinerary, itinerary_id)

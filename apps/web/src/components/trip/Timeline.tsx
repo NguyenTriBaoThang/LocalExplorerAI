@@ -61,12 +61,13 @@ function FloodRouteNotice({ day, places }: { day: Day; places: Record<string, Pl
 
 export default function Timeline({ itinerary, places, budget, busy = false, changed = [], onDisrupt,
   versions = [], version = null, latest = null, pins = [], onView, onRestore, onPin, onExportPdf,
-  selected = null, onSelect, children }: {
+  onOpenPlanner, selected = null, onSelect, children }: {
   itinerary: Itinerary | null; places: Record<string, Place>; budget: number | null; changed?: [number, number][]
   busy?: boolean; onDisrupt?: (d: DisruptionReq) => void
   versions?: number[]; version?: number | null; latest?: number | null; pins?: number[]
   onView?: (v: number) => void; onRestore?: () => void; onPin?: (placeId: number, pinned: boolean) => void
   onExportPdf?: () => void
+  onOpenPlanner?: () => void
   selected?: Selected; onSelect?: (s: Selected) => void
   children?: ReactNode
 }) {
@@ -134,6 +135,12 @@ export default function Timeline({ itinerary, places, budget, busy = false, chan
               <span className="ml-1 text-[var(--text-muted)]">Giữ mục đích {Math.round(itinerary.retention * 100)}%</span>
             )}
           </div>
+        )}
+        {onOpenPlanner && (
+          <button type="button" onClick={onOpenPlanner}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
+            ✨ Chỉnh sửa và tối ưu lịch trình trong Planner
+          </button>
         )}
       </div>
       {itinerary.conflicts.length > 0 && (

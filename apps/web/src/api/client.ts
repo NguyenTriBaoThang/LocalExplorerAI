@@ -217,8 +217,31 @@ export async function changePassword(current_password: string | null, new_passwo
   await api.post('/auth/password', { current_password, new_password })
 }
 
+export type MyItinerarySummary = {
+  id: string
+  planned_date: string | null
+  start_time?: string | null
+  return_deadline?: string | null
+  status: string
+  estimated_cost_vnd: number
+  completed_at?: string | null
+  current_version?: number
+  share_enabled?: boolean
+  city?: string
+  group_size?: number
+  origin_label?: string | null
+  destination_label?: string | null
+  stop_count?: number
+  stop_names?: string[]
+}
+
 export async function getMyItineraries() {
   const { data } = await api.get<Array<{ id: string; planned_date: string | null; status: string; estimated_cost_vnd: number }>>('/me/itineraries')
+  return data
+}
+
+export async function getMyCompletedItineraries(): Promise<MyItinerarySummary[]> {
+  const { data } = await api.get<MyItinerarySummary[]>('/me/itineraries/history')
   return data
 }
 

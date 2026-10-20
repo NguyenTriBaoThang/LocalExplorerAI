@@ -129,6 +129,8 @@ def get_trip(trip_id: int, version: int | None = None, db: Session = Depends(get
     if version is not None and not it:
         raise HTTPException(404, "Không tìm thấy phiên bản lịch trình")
     dest = db.get(TripDestination, row.spec["destination"])
+    trip = Trip.model_validate(row.spec)
+    hub = store.hub_for({"hubs": dest.hubs}, trip) if dest else None
     itinerary_data, place_data = (it[1].model_dump(mode="json"), it[2]) if it else (None, {})
     if it:
         required_ids = {stop.place_id for day in it[1].days for stop in day.stops}
@@ -143,6 +145,7 @@ def get_trip(trip_id: int, version: int | None = None, db: Session = Depends(get
                 )
                 itinerary_data, place_data = scored["itinerary"], scored["places"]
     return {"trip_id": row.id, "trip": row.spec, "center": [dest.lon, dest.lat],
+            "hub": hub.model_dump(mode="json") if hub else None,
             "version": it[0] if it else None, "itinerary": itinerary_data,
             "places": place_data, "versions": store.versions(db, trip_id),
             "pinned_place_ids": row.pinned_place_ids}
