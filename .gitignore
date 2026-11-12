@@ -473,3 +473,6 @@ models_3d/*.glb
 apps/web/public/models_3d/*.glb
 !apps/web/public/models_3d/*.glb
 
+
+# Local AI handoff notes (contain secrets)
+AI_HANDOFF_CONFIG.md
