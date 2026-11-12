@@ -176,7 +176,7 @@ def test_reconciliation_tenancy_and_permissions(client, world, db_session):
 def test_demo_history_seed_feeds_the_dashboard_and_is_idempotent(client, db_session):
     from scripts.seed_operator_demo import EMAIL, seed
     from app.models.entities import User
-    assert seed(lambda: db_session, history=True)["history"] == 7
+    assert seed(lambda: db_session, history=True)["history"] == 22  # 7 reconciled-or-pending won tours + 15 pipeline quotes
     assert seed(lambda: db_session, history=True)["history"] == 0
     user = db_session.query(User).filter_by(email=EMAIL).one()
     a = client.get("/api/operator/analytics/margin", headers=bearer_for(user)).json()

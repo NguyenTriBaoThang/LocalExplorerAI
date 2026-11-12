@@ -126,7 +126,8 @@ def _next_code(db: Session, org: OperatorOrg, year: int) -> str:
 
 
 def draft_from_request(db: Session, org: OperatorOrg, req: QuoteRequest, channel: str, contact: str | None, user: User | None, *,
-                       provider, raw_message: str | None = None, parser: str = "given", today: date | None = None) -> DraftResult:
+                       provider, raw_message: str | None = None, parser: str = "given", today: date | None = None,
+                       channel_message_id: str | None = None) -> DraftResult:
     today = today or date.today()
     req = finalize(req.model_copy(deep=True))
     if req.missing_fields:
@@ -150,7 +151,7 @@ def draft_from_request(db: Session, org: OperatorOrg, req: QuoteRequest, channel
     now = datetime.now(timezone.utc)
     quote = Quote(
         id=str(uuid4()), org_id=org.id, code=_next_code(db, org, today.year), status="draft", channel=channel,
-        customer_name=req.customer_name, customer_contact=contact, raw_message=raw_message, received_at=now,
+        customer_name=req.customer_name, customer_contact=contact, channel_message_id=channel_message_id, raw_message=raw_message, received_at=now,
         request=req.model_dump(mode="json"), itinerary={"template_code": template.code, "template_name": template.name, **template.itinerary},
         cost=cost_json, pricing=pricing, cost_total_vnd=cost.total, price_vnd=pricing["modes"][mode]["total"], price_mode=mode,
         rate_card_versions=used_versions(cost, cost_json, items),
@@ -164,10 +165,11 @@ def draft_from_request(db: Session, org: OperatorOrg, req: QuoteRequest, channel
 
 
 def draft_from_message(db: Session, org: OperatorOrg, text: str, channel: str, contact: str | None, user: User | None, *,
-                       provider, today: date | None = None) -> DraftResult:
+                       provider, today: date | None = None, channel_message_id: str | None = None) -> DraftResult:
     today = today or date.today()
     req, parser = parse_request(provider, text, today)
-    return draft_from_request(db, org, req, channel, contact, user, provider=provider, raw_message=text, parser=parser, today=today)
+    return draft_from_request(db, org, req, channel, contact, user, provider=provider, raw_message=text, parser=parser, today=today,
+                              channel_message_id=channel_message_id)
 
 
 # ---- M10: customer link, deposit, follow-up ------------------------------------------------------------------------------

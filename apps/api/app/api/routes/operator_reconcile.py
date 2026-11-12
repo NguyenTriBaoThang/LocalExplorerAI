@@ -1,6 +1,8 @@
 """Post-tour reconciliation (M9): quoted cost vs supplier invoice, and the margin analytics built on it."""
+import json
 from collections import defaultdict
 from datetime import date
+from statistics import median
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -14,6 +16,7 @@ from app.api.routes.operator import _audit, _org
 from app.models.entities import CostActual, OperatorDocument, OperatorOrg, Quote, RateCard, RateCardItem, User
 from app.services.quote import reconciliation as rec
 from app.services.quote.margin_guard import margin_pct
+from app.services.quote.win_model import _default_dir
 
 router = APIRouter(prefix="/api", tags=["operator reconciliation"])
 
@@ -166,3 +169,62 @@ def margin_analytics(date_from: date | None = Query(default=None, alias="from"),
     return {"from": date_from, "to": date_to, "totals": totals, "quotes": items,
             "by_reason": sorted(({"reason": k, **v} for k, v in by_reason.items()), key=lambda x: -abs(x["variance_vnd"])),
             "by_supplier": sorted(({"supplier": k, **v} for k, v in by_supplier.items()), key=lambda x: -abs(x["variance_vnd"]))}
+
+
+WON = ("won", "deposit_paid")
+BACKTEST_STRATEGIES = (("fixed_25pct_markup", "Markup cố định 25%"), ("optimizer_balanced", "Tối ưu: cân bằng"),
+                       ("optimizer_max_profit", "Tối ưu: lợi nhuận tối đa"), ("oracle_max_profit_true_p", "Oracle (cận trên lý thuyết)"))
+
+
+def _backtest() -> dict | None:
+    """Offline backtest of the pricing optimizer vs a fixed 25% markup. Synthetic data: proves the method, not real uplift."""
+    root = _default_dir()
+    try:
+        bt = json.loads((root / "backtest.json").read_text(encoding="utf-8"))
+        status = json.loads((root / "model_metadata.json").read_text(encoding="utf-8")).get("dataset_status", "synthetic")
+    except (OSError, ValueError):
+        return None
+    base = bt["strategies"]["fixed_25pct_markup"]["expected_profit_vnd"]
+    return {"dataset_status": status, "quotes": bt.get("quotes"), "period": bt.get("period"), "baseline": "fixed_25pct_markup",
+            "basis": "Lợi nhuận kỳ vọng trên tập test giả lập theo xác suất thắng thật; so với markup cố định 25%.",
+            "strategies": [{"key": k, "label": label, "expected_profit_vnd": bt["strategies"][k]["expected_profit_vnd"],
+                            "expected_win_rate": bt["strategies"][k]["expected_win_rate"],
+                            "profit_vs_baseline_pct": round((bt["strategies"][k]["expected_profit_vnd"] / base - 1) * 100, 2) if base else None}
+                           for k, label in BACKTEST_STRATEGIES if k in bt["strategies"]]}
+
+
+def _naive(dt):
+    return dt.replace(tzinfo=None)
+
+
+@router.get("/operator/analytics/roi")
+def roi_analytics(date_from: date | None = Query(default=None, alias="from"), date_to: date | None = Query(default=None, alias="to"),
+                  user: User = Depends(require_user(P.OPERATOR_ANALYTICS)), db: Session = Depends(get_db)):
+    """Business value of the copilot from live data (quotes whose tour start_date is in [from, to]); every figure carries its formula in `basis`."""
+    org = _org(db, user)
+    quotes = [q for q in db.scalars(select(Quote).where(Quote.org_id == org.id).order_by(Quote.code)).all()
+              if (date_from is None or date.fromisoformat(q.request["start_date"]) >= date_from)
+              and (date_to is None or date.fromisoformat(q.request["start_date"]) <= date_to)]
+    sent = [q for q in quotes if q.sent_at is not None]
+    minutes = lambda a, b: (_naive(b) - _naive(a)).total_seconds() / 60  # noqa: E731
+    response = [minutes(q.received_at, q.sent_at) for q in sent]
+    saved_min = [max(0.0, org.manual_minutes_per_quote - minutes(q.created_at, q.sent_at)) for q in sent]
+    won = [q for q in quotes if q.status in WON]
+    won_n, lost_n = len(won), sum(q.status == "lost" for q in quotes)
+    uplift = sum(int(q.price_vnd or 0) - round(int(q.cost_total_vnd) * (1 + org.default_markup_pct / 100)) for q in won if q.price_vnd is not None)
+    fixed_profit = sum(round(int(q.cost_total_vnd) * org.default_markup_pct / 100) for q in won if q.price_vnd is not None)
+    revenue = sum(int(q.price_vnd or 0) for q in won)
+    return {
+        "from": date_from, "to": date_to, "quotes_count": len(quotes), "sent_count": len(sent), "won_count": won_n, "lost_count": lost_n,
+        "median_response_minutes": {"value": round(median(response), 1) if response else None, "basis": "Trung vị của (sent_at − received_at) trên các báo giá đã gửi."},
+        "hours_saved": {"value": round(sum(saved_min) / 60, 2) if sent else None, "manual_minutes_per_quote": org.manual_minutes_per_quote,
+                        "basis": f"Σ max(0, {org.manual_minutes_per_quote} phút làm tay − (sent_at − created_at)) / 60 trên các báo giá đã gửi."},
+        "win_rate": {"value": round(won_n / (won_n + lost_n), 4) if won_n + lost_n else None,
+                     "basis": "(won + deposit_paid) / (won + deposit_paid + lost); báo giá chưa có kết quả không tính."},
+        "margin_uplift_vnd": {"value": uplift if won else None, "pct_of_fixed_markup_profit": round(uplift / fixed_profit * 100, 2) if fixed_profit else None,
+                              "default_markup_pct": org.default_markup_pct,
+                              "basis": f"Σ trên báo giá won/deposit_paid của (giá bán − chi phí × (1 + {org.default_markup_pct}%)); % so với lợi nhuận nếu luôn markup cố định."},
+        "ota_commission_avoided_vnd": {"value": round(revenue * org.ota_commission_pct / 100) if won else None, "ota_commission_pct": org.ota_commission_pct,
+                                       "basis": f"Σ giá bán của báo giá won/deposit_paid × {org.ota_commission_pct}% hoa hồng OTA."},
+        "backtest": _backtest(),
+    }

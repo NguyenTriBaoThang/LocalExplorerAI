@@ -166,6 +166,7 @@ export const quoteApi = {
   draft: async (body: { message?: string; request?: QuoteRequest; parse_only?: boolean }) =>
     (await http.post<QuoteDraft>('/operator/quotes', body, { timeout: 60000 })).data,
   list: async (status?: string) => (await http.get<QuoteSummary[]>('/operator/quotes', { params: status ? { status } : {} })).data,
+  intakeInbox: async () => (await http.get<{ id: string; created_at: string; channel: string; contact: string | null; text: string; reason: string }[]>('/operator/quotes/intake-inbox')).data,
   followups: async () => (await http.get<FollowupQuote[]>('/operator/quotes', { params: { needs_followup: 1 } })).data,
   send: async (id: string) => (await http.post<QuoteSent>(`/operator/quotes/${id}/send`)).data,
   get: async (id: string) => (await http.get<Quote>(`/operator/quotes/${id}`)).data,
@@ -203,4 +204,20 @@ export const reconcileApi = {
     (await http.patch<CostActualRow>(`/operator/cost-actuals/${id}`, body)).data,
   confirm: async (quoteId: string) => (await http.post<Reconciliation>(`/operator/quotes/${quoteId}/reconcile/confirm`)).data,
   margin: async (from?: string, to?: string) => (await http.get<MarginAnalytics>('/operator/analytics/margin', { params: { from: from || undefined, to: to || undefined } })).data,
+}
+
+type RoiFigure = { value: number | null; basis: string }
+export type RoiAnalytics = {
+  quotes_count: number; sent_count: number; won_count: number; lost_count: number
+  median_response_minutes: RoiFigure
+  hours_saved: RoiFigure & { manual_minutes_per_quote: number }
+  win_rate: RoiFigure
+  margin_uplift_vnd: RoiFigure & { pct_of_fixed_markup_profit: number | null; default_markup_pct: number }
+  ota_commission_avoided_vnd: RoiFigure & { ota_commission_pct: number }
+  backtest: { dataset_status: string; quotes: number | null; period: string[] | null; basis: string
+    strategies: Array<{ key: string; label: string; expected_profit_vnd: number; expected_win_rate: number; profit_vs_baseline_pct: number | null }> } | null
+}
+
+export const roiApi = {
+  get: async (from?: string, to?: string) => (await http.get<RoiAnalytics>('/operator/analytics/roi', { params: { from: from || undefined, to: to || undefined } })).data,
 }

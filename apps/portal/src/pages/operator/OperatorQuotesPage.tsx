@@ -35,6 +35,27 @@ function FollowupList() {
   )
 }
 
+function IntakeInbox() {
+  const [rows, setRows] = useState<Awaited<ReturnType<typeof quoteApi.intakeInbox>> | null>(null)
+  useEffect(() => { quoteApi.intakeInbox().then(setRows).catch(() => setRows([])) }, [])
+  if (!rows?.length) return null
+  return (
+    <Card className="mb-3">
+      <p className="border-b border-slate-100 px-5 py-3 text-sm font-medium">Yêu cầu cần tư vấn ({rows.length})</p>
+      <ul className="divide-y divide-slate-100">
+        {rows.map((r) => (
+          <li key={r.id} className="px-5 py-2.5 text-sm">
+            <span className="mr-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{r.channel === 'zalo' ? 'Zalo' : 'Telegram'}</span>
+            {r.contact} · {formatDateTime(r.created_at)}
+            <p className="text-slate-600">{r.text}</p>
+            <p className="text-xs text-slate-500">{r.reason}</p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
 export function OperatorQuotesPage() {
   const [tab, setTab] = useState<'all' | 'followup'>('all')
   const [status, setStatus] = useState('')
@@ -51,6 +72,7 @@ export function OperatorQuotesPage() {
       <PageHeader title="Báo giá" description="Soạn nháp báo giá từ tin nhắn của khách, chọn mức giá và theo dõi kết quả."
         actions={<Link to="/operator/quotes/new"><Button icon={Plus}>Báo giá mới</Button></Link>} />
       {error && <Alert tone="red">{error}</Alert>}
+      <IntakeInbox />
       <div className="mb-3"><Tabs value={tab} onChange={setTab} items={[{ value: 'all', label: 'Tất cả' }, { value: 'followup', label: 'Cần follow-up' }]} /></div>
       {tab === 'followup' ? <Card><FollowupList /></Card> : <Card>
         <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-3">
@@ -71,7 +93,7 @@ export function OperatorQuotesPage() {
               <tbody className="divide-y divide-slate-100">
                 {rows.map((q) => (
                   <tr key={q.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2.5 font-medium"><Link className="text-brand-700 hover:underline" to={`/operator/quotes/${q.id}`}>{q.code}</Link></td>
+                    <td className="px-4 py-2.5 font-medium"><Link className="text-brand-700 hover:underline" to={`/operator/quotes/${q.id}`}>{q.code}</Link>{q.status === 'draft' && q.channel !== 'portal' && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Mới từ {q.channel === 'zalo' ? 'Zalo' : 'Telegram'}</span>}</td>
                     <td className="px-4 py-2.5">{q.customer_name || '—'}</td>
                     <td className="px-4 py-2.5">{q.pax} khách, {q.days} ngày</td>
                     <td className="px-4 py-2.5">{q.destinations.map((d) => DESTINATION_LABEL[d] ?? d).join(', ')}</td>

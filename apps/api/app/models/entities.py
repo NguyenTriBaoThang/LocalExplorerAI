@@ -220,6 +220,7 @@ class Quote(Base):
     __tablename__ = "quotes"
     __table_args__ = (
         UniqueConstraint("org_id", "code", name="uq_quotes_org_code"),
+        UniqueConstraint("org_id", "channel", "channel_message_id", name="uq_quotes_org_channel_msg"),
         CheckConstraint("status IN ('draft', 'sent', 'viewed', 'accepted', 'deposit_paid', 'won', 'lost', 'expired')", name="ck_quotes_status"),
         CheckConstraint("channel IN ('portal', 'zalo', 'telegram')", name="ck_quotes_channel"),
     )
@@ -231,6 +232,7 @@ class Quote(Base):
     channel: Mapped[str] = mapped_column(String(20), default="portal", server_default="portal")
     customer_name: Mapped[str | None] = mapped_column(String(180), nullable=True)
     customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    channel_message_id: Mapped[str | None] = mapped_column(String(120), nullable=True)  # M11: provider message id, dedup
     raw_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     request: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)

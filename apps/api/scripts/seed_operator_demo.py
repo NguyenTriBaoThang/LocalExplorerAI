@@ -10,7 +10,7 @@ confirmed invoice reconciliation so the margin dashboard has data. The last one 
 data/demo/hoa-don-nha-xe.csv for trying the reconcile flow by hand.
 """
 import os
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
@@ -104,6 +104,27 @@ DEMO_HISTORY = [
     ("chua-doi-chieu", "[Demo] Công ty Đại Nam (chưa đối chiếu)", dict(pax=24, days=1, start_date="2026-10-20", segment="corporate", destinations=["cu_chi"]), None),
 ]
 
+# Rest of the month's pipeline (no invoices): outcome "won_fixed" = a pre-copilot quote at the fixed 25% markup that was won; "lost" / "expired"
+# are balanced-price quotes the customer did not take. Prices come from the real pricing flow, never hand-picked.
+_LOST = ("Khách chọn bên khác rẻ hơn", "Hoãn chuyến", "Khách chọn bên khác rẻ hơn", "Đổi lịch trình, không còn nhu cầu")
+DEMO_PIPELINE = [
+    ("p-cu-chi-truong-an-phu", "[Demo] Trường TH An Phú", dict(pax=40, days=1, start_date="2026-10-03", segment="school", destinations=["cu_chi"]), "lost", _LOST[0]),
+    ("p-mekong-gia-dinh-lan", "[Demo] Gia đình chị Lan", dict(pax=12, days=1, start_date="2026-10-10", segment="family", destinations=["mekong"]), "lost", _LOST[1]),
+    ("p-city-cty-an-khang", "[Demo] Công ty An Khang", dict(pax=35, days=1, start_date="2026-10-17", segment="corporate", destinations=["city"]), "lost", _LOST[0]),
+    ("p-vung-tau-cty-thanh-dat", "[Demo] Công ty Thành Đạt", dict(pax=45, days=2, start_date="2026-10-31", segment="corporate", destinations=["vung_tau"]), "lost", _LOST[0]),
+    ("p-can-gio-nhom-ban-be", "[Demo] Nhóm bạn anh Tuấn", dict(pax=15, days=1, start_date="2026-11-07", segment="family", destinations=["can_gio"]), "lost", _LOST[1]),
+    ("p-cu-chi-mekong-hoi-cn", "[Demo] Hội cựu chiến binh Q3", dict(pax=38, days=2, start_date="2026-11-14", segment="corporate", destinations=["cu_chi", "mekong"]), "lost", _LOST[0]),
+    ("p-mekong-cty-viet-tin", "[Demo] Công ty Việt Tín", dict(pax=26, days=1, start_date="2026-10-28", segment="corporate", destinations=["mekong"]), "lost", _LOST[3]),
+    ("p-city-truong-nguyen-du", "[Demo] Trường THPT Nguyễn Du", dict(pax=42, days=1, start_date="2026-11-04", segment="school", destinations=["city"]), "lost", _LOST[0]),
+    ("p-vung-tau-cty-hoa-binh", "[Demo] Công ty Hòa Bình", dict(pax=30, days=2, start_date="2026-11-21", segment="corporate", destinations=["vung_tau"]), "lost", _LOST[1]),
+    ("p-cu-chi-gia-dinh-hung", "[Demo] Gia đình anh Hùng", dict(pax=10, days=1, start_date="2026-10-12", segment="family", destinations=["cu_chi"]), "lost", _LOST[0]),
+    ("p-can-gio-cty-sao-viet", "[Demo] Công ty Sao Việt", dict(pax=22, days=1, start_date="2026-11-09", segment="corporate", destinations=["can_gio"]), "lost", _LOST[2]),
+    ("p-cu-chi-cty-tan-phat", "[Demo] Công ty Tân Phát", dict(pax=27, days=1, start_date="2026-10-05", segment="corporate", destinations=["cu_chi"]), "won_fixed", None),
+    ("p-mekong-doan-thanh-nien", "[Demo] Đoàn thanh niên Q7", dict(pax=33, days=1, start_date="2026-10-19", segment="school", destinations=["mekong"]), "won_fixed", None),
+    ("p-city-cty-kim-long", "[Demo] Công ty Kim Long", dict(pax=20, days=1, start_date="2026-09-29", segment="corporate", destinations=["city"]), "expired", None),
+    ("p-vung-tau-gia-dinh-minh", "[Demo] Gia đình anh Minh", dict(pax=16, days=2, start_date="2026-10-26", segment="family", destinations=["vung_tau"]), "expired", None),
+]
+
 
 def _invoice_lines(cost_lines: list[dict], tweak: dict) -> list[dict]:
     out = []
@@ -124,21 +145,49 @@ def _invoice_lines(cost_lines: list[dict], tweak: dict) -> list[dict]:
     return out
 
 
+def _stamp(q: Quote, start_date: str, n: int) -> None:
+    """Realistic timeline: request received ~3 weeks before the tour, quote created a minute later, sent 4-15 minutes after receipt."""
+    q.received_at = datetime.fromisoformat(start_date).replace(hour=9, minute=n, tzinfo=timezone.utc) - timedelta(days=21)
+    q.created_at = q.received_at + timedelta(minutes=1)
+    q.sent_at = q.received_at + timedelta(minutes=(4, 7, 9, 12, 15, 6, 10)[n % 7])
+
+
 def _seed_history(db, org: OperatorOrg, user: User) -> int:
     made = 0
-    for key, customer, request, tweak in DEMO_HISTORY:
-        if db.scalar(select(Quote.id).where(Quote.org_id == org.id, Quote.raw_message == f"DEMO-HISTORY:{key}")):
+    for n, (key, customer, request, tweak) in enumerate(DEMO_HISTORY):
+        existing = db.scalar(select(Quote).where(Quote.org_id == org.id, Quote.raw_message == f"DEMO-HISTORY:{key}"))
+        if existing is not None:
+            _stamp(existing, request["start_date"], n)  # idempotent: older seeds left received/sent at "now"
+            db.commit()
             continue
         req = QuoteRequest(**{**request, "start_date": date.fromisoformat(request["start_date"]), "customer_name": customer})
         result = qs.draft_from_request(db, org, req, "portal", None, user, provider=NotConfiguredLLMProvider(),
                                        raw_message=f"DEMO-HISTORY:{key}", today=date.fromisoformat(request["start_date"]).replace(day=1))
         q = result.quote
         q.status, q.accepted_at = "won", datetime.now(timezone.utc)
+        _stamp(q, request["start_date"], n)
         if tweak is not None:
             rows = match(q.cost["lines"], _invoice_lines(q.cost["lines"], tweak))
             for row in rows:
                 db.add(CostActual(org_id=org.id, quote_id=q.id, confirmed=True, **row))
             q.actual_cost_vnd = sum(r["actual_vnd"] for r in rows)
+        db.commit()
+        made += 1
+    for n, (key, customer, request, outcome, reason) in enumerate(DEMO_PIPELINE, start=len(DEMO_HISTORY)):
+        existing = db.scalar(select(Quote).where(Quote.org_id == org.id, Quote.raw_message == f"DEMO-HISTORY:{key}"))
+        if existing is not None:
+            _stamp(existing, request["start_date"], n)
+            db.commit()
+            continue
+        req = QuoteRequest(**{**request, "start_date": date.fromisoformat(request["start_date"]), "customer_name": customer})
+        q = qs.draft_from_request(db, org, req, "portal", None, user, provider=NotConfiguredLLMProvider(), raw_message=f"DEMO-HISTORY:{key}",
+                                  today=date.fromisoformat(request["start_date"]).replace(day=1)).quote
+        _stamp(q, request["start_date"], n)
+        q.status, q.lost_reason = {"won_fixed": "won", "lost": "lost", "expired": "expired"}[outcome], reason
+        if outcome == "won_fixed":
+            q.price_vnd, q.accepted_at = round(q.cost_total_vnd * (1 + org.default_markup_pct / 100) / 1000) * 1000, q.sent_at + timedelta(days=2)
+        if outcome == "expired":
+            q.expires_at = q.sent_at + timedelta(days=org.quote_validity_days)
         db.commit()
         made += 1
     return made

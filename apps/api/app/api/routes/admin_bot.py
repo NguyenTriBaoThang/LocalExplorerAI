@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+import logging
 import secrets
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -7,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
 from app.models.entities import AuditLog, Experience, Itinerary, POI, Provider, User
+from app.core.config import settings
 from app.services.bot_service import bot_service
+from app.services.quote.bot_intake import handle_bot_message
 from app.api.guards import public, require
 from app.api.permissions import P
 
@@ -25,6 +28,7 @@ class BotConfigPatch(BaseModel):
     temperature: Optional[float] = None
     forward_to_n8n: Optional[bool] = None
     forward_n8n_url: Optional[str] = None
+    quote_org_id: Optional[str] = None  # operator org slug or id that receives quote drafts from bot messages
 
 
 class SystemSettingsPatch(BaseModel):
@@ -192,7 +196,7 @@ def verify_zalo_webhook():
 
 
 @router.post('/api/bot/webhook', dependencies=[Depends(public('Zalo webhook; authenticated by the secret-token header, not a session'))])
-async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional[str] = Header(default=None)):
+async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional[str] = Header(default=None), db: Session = Depends(get_db)):
     body = await request.json()
     cfg = bot_service.get_config()
     expected_secret = cfg.get('secret_token')
@@ -213,6 +217,11 @@ async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional
     if chat_id and text:
         bot_service.add_message(chat_id, 'user', user_name, text)
 
+        reply = handle_bot_message(db, text, 'zalo', chat_id, str(message['message_id']) if message.get('message_id') else None)
+        if reply:
+            await bot_service.send_zalo_message(chat_id, reply)
+            bot_service.add_message(chat_id, 'bot', 'Bot', reply)
+
         # Forward to n8n if enabled
         if cfg.get('forward_to_n8n') and cfg.get('forward_n8n_url'):
             try:
@@ -222,4 +231,34 @@ async def handle_zalo_webhook(request: Request, x_bot_api_secret_token: Optional
             except Exception:
                 pass
 
+    return {'status': 'processed'}
+
+
+# --- Telegram quote intake ---
+
+@router.post('/api/bot/telegram/webhook', dependencies=[Depends(public('Telegram webhook; authenticated by the X-Telegram-Bot-Api-Secret-Token header, not a session'))])
+async def handle_telegram_webhook(request: Request, x_telegram_bot_api_secret_token: Optional[str] = Header(default=None), db: Session = Depends(get_db)):
+    expected = settings.telegram_webhook_secret
+    if not expected:
+        raise HTTPException(status_code=503, detail='Telegram webhook secret is not configured.')
+    if not x_telegram_bot_api_secret_token or not secrets.compare_digest(x_telegram_bot_api_secret_token, expected):
+        raise HTTPException(status_code=403, detail='Invalid secret token.')
+    body = await request.json()
+    message = body.get('message') or {}
+    chat_id = str((message.get('chat') or {}).get('id', ''))
+    text = message.get('text') or ''
+    if not (chat_id and text):
+        return {'status': 'ignored'}
+    try:
+        reply = handle_bot_message(db, text, 'telegram', chat_id, str(body['update_id']) if body.get('update_id') is not None else None)
+    except Exception:
+        logging.getLogger(__name__).exception('telegram quote intake failed')
+        return {'status': 'error'}  # 200 so Telegram does not redeliver forever
+    if reply and settings.telegram_bot_token:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(f'https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage', json={'chat_id': chat_id, 'text': reply})
+        except Exception:
+            logging.getLogger(__name__).warning('telegram sendMessage failed', exc_info=True)
     return {'status': 'processed'}

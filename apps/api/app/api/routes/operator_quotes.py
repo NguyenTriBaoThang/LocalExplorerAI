@@ -1,5 +1,5 @@
 """Quote drafting for operators (M5) and the pricing curve (M7)."""
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field, model_validator
@@ -11,7 +11,7 @@ from app.api.guards import require_user
 from app.api.permissions import P
 from app.api.routes.operator import _org
 from app.core.config import settings
-from app.models.entities import OperatorOrg, PaymentTransaction, Quote, QuoteRevision, User
+from app.models.entities import AuditLog, OperatorOrg, PaymentTransaction, Quote, QuoteRevision, User
 from app.services.quote import margin_guard as mg
 from app.services.quote import quote_service as qs
 from app.services.quote.explainer import explain, explain_rescue
@@ -153,6 +153,16 @@ def list_quotes(status: str | None = Query(default=None), needs_followup: bool |
             out.append({**quote_summary(q), "followup_reason": reason, "reminder_text": qs.reminder_text(q, reason),
                         "sent_at": q.sent_at, "first_viewed_at": q.first_viewed_at, "expires_at": q.expires_at})
     return out
+
+
+@router.get("/operator/quotes/intake-inbox")
+def intake_inbox(user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db)):
+    """Bot requests that could not be drafted (custom tour, missing rates): a human must answer them. Last 30 days."""
+    org = _org(db, user)
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+    rows = db.scalars(select(AuditLog).where(AuditLog.action == "quote.intake_needs_human", AuditLog.target_id == org.id,
+                                             AuditLog.created_at >= since).order_by(AuditLog.created_at.desc()).limit(100)).all()
+    return [{"id": r.id, "created_at": r.created_at, **r.details} for r in rows]
 
 
 @router.get("/operator/quotes/{quote_id}")
