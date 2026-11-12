@@ -45,10 +45,10 @@ class OperatorOrgCreate(BaseModel):
     name: str = Field(min_length=2, max_length=180)
 
 
-def _audit(db: Session, actor: User, action: str, target_id: str, details: dict) -> None:
+def _audit(db: Session, actor: User, action: str, target_id: str, details: dict, target_type: str = "operator_org") -> None:
     if request_id := current_request_id.get():
         details = {**details, "request_id": request_id}
-    db.add(AuditLog(id=str(uuid4()), actor_id=actor.id, action=action, target_type="operator_org", target_id=target_id,
+    db.add(AuditLog(id=str(uuid4()), actor_id=actor.id, action=action, target_type=target_type, target_id=target_id,
                     details=details, created_at=datetime.now(timezone.utc)))
 
 

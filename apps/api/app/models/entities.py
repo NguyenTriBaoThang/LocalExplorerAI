@@ -128,6 +128,80 @@ class OperatorOrg(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class OperatorDocument(Base):
+    """An uploaded supplier rate sheet or invoice, plus the LLM extraction awaiting human review."""
+    __tablename__ = "operator_documents"
+    __table_args__ = (
+        UniqueConstraint("org_id", "sha256", name="uq_operator_documents_org_sha256"),
+        CheckConstraint("kind IN ('rate_sheet', 'invoice')", name="ck_operator_documents_kind"),
+        CheckConstraint("status IN ('uploaded', 'extracted', 'failed', 'approved', 'rejected')", name="ck_operator_documents_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    filename: Mapped[str] = mapped_column(String(255))
+    mime: Mapped[str] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    storage_path: Mapped[str] = mapped_column(String(400))  # relative to the app data dir
+    status: Mapped[str] = mapped_column(String(20), default="uploaded", server_default="uploaded")
+    extracted: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class RateCard(Base):
+    """One supplier's price list for one category. Versioned: approving a new version archives the old one."""
+    __tablename__ = "rate_cards"
+    __table_args__ = (
+        UniqueConstraint("org_id", "supplier", "category", "version", name="uq_rate_cards_version"),
+        CheckConstraint("category IN ('vehicle', 'guide', 'meal', 'ticket', 'hotel', 'surcharge')", name="ck_rate_cards_category"),
+        CheckConstraint("status IN ('draft', 'active', 'archived')", name="ck_rate_cards_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    supplier: Mapped[str] = mapped_column(String(180))
+    category: Mapped[str] = mapped_column(String(20))
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_document_id: Mapped[str | None] = mapped_column(ForeignKey("operator_documents.id", ondelete="SET NULL"), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    items: Mapped[list["RateCardItem"]] = relationship(back_populates="card", cascade="all, delete-orphan", order_by="RateCardItem.code")
+
+
+class RateCardItem(Base):
+    __tablename__ = "rate_card_items"
+    __table_args__ = (
+        UniqueConstraint("card_id", "code", name="uq_rate_card_items_code"),
+        CheckConstraint("unit IN ('per_km', 'per_day', 'per_trip', 'per_pax', 'per_room_night', 'pct')", name="ck_rate_card_items_unit"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    card_id: Mapped[str] = mapped_column(ForeignKey("rate_cards.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(120))  # stable across versions of a card; the key of the diff
+    label: Mapped[str] = mapped_column(String(255))
+    unit: Mapped[str] = mapped_column(String(20))
+    seats: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_pax: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    amount_vnd: Mapped[int] = mapped_column(BigInteger)  # pct items hold a whole percent
+    experience_id: Mapped[str | None] = mapped_column(ForeignKey("experiences.id", ondelete="SET NULL"), nullable=True)
+    conditions: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    card: Mapped[RateCard] = relationship(back_populates="items")
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (

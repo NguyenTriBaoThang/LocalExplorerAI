@@ -164,7 +164,7 @@ const STATUS: Record<string, [string, Tone]> = {
   pending_provider: ['Chờ xác nhận', 'amber'], awaiting_payment: ['Chờ thanh toán', 'brand'], confirmed: ['Đã xác nhận', 'green'],
   cancellation_requested: ['Yêu cầu hủy', 'amber'], expired: ['Hết hạn', 'gray'], completed: ['Hoàn tất', 'green'],
   // users
-  active: ['Hoạt động', 'green'], inactive: ['Đã khóa', 'red'],
+  archived: ['Đã lưu trữ', 'gray'], active: ['Hoạt động', 'green'], inactive: ['Đã khóa', 'red'],
 }
 
 export function StatusBadge({ status }: { status: string }) {
