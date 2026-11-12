@@ -92,3 +92,59 @@ export const rateCardApi = {
   approve: async (id: string) => (await http.post<RateCard>(`/operator/rate-cards/${id}/approve`)).data,
   diff: async (id: string, otherId: string) => (await http.get<RateCardDiff>(`/operator/rate-cards/${id}/diff/${otherId}`)).data,
 }
+
+export type QuoteSegment = 'family' | 'corporate' | 'school'
+export type QuoteRequest = {
+  pax: number | null
+  days: number | null
+  start_date: string | null
+  segment: QuoteSegment | null
+  destinations: string[]
+  pickup: string | null
+  hotel_class: number | null
+  meal_plan: 'none' | 'basic' | 'full' | null
+  budget_per_pax: number | null
+  interests: string[]
+  customer_name: string | null
+  missing_fields: string[]
+  assumed_fields: string[]
+}
+
+export type PriceMode = 'safe' | 'balanced' | 'max_profit'
+export type ModePrice = { price_per_pax: number; total: number; margin_pct: number; p_win: number; expected_profit: number; floor_bound: boolean }
+export type CostLine = {
+  category: RateCategory; label: string; qty: number; unit_vnd: number; amount_vnd: number; fixed: boolean
+  surcharge_vnd: number; surcharge_codes: string[]; total_vnd: number
+}
+export type QuoteSummary = {
+  id: string; code: string; status: string; channel: string; customer_name: string | null; pax: number | null; days: number | null
+  start_date: string | null; destinations: string[]; price_vnd: number | null; price_mode: PriceMode; cost_total_vnd: number; created_at: string
+}
+export type Quote = QuoteSummary & {
+  customer_contact: string | null
+  raw_message: string | null
+  request: QuoteRequest
+  itinerary: { template_code: string; template_name: string; days: Array<{ title: string; legs: Array<{ from: string; to: string; distance_km: number }>; stops: Array<{ name: string }> }> }
+  cost: { total: number; fixed_total: number; variable_total: number; variable_per_pax: number; lines: CostLine[]; surcharges: Array<{ code: string; label: string; pct: number; amount_vnd: number }> }
+  pricing: { source: 'model' | 'heuristic'; floor_margin_pct: number; modes: Record<PriceMode, ModePrice> }
+  margin_floor_pct: number
+  explanation: string | null
+  lost_reason: string | null
+  revision: number
+}
+export type QuoteDraft = { quote: Quote | null; request: QuoteRequest; parser: 'llm' | 'offline' | 'given'; questions: string[] }
+export type PricingCurve = {
+  pax: number; cost_total_vnd: number; cost_per_pax: number; selected_mode: PriceMode; source: string; floor_margin_pct: number
+  modes: Record<PriceMode, ModePrice>; points: Array<{ price_per_pax: number; p_win: number; expected_profit: number }>
+}
+
+export const quoteApi = {
+  // The LLM parse + costing can take a few seconds.
+  draft: async (body: { message?: string; request?: QuoteRequest; parse_only?: boolean }) =>
+    (await http.post<QuoteDraft>('/operator/quotes', body, { timeout: 60000 })).data,
+  list: async (status?: string) => (await http.get<QuoteSummary[]>('/operator/quotes', { params: status ? { status } : {} })).data,
+  get: async (id: string) => (await http.get<Quote>(`/operator/quotes/${id}`)).data,
+  selectMode: async (id: string, mode: PriceMode) => (await http.post<Quote>(`/operator/quotes/${id}/select-mode`, { mode })).data,
+  mark: async (id: string, outcome: 'won' | 'lost', reason?: string) => (await http.post<Quote>(`/operator/quotes/${id}/mark`, { outcome, reason })).data,
+  curve: async (id: string) => (await http.get<PricingCurve>(`/operator/quotes/${id}/pricing-curve`)).data,
+}

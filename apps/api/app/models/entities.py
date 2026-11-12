@@ -202,6 +202,74 @@ class RateCardItem(Base):
     card: Mapped[RateCard] = relationship(back_populates="items")
 
 
+class TourTemplate(Base):
+    """A ready-made itinerary (cost-engine shape) the quote copilot starts from."""
+    __tablename__ = "tour_templates"
+    __table_args__ = (UniqueConstraint("org_id", "code", name="uq_tour_templates_code"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(180))
+    days: Mapped[int] = mapped_column(Integer)
+    itinerary: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)  # {destinations, days:[{title, legs, stops}]}
+    meal_plan: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)  # {"meals": total meals per guest}
+
+
+class Quote(Base):
+    __tablename__ = "quotes"
+    __table_args__ = (
+        UniqueConstraint("org_id", "code", name="uq_quotes_org_code"),
+        CheckConstraint("status IN ('draft', 'sent', 'viewed', 'accepted', 'deposit_paid', 'won', 'lost', 'expired')", name="ck_quotes_status"),
+        CheckConstraint("channel IN ('portal', 'zalo', 'telegram')", name="ck_quotes_channel"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft", index=True)
+    channel: Mapped[str] = mapped_column(String(20), default="portal", server_default="portal")
+    customer_name: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    raw_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    request: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    itinerary: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    cost: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    pricing: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    cost_total_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    price_vnd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    price_mode: Mapped[str] = mapped_column(String(20), default="balanced", server_default="balanced")
+    rate_card_versions: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    margin_floor_pct: Mapped[int] = mapped_column(Integer, default=15)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    public_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)  # M10
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lost_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    actual_cost_vnd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class QuoteRevision(Base):
+    __tablename__ = "quote_revisions"
+    __table_args__ = (UniqueConstraint("quote_id", "revision", name="uq_quote_revisions_rev"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    quote_id: Mapped[str] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (

@@ -27,6 +27,9 @@ import { OperatorOverviewPage } from './pages/operator/OperatorOverviewPage'
 import { OperatorSettingsPage } from './pages/operator/OperatorSettingsPage'
 import { OperatorComingSoonPage } from './pages/operator/OperatorComingSoonPage'
 import { OperatorRateCardsPage } from './pages/operator/OperatorRateCardsPage'
+import { OperatorQuotesPage } from './pages/operator/OperatorQuotesPage'
+import { OperatorQuoteNewPage } from './pages/operator/OperatorQuoteNewPage'
+import { OperatorQuoteDetailPage } from './pages/operator/OperatorQuoteDetailPage'
 import { PartnerAnalyticsPage } from './pages/partner/PartnerAnalyticsPage'
 import { PartnerCalendarPage } from './pages/partner/PartnerCalendarPage'
 import { PartnerPlacesPage } from './pages/partner/PartnerPlacesPage'
@@ -103,7 +106,9 @@ export function App() {
                 <Route path="/operator" element={<OperatorLayout />}>
                   <Route index element={<OperatorOverviewPage />} />
                   <Route element={<RequirePermission permission="operator:quote" />}>
-                    <Route path="quotes" element={<OperatorComingSoonPage title="Báo giá" />} />
+                    <Route path="quotes" element={<OperatorQuotesPage />} />
+                    <Route path="quotes/new" element={<OperatorQuoteNewPage />} />
+                    <Route path="quotes/:id" element={<OperatorQuoteDetailPage />} />
                   </Route>
                   <Route element={<RequirePermission permission="operator:rate_card" />}>
                     <Route path="rate-cards" element={<OperatorRateCardsPage />} />

@@ -2,8 +2,8 @@
 
     python -m scripts.seed_operator_demo
 
-Re-running adds only what is missing (org, user, and any supplier+category without a card). Tour templates and
-trip places are NOT seeded here.
+Re-running adds only what is missing (org, user, any supplier+category without a card, any tour template code).
+Trip places are NOT seeded here.
 """
 import os
 from datetime import date, datetime, timezone
@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.auth import hash_password
 from app.db.session import SessionLocal
-from app.models.entities import OperatorOrg, RateCard, RateCardItem, User
+from app.models.entities import OperatorOrg, RateCard, RateCardItem, TourTemplate, User
 
 ORG_NAME, ORG_SLUG = "Saigon Group Tours", "saigon-group-tours"
 EMAIL = os.environ.get("DEMO_OPERATOR_EMAIL", "operator@saigongroup.example").strip().lower()
@@ -48,8 +48,32 @@ CARDS = [
 ]
 
 
+def _stop(name: str, ticket: str | None = None, price: int | None = None) -> dict:
+    return {"name": name, **({"ticket_code": ticket} if ticket else {}), **({"price_vnd": price} if price else {})}
+
+
+def _day(title: str, legs: list[tuple[str, str, int]], stops: list[dict]) -> dict:
+    return {"title": title, "legs": [{"from": a, "to": b, "distance_km": km} for a, b, km in legs], "stops": stops}
+
+
+CU_CHI, MEKONG, CAN_GIO = "ticket-dia-dao-cu-chi", "ticket-thuyen-mekong", "ticket-can-gio"
+# (code, name, days, destinations, meals per guest in total, day plans). Distances are one-way road estimates from HCMC.
+TEMPLATES = [
+    ("cu-chi-1n", "Củ Chi 1 ngày", 1, ["cu_chi"], 1, [_day("TP.HCM - Địa đạo Củ Chi - TP.HCM", [("TP.HCM", "Củ Chi", 70), ("Củ Chi", "TP.HCM", 70)], [_stop("Địa đạo Củ Chi", CU_CHI)])]),
+    ("mekong-1n", "Mekong 1 ngày", 1, ["mekong"], 1, [_day("TP.HCM - Mỹ Tho - Bến Tre - TP.HCM", [("TP.HCM", "Mỹ Tho", 70), ("Mỹ Tho", "Bến Tre", 20), ("Bến Tre", "TP.HCM", 85)], [_stop("Thuyền sông Mekong", MEKONG)])]),
+    ("cu-chi-mekong-2n1d", "Củ Chi - Mekong 2N1Đ", 2, ["cu_chi", "mekong"], 3, [
+        _day("TP.HCM - Củ Chi - Mỹ Tho", [("TP.HCM", "Củ Chi", 70), ("Củ Chi", "Mỹ Tho", 100)], [_stop("Địa đạo Củ Chi", CU_CHI)]),
+        _day("Mỹ Tho - Bến Tre - TP.HCM", [("Mỹ Tho", "Bến Tre", 20), ("Bến Tre", "TP.HCM", 85)], [_stop("Thuyền sông Mekong", MEKONG)])]),
+    ("can-gio-1n", "Cần Giờ 1 ngày", 1, ["can_gio"], 1, [_day("TP.HCM - Cần Giờ - TP.HCM", [("TP.HCM", "Cần Giờ", 60), ("Cần Giờ", "TP.HCM", 60), ("Cần Giờ", "Cần Giờ", 20)], [_stop("Rừng ngập mặn Cần Giờ", CAN_GIO)])]),
+    ("vung-tau-2n1d", "Vũng Tàu 2N1Đ", 2, ["vung_tau"], 3, [
+        _day("TP.HCM - Vũng Tàu", [("TP.HCM", "Vũng Tàu", 100), ("Vũng Tàu", "Vũng Tàu", 20)], [_stop("Tượng Chúa Kitô Vua")]),
+        _day("Vũng Tàu - TP.HCM", [("Vũng Tàu", "Vũng Tàu", 20), ("Vũng Tàu", "TP.HCM", 100)], [_stop("Bãi Sau")])]),
+    ("city-tour-1n", "City tour TP.HCM 1 ngày", 1, ["city"], 1, [_day("Trung tâm TP.HCM", [("TP.HCM", "TP.HCM", 40)], [_stop("Dinh Độc Lập", price=65_000), _stop("Bảo tàng Chứng tích Chiến tranh", price=40_000)])]),
+]
+
+
 def seed(session_factory=SessionLocal) -> dict:
-    created = {"org": False, "user": False, "cards": 0}
+    created = {"org": False, "user": False, "cards": 0, "templates": 0}
     with session_factory() as db:
         org = db.scalar(select(OperatorOrg).where(OperatorOrg.slug == ORG_SLUG))
         if org is None:
@@ -71,6 +95,12 @@ def seed(session_factory=SessionLocal) -> dict:
                                                seats=seats, max_pax=max_pax, conditions=conditions, confidence=1.0))
             db.add(card)
             created["cards"] += 1
+        for code, name, days, destinations, meals, plan in TEMPLATES:
+            if db.scalar(select(TourTemplate.id).where(TourTemplate.org_id == org.id, TourTemplate.code == code)):
+                continue
+            db.add(TourTemplate(org_id=org.id, code=code, name=name, days=days, meal_plan={"meals": meals},
+                                itinerary={"destinations": destinations, "days": plan}))
+            created["templates"] += 1
         db.commit()
     return created
 
