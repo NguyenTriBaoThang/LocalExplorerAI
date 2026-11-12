@@ -131,7 +131,12 @@ export type Quote = QuoteSummary & {
   explanation: string | null
   lost_reason: string | null
   revision: number
+  sent_at: string | null; expires_at: string | null; first_viewed_at: string | null; view_count: number; accepted_at: string | null
+  deposit_pct?: number; deposit_vnd?: number | null; deposit_paid_at?: string | null
 }
+export type FollowupReason = 'not_viewed' | 'not_accepted' | 'expiring'
+export type FollowupQuote = QuoteSummary & { followup_reason: FollowupReason; reminder_text: string; sent_at: string | null; first_viewed_at: string | null; expires_at: string | null }
+export type QuoteSent = { quote: Quote; share_url: string; message: string }
 export type QuoteDraft = { quote: Quote | null; request: QuoteRequest; parser: 'llm' | 'offline' | 'given'; questions: string[] }
 export type PricingCurve = {
   pax: number; cost_total_vnd: number; cost_per_pax: number; selected_mode: PriceMode; source: string; floor_margin_pct: number
@@ -143,6 +148,8 @@ export const quoteApi = {
   draft: async (body: { message?: string; request?: QuoteRequest; parse_only?: boolean }) =>
     (await http.post<QuoteDraft>('/operator/quotes', body, { timeout: 60000 })).data,
   list: async (status?: string) => (await http.get<QuoteSummary[]>('/operator/quotes', { params: status ? { status } : {} })).data,
+  followups: async () => (await http.get<FollowupQuote[]>('/operator/quotes', { params: { needs_followup: 1 } })).data,
+  send: async (id: string) => (await http.post<QuoteSent>(`/operator/quotes/${id}/send`)).data,
   get: async (id: string) => (await http.get<Quote>(`/operator/quotes/${id}`)).data,
   selectMode: async (id: string, mode: PriceMode) => (await http.post<Quote>(`/operator/quotes/${id}/select-mode`, { mode })).data,
   mark: async (id: string, outcome: 'won' | 'lost', reason?: string) => (await http.post<Quote>(`/operator/quotes/${id}/mark`, { outcome, reason })).data,

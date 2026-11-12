@@ -37,6 +37,9 @@ PUBLIC_ROUTES = {
     ("ml", "POST", "/api/ml/flood-risk"), ("ml", "POST", "/api/ml/rank-experiences"),
     ("models_3d", "GET", "/models-3d/calibration"), ("models_3d", "GET", "/models-3d/calibration/{model_id}"),
     ("planner", "GET", "/api/shared/itineraries/{share_token}"),
+    # The quote link token is the credential for the customer's view, accept and deposit checkout.
+    ("public_quotes", "GET", "/api/public/quotes/{token}"), ("public_quotes", "POST", "/api/public/quotes/{token}/accept"),
+    ("public_quotes", "POST", "/api/public/quotes/{token}/checkout"),
     # The high-entropy invite is the credential for read-only access; proposing still needs a traveler session.
     ("collaboration", "GET", "/api/collaborations/{token}"),
     ("routing", "GET", "/api/geocoding/forward"), ("routing", "GET", "/api/routing/capabilities"),

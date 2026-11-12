@@ -10,7 +10,8 @@ from app.api.dependencies import get_db, get_llm_provider
 from app.api.guards import require_user
 from app.api.permissions import P
 from app.api.routes.operator import _org
-from app.models.entities import OperatorOrg, Quote, User
+from app.core.config import settings
+from app.models.entities import OperatorOrg, PaymentTransaction, Quote, User
 from app.services.quote import quote_service as qs
 from app.services.quote.explainer import explain
 from app.services.quote.request_parser import QuoteRequest, clarifying_questions, finalize, parse_request
@@ -56,7 +57,8 @@ def quote_payload(q: Quote) -> dict:
     return {**quote_summary(q), "customer_contact": q.customer_contact, "raw_message": q.raw_message, "received_at": q.received_at,
             "request": q.request, "itinerary": q.itinerary, "cost": q.cost, "pricing": {k: v for k, v in q.pricing.items() if k != "curve"},
             "rate_card_versions": q.rate_card_versions, "margin_floor_pct": q.margin_floor_pct, "explanation": q.explanation,
-            "lost_reason": q.lost_reason, "accepted_at": q.accepted_at, "revision": q.revision}
+            "lost_reason": q.lost_reason, "accepted_at": q.accepted_at, "revision": q.revision,
+            "sent_at": q.sent_at, "expires_at": q.expires_at, "first_viewed_at": q.first_viewed_at, "view_count": q.view_count}
 
 
 def _quote(db: Session, org: OperatorOrg, quote_id: str) -> Quote:
@@ -94,17 +96,49 @@ def create_quote(body: QuoteCreate, response: Response, user: User = Depends(req
 @router.get("/operator/quotes")
 def list_quotes(status: str | None = Query(default=None), needs_followup: bool | None = Query(default=None),
                 user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db)):
-    """``needs_followup`` is accepted but ignored until the send/view tracking of M10 exists."""
+    """``needs_followup``: sent/viewed quotes matching a rule of ``quote_service.followup_reason``, each with a reminder text."""
     org = _org(db, user)
     stmt = select(Quote).where(Quote.org_id == org.id).order_by(Quote.created_at.desc(), Quote.code.desc())
     if status:
         stmt = stmt.where(Quote.status == status)
-    return [quote_summary(q) for q in db.scalars(stmt.limit(200)).all()]
+    rows = db.scalars(stmt.limit(200)).all()
+    now = datetime.now(timezone.utc)
+    if any([qs.expire_due(q, now) for q in rows]):
+        db.commit()
+    if status:
+        rows = [q for q in rows if q.status == status]
+    if not needs_followup:
+        return [quote_summary(q) for q in rows]
+    out = []
+    for q in rows:
+        if reason := qs.followup_reason(q, now):
+            out.append({**quote_summary(q), "followup_reason": reason, "reminder_text": qs.reminder_text(q, reason),
+                        "sent_at": q.sent_at, "first_viewed_at": q.first_viewed_at, "expires_at": q.expires_at})
+    return out
 
 
 @router.get("/operator/quotes/{quote_id}")
 def get_quote(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db)):
-    return quote_payload(_quote(db, _org(db, user), quote_id))
+    org = _org(db, user)
+    q = _quote(db, org, quote_id)
+    if qs.expire_due(q, datetime.now(timezone.utc)):
+        db.commit()
+    paid = db.scalar(select(PaymentTransaction.updated_at).where(PaymentTransaction.quote_id == q.id, PaymentTransaction.status == "succeeded")
+                     .order_by(PaymentTransaction.updated_at).limit(1))
+    return {**quote_payload(q), "deposit_pct": org.deposit_pct, "deposit_vnd": qs.deposit_vnd(q.price_vnd, org.deposit_pct) if q.price_vnd else None,
+            "deposit_paid_at": paid if q.status == "deposit_paid" else None}
+
+
+@router.post("/operator/quotes/{quote_id}/send")
+def send_quote(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db)):
+    """Issue the customer link (re-sending rotates it and renews the validity). The plain URL is returned only here."""
+    org = _org(db, user)
+    q = _quote(db, org, quote_id)
+    if q.status not in ("draft", "sent", "viewed", "expired"):
+        raise _fail(409, "QUOTE_LOCKED", "Báo giá đã được khách chấp nhận hoặc đã đóng, không gửi lại được.")
+    token = qs.send(db, org, q, user)
+    url = f"{settings.web_app_url.rstrip('/')}/q/{token}"
+    return {"quote": quote_payload(q), "share_url": url, "message": qs.share_message(org, q, url)}
 
 
 @router.post("/operator/quotes/{quote_id}/select-mode")

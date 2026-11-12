@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Copy, Send, XCircle } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardHeader, DescriptionList, Input, Modal, PageHeader, Spinner, StatusBadge, useToast } from '../../components/ui'
 import { Legend, LineChart } from '../../components/charts'
 import { errorMessage } from '../../lib/api'
-import { formatDate } from '../../lib/format'
-import { quoteApi, type PriceMode, type PricingCurve, type Quote } from '../../lib/operatorApi'
+import { formatDate, formatDateTime } from '../../lib/format'
+import { quoteApi, type PriceMode, type PricingCurve, type Quote, type QuoteSent } from '../../lib/operatorApi'
 import { DESTINATION_LABEL, MODE_HINT, MODE_LABEL, SEGMENT_LABEL, vnd } from './quoteFormat'
 
 const MODES: PriceMode[] = ['safe', 'balanced', 'max_profit']
@@ -40,6 +40,7 @@ export function OperatorQuoteDetailPage() {
   const [busy, setBusy] = useState('')
   const [lostOpen, setLostOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const [sent, setSent] = useState<QuoteSent | null>(null)  // the plain link is shown once: only its hash is stored
 
   const load = useCallback(async () => {
     try {
@@ -70,6 +71,11 @@ export function OperatorQuoteDetailPage() {
   const r = quote.request
   const editable = quote.status === 'draft'
   const open = ['draft', 'sent', 'viewed', 'accepted', 'deposit_paid'].includes(quote.status)
+  const canSend = ['draft', 'sent', 'viewed', 'expired'].includes(quote.status)
+  const copy = (text: string) => { void navigator.clipboard?.writeText(text); toast.success('Đã sao chép.') }
+  const timeline: Array<[string, string | null | undefined]> = [
+    ['Đã gửi khách', quote.sent_at], ['Khách đã xem', quote.first_viewed_at], ['Khách chấp nhận', quote.accepted_at], ['Đã đặt cọc', quote.deposit_paid_at],
+  ]
 
   return (
     <>
@@ -77,10 +83,34 @@ export function OperatorQuoteDetailPage() {
         actions={<>
           <StatusBadge status={quote.status} />
           <Link to="/operator/quotes"><Button variant="secondary" icon={ArrowLeft}>Danh sách</Button></Link>
+          {canSend && <Button icon={Send} loading={busy === 'send'} onClick={() => act('send', async () => setSent(await quoteApi.send(quote.id)))}>{quote.status === 'draft' ? 'Gửi khách' : 'Gửi lại (đổi link)'}</Button>}
           {open && <Button icon={CheckCircle2} loading={busy === 'won'} onClick={() => act('won', () => quoteApi.mark(quote.id, 'won'))}>Đã chốt</Button>}
           {open && <Button variant="secondary" icon={XCircle} onClick={() => setLostOpen(true)}>Không chốt</Button>}
         </>} />
       <div className="space-y-4">
+        {sent && (
+          <Card>
+            <CardHeader title="Liên kết gửi khách" description="Link chỉ hiện một lần ở đây; gửi lại sẽ tạo link mới và vô hiệu link cũ." />
+            <div className="space-y-3 p-5 text-sm">
+              <div className="flex gap-2"><Input readOnly value={sent.share_url} onFocus={(e) => e.currentTarget.select()} /><Button variant="secondary" icon={Copy} onClick={() => copy(sent.share_url)}>Sao chép link</Button></div>
+              <textarea readOnly rows={5} className="w-full rounded-lg border border-slate-200 p-3 text-sm" value={sent.message} />
+              <Button variant="secondary" icon={Copy} onClick={() => copy(sent.message)}>Sao chép tin nhắn Zalo</Button>
+            </div>
+          </Card>
+        )}
+        {quote.sent_at && (
+          <Card>
+            <CardHeader title="Tiến trình" description={quote.expires_at ? `Hiệu lực đến ${formatDateTime(quote.expires_at)} · khách mở link ${quote.view_count} lần` : undefined} />
+            <ol className="grid gap-3 p-5 text-sm sm:grid-cols-4">
+              {timeline.map(([label, at]) => (
+                <li key={label} className={at ? 'text-slate-900' : 'text-slate-400'}>
+                  <p className="font-medium">{at ? '✓ ' : '○ '}{label}</p><p className="text-xs">{at ? formatDateTime(at) : 'Chưa có'}</p>
+                </li>
+              ))}
+            </ol>
+          </Card>
+        )}
+        {quote.status === 'expired' && <Alert tone="amber">Báo giá đã hết hạn. Bấm "Gửi lại" để gia hạn và tạo link mới.</Alert>}
         {quote.status === 'lost' && <Alert tone="amber">Không chốt: {quote.lost_reason || 'không ghi lý do'}.</Alert>}
 
         <div className="grid gap-4 lg:grid-cols-2">

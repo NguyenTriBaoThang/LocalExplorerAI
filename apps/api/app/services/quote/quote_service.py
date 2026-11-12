@@ -3,8 +3,10 @@
 Channel-agnostic (portal now, Zalo/Telegram bots later): callers pass the LLM provider and get either a persisted
 draft or the clarifying questions to send back instead of a price.
 """
+import hashlib
+import secrets
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -157,3 +159,101 @@ def draft_from_message(db: Session, org: OperatorOrg, text: str, channel: str, c
     today = today or date.today()
     req, parser = parse_request(provider, text, today)
     return draft_from_request(db, org, req, channel, contact, user, provider=provider, raw_message=text, parser=parser, today=today)
+
+
+# ---- M10: customer link, deposit, follow-up ------------------------------------------------------------------------------
+
+def token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def aware(value: datetime | None) -> datetime | None:
+    return value.replace(tzinfo=timezone.utc) if value is not None and value.tzinfo is None else value
+
+
+def deposit_vnd(price_vnd: int, deposit_pct: int) -> int:
+    """ceil(price x pct / 100), rounded up to 1,000 VND, never above the price."""
+    raw = -(-price_vnd * deposit_pct // 100)
+    return min(-(-raw // 1000) * 1000, price_vnd)
+
+
+def _money(n: int) -> str:
+    return f"{n:,}".replace(",", ".") + "đ"
+
+
+def _day(d: datetime | None) -> str:
+    return d.strftime("%d/%m/%Y") if d else ""
+
+
+def send(db: Session, org: OperatorOrg, q: Quote, user: User | None, now: datetime | None = None) -> str:
+    """Issue (or rotate) the customer link. Returns the plain token, which is never stored. The price stays as it is."""
+    now = now or datetime.now(timezone.utc)
+    token = secrets.token_urlsafe(32)
+    q.public_token_hash = token_hash(token)
+    q.sent_at, q.expires_at = now, now + timedelta(days=org.quote_validity_days)
+    if q.status in ("draft", "expired"):
+        q.status = "sent"
+    _audit(db, user, "quote.sent", q, {"expires_at": q.expires_at.isoformat()})
+    db.commit()
+    return token
+
+
+def share_message(org: OperatorOrg, q: Quote, url: str) -> str:
+    r = q.request
+    greeting = f"Chào {q.customer_name}" if q.customer_name else "Chào anh/chị"
+    return (f"{greeting}, {org.name} gửi anh/chị báo giá {q.code}: {r['pax']} khách, {r['days']} ngày, khởi hành {_day(date.fromisoformat(r['start_date']))}. "
+            f"Tổng {_money(q.price_vnd)} (khoảng {_money(round(q.price_vnd / r['pax']))}/khách). "
+            f"Anh/chị xem chi tiết và xác nhận tại: {url} (hiệu lực đến {_day(q.expires_at)}). Cảm ơn anh/chị!")
+
+
+def expire_due(q: Quote, now: datetime) -> bool:
+    """sent/viewed quotes past expires_at read as expired. Returns True when the status changed (caller commits)."""
+    if q.status in ("sent", "viewed") and q.expires_at and aware(q.expires_at) <= now:
+        q.status = "expired"
+        return True
+    return False
+
+
+FOLLOWUP_NOT_VIEWED, FOLLOWUP_NOT_ACCEPTED, FOLLOWUP_EXPIRING = timedelta(hours=24), timedelta(hours=48), timedelta(hours=24)
+
+
+def followup_reason(q: Quote, now: datetime) -> str | None:
+    """not_viewed: sent >24h ago, never opened. not_accepted: first viewed >48h ago, not accepted. expiring: expires within 24h."""
+    if q.status not in ("sent", "viewed") or q.expires_at is None or aware(q.expires_at) <= now:
+        return None
+    if aware(q.expires_at) - now <= FOLLOWUP_EXPIRING:
+        return "expiring"
+    if q.status == "viewed" and q.first_viewed_at and now - aware(q.first_viewed_at) >= FOLLOWUP_NOT_ACCEPTED:
+        return "not_accepted"
+    if q.status == "sent" and q.sent_at and now - aware(q.sent_at) >= FOLLOWUP_NOT_VIEWED:
+        return "not_viewed"
+    return None
+
+
+def reminder_text(q: Quote, reason: str) -> str:
+    name = q.customer_name or "anh/chị"
+    base = f"Chào {name}, em nhắn về báo giá {q.code} ({_money(q.price_vnd)}) em đã gửi."
+    tail = {"not_viewed": " Anh/chị đã kịp xem báo giá chưa ạ? Nếu cần em giải đáp hoặc điều chỉnh, anh/chị cứ nhắn em nhé.",
+            "not_accepted": " Anh/chị còn điều gì cần em điều chỉnh về lịch trình hoặc giá không ạ? Em sẵn sàng hỗ trợ.",
+            "expiring": f" Báo giá sẽ hết hiệu lực vào {_day(q.expires_at)}, anh/chị xác nhận giúp em trước thời điểm này để giữ mức giá nhé."}[reason]
+    return base + tail
+
+
+INCLUSIONS = {"vehicle": "Xe du lịch đưa đón theo lịch trình", "guide": "Hướng dẫn viên", "meal": "Các bữa ăn theo chương trình",
+              "ticket": "Vé tham quan theo chương trình", "hotel": "Lưu trú"}
+
+
+def public_view(org: OperatorOrg, q: Quote, now: datetime) -> dict:
+    """Customer-safe fields only: no cost lines or totals, margins, win probability, other price modes or internal notes."""
+    pax = q.request["pax"]
+    categories = {ln["category"] for ln in q.cost.get("lines", [])}
+    return {
+        "code": q.code, "status": q.status, "company_name": org.name, "customer_name": q.customer_name,
+        "pax": pax, "days": q.request["days"], "start_date": q.request.get("start_date"), "destinations": q.request.get("destinations", []),
+        "itinerary": [{"title": d["title"], "stops": [s["name"] for s in d["stops"]]} for d in q.itinerary.get("days", [])],
+        "inclusions": [label for cat, label in INCLUSIONS.items() if cat in categories],
+        "price_vnd": q.price_vnd, "price_per_pax": round(q.price_vnd / pax),
+        "deposit_pct": org.deposit_pct, "deposit_vnd": deposit_vnd(q.price_vnd, org.deposit_pct),
+        "expires_at": q.expires_at, "accepted_at": q.accepted_at,
+        "can_accept": q.status in ("sent", "viewed"), "can_pay": q.status == "accepted",
+    }

@@ -439,10 +439,12 @@ class PaymentTransaction(Base):
         ),
         UniqueConstraint("provider", "provider_reference", name="uq_payment_provider_reference"),
         UniqueConstraint("idempotency_key", name="uq_payment_idempotency_key"),
+        CheckConstraint("(booking_id IS NULL) <> (quote_id IS NULL)", name="ck_payment_exactly_one_target"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), index=True)
+    booking_id: Mapped[str | None] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), nullable=True, index=True)
+    quote_id: Mapped[str | None] = mapped_column(ForeignKey("quotes.id", ondelete="RESTRICT"), nullable=True, index=True)  # M10 deposit
     provider: Mapped[str] = mapped_column(String(40), default="unconfigured")
     provider_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(100))
