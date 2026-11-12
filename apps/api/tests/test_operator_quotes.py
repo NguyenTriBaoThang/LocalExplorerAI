@@ -103,7 +103,7 @@ def test_demo_message_end_to_end(client, seeded, llm, db_session):
     modes = q["pricing"]["modes"]
     assert modes["safe"]["price_per_pax"] <= modes["balanced"]["price_per_pax"] <= modes["max_profit"]["price_per_pax"]
     assert all(m["margin_pct"] >= q["margin_floor_pct"] for m in modes.values())
-    assert q["price_vnd"] == modes["balanced"]["total"] and q["pricing"]["source"] == "heuristic"
+    assert q["price_vnd"] == modes["balanced"]["total"] and q["pricing"]["source"] in ("heuristic", "model")  # model when xgboost is installed
     assert "999.999.999" not in q["explanation"]  # invented number discarded by the guard
     assert db_session.query(QuoteRevision).filter_by(quote_id=q["id"]).count() == 1
     assert db_session.query(AuditLog).filter_by(target_type="quote", target_id=q["id"], action="quote.created").count() == 1
