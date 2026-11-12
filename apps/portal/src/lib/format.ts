@@ -54,4 +54,4 @@ export const INTENTS: Record<string, string> = {
   'thư_giãn': 'Thư giãn',
 }
 
-export const ROLES: Record<string, string> = { traveler: 'Du khách', provider: 'Đối tác', admin: 'Quản trị viên' }
+export const ROLES: Record<string, string> = { traveler: 'Du khách', provider: 'Đối tác', operator: 'Điều hành tour', admin: 'Quản trị viên' }

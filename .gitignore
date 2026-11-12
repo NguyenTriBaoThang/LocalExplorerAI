@@ -462,6 +462,7 @@ notebooks/*
 
 # Bot runtime store
 apps/api/.meshy-assets/
+apps/api/.app-data/
 apps/api/app/bot_store.json
 apps/api/.local-secrets/
 

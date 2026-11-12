@@ -54,6 +54,12 @@ class P:
     PROVIDER_SLOT_ASSIST = _p("provider:slot_assist", "Use the slot assistant")
     PROVIDER_REVIEWS = _p("provider:reviews", "Read and reply to reviews of own experiences")
     PROVIDER_ANALYTICS = _p("provider:analytics", "Read views and conversion of own experiences")
+    # Tour operator (quote & margin copilot)
+    OPERATOR_QUOTE = _p("operator:quote", "Build and send quotes")
+    OPERATOR_RATE_CARD = _p("operator:rate_card", "Manage supplier rate cards")
+    OPERATOR_RECONCILE = _p("operator:reconcile", "Reconcile supplier invoices")
+    OPERATOR_ANALYTICS = _p("operator:analytics", "Read margin and ROI analytics")
+    OPERATOR_SETTINGS = _p("operator:settings", "Read and edit the operator organisation settings")
     # Administration
     ADMIN_DASHBOARD = _p("admin:dashboard", "Read the admin dashboard")
     ADMIN_USERS = _p("admin:users", "List and update users")
@@ -88,9 +94,10 @@ DEFAULT_GRANTS: dict[str, list[str]] = {
         P.PROVIDER_PROFILE, P.PROVIDER_EXPERIENCE, P.PROVIDER_POI, P.PROVIDER_EVIDENCE, P.PROVIDER_SLOT, P.PROVIDER_AUDIT,
         P.PROVIDER_BOOKING_READ, P.PROVIDER_BOOKING_DECIDE, P.PROVIDER_SLOT_ASSIST, P.PROVIDER_REVIEWS, P.PROVIDER_ANALYTICS,
     ],
+    "operator": _ACCOUNT + [P.OPERATOR_QUOTE, P.OPERATOR_RATE_CARD, P.OPERATOR_RECONCILE, P.OPERATOR_ANALYTICS, P.OPERATOR_SETTINGS],
     "admin": _ACCOUNT + [name for name in registry.names() if name.startswith("admin:")] + [P.OPS_READ],
 }
-SYSTEM_ROLES = {"traveler": "Signed-in visitor", "provider": "Experience provider", "admin": "Platform administrator"}
+SYSTEM_ROLES = {"traveler": "Signed-in visitor", "provider": "Experience provider", "operator": "Tour operator", "admin": "Platform administrator"}
 
 # An administrator whose session did not pass a second factor may use only these (so they can enrol one).
 MFA_ENROLMENT_PERMISSIONS: frozenset[str] = frozenset({P.ACCOUNT_READ, P.ACCOUNT_MFA})

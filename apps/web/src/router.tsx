@@ -10,6 +10,7 @@ import { AboutPage } from './pages/AboutPage'
 import { AuthPage } from './pages/AuthPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SharedItineraryPage } from './pages/SharedItineraryPage'
+import { QuotePage, QuoteResultPage } from './pages/QuotePage'
 import { CollaborativeItineraryPage } from './pages/CollaborativeItineraryPage'
 import { ComparePage } from './pages/ComparePage'
 import { TripHistoryPage } from './pages/TripHistoryPage'
@@ -43,6 +44,8 @@ export const router = createBrowserRouter([{
       { path: '/itinerary/:id', element: <ItineraryPage /> },
     ] },
     { path: '/shared/:token', element: <SharedItineraryPage /> },
+    { path: '/q/result', element: <QuoteResultPage /> },
+    { path: '/q/:token', element: <QuotePage /> },
     { path: '/collaborate/:token', element: <CollaborativeItineraryPage /> },
     { path: '/forgot-password', element: <ForgotPasswordPage /> },
     { path: '/reset-password', element: <ResetPasswordPage /> },

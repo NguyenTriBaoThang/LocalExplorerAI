@@ -1,0 +1,38 @@
+{
+  "feature_version": "quote-win-features-v1",
+  "feature_names": [
+    "pax",
+    "days",
+    "lead_days",
+    "seg_family",
+    "seg_corporate",
+    "seg_school",
+    "dest_cu_chi",
+    "dest_mekong",
+    "dest_can_gio",
+    "dest_vung_tau",
+    "dest_city",
+    "weekend",
+    "holiday",
+    "tet",
+    "month",
+    "competitor_price_index",
+    "rain_prob",
+    "response_time_h",
+    "cost_per_pax",
+    "price_ratio_cost",
+    "price_ratio_comp"
+  ],
+  "feature_builder": "apps/api/app/services/quote/win_model.py::build_features",
+  "price_dependent_features": [
+    "price_ratio_cost",
+    "price_ratio_comp"
+  ],
+  "excluded_label_or_truth_columns": [
+    "won",
+    "true_p_win",
+    "markup_pct",
+    "offered_total",
+    "offered_price_per_pax"
+  ]
+}

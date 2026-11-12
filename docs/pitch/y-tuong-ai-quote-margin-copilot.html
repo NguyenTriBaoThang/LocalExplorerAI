@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>AI Quote & Margin Copilot — Ý tưởng</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm; }
+  :root { --ink:#13201b; --muted:#5b6b64; --brand:#0f766e; --brand2:#10b981; --soft:#ecfdf5; --line:#d7e3de; --warn:#b45309; }
+  * { box-sizing: border-box; }
+  body { font-family: "Be Vietnam Pro", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.55; margin: 0; background:#fff; }
+  h1 { font-size: 26pt; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.5px; }
+  h2 { font-size: 14.5pt; margin: 22px 0 8px; color: var(--brand); border-bottom: 2px solid var(--soft); padding-bottom: 4px; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  .cover { background: linear-gradient(135deg, #0f766e, #10b981); color:#fff; border-radius: 14px; padding: 26px 26px 22px; margin-bottom: 14px; }
+  .cover .tag { display:inline-block; font-size:8.5pt; font-weight:600; letter-spacing:1px; text-transform:uppercase; background:rgba(255,255,255,.18); padding:3px 9px; border-radius:20px; margin-bottom:12px; }
+  .cover .sub { font-size: 12pt; opacity: .95; margin: 0; }
+  .cover .meta { font-size: 9pt; opacity: .85; margin-top: 14px; }
+  .pitch { font-size: 11.5pt; background: var(--soft); border-left: 4px solid var(--brand); padding: 12px 14px; border-radius: 0 10px 10px 0; margin: 10px 0 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.5pt; break-inside: avoid; }
+  th { background: var(--soft); color: var(--brand); text-align: left; font-weight: 600; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; break-inside: avoid; }
+  .card b.k { display:block; color: var(--brand); font-size: 10pt; margin-bottom: 2px; }
+  .flow { display:flex; gap:6px; align-items:stretch; margin: 8px 0 12px; }
+  .step { flex:1; background: var(--soft); border-radius: 10px; padding: 8px 9px; font-size: 8.8pt; line-height:1.4; }
+  .step .n { display:inline-block; width:18px; height:18px; border-radius:50%; background:var(--brand); color:#fff; font-size:8pt; font-weight:700; text-align:center; line-height:18px; margin-bottom:4px; }
+  .step b { display:block; font-size: 9.5pt; margin-bottom: 2px; }
+  .note { font-size: 8.8pt; color: var(--muted); }
+  .warn { color: var(--warn); font-weight: 600; }
+  .src { font-size: 8.3pt; color: var(--muted); }
+  .src li { margin-bottom: 1px; }
+  .pb { break-before: page; }
+  .big { font-size: 18pt; font-weight: 800; color: var(--brand); line-height: 1.1; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="tag">AI for Business Innovation · Đề xuất ý tưởng</div>
+  <h1>AI Quote &amp; Margin Copilot</h1>
+  <p class="sub">Trợ lý AI giúp công ty lữ hành báo giá tour trong vài phút, định giá thông minh và không còn lỗ ngầm.</p>
+  <div class="meta">Mở rộng từ nền tảng Local Explorer AI · TP. Hồ Chí Minh · 2026</div>
+</div>
+
+<div class="pitch"><b>Một câu:</b> Sales dán tin nhắn của khách → AI dựng lịch trình khả thi, tính đúng giá vốn từ bảng giá nhà cung cấp, đề xuất giá bán tối ưu lợi nhuận → gửi khách một link báo giá có nút đặt cọc → tiếp tục canh margin đến khi tour kết thúc.</div>
+
+<h2>1. Vấn đề kinh doanh (Business Problem)</h2>
+<p>Công ty lữ hành vừa và nhỏ đang mất tiền ở ba chỗ, phần lớn vì quy trình vẫn chạy bằng Excel, Zalo và kinh nghiệm cá nhân.</p>
+
+<div class="grid">
+  <div class="card"><b class="k">① Báo giá chậm → mất khách</b>Mỗi báo giá tùy chỉnh mất <b>45 phút – 2 giờ</b>. Phản hồi sau 24–48 giờ khiến đại lý mất <b>40–60%</b> yêu cầu, trong khi trả lời trong 1 giờ có khả năng chốt cao gần <b>7 lần</b>.</div>
+  <div class="card"><b class="k">② Lỗ ngầm sau khi chốt</b>Giá bán dựa trên ước tính, còn hóa đơn nhà cung cấp về sau <b>15–60 ngày</b>. Đổi lịch hay đổi số khách không được tính lại giá; phụ thu lễ/cuối tuần phát sinh. Đoàn hụt người có thể kéo margin từ <b>25% xuống 5%</b>.</div>
+  <div class="card"><b class="k">③ Định giá theo cảm tính</b>Đa số áp một mức markup cố định cho mọi đoàn, bất kể mùa, lễ Tết, ngày đặt trước hay giá đối thủ. Kết quả: hoặc bán rẻ bỏ tiền trên bàn, hoặc bán đắt và mất đơn.</div>
+  <div class="card"><b class="k">④ Phụ thuộc kênh trung gian</b>Bán tour/hoạt động qua OTA mất hoa hồng phổ biến <b>20–25%</b> (dao động 15–35%) trên mỗi đơn.</div>
+</div>
+<p class="note">Số liệu tổng hợp từ các nguồn ngành (xem mục Nguồn tham khảo). Đây là bối cảnh thị trường, không phải kết quả của sản phẩm.</p>
+
+<h2>2. Giải pháp AI (AI Solution)</h2>
+<p><b>Khách hàng mục tiêu:</b> công ty lữ hành SME tại TP.HCM, bán tour đoàn 1–3 ngày (gia đình, công ty team-building, trường học) ở TP.HCM và lân cận như Củ Chi, Mekong, Cần Giờ, Vũng Tàu.</p>
+
+<h3>Luồng làm việc</h3>
+<div class="flow">
+  <div class="step"><span class="n">1</span><b>Nhận yêu cầu</b>Sales dán tin nhắn, hoặc bot Zalo/Telegram tự nhận.</div>
+  <div class="step"><span class="n">2</span><b>Hiểu yêu cầu</b>AI tách số khách, số ngày, điểm đến, ngân sách; thiếu thì hỏi lại.</div>
+  <div class="step"><span class="n">3</span><b>Dựng lịch trình</b>Chọn và chỉnh tour mẫu, hoặc AI tự thiết kế tour riêng.</div>
+  <div class="step"><span class="n">4</span><b>Tính giá vốn</b>Ghép đúng giá xe, HDV, ăn, vé, khách sạn, phụ thu từ bảng giá.</div>
+  <div class="step"><span class="n">5</span><b>Định giá động</b>3 mức giá kèm xác suất chốt và lãi kỳ vọng.</div>
+  <div class="step"><span class="n">6</span><b>Gửi &amp; cọc</b>Link báo giá + PDF, khách bấm đặt cọc VNPay/MoMo.</div>
+</div>
+
+<h3>Năm năng lực chính</h3>
+<table>
+  <tr><th style="width:24%">Năng lực</th><th style="width:44%">AI làm gì</th><th>Vì sao tin được</th></tr>
+  <tr><td><b>AI đọc bảng giá &amp; hóa đơn</b></td><td>Đọc file Excel, PDF, ảnh chụp bảng giá NET của nhà cung cấp và chuyển thành bảng giá có cấu trúc.</td><td>Người duyệt trước khi dùng; ô AI không chắc được tô nổi; bảng giá có phiên bản.</td></tr>
+  <tr><td><b>AI soạn báo giá</b></td><td>Hiểu tin nhắn tiếng Việt tự nhiên, dựng lịch trình khả thi về thời gian và đường đi.</td><td>Tái dùng bộ lập lịch trình chống "ảo giác" đã có trong Local Explorer AI.</td></tr>
+  <tr><td><b>Định giá động</b></td><td>Mô hình học máy dự đoán xác suất khách chốt ở từng mức giá; hệ thống chọn giá tối đa lợi nhuận kỳ vọng.</td><td>Không bao giờ dưới margin sàn; giá cao hơn thì xác suất chốt luôn thấp hơn (ràng buộc đơn điệu).</td></tr>
+  <tr><td><b>Margin Guard</b></td><td>Đổi số khách, đổi ngày hay nhà cung cấp tăng giá → tính lại ngay, cảnh báo báo giá sắp lỗ, gợi ý cách cứu lãi kèm số tiền tiết kiệm.</td><td>Mọi con số do công thức tính; AI chỉ diễn giải, có cơ chế chặn số bịa.</td></tr>
+  <tr><td><b>Đối chiếu sau tour</b></td><td>Đọc hóa đơn thực tế, so với dự toán, chỉ ra khoản lệch và nguyên nhân.</td><td>Người xác nhận cuối; dashboard lãi dự kiến và lãi thực tế theo từng đoàn.</td></tr>
+</table>
+
+<h3 class="pb">Định giá động hoạt động thế nào</h3>
+<ol>
+  <li><b>Dữ liệu:</b> sinh 3 năm lịch sử báo giá giả lập (BTC cho phép dùng mock data) theo các quy luật minh bạch: mùa vụ, lễ Tết âm và dương lịch, số ngày đặt trước, cỡ đoàn, phân khúc khách, giá đối thủ, thời tiết, tốc độ phản hồi. Toàn bộ quy luật được công bố trong tài liệu để giám khảo kiểm chứng.</li>
+  <li><b>Mô hình:</b> XGBoost dự đoán <i>P(chốt | giá, bối cảnh)</i>, huấn luyện chia theo thời gian (không nhìn trước tương lai).</li>
+  <li><b>Tối ưu:</b> chọn giá tối đa <i>Lãi kỳ vọng = P(chốt) × (Giá − Giá vốn)</i>, với 3 mức cho sales:
+    <table style="margin-top:6px">
+      <tr><th>Mức</th><th>Khi nào dùng</th><th>Ý nghĩa</th></tr>
+      <tr><td>🛡️ An toàn chốt</td><td>Cần lấp xe, lấp lịch, khách nhạy giá</td><td>Xác suất chốt ≥ 75%</td></tr>
+      <tr><td>⚖️ Cân bằng</td><td>Mặc định</td><td>Giữ ≥ 95% lãi kỳ vọng tối đa, chọn mức có xác suất chốt cao nhất</td></tr>
+      <tr><td>💰 Tối đa lãi</td><td>Mùa cao điểm, khách ít nhạy giá</td><td>Lãi kỳ vọng cao nhất, không ràng buộc xác suất</td></tr>
+    </table>
+  </li>
+  <li><b>Kiểm chứng:</b> backtest trên giai đoạn dữ liệu chưa thấy, so với cách cũ (markup cố định 25%).</li>
+</ol>
+
+<h3>Ví dụ minh họa</h3>
+<div class="card">
+  <p><b>Tin nhắn khách:</b> <i>"Công ty mình 32 người muốn đi Củ Chi – Mekong 2 ngày 1 đêm cuối tháng 4, ngân sách khoảng 2 triệu/người."</i></p>
+  <p style="margin:0"><b>Copilot trả về trong vài phút:</b> lịch trình 2 ngày, xe 45 chỗ, 1 HDV, 4 bữa, vé tham quan, khách sạn 16 phòng. Cờ cảnh báo: <span class="warn">dịp 30/4 có phụ thu lễ</span>. Ba mức giá, mỗi mức kèm xác suất chốt và lãi kỳ vọng, cùng gợi ý <i>"dời sang tuần trước để né phụ thu, tiết kiệm X đồng"</i>.</p>
+  <p class="note" style="margin-top:6px">Đây là kịch bản minh họa; các con số cụ thể do hệ thống tính từ bảng giá mẫu.</p>
+</div>
+
+<h2>3. Giá trị kinh doanh (Business Value)</h2>
+<table>
+  <tr><th style="width:26%">Giá trị</th><th style="width:40%">Cơ chế</th><th>Đo bằng gì (hiển thị trên trang ROI)</th></tr>
+  <tr><td><b>Tiết kiệm giờ công</b></td><td>Báo giá từ 45–120 phút xuống còn vài phút.</td><td>Số giờ tiết kiệm = (thời gian thủ công khai báo − thời gian thực tế) × số báo giá.</td></tr>
+  <tr><td><b>Chốt nhiều đơn hơn</b></td><td>Phản hồi trong vài phút thay vì vài ngày; bot nhận yêu cầu 24/7; tự nhắc follow-up.</td><td>Thời gian phản hồi trung vị, tỉ lệ chốt.</td></tr>
+  <tr><td><b>Lãi cao hơn mỗi đơn</b></td><td>Định giá theo bối cảnh thay vì markup cố định.</td><td>Lãi so với markup cố định; backtest trên dữ liệu giả lập.</td></tr>
+  <tr><td><b>Chặn lỗ ngầm</b></td><td>Cảnh báo ngay khi có thay đổi; đối chiếu hóa đơn sau tour.</td><td>Lãi dự kiến và lãi thực tế; tổng tiền lệch theo nguyên nhân.</td></tr>
+  <tr><td><b>Giảm phí trung gian</b></td><td>Bán trực tiếp qua link báo giá có đặt cọc.</td><td>Hoa hồng OTA tránh được = doanh thu bán trực tiếp × tỉ lệ hoa hồng.</td></tr>
+</table>
+<p class="note">Kết quả backtest sẽ được gắn nhãn rõ là "dữ liệu giả lập": nó chứng minh phương pháp hoạt động, chưa phải hiệu quả thực tế đã được đo ở doanh nghiệp.</p>
+
+<h2>4. Vì sao làm được, và vì sao khác biệt</h2>
+<div class="grid">
+  <div class="card"><b class="k">Nền tảng đã có sẵn</b>Local Explorer AI đã có AI chat tiếng Việt, bộ lập lịch trình có kiểm tra khả thi, bản đồ Goong, XGBoost, thanh toán VNPay/MoMo, bot Zalo và portal đối tác. Phần mở rộng tận dụng phần lớn hạ tầng này.</div>
+  <div class="card"><b class="k">AI có trách nhiệm</b>AI hiểu ngôn ngữ và giải thích, còn tiền do công thức và mô hình kiểm chứng được quyết định. Con người luôn duyệt trước khi gửi giá.</div>
+  <div class="card"><b class="k">Khép kín vòng đời</b>Không dừng ở báo giá: canh margin khi thay đổi và đối chiếu chi phí thật sau tour. Đây là chỗ các công cụ báo giá thông thường bỏ trống.</div>
+  <div class="card"><b class="k">Hợp bối cảnh Việt Nam</b>Lịch lễ âm dương, kênh Zalo, VNPay/MoMo, dữ liệu điểm đến và giá thị trường TP.HCM.</div>
+</div>
+
+<h2>5. Lộ trình triển khai</h2>
+<table>
+  <tr><th style="width:18%">Giai đoạn</th><th>Nội dung</th></tr>
+  <tr><td><b>Nền móng</b></td><td>Tài khoản công ty lữ hành (đa doanh nghiệp), bộ tính giá vốn, bảng giá nhà cung cấp + dữ liệu mẫu TP.HCM, AI đọc tài liệu.</td></tr>
+  <tr><td><b>Lõi AI</b></td><td>Sinh dữ liệu giả lập, huấn luyện mô hình xác suất chốt, định giá 3 mức, AI soạn báo giá.</td></tr>
+  <tr><td><b>Chốt đơn</b></td><td>Link báo giá, PDF, đặt cọc VNPay/MoMo, nhắc follow-up, bot Zalo/Telegram.</td></tr>
+  <tr><td><b>Bảo vệ lãi</b></td><td>Margin Guard, gợi ý cứu lãi, đối chiếu hóa đơn, dashboard lãi.</td></tr>
+  <tr><td><b>Chứng minh giá trị</b></td><td>Trang ROI, backtest, slide và kịch bản demo.</td></tr>
+</table>
+
+<h2>6. Rủi ro và cách xử lý</h2>
+<ul>
+  <li><b>Dữ liệu giả lập có thể bị nghi ngờ:</b> công bố toàn bộ quy luật sinh dữ liệu và ghi nhãn "synthetic" ở mọi nơi; khi có doanh nghiệp thật thì huấn luyện lại trên dữ liệu thật.</li>
+  <li><b>AI đọc sai bảng giá:</b> bắt buộc người duyệt, tô nổi ô AI không chắc, lưu phiên bản để so sánh.</li>
+  <li><b>AI bịa số trong lời giải thích:</b> lời giải thích chứa số không có trong dữ liệu thì tự động bị thay bằng mẫu có sẵn.</li>
+  <li><b>Sai sót liên quan tiền:</b> phần thanh toán có test đầy đủ cho các trường hợp trùng giao dịch, lệch số tiền, đã thanh toán.</li>
+</ul>
+
+<h2>Nguồn tham khảo</h2>
+<ul class="src">
+  <li>Caladeo — Travel quote management: a custom quote takes 45 minutes to 2 hours.</li>
+  <li>Peakflo — CRM for Travel Agents (2026): agencies lose 40–60% of quoted enquiries; cites Harvard Business Review on lead response time.</li>
+  <li>Peakflo — Why Tour Operators Only Learn Their Real Margin Weeks After the Tour Ends (2026).</li>
+  <li>Tourwriter — 5 Tips to Sell More Travel: cost of unconverted quotes.</li>
+  <li>Samba — OTA Commission Rates for Tours (2026): 15–35%, commonly 20–25%.</li>
+  <li>Nhanh Travel (2025), MISA AMIS — các vấn đề vận hành và tài chính của doanh nghiệp lữ hành Việt Nam.</li>
+</ul>
+
+</body>
+</html>

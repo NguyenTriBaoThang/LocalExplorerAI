@@ -300,6 +300,19 @@ def handle_event(client: httpx.Client, token: str, event: dict) -> None:
         log("Auto-reply disabled in Admin; message stored only.")
         return
 
+    try:
+        from app.db.session import SessionLocal
+        from app.services.quote.bot_intake import handle_bot_message
+        with SessionLocal() as db:
+            quote_reply = handle_bot_message(db, text, "zalo", chat_id, str(message["message_id"]) if message.get("message_id") else None)
+    except Exception as error:
+        log(f"Quote intake failed: {error!r}")
+        quote_reply = None
+    if quote_reply:
+        send_message(client, token, chat_id, quote_reply)
+        bot_service.add_message(chat_id, "bot", "Bot botHK2T (Tour Guide AI)", quote_reply)
+        return
+
     reply = generate_ai_reply_with_memory(chat_id, text, sender)
     send_message(client, token, chat_id, reply)
     bot_service.add_message(chat_id, "bot", "Bot botHK2T (Tour Guide AI)", reply)

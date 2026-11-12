@@ -26,11 +26,13 @@ from app.models.entities import (
     PaymentTransaction,
     POI,
     Provider,
+    Quote,
     User,
 )
 from app.schemas.booking import BookingCancelRequest, BookingCancellationDecisionRequest, BookingDecisionRequest, BookingHoldRequest
 from app.services.evidence_service import entity_is_operationally_verified, slot_is_operationally_verified
 from app.services.notifications import queue_booking_status
+from app.services.quote import quote_service
 from app.services.integration_config import IntegrationSecretConfigurationError, resolve_integration_value
 from app.services.momo import MomoProviderError, MomoRejectedError, build_create_payload, create_payment_url, get_momo_config, verify_ipn_signature
 from app.services.vnpay import build_payment_url, get_vnpay_config, verify_params
@@ -162,7 +164,32 @@ def _vnpay_reply(code: str, message: str) -> dict[str, str]:
     return {"RspCode": code, "Message": message}
 
 
-def _payment_return_redirect(*, payment: str, booking: Booking | None = None) -> RedirectResponse:
+def _settle_quote_payment(db: Session, payment: PaymentTransaction, *, success: bool, suspicious: bool = False, details: dict) -> bool:
+    """Apply a verified gateway result to a quote deposit. Idempotent: returns False when the payment was already processed."""
+    payment = db.scalar(select(PaymentTransaction).where(PaymentTransaction.id == payment.id)
+                        .with_for_update().execution_options(populate_existing=True))
+    if payment is None or payment.status not in {"created", "pending", "failed"} or (payment.status == "failed" and not success):
+        return False
+    quote = db.scalar(select(Quote).where(Quote.id == payment.quote_id).with_for_update())
+    payment.updated_at = _now()
+    if not success:
+        payment.status = "failed"
+        quote_service._audit(db, None, "quote.deposit_failed", quote, {"payment_transaction_id": payment.id, **details})
+    else:
+        payment.status = "succeeded"
+        if quote.status == "accepted" and not suspicious:
+            quote.status = "deposit_paid"
+            action = "quote.deposit_paid"
+        else:  # money was captured but the quote cannot take it: keep the quote as is and flag it for a human
+            action = "quote.payment_captured_reconciliation_required"
+        quote_service._audit(db, None, action, quote, {"payment_transaction_id": payment.id, "amount_vnd": payment.amount_vnd, **details})
+    db.commit()
+    return True
+
+
+def _payment_return_redirect(*, payment: str, booking: Booking | None = None, quote: bool = False) -> RedirectResponse:
+    if quote:  # only the token hash is stored, so the customer cannot be sent back to /q/:token
+        return RedirectResponse(f"{settings.web_app_url.rstrip('/')}/q/result?{urlencode({'status': payment})}", status_code=303)
     target = f"{settings.web_app_url.rstrip('/')}/itinerary/{booking.itinerary_id}" if booking and booking.itinerary_id else settings.web_app_url.rstrip("/")
     query = {"payment": payment}
     if booking:
@@ -187,6 +214,8 @@ def vnpay_return(request: Request, db: Session = Depends(get_db)):
         PaymentTransaction.provider == "vnpay",
         PaymentTransaction.provider_reference == reference,
     )) if reference else None
+    if payment is not None and payment.quote_id:
+        return _payment_return_redirect(payment="returned" if params.get("vnp_ResponseCode") == "00" else "failed", quote=True)
     booking = db.get(Booking, payment.booking_id) if payment else None
     if booking is None:
         return _payment_return_redirect(payment="invalid")
@@ -232,6 +261,12 @@ def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     gateway_transaction_no = params.get("vnp_TransactionNo", "")
     if response_code in {"00", "07"} and (not gateway_transaction_no or not gateway_transaction_no.isascii()):
         return _vnpay_reply("99", "Missing gateway transaction reference")
+
+    if payment.quote_id:
+        settled = _settle_quote_payment(db, payment, success=response_code in {"00", "07"},
+                                        suspicious=response_code == "07", details={"gateway": "vnpay", "gateway_transaction_no": gateway_transaction_no,
+                                                                                    "gateway_response_code": response_code})
+        return _vnpay_reply("00", "Confirm Success") if settled else _vnpay_reply("02", "Order already confirmed")
 
     booking_preview = db.get(Booking, payment.booking_id)
     if booking_preview is None:
@@ -312,6 +347,8 @@ def momo_return(request: Request, db: Session = Depends(get_db)):
         PaymentTransaction.provider == "momo",
         PaymentTransaction.provider_reference == order_id,
     )) if order_id else None
+    if payment is not None and payment.quote_id:
+        return _payment_return_redirect(payment="returned" if request.query_params.get("resultCode") == "0" else "failed", quote=True)
     booking = db.get(Booking, payment.booking_id) if payment else None
     if booking is None:
         return _payment_return_redirect(payment="invalid")
@@ -365,6 +402,11 @@ async def momo_ipn(request: Request, db: Session = Depends(get_db)):
     trans_id = payload.get("transId")
     if result_code in {0, 9000} and (isinstance(trans_id, bool) or not str(trans_id).isascii() or not str(trans_id).isdigit()):
         return Response(status_code=400)
+
+    if payment.quote_id:
+        if result_code != 9000:  # an authorization is not a capture, same as for bookings
+            _settle_quote_payment(db, payment, success=result_code == 0, details={"gateway": "momo", "gateway_transaction_id": str(trans_id), "gateway_result_code": result_code})
+        return Response(status_code=204)
 
     booking_preview = db.get(Booking, payment.booking_id)
     if booking_preview is None:

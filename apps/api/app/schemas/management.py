@@ -113,9 +113,10 @@ class ProviderCreateRequest(BaseModel):
 
 
 class AdminUserUpdateRequest(BaseModel):
-    role: Literal["traveler", "provider", "admin"]
+    role: Literal["traveler", "provider", "operator", "admin"]
     is_active: bool
     provider_id: str | None = None
+    operator_org_id: str | None = None
 
 
 class POIMergeRequest(BaseModel):

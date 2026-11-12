@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     rate_limit_costly_per_minute: int = Field(default=30, ge=1, le=10000)  # geocoding and local ML inference
     rate_limit_prefix: str = "local-explorer:rl"
     trusted_proxy_ips: str = ""
+    telegram_bot_token: str = ""
+    telegram_webhook_secret: str = ""
     smtp_host: str | None = None
     smtp_port: int = Field(default=587, ge=1, le=65535)
     smtp_username: str | None = None

@@ -22,6 +22,16 @@ import { AdminFloodRiskPage } from './pages/admin/AdminFloodRiskPage'
 import { AccountPage } from './pages/AccountPage'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { adminApi, partnerApi } from './lib/api'
+import { OperatorLayout } from './pages/operator/OperatorLayout'
+import { OperatorOverviewPage } from './pages/operator/OperatorOverviewPage'
+import { OperatorSettingsPage } from './pages/operator/OperatorSettingsPage'
+import { OperatorReconcilePage } from './pages/operator/OperatorReconcilePage'
+import { OperatorMarginPage } from './pages/operator/OperatorMarginPage'
+import { OperatorRoiPage } from './pages/operator/OperatorRoiPage'
+import { OperatorRateCardsPage } from './pages/operator/OperatorRateCardsPage'
+import { OperatorQuotesPage } from './pages/operator/OperatorQuotesPage'
+import { OperatorQuoteNewPage } from './pages/operator/OperatorQuoteNewPage'
+import { OperatorQuoteDetailPage } from './pages/operator/OperatorQuoteDetailPage'
 import { PartnerAnalyticsPage } from './pages/partner/PartnerAnalyticsPage'
 import { PartnerCalendarPage } from './pages/partner/PartnerCalendarPage'
 import { PartnerPlacesPage } from './pages/partner/PartnerPlacesPage'
@@ -90,6 +100,30 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="provider:audit" />}>
                     <Route path="activity" element={<AuditLogPage title="Nhật ký hoạt động" description="Các thay đổi trên trải nghiệm, slot và địa điểm của bạn." load={loadPartnerAudit} />} />
+                  </Route>
+                  <Route path="account" element={<AccountPage />} />
+                </Route>
+              </Route>
+              <Route element={<RequireRole role="operator" />}>
+                <Route path="/operator" element={<OperatorLayout />}>
+                  <Route index element={<OperatorOverviewPage />} />
+                  <Route element={<RequirePermission permission="operator:quote" />}>
+                    <Route path="quotes" element={<OperatorQuotesPage />} />
+                    <Route path="quotes/new" element={<OperatorQuoteNewPage />} />
+                    <Route path="quotes/:id" element={<OperatorQuoteDetailPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:rate_card" />}>
+                    <Route path="rate-cards" element={<OperatorRateCardsPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:reconcile" />}>
+                    <Route path="reconcile" element={<OperatorReconcilePage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:analytics" />}>
+                    <Route path="margin" element={<OperatorMarginPage />} />
+                    <Route path="roi" element={<OperatorRoiPage />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:settings" />}>
+                    <Route path="settings" element={<OperatorSettingsPage />} />
                   </Route>
                   <Route path="account" element={<AccountPage />} />
                 </Route>

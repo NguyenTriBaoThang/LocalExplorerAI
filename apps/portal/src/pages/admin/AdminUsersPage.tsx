@@ -10,7 +10,7 @@ import { formatDate, formatDateTime, ROLES, timeAgo } from '../../lib/format'
 import type { AdminProvider, AdminUser, AdminUserDetail, Role } from '../../lib/types'
 
 const LIMIT = 25
-const ROLE_TONE = { admin: 'violet', provider: 'brand', traveler: 'gray' } as const
+const ROLE_TONE = { admin: 'violet', provider: 'brand', operator: 'amber', traveler: 'gray' } as const
 
 export function AdminUsersPage() {
   const { user: me } = useAuth()

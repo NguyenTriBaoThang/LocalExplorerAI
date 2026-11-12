@@ -163,8 +163,11 @@ const STATUS: Record<string, [string, Tone]> = {
   // bookings
   pending_provider: ['Chờ xác nhận', 'amber'], awaiting_payment: ['Chờ thanh toán', 'brand'], confirmed: ['Đã xác nhận', 'green'],
   cancellation_requested: ['Yêu cầu hủy', 'amber'], expired: ['Hết hạn', 'gray'], completed: ['Hoàn tất', 'green'],
+  // quotes
+  sent: ['Đã gửi', 'brand'], viewed: ['Khách đã xem', 'violet'], accepted: ['Khách chấp nhận', 'green'], deposit_paid: ['Đã đặt cọc', 'green'],
+  won: ['Đã chốt', 'green'], lost: ['Không chốt', 'red'],
   // users
-  active: ['Hoạt động', 'green'], inactive: ['Đã khóa', 'red'],
+  archived: ['Đã lưu trữ', 'gray'], active: ['Hoạt động', 'green'], inactive: ['Đã khóa', 'red'],
 }
 
 export function StatusBadge({ status }: { status: string }) {

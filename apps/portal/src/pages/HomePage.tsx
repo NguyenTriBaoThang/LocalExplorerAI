@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Building2, Check, Lock, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Building2, Check, Lock, FileText, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { ApplicationForm, cleanApplication, EMPTY_APPLICATION } from '../components/ApplicationForm'
 import { BrandLogo } from '../components/Brand'
@@ -25,6 +25,12 @@ const WIDGETS: PortalWidget[] = [
     description: 'Quản lý hồ sơ cơ sở, trải nghiệm, slot và các yêu cầu đặt chỗ của khách.',
     accent: 'from-brand-500 to-teal-400',
     features: ['Trải nghiệm, slot & lịch theo tuần', 'Đặt chỗ, đánh giá & thống kê doanh thu', 'Địa điểm và hồ sơ đối tác'],
+  },
+  {
+    role: 'operator', path: '/operator', title: 'Portal Điều hành tour', icon: FileText,
+    description: 'Lập báo giá tour, quản lý bảng giá nhà cung cấp và theo dõi biên lợi nhuận.',
+    accent: 'from-amber-500 to-brand-500',
+    features: ['Báo giá & điểm hòa vốn', 'Bảng giá nhà cung cấp có phiên bản', 'Biên lợi nhuận & ROI'],
   },
   {
     role: 'admin', path: '/admin', title: 'Portal Quản trị', icon: ShieldCheck,

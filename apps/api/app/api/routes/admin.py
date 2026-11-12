@@ -17,7 +17,7 @@ from geoalchemy2.elements import WKTElement
 from app.adapters.llm.provider import LLMNotConfigured, LLMProviderError
 from app.adapters.routing.provider import RoutingConfigurationError, RoutingProviderError
 from app.api.dependencies import get_db, get_llm_provider
-from app.models.entities import AuditLog, Booking, Feedback, RecommendationConsent, RecommendationInteraction, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, POI, Provider, User
+from app.models.entities import AuditLog, Booking, Feedback, RecommendationConsent, RecommendationInteraction, Evidence, Experience, ExperienceSlot, Itinerary, ItineraryStop, PlaceImportBatch, PlaceImportCandidate, OperatorOrg, POI, Provider, User
 from app.api.routes.provider import provider_profile_payload
 from app.models.auth_entities import AuthSession
 from app.schemas.management import AdminUserUpdateRequest, ModerationRequest, POIMergeRequest, ProviderCreateRequest
@@ -107,14 +107,14 @@ def _like(term: str) -> str:
 
 def _user_row(item: User, provider_names: dict[str, str]) -> dict:
     return {"id": item.id, "email": item.email, "display_name": item.display_name, "role": item.role,
-            "provider_id": item.provider_id, "provider_name": provider_names.get(item.provider_id or ""),
+            "provider_id": item.provider_id, "operator_org_id": item.operator_org_id, "provider_name": provider_names.get(item.provider_id or ""),
             "phone": item.phone, "is_active": item.is_active, "email_verified_at": item.email_verified_at,
             "mfa_enabled": item.mfa_enabled, "created_at": item.created_at}
 
 
 @router.get("/users")
 def list_users(response: Response, user: User = Depends(require_user(P.ADMIN_USERS)), db: Session = Depends(get_db),
-               q: str | None = Query(default=None, max_length=120), role: Literal["traveler", "provider", "admin"] | None = None,
+               q: str | None = Query(default=None, max_length=120), role: Literal["traveler", "provider", "operator", "admin"] | None = None,
                active: bool | None = None, limit: int = Query(default=100, ge=1, le=500), offset: int = Query(default=0, ge=0)):
     query = select(User)
     if q and q.strip():
@@ -568,6 +568,12 @@ def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Dep
         target.provider_id = payload.provider_id
     else:
         target.provider_id = None
+    if payload.role == "operator":
+        if not payload.operator_org_id or db.get(OperatorOrg, payload.operator_org_id) is None:
+            raise HTTPException(status_code=422, detail={"code": "OPERATOR_ORG_REQUIRED", "message": "Operator accounts must be linked to an operator organisation."})
+        target.operator_org_id = payload.operator_org_id
+    else:
+        target.operator_org_id = None
     old_role, old_active = target.role, target.is_active
     target.role, target.is_active = payload.role, payload.is_active
     if (old_role, old_active) != (target.role, target.is_active):
@@ -575,7 +581,7 @@ def update_user(user_id: str, payload: AdminUserUpdateRequest, actor: User = Dep
     _audit(db, actor, "user.updated", "user", target.id, {"old_role": old_role, "role": target.role, "old_active": old_active, "is_active": target.is_active})
     db.commit()
     invalidate_user_state(target.id)
-    return {"id": target.id, "role": target.role, "provider_id": target.provider_id, "is_active": target.is_active}
+    return {"id": target.id, "role": target.role, "provider_id": target.provider_id, "operator_org_id": target.operator_org_id, "is_active": target.is_active}
 
 
 @router.post("/providers", status_code=201)

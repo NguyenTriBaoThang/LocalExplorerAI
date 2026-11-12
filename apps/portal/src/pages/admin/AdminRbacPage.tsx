@@ -25,8 +25,8 @@ const LABELS: Record<string, string> = {
   'admin:rbac': 'Phân quyền vai trò', 'admin:places': 'Quản lý địa điểm & danh thắng', 'admin:content': 'Quản lý nội dung website', 'admin:analytics': 'Xem thống kê truy cập',
   'provider:reviews': 'Xem & trả lời đánh giá', 'provider:analytics': 'Xem thống kê trải nghiệm', 'review:write': 'Viết đánh giá trải nghiệm', 'admin:service_accounts': 'Quản lý khóa API', 'ops:read': 'Xem trạng thái vận hành',
 }
-const ROLE_ORDER = ['admin', 'provider', 'traveler']
-const GROUP_ORDER = ['account', 'itinerary', 'booking', 'review', 'chat', 'recommendations', 'replan', 'notification', 'provider', 'admin', 'ops']
+const ROLE_ORDER = ['admin', 'operator', 'provider', 'traveler']
+const GROUP_ORDER = ['account', 'itinerary', 'booking', 'review', 'chat', 'recommendations', 'replan', 'notification', 'provider', 'operator', 'admin', 'ops']
 // Kept in sync with ADMIN_REQUIRED on the server: the admin role can never lose these.
 const ADMIN_LOCKED = new Set(['admin:rbac', 'admin:users', 'admin:service_accounts'])
 

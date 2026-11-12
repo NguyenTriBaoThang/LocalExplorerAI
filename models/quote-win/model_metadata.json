@@ -1,0 +1,89 @@
+{
+  "model_version": "quote-win-xgb-synthetic-20261112T144400Z",
+  "model_family": "xgboost",
+  "model_file": "xgboost_win.json",
+  "model_sha256": "4c1ae39386d3893f4729758af2534d573f3adaba1b4e5df201eb40bdc9bc0374",
+  "feature_version": "quote-win-features-v1",
+  "feature_names": [
+    "pax",
+    "days",
+    "lead_days",
+    "seg_family",
+    "seg_corporate",
+    "seg_school",
+    "dest_cu_chi",
+    "dest_mekong",
+    "dest_can_gio",
+    "dest_vung_tau",
+    "dest_city",
+    "weekend",
+    "holiday",
+    "tet",
+    "month",
+    "competitor_price_index",
+    "rain_prob",
+    "response_time_h",
+    "cost_per_pax",
+    "price_ratio_cost",
+    "price_ratio_comp"
+  ],
+  "monotone_constraints": {
+    "pax": 0,
+    "days": 0,
+    "lead_days": 0,
+    "seg_family": 0,
+    "seg_corporate": 0,
+    "seg_school": 0,
+    "dest_cu_chi": 0,
+    "dest_mekong": 0,
+    "dest_can_gio": 0,
+    "dest_vung_tau": 0,
+    "dest_city": 0,
+    "weekend": 0,
+    "holiday": 0,
+    "tet": 0,
+    "month": 0,
+    "competitor_price_index": 0,
+    "rain_prob": 0,
+    "response_time_h": 0,
+    "cost_per_pax": 0,
+    "price_ratio_cost": -1,
+    "price_ratio_comp": -1
+  },
+  "dataset_status": "synthetic",
+  "deployment_eligible": false,
+  "production_eligible": false,
+  "warning": "Trained on SYNTHETIC quote history; probabilities are not market evidence.",
+  "source_dataset": "quote_win_synthetic.csv",
+  "source_dataset_sha256": "82f9e89d2e2d4067f429c6f5a00d4bccb22bd6e857a0668883f7ec589198c160",
+  "price_support": {
+    "price_ratio_cost_min": 1.050989383215158,
+    "price_ratio_cost_max": 1.6380748153442934
+  },
+  "trained_at": "2026-11-12T14:44:00.617817+00:00",
+  "seed": 42,
+  "model_parameters": {
+    "max_depth": 2,
+    "min_child_weight": 30,
+    "n_estimators": 394
+  },
+  "split": {
+    "train": [
+      "2023-01-01",
+      "2025-01-01"
+    ],
+    "validation": [
+      "2025-01-01",
+      "2025-07-01"
+    ],
+    "test": [
+      "2025-07-01",
+      "2025-12-31"
+    ],
+    "rows": {
+      "train": 14772,
+      "val": 3586,
+      "test": 3622
+    }
+  }
+}

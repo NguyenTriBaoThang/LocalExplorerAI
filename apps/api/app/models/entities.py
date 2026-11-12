@@ -109,10 +109,197 @@ class Provider(Base):
     experiences: Mapped[list["Experience"]] = relationship(back_populates="provider")
 
 
+class OperatorOrg(Base):
+    """A tour-operator tenant for the quote & margin copilot."""
+    __tablename__ = "operator_orgs"
+    __table_args__ = (UniqueConstraint("slug", name="uq_operator_orgs_slug"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    name: Mapped[str] = mapped_column(String(180))
+    slug: Mapped[str] = mapped_column(String(200))
+    margin_floor_pct: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
+    default_markup_pct: Mapped[int] = mapped_column(Integer, default=25, server_default="25")
+    deposit_pct: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
+    quote_validity_days: Mapped[int] = mapped_column(Integer, default=7, server_default="7")
+    ota_commission_pct: Mapped[int] = mapped_column(Integer, default=18, server_default="18")
+    manual_minutes_per_quote: Mapped[int] = mapped_column(Integer, default=90, server_default="90")
+    settings: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class OperatorDocument(Base):
+    """An uploaded supplier rate sheet or invoice, plus the LLM extraction awaiting human review."""
+    __tablename__ = "operator_documents"
+    __table_args__ = (
+        UniqueConstraint("org_id", "sha256", name="uq_operator_documents_org_sha256"),
+        CheckConstraint("kind IN ('rate_sheet', 'invoice')", name="ck_operator_documents_kind"),
+        CheckConstraint("status IN ('uploaded', 'extracted', 'failed', 'approved', 'rejected')", name="ck_operator_documents_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    filename: Mapped[str] = mapped_column(String(255))
+    mime: Mapped[str] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    storage_path: Mapped[str] = mapped_column(String(400))  # relative to the app data dir
+    status: Mapped[str] = mapped_column(String(20), default="uploaded", server_default="uploaded")
+    extracted: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class RateCard(Base):
+    """One supplier's price list for one category. Versioned: approving a new version archives the old one."""
+    __tablename__ = "rate_cards"
+    __table_args__ = (
+        UniqueConstraint("org_id", "supplier", "category", "version", name="uq_rate_cards_version"),
+        CheckConstraint("category IN ('vehicle', 'guide', 'meal', 'ticket', 'hotel', 'surcharge')", name="ck_rate_cards_category"),
+        CheckConstraint("status IN ('draft', 'active', 'archived')", name="ck_rate_cards_status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    supplier: Mapped[str] = mapped_column(String(180))
+    category: Mapped[str] = mapped_column(String(20))
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_document_id: Mapped[str | None] = mapped_column(ForeignKey("operator_documents.id", ondelete="SET NULL"), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    items: Mapped[list["RateCardItem"]] = relationship(back_populates="card", cascade="all, delete-orphan", order_by="RateCardItem.code")
+
+
+class RateCardItem(Base):
+    __tablename__ = "rate_card_items"
+    __table_args__ = (
+        UniqueConstraint("card_id", "code", name="uq_rate_card_items_code"),
+        CheckConstraint("unit IN ('per_km', 'per_day', 'per_trip', 'per_pax', 'per_room_night', 'pct')", name="ck_rate_card_items_unit"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    card_id: Mapped[str] = mapped_column(ForeignKey("rate_cards.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(120))  # stable across versions of a card; the key of the diff
+    label: Mapped[str] = mapped_column(String(255))
+    unit: Mapped[str] = mapped_column(String(20))
+    seats: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_pax: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    amount_vnd: Mapped[int] = mapped_column(BigInteger)  # pct items hold a whole percent
+    experience_id: Mapped[str | None] = mapped_column(ForeignKey("experiences.id", ondelete="SET NULL"), nullable=True)
+    conditions: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    card: Mapped[RateCard] = relationship(back_populates="items")
+
+
+class TourTemplate(Base):
+    """A ready-made itinerary (cost-engine shape) the quote copilot starts from."""
+    __tablename__ = "tour_templates"
+    __table_args__ = (UniqueConstraint("org_id", "code", name="uq_tour_templates_code"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(60))
+    name: Mapped[str] = mapped_column(String(180))
+    days: Mapped[int] = mapped_column(Integer)
+    itinerary: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)  # {destinations, days:[{title, legs, stops}]}
+    meal_plan: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)  # {"meals": total meals per guest}
+
+
+class Quote(Base):
+    __tablename__ = "quotes"
+    __table_args__ = (
+        UniqueConstraint("org_id", "code", name="uq_quotes_org_code"),
+        UniqueConstraint("org_id", "channel", "channel_message_id", name="uq_quotes_org_channel_msg"),
+        CheckConstraint("status IN ('draft', 'sent', 'viewed', 'accepted', 'deposit_paid', 'won', 'lost', 'expired')", name="ck_quotes_status"),
+        CheckConstraint("channel IN ('portal', 'zalo', 'telegram')", name="ck_quotes_channel"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft", index=True)
+    channel: Mapped[str] = mapped_column(String(20), default="portal", server_default="portal")
+    customer_name: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    channel_message_id: Mapped[str | None] = mapped_column(String(120), nullable=True)  # M11: provider message id, dedup
+    raw_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    request: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    itinerary: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    cost: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    pricing: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    cost_total_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    price_vnd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    price_mode: Mapped[str] = mapped_column(String(20), default="balanced", server_default="balanced")
+    rate_card_versions: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    margin_floor_pct: Mapped[int] = mapped_column(Integer, default=15)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    public_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)  # M10
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lost_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    actual_cost_vnd: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class QuoteRevision(Base):
+    __tablename__ = "quote_revisions"
+    __table_args__ = (UniqueConstraint("quote_id", "revision", name="uq_quote_revisions_rev"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    quote_id: Mapped[str] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    snapshot: Mapped[dict] = mapped_column(JSON_DOCUMENT, default=dict)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CostActual(Base):
+    """One reconciled line: what the quote expected for a cost line vs what the supplier invoice charged (M9)."""
+    __tablename__ = "cost_actuals"
+    __table_args__ = (
+        CheckConstraint("reason IS NULL OR reason IN ('price_change', 'pax_change', 'unplanned', 'surcharge', 'not_used', 'other')", name="ck_cost_actuals_reason"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    quote_id: Mapped[str] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("operator_documents.id", ondelete="SET NULL"), nullable=True)
+    category: Mapped[str] = mapped_column(String(20))
+    label: Mapped[str] = mapped_column(String(255))
+    quoted_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    actual_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    variance_vnd: Mapped[int] = mapped_column(BigInteger, default=0)  # actual - quoted
+    reason: Mapped[str | None] = mapped_column(String(20), nullable=True)  # None = matches the quote
+    matched_cost_line: Mapped[int | None] = mapped_column(Integer, nullable=True)  # index into quote.cost["lines"]
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('traveler', 'provider', 'admin')", name="ck_users_role"),
+        CheckConstraint("role IN ('traveler', 'provider', 'operator', 'admin')", name="ck_users_role"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -122,6 +309,7 @@ class User(Base):
     google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(24), default="traveler", index=True)
     provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
+    operator_org_id: Mapped[str | None] = mapped_column(ForeignKey("operator_orgs.id", ondelete="SET NULL"), nullable=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # Bumped on role change, deactivation, password change or "sign out everywhere": invalidates every access token at once.
@@ -277,10 +465,12 @@ class PaymentTransaction(Base):
         ),
         UniqueConstraint("provider", "provider_reference", name="uq_payment_provider_reference"),
         UniqueConstraint("idempotency_key", name="uq_payment_idempotency_key"),
+        CheckConstraint("(booking_id IS NULL) <> (quote_id IS NULL)", name="ck_payment_exactly_one_target"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), index=True)
+    booking_id: Mapped[str | None] = mapped_column(ForeignKey("bookings.id", ondelete="RESTRICT"), nullable=True, index=True)
+    quote_id: Mapped[str | None] = mapped_column(ForeignKey("quotes.id", ondelete="RESTRICT"), nullable=True, index=True)  # M10 deposit
     provider: Mapped[str] = mapped_column(String(40), default="unconfigured")
     provider_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(100))
