@@ -223,7 +223,7 @@ def roi_analytics(date_from: date | None = Query(default=None, alias="from"), da
                      "basis": "(won + deposit_paid) / (won + deposit_paid + lost); báo giá chưa có kết quả không tính."},
         "margin_uplift_vnd": {"value": uplift if won else None, "pct_of_fixed_markup_profit": round(uplift / fixed_profit * 100, 2) if fixed_profit else None,
                               "default_markup_pct": org.default_markup_pct,
-                              "basis": f"Σ trên báo giá won/deposit_paid của (giá bán − chi phí × (1 + {org.default_markup_pct}%)); % so với lợi nhuận nếu luôn markup cố định."},
+                              "basis": f"Σ trên báo giá won/deposit_paid của (giá bán − chi phí × (1 + {org.default_markup_pct}%)); % so với lợi nhuận nếu luôn markup cố định. Chỉ tính trên đơn đã chốt, chưa trừ các đơn có thể mất vì giá cao hơn — so sánh đầy đủ (có xác suất chốt) xem phần backtest."},
         "ota_commission_avoided_vnd": {"value": round(revenue * org.ota_commission_pct / 100) if won else None, "ota_commission_pct": org.ota_commission_pct,
                                        "basis": f"Σ giá bán của báo giá won/deposit_paid × {org.ota_commission_pct}% hoa hồng OTA."},
         "backtest": _backtest(),

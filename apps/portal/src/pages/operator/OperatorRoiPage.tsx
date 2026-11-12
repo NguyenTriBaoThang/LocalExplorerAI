@@ -37,7 +37,7 @@ export function OperatorRoiPage() {
               hint={<Basis text={data.median_response_minutes.basis} />} />
             <StatCard label="Tỉ lệ chốt" value={dash(data.win_rate.value, (n) => `${(n * 100).toFixed(1)}%`)} icon={Percent} tone="amber"
               hint={<><Basis text={data.win_rate.basis} /><br />{data.won_count} chốt · {data.lost_count} mất</>} />
-            <StatCard label="Lãi tăng so với markup cố định" value={dash(data.margin_uplift_vnd.value, (n) => `${n > 0 ? '+' : ''}${formatCompact(n)}đ`)} icon={TrendingUp} tone="green"
+            <StatCard label="Lãi thêm trên đơn đã chốt (so với markup cố định)" value={dash(data.margin_uplift_vnd.value, (n) => `${n > 0 ? '+' : ''}${formatCompact(n)}đ`)} icon={TrendingUp} tone="green"
               hint={<><Basis text={data.margin_uplift_vnd.basis} /><br /><Delta value={data.margin_uplift_vnd.pct_of_fixed_markup_profit} suffix="so với lợi nhuận markup cố định" /></>} />
             <StatCard label="Hoa hồng OTA tránh được" value={dash(data.ota_commission_avoided_vnd.value, (n) => `${formatCompact(n)}đ`)} icon={PiggyBank} tone="amber"
               hint={<Basis text={data.ota_commission_avoided_vnd.basis} />} />
