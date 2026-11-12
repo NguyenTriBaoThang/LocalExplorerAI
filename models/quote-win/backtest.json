@@ -1,0 +1,57 @@
+{
+  "period": [
+    "2025-07-01",
+    "2025-12-31"
+  ],
+  "quotes": 3622,
+  "floor_markup_pct": 10.0,
+  "note": "expected values under the TRUE synthetic P(win); margin_pct = (price-cost)/price",
+  "strategies": {
+    "fixed_25pct_markup": {
+      "expected_profit_vnd": 5449526147,
+      "expected_profit_per_quote_vnd": 1504563,
+      "expected_win_rate": 0.3166,
+      "avg_margin_pct_offered": 20.52,
+      "avg_margin_pct_on_wins": 20.52
+    },
+    "optimizer_balanced": {
+      "expected_profit_vnd": 4212424161,
+      "expected_profit_per_quote_vnd": 1163011,
+      "expected_win_rate": 0.4304,
+      "avg_margin_pct_offered": 12.51,
+      "avg_margin_pct_on_wins": 12.97,
+      "model_estimated_profit_vnd": 4460633894
+    },
+    "optimizer_max_profit": {
+      "expected_profit_vnd": 5846774251,
+      "expected_profit_per_quote_vnd": 1614239,
+      "expected_win_rate": 0.2087,
+      "avg_margin_pct_offered": 29.44,
+      "avg_margin_pct_on_wins": 27.85,
+      "model_estimated_profit_vnd": 7328511002
+    },
+    "oracle_max_profit_true_p": {
+      "expected_profit_vnd": 6273466859,
+      "expected_profit_per_quote_vnd": 1732045,
+      "expected_win_rate": 0.2743,
+      "avg_margin_pct_offered": 24.22,
+      "avg_margin_pct_on_wins": 24.58
+    },
+    "legacy_balanced_grid_1.80_unsupported": {
+      "expected_profit_vnd": 4212424161,
+      "expected_profit_per_quote_vnd": 1163011,
+      "expected_win_rate": 0.4304,
+      "avg_margin_pct_offered": 12.51,
+      "avg_margin_pct_on_wins": 12.97,
+      "model_estimated_profit_vnd": 4460633894
+    },
+    "legacy_max_profit_grid_1.80_unsupported": {
+      "expected_profit_vnd": 4809932559,
+      "expected_profit_per_quote_vnd": 1327977,
+      "expected_win_rate": 0.1338,
+      "avg_margin_pct_offered": 37.64,
+      "avg_margin_pct_on_wins": 31.25,
+      "model_estimated_profit_vnd": 8351446638
+    }
+  }
+}
