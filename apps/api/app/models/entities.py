@@ -270,6 +270,30 @@ class QuoteRevision(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class CostActual(Base):
+    """One reconciled line: what the quote expected for a cost line vs what the supplier invoice charged (M9)."""
+    __tablename__ = "cost_actuals"
+    __table_args__ = (
+        CheckConstraint("reason IS NULL OR reason IN ('price_change', 'pax_change', 'unplanned', 'surcharge', 'not_used', 'other')", name="ck_cost_actuals_reason"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(ForeignKey("operator_orgs.id", ondelete="CASCADE"), index=True)
+    quote_id: Mapped[str] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("operator_documents.id", ondelete="SET NULL"), nullable=True)
+    category: Mapped[str] = mapped_column(String(20))
+    label: Mapped[str] = mapped_column(String(255))
+    quoted_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    actual_vnd: Mapped[int] = mapped_column(BigInteger, default=0)
+    variance_vnd: Mapped[int] = mapped_column(BigInteger, default=0)  # actual - quoted
+    reason: Mapped[str | None] = mapped_column(String(20), nullable=True)  # None = matches the quote
+    matched_cost_line: Mapped[int | None] = mapped_column(Integer, nullable=True)  # index into quote.cost["lines"]
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (

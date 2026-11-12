@@ -73,11 +73,15 @@ def cost_payload(cost: CostBreakdown, items) -> dict:
     }
 
 
-def price(cost_total: int, req: QuoteRequest, floor_margin_pct: int, today: date) -> dict:
+def price_context(req: QuoteRequest, today: date) -> dict:
     depart = req.start_date
-    ctx = {"days": req.days, "lead_days": max(0, (depart - today).days), "segment": req.segment, "destination": req.destinations[0],
-           **day_flags(depart), "competitor_price_index": 1.0, "rain_prob": RAIN_BY_MONTH[depart.month - 1],
-           "response_time_h": DEFAULT_RESPONSE_TIME_H}
+    return {"days": req.days, "lead_days": max(0, (depart - today).days), "segment": req.segment, "destination": req.destinations[0],
+            **day_flags(depart), "competitor_price_index": 1.0, "rain_prob": RAIN_BY_MONTH[depart.month - 1],
+            "response_time_h": DEFAULT_RESPONSE_TIME_H}
+
+
+def price(cost_total: int, req: QuoteRequest, floor_margin_pct: int, today: date) -> dict:
+    ctx = price_context(req, today)
     sources = set()
 
     def p_win(features: dict) -> float:
@@ -93,6 +97,12 @@ def price(cost_total: int, req: QuoteRequest, floor_margin_pct: int, today: date
             "modes": modes, "curve": result["curve"]}
 
 
+def used_versions(cost: CostBreakdown, cost_json: dict, items) -> dict:
+    """{"supplier|category": card version} for every rate item the cost actually used (surcharges included)."""
+    used = {ln.rate_item_id for ln in cost.lines} | {i.id for i in items if i.code in {s["code"] for s in cost_json["surcharges"]}}
+    return {f"{i.supplier}|{i.category}": i.card_version for i in items if i.id in used}
+
+
 def _audit(db: Session, actor: User | None, action: str, quote: Quote, details: dict) -> None:
     if request_id := current_request_id.get():
         details = {**details, "request_id": request_id}
@@ -105,8 +115,8 @@ def snapshot(q: Quote) -> dict:
             "price_mode": q.price_mode, "explanation": q.explanation, "rate_card_versions": q.rate_card_versions}
 
 
-def add_revision(db: Session, q: Quote, user: User | None) -> None:
-    db.add(QuoteRevision(id=str(uuid4()), quote_id=q.id, org_id=q.org_id, revision=q.revision, snapshot=snapshot(q),
+def add_revision(db: Session, q: Quote, user: User | None, reason: str | None = None) -> None:
+    db.add(QuoteRevision(id=str(uuid4()), quote_id=q.id, org_id=q.org_id, revision=q.revision, snapshot={**snapshot(q), "reason": reason},
                          created_by=user.id if user else None))
 
 
@@ -137,14 +147,13 @@ def draft_from_request(db: Session, org: OperatorOrg, req: QuoteRequest, channel
     pricing = price(cost.total, req, org.margin_floor_pct, today)
     mode = "balanced"
     explanation, _ = explain(provider, req.model_dump(mode="json"), cost_json, pricing, mode)
-    used = {ln.rate_item_id for ln in cost.lines} | {i.id for i in items if i.code in {s["code"] for s in cost_json["surcharges"]}}
     now = datetime.now(timezone.utc)
     quote = Quote(
         id=str(uuid4()), org_id=org.id, code=_next_code(db, org, today.year), status="draft", channel=channel,
         customer_name=req.customer_name, customer_contact=contact, raw_message=raw_message, received_at=now,
         request=req.model_dump(mode="json"), itinerary={"template_code": template.code, "template_name": template.name, **template.itinerary},
         cost=cost_json, pricing=pricing, cost_total_vnd=cost.total, price_vnd=pricing["modes"][mode]["total"], price_mode=mode,
-        rate_card_versions={f"{i.supplier}|{i.category}": i.card_version for i in items if i.id in used},
+        rate_card_versions=used_versions(cost, cost_json, items),
         margin_floor_pct=org.margin_floor_pct, explanation=explanation, revision=1, created_by=user.id if user else None)
     db.add(quote)
     db.flush()

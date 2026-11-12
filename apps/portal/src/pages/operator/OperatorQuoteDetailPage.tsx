@@ -7,6 +7,7 @@ import { errorMessage } from '../../lib/api'
 import { formatDate, formatDateTime } from '../../lib/format'
 import { quoteApi, type PriceMode, type PricingCurve, type Quote, type QuoteSent } from '../../lib/operatorApi'
 import { DESTINATION_LABEL, MODE_HINT, MODE_LABEL, SEGMENT_LABEL, vnd } from './quoteFormat'
+import { EditPanel, RescuePanel, RevisionList } from './QuoteMarginPanels'
 
 const MODES: PriceMode[] = ['safe', 'balanced', 'max_profit']
 const CATEGORY_LABEL: Record<string, string> = { vehicle: 'Xe', guide: 'Hướng dẫn viên', meal: 'Ăn uống', ticket: 'Vé', hotel: 'Lưu trú' }
@@ -110,6 +111,12 @@ export function OperatorQuoteDetailPage() {
             </ol>
           </Card>
         )}
+        {quote.margin_alert && (
+          <Alert tone="red" title="Biên lợi nhuận dưới mức sàn">
+            Biên hiện tại {quote.margin_alert.margin_pct.toFixed(1)}% so với sàn {quote.margin_alert.floor_pct}%. Giá bán cần tăng thêm {vnd(quote.margin_alert.shortfall_vnd)} để về sàn,
+            hoặc giảm chi phí theo các phương án bên dưới.
+          </Alert>
+        )}
         {quote.status === 'expired' && <Alert tone="amber">Báo giá đã hết hạn. Bấm "Gửi lại" để gia hạn và tạo link mới.</Alert>}
         {quote.status === 'lost' && <Alert tone="amber">Không chốt: {quote.lost_reason || 'không ghi lý do'}.</Alert>}
 
@@ -137,6 +144,9 @@ export function OperatorQuoteDetailPage() {
             </ol>
           </Card>
         </div>
+
+        {open && <EditPanel quote={quote} onSaved={load} />}
+        {open && <RescuePanel quote={quote} onApplied={load} />}
 
         <Card>
           <CardHeader title="Chi phí" description={`Giá vốn ${vnd(quote.cost.total)} · cố định ${vnd(quote.cost.fixed_total)} · biến đổi ${vnd(quote.cost.variable_total)}`} />
@@ -195,6 +205,8 @@ export function OperatorQuoteDetailPage() {
             <p className="p-5 text-sm leading-relaxed text-slate-700">{quote.explanation}</p>
           </Card>
         )}
+
+        <RevisionList quote={quote} />
 
         <Card>
           <CardHeader title="Đường cong giá" description="Xác suất chốt và lãi kỳ vọng theo giá chào." />

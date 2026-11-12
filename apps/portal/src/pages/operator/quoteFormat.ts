@@ -10,3 +10,7 @@ export const MODE_HINT: Record<PriceMode, string> = {
 export const STATUS_LABEL: Record<string, string> = {
   draft: 'Nháp', sent: 'Đã gửi', viewed: 'Khách đã xem', accepted: 'Khách chấp nhận', deposit_paid: 'Đã đặt cọc', won: 'Đã chốt', lost: 'Không chốt', expired: 'Hết hạn',
 }
+
+export const REASON_LABEL: Record<string, string> = {
+  price_change: 'Đổi đơn giá', pax_change: 'Đổi số lượng/số khách', unplanned: 'Phát sinh ngoài báo giá', surcharge: 'Phụ thu', not_used: 'Không sử dụng', other: 'Khác',
+}

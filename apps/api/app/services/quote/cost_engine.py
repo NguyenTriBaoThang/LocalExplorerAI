@@ -12,7 +12,7 @@ Conventions
 - Surcharges ride on the base line (CostLine.surcharge_vnd), no separate lines.
 """
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from math import ceil
 
@@ -51,6 +51,8 @@ class QuoteRequestLite:
     meals: int = 0  # total meals per guest over the trip
     guide_count: int = 1
     meal_code: str | None = None  # None = cheapest per_pax meal item
+    vehicle_seats: int | None = None  # None = cheapest combination of any seat size; set = only that seat size
+    hotel_code: str | None = None  # None = itinerary["hotel_code"], else the cheapest room item
 
 
 @dataclass
@@ -109,11 +111,11 @@ def _cheapest(items: list[RateItem], category: str, unit: str, code: str | None 
     return min(pool, key=lambda i: i.amount_vnd)
 
 
-def _vehicles(items: list[RateItem], need_seats: int, days: int, km: int) -> list[tuple[RateItem, int, int]]:
+def _vehicles(items: list[RateItem], need_seats: int, days: int, km: int, only_seats: int | None = None) -> list[tuple[RateItem, int, int]]:
     """Cheapest multiset of vehicles covering need_seats. Returns (base item, count, per_vehicle_km_cost)."""
     types: dict[tuple, dict] = {}
     for i in items:
-        if i.category == "vehicle" and i.seats and i.experience_id is None:
+        if i.category == "vehicle" and i.seats and i.experience_id is None and only_seats in (None, i.seats):
             t = types.setdefault((i.supplier, i.seats), {"base": None, "km": 0})
             if i.unit in ("per_trip", "per_day"):
                 cost = i.amount_vnd * (days if i.unit == "per_day" else 1)
@@ -176,7 +178,7 @@ def compute_cost(itin: dict, req: QuoteRequestLite, items: list[RateItem], depar
     km = ceil(km)
     lines: list[CostLine] = []
 
-    for base, n, km_cost in _vehicles(items, pax + guides, days, km):
+    for base, n, km_cost in _vehicles(items, pax + guides, days, km, req.vehicle_seats):
         unit = base.amount_vnd * (days if base.unit == "per_day" else 1)
         lines.append(CostLine("vehicle", f"{base.label} ({base.seats} seats)", base.id, base.card_version, n, unit, unit * n, True))
         if km_cost:
@@ -194,7 +196,7 @@ def compute_cost(itin: dict, req: QuoteRequestLite, items: list[RateItem], depar
                                   m.amount_vnd, m.amount_vnd * req.meals * guides, True))
     lines += _ticket_lines(itin, items, pax)
     if nights:
-        h = _cheapest(items, "hotel", "per_room_night")
+        h = _cheapest(items, "hotel", "per_room_night", req.hotel_code or itin.get("hotel_code"))
         rooms = ceil(pax / 2)
         lines.append(CostLine("hotel", h.label, h.id, h.card_version, rooms * nights, h.amount_vnd, h.amount_vnd * rooms * nights, False))
         if guides:
@@ -213,4 +215,4 @@ def compute_cost(itin: dict, req: QuoteRequestLite, items: list[RateItem], depar
                 line.surcharge_vnd += (2 * num + den) // (2 * den)  # round half up
                 line.surcharge_codes += (s.code,)
 
-    return CostBreakdown(pax, lines, lambda p: compute_cost(itin, QuoteRequestLite(p, days, req.meals, guides, req.meal_code), items, depart))
+    return CostBreakdown(pax, lines, lambda p: compute_cost(itin, replace(req, pax=p), items, depart))

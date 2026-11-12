@@ -11,13 +11,14 @@ from app.api.guards import require_user
 from app.api.permissions import P
 from app.api.routes.operator import _org
 from app.core.config import settings
-from app.models.entities import OperatorOrg, PaymentTransaction, Quote, User
+from app.models.entities import OperatorOrg, PaymentTransaction, Quote, QuoteRevision, User
+from app.services.quote import margin_guard as mg
 from app.services.quote import quote_service as qs
-from app.services.quote.explainer import explain
+from app.services.quote.explainer import explain, explain_rescue
 from app.services.quote.request_parser import QuoteRequest, clarifying_questions, finalize, parse_request
 
 router = APIRouter(prefix="/api", tags=["operator quotes"])
-OPEN_STATUSES = ("draft", "sent", "viewed", "accepted", "deposit_paid")
+OPEN_STATUSES = mg.OPEN_STATUSES
 
 
 def _fail(status: int, code: str, message: str) -> HTTPException:
@@ -41,6 +42,43 @@ class ModeBody(BaseModel):
     mode: str = Field(pattern="^(safe|balanced|max_profit)$")
 
 
+class Stop(BaseModel):
+    name: str = Field(min_length=1, max_length=180)
+    ticket_code: str | None = Field(default=None, max_length=120)
+    price_vnd: int | None = Field(default=None, ge=0, le=100_000_000)
+    price_basis: str | None = Field(default=None, pattern="^(per_person|per_group)$")
+
+
+class Leg(BaseModel):
+    from_: str = Field(alias="from", max_length=120)
+    to: str = Field(max_length=120)
+    distance_km: float = Field(ge=0, le=2000)
+
+
+class Day(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    legs: list[Leg] = Field(max_length=20)
+    stops: list[Stop] = Field(max_length=20)
+
+
+class Overrides(BaseModel):
+    vehicle_seats: int | None = Field(default=None, ge=1, le=100)  # None clears the override
+    meal_code: str | None = Field(default=None, max_length=120)
+    hotel_code: str | None = Field(default=None, max_length=120)
+
+
+class QuotePatch(BaseModel):
+    pax: int | None = Field(default=None, ge=1, le=60)
+    start_date: date | None = None
+    overrides: Overrides | None = None
+    itinerary_days: list[Day] | None = Field(default=None, max_length=3)  # same day count as the quote; legs/stops as the cost engine reads them
+    reason: str | None = Field(default=None, max_length=255)
+
+
+class RescueApply(BaseModel):
+    confirm_resend: bool = False
+
+
 class MarkBody(BaseModel):
     outcome: str = Field(pattern="^(won|lost)$")
     reason: str | None = Field(default=None, max_length=255)
@@ -50,11 +88,11 @@ def quote_summary(q: Quote) -> dict:
     return {"id": q.id, "code": q.code, "status": q.status, "channel": q.channel, "customer_name": q.customer_name,
             "pax": q.request.get("pax"), "days": q.request.get("days"), "start_date": q.request.get("start_date"),
             "destinations": q.request.get("destinations", []), "price_vnd": q.price_vnd, "price_mode": q.price_mode,
-            "cost_total_vnd": q.cost_total_vnd, "created_at": q.created_at}
+            "cost_total_vnd": q.cost_total_vnd, "margin_pct": mg.margin_pct(q.price_vnd, q.cost_total_vnd), "created_at": q.created_at}
 
 
-def quote_payload(q: Quote) -> dict:
-    return {**quote_summary(q), "customer_contact": q.customer_contact, "raw_message": q.raw_message, "received_at": q.received_at,
+def quote_payload(q: Quote, floor_pct: int | None = None) -> dict:
+    return {**quote_summary(q), "margin_alert": mg.margin_alert(q, floor_pct), "customer_contact": q.customer_contact, "raw_message": q.raw_message, "received_at": q.received_at,
             "request": q.request, "itinerary": q.itinerary, "cost": q.cost, "pricing": {k: v for k, v in q.pricing.items() if k != "curve"},
             "rate_card_versions": q.rate_card_versions, "margin_floor_pct": q.margin_floor_pct, "explanation": q.explanation,
             "lost_reason": q.lost_reason, "accepted_at": q.accepted_at, "revision": q.revision,
@@ -125,7 +163,7 @@ def get_quote(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QUOTE)
         db.commit()
     paid = db.scalar(select(PaymentTransaction.updated_at).where(PaymentTransaction.quote_id == q.id, PaymentTransaction.status == "succeeded")
                      .order_by(PaymentTransaction.updated_at).limit(1))
-    return {**quote_payload(q), "deposit_pct": org.deposit_pct, "deposit_vnd": qs.deposit_vnd(q.price_vnd, org.deposit_pct) if q.price_vnd else None,
+    return {**quote_payload(q, org.margin_floor_pct), "deposit_pct": org.deposit_pct, "deposit_vnd": qs.deposit_vnd(q.price_vnd, org.deposit_pct) if q.price_vnd else None,
             "deposit_paid_at": paid if q.status == "deposit_paid" else None}
 
 
@@ -179,3 +217,74 @@ def pricing_curve(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QU
             "modes": q.pricing["modes"],
             "points": [{"price_per_pax": p["price_per_pax"], "p_win": p["p_win"], "expected_profit": p["expected_profit"]}
                        for p in q.pricing["curve"]]}
+
+
+@router.patch("/operator/quotes/{quote_id}")
+def patch_quote(quote_id: str, body: QuotePatch, user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db),
+                provider=Depends(get_llm_provider)):
+    """Edit pax / departure / vehicle-meal-hotel pins / itinerary and re-cost with the rate cards of the (new) departure date.
+    Draft: price is re-optimized. Sent or later: the selling price stays, only the margin moves (``margin_alert`` below the floor)."""
+    org = _org(db, user)
+    q = _quote(db, org, quote_id)
+    if q.status not in OPEN_STATUSES:
+        raise _fail(409, "QUOTE_CLOSED", "Báo giá đã đóng, không sửa được.")
+    days_plan = [d.model_dump(by_alias=True, exclude_none=True) for d in body.itinerary_days] if body.itinerary_days else None
+    if days_plan is not None and len(days_plan) != q.request["days"]:
+        raise _fail(422, "ITINERARY_DAYS_MISMATCH", f"Lịch trình phải đủ {q.request['days']} ngày.")
+    overrides = body.overrides.model_dump(exclude_unset=True) if body.overrides else None
+    if not (body.pax or body.start_date or overrides or days_plan):
+        raise _fail(422, "NOTHING_TO_CHANGE", "Không có thay đổi nào.")
+    parts = [f"pax {body.pax}" if body.pax else "", f"ngày đi {body.start_date.isoformat()}" if body.start_date else "",
+             "xe/bữa/khách sạn" if overrides else "", "lịch trình" if days_plan else ""]
+    reason = body.reason or "Sửa báo giá: " + ", ".join(p for p in parts if p)
+    try:
+        mg.recost(db, org, q, provider, user, reason, date.today(), pax=body.pax, start_date=body.start_date, overrides=overrides, days_plan=days_plan)
+    except qs.NoRates as error:
+        db.rollback()
+        raise _fail(422, "NO_RATES", str(error))
+    db.commit()
+    return quote_payload(q, org.margin_floor_pct)
+
+
+@router.get("/operator/quotes/{quote_id}/revisions")
+def list_revisions(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db)):
+    q = _quote(db, _org(db, user), quote_id)
+    rows = db.scalars(select(QuoteRevision).where(QuoteRevision.quote_id == q.id).order_by(QuoteRevision.revision.desc())).all()
+    out = []
+    for r in rows:
+        s = r.snapshot
+        cost = (s.get("cost") or {}).get("total")
+        out.append({"revision": r.revision, "reason": s.get("reason"), "created_at": r.created_at, "price_vnd": s.get("price_vnd"),
+                    "cost_total_vnd": cost, "margin_pct": mg.margin_pct(s.get("price_vnd"), cost) if cost else None})
+    return out
+
+
+@router.get("/operator/quotes/{quote_id}/rescue")
+def rescue(quote_id: str, user: User = Depends(require_user(P.OPERATOR_QUOTE)), db: Session = Depends(get_db), provider=Depends(get_llm_provider)):
+    org = _org(db, user)
+    q = _quote(db, org, quote_id)
+    if q.status not in OPEN_STATUSES:
+        raise _fail(409, "QUOTE_CLOSED", "Báo giá đã đóng.")
+    options = mg.rescue_options(db, org, q, date.today())
+    alert = mg.margin_alert(q, org.margin_floor_pct)
+    text, source = explain_rescue(provider, alert, options)
+    return {"quote_id": q.id, "margin_alert": alert, "options": options, "explanation": text, "explanation_source": source}
+
+
+@router.post("/operator/quotes/{quote_id}/apply-rescue/{code}")
+def apply_rescue(quote_id: str, code: str, body: RescueApply | None = None, user: User = Depends(require_user(P.OPERATOR_QUOTE)),
+                 db: Session = Depends(get_db), provider=Depends(get_llm_provider)):
+    """Creates a revision. A change the customer would see (price, date, tier) on a sent/viewed quote is NOT applied until
+    ``confirm_resend`` is true; then the quote goes back to draft with its old link revoked and must be sent again."""
+    org = _org(db, user)
+    q = _quote(db, org, quote_id)
+    if q.status not in OPEN_STATUSES:
+        raise _fail(409, "QUOTE_CLOSED", "Báo giá đã đóng.")
+    option = next((o for o in mg.rescue_options(db, org, q, date.today()) if o["code"] == code), None)
+    if option is None:
+        raise _fail(404, "RESCUE_OPTION_NOT_FOUND", "Phương án không còn khả dụng.")
+    if option["customer_visible"] and q.status in ("accepted", "deposit_paid"):
+        raise _fail(409, "QUOTE_LOCKED", "Khách đã chấp nhận báo giá; chỉ áp dụng được phương án không đổi những gì khách đã thấy.")
+    result = mg.apply_rescue(db, org, q, option, provider, user, date.today(), bool(body and body.confirm_resend))
+    db.commit()
+    return {**result, "option": option, "suggested_price_vnd": option["new_price_vnd"], "quote": quote_payload(q, org.margin_floor_pct)}

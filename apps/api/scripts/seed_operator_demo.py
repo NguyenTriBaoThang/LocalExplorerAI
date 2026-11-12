@@ -2,8 +2,12 @@
 
     python -m scripts.seed_operator_demo
 
-Re-running adds only what is missing (org, user, any supplier+category without a card, any tour template code).
-Trip places are NOT seeded here.
+Re-running adds only what is missing (org, user, any supplier+category without a card, any tour template code, any demo
+history quote). Trip places are NOT seeded here.
+
+Demo history: completed tours in Aug-Oct 2026, marked "[Demo]" (customer_name) and "DEMO-HISTORY:<key>" (raw_message), won, with
+confirmed invoice reconciliation so the margin dashboard has data. The last one is won but NOT reconciled: it matches
+data/demo/hoa-don-nha-xe.csv for trying the reconcile flow by hand.
 """
 import os
 from datetime import date, datetime, timezone
@@ -12,7 +16,11 @@ from sqlalchemy import select
 
 from app.auth import hash_password
 from app.db.session import SessionLocal
-from app.models.entities import OperatorOrg, RateCard, RateCardItem, TourTemplate, User
+from app.adapters.llm.provider import NotConfiguredLLMProvider
+from app.models.entities import CostActual, OperatorOrg, Quote, RateCard, RateCardItem, TourTemplate, User
+from app.services.quote import quote_service as qs
+from app.services.quote.reconciliation import match
+from app.services.quote.request_parser import QuoteRequest
 
 ORG_NAME, ORG_SLUG = "Saigon Group Tours", "saigon-group-tours"
 EMAIL = os.environ.get("DEMO_OPERATOR_EMAIL", "operator@saigongroup.example").strip().lower()
@@ -41,6 +49,9 @@ CARDS = [
         ("ticket-can-gio", "Vé + xuồng rừng ngập mặn Cần Giờ", "per_pax", 130_000, None, 30, {})]),
     ("KS Biển Xanh Vũng Tàu 3★", "hotel", [
         ("hotel-vung-tau-3-sao", "Phòng đôi 3★ Vũng Tàu (gồm ăn sáng)", "per_room_night", 700_000, None, 2, {})]),
+    ("Homestay Vườn Dừa Bến Tre", "hotel", [
+        ("hotel-mekong-4-sao", "Phòng đôi Resort 4★ Mekong (gồm ăn sáng)", "per_room_night", 900_000, None, 2, {}),
+        ("hotel-mekong-homestay", "Phòng đôi homestay vườn dừa 3★ (gồm ăn sáng)", "per_room_night", 650_000, None, 2, {})]),
     ("Chính sách phụ thu", "surcharge", [
         ("surcharge-weekend", "Phụ thu cuối tuần", "pct", 10, None, None, {"weekdays": ["sat", "sun"], "applies_to": BEFORE_SURCHARGE}),
         ("surcharge-holiday", "Phụ thu ngày lễ", "pct", 25, None, None, {"holiday": True, "applies_to": BEFORE_SURCHARGE}),
@@ -72,8 +83,70 @@ TEMPLATES = [
 ]
 
 
-def seed(session_factory=SessionLocal) -> dict:
-    created = {"org": False, "user": False, "cards": 0, "templates": 0}
+# Multi-day templates pin their room item, otherwise the engine would price the cheapest room of any province.
+HOTEL_CODE = {"cu-chi-mekong-2n1d": "hotel-mekong-4-sao", "vung-tau-2n1d": "hotel-vung-tau-3-sao"}
+
+
+# (key, customer, request, tweak). tweak builds the synthetic supplier invoice from the quote's own cost lines:
+# scale = price per category, qty = quantity per category, no_surcharge = bill the base amount only, drop = not billed, extra = billed but unquoted.
+DEMO_HISTORY = [
+    ("cu-chi-gia-xe-tang", "[Demo] Công ty Minh Phát", dict(pax=30, days=1, start_date="2026-09-15", segment="corporate", destinations=["cu_chi"]),
+     {"scale": {"vehicle": 1.10}}),
+    ("mekong-phi-ben", "[Demo] Trường THCS Lê Lợi", dict(pax=25, days=1, start_date="2026-09-22", segment="school", destinations=["mekong"]),
+     {"extra": [("ticket", "Phí neo bến và gửi xe", 450_000)]}),
+    ("cu-chi-mekong-them-khach", "[Demo] Công ty Hải Âu", dict(pax=32, days=2, start_date="2026-10-07", segment="corporate", destinations=["cu_chi", "mekong"]),
+     {"qty": {"meal": 1.06}, "scale": {"hotel": 1.05}}),
+    ("can-gio-khong-dung-hdv", "[Demo] Gia đình anh Nam", dict(pax=20, days=1, start_date="2026-10-14", segment="family", destinations=["can_gio"]),
+     {"drop": ["guide"]}),
+    ("city-tour-dung-bao-gia", "[Demo] Đoàn công đoàn Sao Mai", dict(pax=18, days=1, start_date="2026-08-26", segment="corporate", destinations=["city"]), {}),
+    ("vung-tau-phu-thu-cuoi-tuan", "[Demo] Công ty Bình An", dict(pax=28, days=2, start_date="2026-10-24", segment="corporate", destinations=["vung_tau"]),
+     {"no_surcharge": ["vehicle"]}),
+    ("chua-doi-chieu", "[Demo] Công ty Đại Nam (chưa đối chiếu)", dict(pax=24, days=1, start_date="2026-10-20", segment="corporate", destinations=["cu_chi"]), None),
+]
+
+
+def _invoice_lines(cost_lines: list[dict], tweak: dict) -> list[dict]:
+    out = []
+    for ln in cost_lines:
+        c = ln["category"]
+        if c in tweak.get("drop", []):
+            continue
+        qty, amount = ln["qty"], ln["total_vnd"]
+        if c in tweak.get("qty", {}):
+            qty = round(qty * tweak["qty"][c])
+            amount = round(ln["total_vnd"] * qty / ln["qty"] / 1000) * 1000
+        if c in tweak.get("scale", {}):
+            amount = round(amount * tweak["scale"][c] / 1000) * 1000
+        if c in tweak.get("no_surcharge", []):
+            amount = ln["amount_vnd"]
+        out.append({"category": c, "label": ln["label"], "amount_vnd": amount, "conditions": {"qty": qty, "unit_price_vnd": amount // qty}})
+    out += [{"category": c, "label": label, "amount_vnd": amount, "conditions": {"qty": 1, "unit_price_vnd": amount}} for c, label, amount in tweak.get("extra", [])]
+    return out
+
+
+def _seed_history(db, org: OperatorOrg, user: User) -> int:
+    made = 0
+    for key, customer, request, tweak in DEMO_HISTORY:
+        if db.scalar(select(Quote.id).where(Quote.org_id == org.id, Quote.raw_message == f"DEMO-HISTORY:{key}")):
+            continue
+        req = QuoteRequest(**{**request, "start_date": date.fromisoformat(request["start_date"]), "customer_name": customer})
+        result = qs.draft_from_request(db, org, req, "portal", None, user, provider=NotConfiguredLLMProvider(),
+                                       raw_message=f"DEMO-HISTORY:{key}", today=date.fromisoformat(request["start_date"]).replace(day=1))
+        q = result.quote
+        q.status, q.accepted_at = "won", datetime.now(timezone.utc)
+        if tweak is not None:
+            rows = match(q.cost["lines"], _invoice_lines(q.cost["lines"], tweak))
+            for row in rows:
+                db.add(CostActual(org_id=org.id, quote_id=q.id, confirmed=True, **row))
+            q.actual_cost_vnd = sum(r["actual_vnd"] for r in rows)
+        db.commit()
+        made += 1
+    return made
+
+
+def seed(session_factory=SessionLocal, history: bool = False) -> dict:
+    """``history`` adds the demo completed tours; off by default so tests that count quotes are unaffected."""
+    created = {"org": False, "user": False, "cards": 0, "templates": 0, "history": 0}
     with session_factory() as db:
         org = db.scalar(select(OperatorOrg).where(OperatorOrg.slug == ORG_SLUG))
         if org is None:
@@ -96,16 +169,21 @@ def seed(session_factory=SessionLocal) -> dict:
             db.add(card)
             created["cards"] += 1
         for code, name, days, destinations, meals, plan in TEMPLATES:
-            if db.scalar(select(TourTemplate.id).where(TourTemplate.org_id == org.id, TourTemplate.code == code)):
+            existing = db.scalar(select(TourTemplate).where(TourTemplate.org_id == org.id, TourTemplate.code == code))
+            itinerary = {"destinations": destinations, "days": plan, **({"hotel_code": HOTEL_CODE[code]} if code in HOTEL_CODE else {})}
+            if existing is not None:
+                if existing.itinerary != itinerary:  # older seeds lacked hotel_code
+                    existing.itinerary = itinerary
                 continue
-            db.add(TourTemplate(org_id=org.id, code=code, name=name, days=days, meal_plan={"meals": meals},
-                                itinerary={"destinations": destinations, "days": plan}))
+            db.add(TourTemplate(org_id=org.id, code=code, name=name, days=days, meal_plan={"meals": meals}, itinerary=itinerary))
             created["templates"] += 1
         db.commit()
+        if history:
+            created["history"] = _seed_history(db, org, db.scalar(select(User).where(User.email == EMAIL)))
     return created
 
 
 if __name__ == "__main__":
-    result = seed()
+    result = seed(history=True)
     print(f"Seeded: {result}")
     print(f"Operator login: {EMAIL} / {PASSWORD}  (org: {ORG_NAME})")

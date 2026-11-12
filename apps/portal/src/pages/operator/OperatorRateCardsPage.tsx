@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CheckCircle2, FileUp, GitCompare, Sparkles, XCircle } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardHeader, Drawer, EmptyState, Input, Modal, PageHeader, Select, Spinner, StatusBadge, useToast } from '../../components/ui'
 import { errorMessage } from '../../lib/api'
 import {
-  rateCardApi, type ExtractedLine, type OperatorDocument, type RateCard, type RateCardDiff, type RateCategory, type RateUnit,
+  rateCardApi, type ExtractedLine, type OperatorDocument, type RateCard, type RateCardDiff, type RateCategory, type RateUnit, type RequoteSummary,
 } from '../../lib/operatorApi'
 
 const CATEGORY_LABEL: Record<RateCategory, string> = { vehicle: 'Xe', guide: 'Hướng dẫn viên', meal: 'Ăn uống', ticket: 'Vé tham quan', hotel: 'Lưu trú', surcharge: 'Phụ thu' }
@@ -162,6 +163,7 @@ export function OperatorRateCardsPage() {
   const [detail, setDetail] = useState<RateCard | null>(null)
   const [diff, setDiff] = useState<RateCardDiff | null>(null)
   const [busy, setBusy] = useState('')
+  const [requote, setRequote] = useState<RequoteSummary | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -189,8 +191,9 @@ export function OperatorRateCardsPage() {
     }
   }
   const approve = (card: RateCard) => act(card.id, async () => {
-    await rateCardApi.approve(card.id)
-    toast.success(`Đã kích hoạt ${card.supplier} v${card.version}`)
+    const { requote: summary } = await rateCardApi.approve(card.id)
+    toast.success(summary.requoted ? `Đã kích hoạt ${card.supplier} v${card.version}. ${summary.requoted} báo giá bị ảnh hưởng.` : `Đã kích hoạt ${card.supplier} v${card.version}`)
+    setRequote(summary.requoted ? summary : null)
     setDetail(null)
     await load()
   })
@@ -201,6 +204,18 @@ export function OperatorRateCardsPage() {
     <div className="space-y-6">
       <PageHeader title="Bảng giá" description="Bảng giá NET theo nhà cung cấp, có phiên bản. Chỉ bản đã duyệt mới được dùng để tính giá." />
       <Importer onDone={() => void load()} />
+      {requote && (
+        <Alert tone={requote.alerts.length ? 'red' : 'amber'} title={`${requote.requoted} báo giá bị ảnh hưởng, ${requote.alerts.length} xuống dưới biên sàn`}>
+          <ul className="mt-1 space-y-1">
+            {requote.quotes.map((q) => (
+              <li key={q.quote_id}>
+                <Link className="font-medium underline" to={`/operator/quotes/${q.quote_id}`}>{q.code}</Link>: giá vốn {q.old_cost_vnd.toLocaleString('vi-VN')}đ → {q.new_cost_vnd.toLocaleString('vi-VN')}đ
+                {requote.alerts.some((a) => a.quote_id === q.quote_id) && <b> · dưới sàn, cần xử lý</b>}
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      )}
       {error && <Alert tone="red">{error}</Alert>}
       {cards === null && !error && <Spinner />}
       {cards?.length === 0 && <Card><EmptyState icon={Sparkles} title="Chưa có bảng giá" description="Tải lên bảng giá đầu tiên của nhà cung cấp để bắt đầu." /></Card>}

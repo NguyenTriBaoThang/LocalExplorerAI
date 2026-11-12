@@ -26,6 +26,8 @@ import { OperatorLayout } from './pages/operator/OperatorLayout'
 import { OperatorOverviewPage } from './pages/operator/OperatorOverviewPage'
 import { OperatorSettingsPage } from './pages/operator/OperatorSettingsPage'
 import { OperatorComingSoonPage } from './pages/operator/OperatorComingSoonPage'
+import { OperatorReconcilePage } from './pages/operator/OperatorReconcilePage'
+import { OperatorMarginPage } from './pages/operator/OperatorMarginPage'
 import { OperatorRateCardsPage } from './pages/operator/OperatorRateCardsPage'
 import { OperatorQuotesPage } from './pages/operator/OperatorQuotesPage'
 import { OperatorQuoteNewPage } from './pages/operator/OperatorQuoteNewPage'
@@ -114,10 +116,10 @@ export function App() {
                     <Route path="rate-cards" element={<OperatorRateCardsPage />} />
                   </Route>
                   <Route element={<RequirePermission permission="operator:reconcile" />}>
-                    <Route path="reconcile" element={<OperatorComingSoonPage title="Đối chiếu" />} />
+                    <Route path="reconcile" element={<OperatorReconcilePage />} />
                   </Route>
                   <Route element={<RequirePermission permission="operator:analytics" />}>
-                    <Route path="margin" element={<OperatorComingSoonPage title="Biên lợi nhuận" />} />
+                    <Route path="margin" element={<OperatorMarginPage />} />
                     <Route path="roi" element={<OperatorComingSoonPage title="ROI" />} />
                   </Route>
                   <Route element={<RequirePermission permission="operator:settings" />}>

@@ -90,3 +90,32 @@ def explain(provider, req: dict, cost: dict, pricing: dict, mode: str) -> tuple[
     except (LLMNotConfigured, LLMProviderError, InvalidStructuredOutput):
         pass
     return template_explanation(src), "template"
+
+
+# ---- M8: margin rescue ----------------------------------------------------------------------------------------------
+
+def rescue_input(alert: dict | None, options: list[dict]) -> dict:
+    return {"margin_pct": alert["margin_pct"] if alert else None, "floor_pct": alert["floor_pct"] if alert else None,
+            "shortfall_vnd": alert["shortfall_vnd"] if alert else None,
+            "options": [{"title": o["title"], "savings_vnd": o["savings_vnd"], "new_margin_pct": o["new_margin_pct"]} for o in options[:4]]}
+
+
+def template_rescue(src: dict) -> str:
+    head = (f"Biên lợi nhuận đang là {src['margin_pct']}%, thấp hơn mức sàn {src['floor_pct']}% (thiếu {_vnd(src['shortfall_vnd'])}đ). "
+            if src["margin_pct"] is not None else "Báo giá chưa dưới mức sàn lợi nhuận. ")
+    if not src["options"]:
+        return head + "Hiện chưa có phương án giảm chi phí nào khả thi."
+    return head + "Phương án gợi ý: " + "; ".join(
+        f"{o['title']} (tiết kiệm {_vnd(o['savings_vnd'])}đ, biên còn {o['new_margin_pct']}%)" for o in src["options"]) + "."
+
+
+def explain_rescue(provider, alert: dict | None, options: list[dict]) -> tuple[str, str]:
+    """-> (text, "llm" | "template"); same number guard as the quote explanation."""
+    src = rescue_input(alert, options)
+    try:
+        text = PromptRunner(provider).run("MARGIN_RESCUE_EXPLAINER", src, Explanation).explanation.strip()
+        if text and numbers_grounded(text, src):
+            return text, "llm"
+    except (LLMNotConfigured, LLMProviderError, InvalidStructuredOutput):
+        pass
+    return template_rescue(src), "template"

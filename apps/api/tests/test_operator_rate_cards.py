@@ -261,8 +261,8 @@ def test_provider_renders_attachments_as_image_url_parts_and_default_is_unchange
 def test_demo_seed_is_idempotent_and_prices_a_32_pax_two_day_trip(db_session):
     from scripts.seed_operator_demo import ORG_SLUG, seed
 
-    assert seed(lambda: db_session) == {"org": True, "user": True, "cards": 7, "templates": 6}
-    assert seed(lambda: db_session) == {"org": False, "user": False, "cards": 0, "templates": 0}
+    assert seed(lambda: db_session) == {"org": True, "user": True, "cards": 8, "templates": 6, "history": 0}
+    assert seed(lambda: db_session) == {"org": False, "user": False, "cards": 0, "templates": 0, "history": 0}
     org = db_session.query(OperatorOrg).filter_by(slug=ORG_SLUG).one()
     items = active_rate_items(db_session, org.id, date(2026, 12, 5))  # a Saturday
     itin = {"days": [{"legs": [{"distance_km": 70}], "stops": [{"ticket_code": "ticket-dia-dao-cu-chi"}]},

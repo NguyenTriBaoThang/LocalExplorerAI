@@ -14,6 +14,7 @@ from app.api.permissions import P
 from app.api.routes.operator import _audit, _org
 from app.models.entities import OperatorDocument, OperatorOrg, RateCard, RateCardItem, User
 from app.services import operator_documents as docs
+from app.services.quote import margin_guard as mg
 from app.services.operator_documents import Extraction, ExtractedLine
 from app.services.prompt_service import InvalidStructuredOutput, PromptRunner
 from app.services.rate_cards import diff_items, make_code
@@ -240,7 +241,7 @@ def edit_item(card_id: str, item_id: str, body: ItemPatch, user: User = Depends(
 
 @router.post("/operator/rate-cards/{card_id}/approve")
 def approve_card(card_id: str, body: ApproveBody | None = None, user: User = Depends(require_user(P.OPERATOR_RATE_CARD)),
-                 db: Session = Depends(get_db)):
+                 db: Session = Depends(get_db), provider=Depends(get_llm_provider)):
     org = _org(db, user)
     card = _card(db, org, card_id)
     if card.status != "draft":
@@ -260,8 +261,10 @@ def approve_card(card_id: str, body: ApproveBody | None = None, user: User = Dep
         card.valid_to = body.valid_to
     card.valid_from = card.valid_from or now.date()
     _audit(db, user, "rate_card.approved", card.id, {"version": card.version, "archived": [o.id for o in previous]}, "rate_card")
+    # M8: quotes still open that used this supplier+category are re-costed in the same transaction ("lỗ ngầm" alerts).
+    requote = mg.requote_for_card(db, org, card, provider, user, date.today())
     db.commit()
-    return card_payload(card, items=True)
+    return {**card_payload(card, items=True), "requote": requote}
 
 
 @router.get("/operator/rate-cards/{card_id}/diff/{other_id}")
