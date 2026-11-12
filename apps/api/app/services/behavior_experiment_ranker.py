@@ -72,7 +72,8 @@ class BehaviorExperimentRanker:
     """A dev-only adapter from catalog records to the downloaded model schema."""
 
     def __init__(self, artifact_dir: Path | None = None):
-        repo_root = Path(__file__).resolve().parents[4]
+        parents = Path(__file__).resolve().parents
+        repo_root = parents[min(4, len(parents) - 1)]  # in Docker the file sits at /app/app/services (too shallow)
         self.artifact_dir = artifact_dir or repo_root / "models" / "behavior-ranker-experiment"
         self._metadata: dict[str, Any] | None = None
         self._model = None

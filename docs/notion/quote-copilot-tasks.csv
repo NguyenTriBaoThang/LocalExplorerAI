@@ -1,0 +1,29 @@
+ID,Module,Task,Mô tả,Phụ thuộc,Xong khi,Loại
+M0-1,M0 Chuẩn bị,Đồng bộ tài nguyên từ bản cũ,"Chép model 3D, API key và ảnh demo từ bản cũ sang repo mới.",,Đã xong,Setup
+M1-1,M1 Tài khoản lữ hành,Role & tổ chức lữ hành,"Thêm loại tài khoản ""công ty lữ hành"" (operator). Mỗi công ty chỉ thấy dữ liệu của mình.",M0-1,Admin tạo được tài khoản operator; công ty A không xem được dữ liệu của công ty B,Backend
+M1-2,M1 Tài khoản lữ hành,Khu vực /operator trên portal,Khung trang và menu riêng cho công ty lữ hành trong portal.,M1-1,Đăng nhập operator thấy menu riêng,Frontend
+M4-1,M4 Tính giá vốn,Lịch lễ Việt Nam,"Xác định một ngày có phải cuối tuần, ngày lễ hay Tết (kể cả âm lịch) để tính phụ thu.",,Có test cho các ngày lễ chính,Backend
+M4-2,M4 Tính giá vốn,Bộ tính giá vốn tour,"Từ lịch trình và số khách, tính ra tổng chi phí: xe, hướng dẫn viên, ăn, vé, khách sạn, phụ thu. Không dùng AI, chỉ dùng công thức.",M4-1,Có test với các con số chuẩn,Backend
+M3-1,M3 Bảng giá NCC,Lưu bảng giá nhà cung cấp,"Lưu bảng giá NET của nhà cung cấp, có phiên bản. Bảng giá phải được duyệt mới có hiệu lực.",M1-1,Duyệt bản mới thì bản cũ tự lưu trữ,Backend
+M3-2,M3 Bảng giá NCC,Dữ liệu mẫu TP.HCM,"Tạo sẵn 1 công ty mẫu, khoảng 6 nhà cung cấp với giá thực tế và khoảng 6 tour mẫu (Củ Chi, Mekong, Cần Giờ, Vũng Tàu…).",M3-1,Chạy một lệnh là có đủ dữ liệu demo,Data
+M3-3,M3 Bảng giá NCC,Trang quản lý bảng giá,"Xem danh sách bảng giá và lịch sử phiên bản, duyệt bảng giá mới.",M3-1;M2-2,Duyệt được bảng giá trên giao diện,Frontend
+M2-1,M2 AI đọc tài liệu,Upload file,"Cho phép tải lên Excel, CSV, ảnh hoặc PDF bảng giá và hóa đơn.",M1-1,Upload được; file sai loại bị chặn,Backend
+M2-2,M2 AI đọc tài liệu,AI trích xuất bảng giá & hóa đơn,"AI đọc file đã tải lên và chuyển thành bảng có cấu trúc. Người dùng sửa lại trước khi duyệt.",M2-1,Đọc đúng file mẫu; file bị từ chối không được dùng,AI
+M6-1,M6 Mô hình dự đoán chốt đơn,Sinh dữ liệu giả lập,"Tạo dữ liệu lịch sử báo giá 3 năm (chốt/trượt) theo các quy luật mùa vụ, lễ Tết, giá đối thủ… Ghi rõ quy luật trong tài liệu.",M4-2,Có file dữ liệu và tài liệu mô tả quy luật,ML
+M6-2,M6 Mô hình dự đoán chốt đơn,Huấn luyện mô hình,Huấn luyện XGBoost dự đoán xác suất khách chốt theo mức giá. Giá càng cao thì xác suất chốt phải càng thấp.,M6-1,Có báo cáo độ chính xác; mô hình nạp được vào API,ML
+M7-1,M7 Định giá động,Đề xuất giá 3 mức,"Tìm giá bán tối ưu lợi nhuận kỳ vọng, theo 3 mức: An toàn / Cân bằng / Tối đa lãi. Không bao giờ thấp hơn margin sàn.",M4-2;M6-2,Test 3 mức đúng thứ tự và đều trên sàn,ML
+M7-2,M7 Định giá động,AI giải thích giá,"AI viết vài câu giải thích vì sao ra mức giá đó, nhưng không được tự bịa con số.",M7-1,Giải thích chứa số lạ thì tự động bị thay bằng mẫu có sẵn,AI
+M5-1,M5 Soạn báo giá,AI đọc yêu cầu khách,"Sales dán tin nhắn của khách, AI tách ra: số khách, số ngày, ngày đi, điểm đến, ngân sách… Thiếu thông tin thì hỏi lại.",M2-2,Tin nhắn mẫu ra đúng thông tin,AI
+M5-2,M5 Soạn báo giá,Dựng lịch trình,"Chọn tour mẫu phù hợp và chỉnh lại. Khách muốn tour riêng thì AI tự thiết kế.",M5-1;M3-2,Ra lịch trình hợp lệ cho đoàn 30 người,AI
+M5-3,M5 Soạn báo giá,Tạo bản nháp báo giá,Ghép lịch trình + giá vốn + giá đề xuất thành một bản nháp báo giá.,M5-2;M4-2;M7-1,Có bản nháp đầy đủ trong vài giây,Backend
+M5-4,M5 Soạn báo giá,Trang báo giá,"Trang tạo báo giá, xem chi tiết (lịch trình, bảng chi phí, 3 mức giá) và danh sách báo giá.",M5-3,Làm trọn luồng dán tin → báo giá trên portal,Frontend
+M10-1,M10 Gửi báo giá & đặt cọc,Link báo giá cho khách,"Mỗi báo giá có một link riêng để gửi khách, có hạn dùng, biết khách đã mở chưa, in ra được PDF.",M5-3,Khách mở link và in được PDF,Fullstack
+M10-2,M10 Gửi báo giá & đặt cọc,Chấp nhận & đặt cọc,Khách bấm chấp nhận rồi đặt cọc qua VNPay/MoMo; báo giá tự chuyển sang đã cọc.,M10-1,Cọc thử thành công; luồng thanh toán booking cũ không bị ảnh hưởng,Backend
+M10-3,M10 Gửi báo giá & đặt cọc,Nhắc follow-up,"Liệt kê các báo giá cần nhắc (chưa mở, chưa chốt, sắp hết hạn) và gửi nhắc nhanh.",M10-1,Danh sách hiển thị đúng,Fullstack
+M8-1,M8 Canh lỗ,Cảnh báo khi margin tụt,"Khi đổi số khách, đổi ngày hoặc nhà cung cấp tăng giá, tự tính lại và cảnh báo báo giá nào sắp lỗ.",M5-3;M3-1,Hiện cảnh báo khi margin dưới sàn,Backend
+M8-2,M8 Canh lỗ,Gợi ý cứu margin,"Đề xuất cách lấy lại lãi (đổi xe, dời ngày, đổi nhà cung cấp…) kèm số tiền tiết kiệm được. Áp dụng bằng 1 click.",M8-1,Số tiết kiệm đúng; có giao diện áp dụng,Fullstack
+M9-1,M9 Đối chiếu sau tour,Đối chiếu hóa đơn,"Sau tour, tải hóa đơn lên. AI so với dự toán và chỉ ra khoản nào lệch, vì sao.",M2-2;M5-3,Tự ghép dòng và nêu lý do lệch,Backend
+M9-2,M9 Đối chiếu sau tour,Dashboard lãi dự kiến vs thực tế,So sánh lãi dự kiến và lãi thực tế theo từng đoàn.,M9-1,Biểu đồ có số từ dữ liệu mẫu,Frontend
+M11-1,M11 Bot nhận yêu cầu,Bot Zalo/Telegram tự nháp,"Khách nhắn bot thì hệ thống tự tạo bản nháp báo giá, sales duyệt rồi mới gửi.",M5-3,Tin nhắn bot tạo ra bản nháp; tin trùng không tạo 2 lần,Backend
+M12-1,M12 Trang ROI,Trang hiệu quả kinh doanh,"Thể hiện giá trị mang lại: giờ công tiết kiệm, thời gian phản hồi, tỉ lệ chốt, lãi tăng so với cách cũ, hoa hồng OTA tránh được.",M6-2;M9-1;M10-2,Có số liệu dùng được cho slide,Fullstack
+P-1,Pitch,Slide & kịch bản demo,"Viết lại bài thuyết trình theo khung Vấn đề → Giải pháp AI → Giá trị kinh doanh, dùng số liệu từ trang ROI.",M12-1,Bản nộp hoàn chỉnh,Docs
