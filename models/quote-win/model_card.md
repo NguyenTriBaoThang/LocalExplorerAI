@@ -34,10 +34,10 @@ Bảng calibration 10 bin nằm trong `metrics.json`.
 | Chiến lược | Lợi nhuận kỳ vọng (VND) | so với markup 25% | Tỉ lệ chốt kỳ vọng | Biên TB chào giá | Biên TB khi chốt |
 |---|---|---|---|---|---|
 | fixed_25pct_markup | 5,449,526,147 | +0.0% | 31.7% | 20.5% | 20.5% |
-| optimizer_balanced | 4,212,424,161 | -22.7% | 43.0% | 12.5% | 13.0% |
+| optimizer_balanced | 5,968,957,526 | +9.5% | 24.6% | 26.6% | 25.4% |
 | optimizer_max_profit | 5,846,774,251 | +7.3% | 20.9% | 29.4% | 27.9% |
 | oracle_max_profit_true_p | 6,273,466,859 | +15.1% | 27.4% | 24.2% | 24.6% |
-| legacy_balanced_grid_1.80_unsupported | 4,212,424,161 | -22.7% | 43.0% | 12.5% | 13.0% |
+| legacy_balanced_grid_1.80_unsupported | 5,125,439,092 | -5.9% | 16.3% | 34.9% | 28.5% |
 | legacy_max_profit_grid_1.80_unsupported | 4,809,932,559 | -11.7% | 13.4% | 37.6% | 31.2% |
 
-Optimizer mặc định giới hạn lưới giá ở `price_support.price_ratio_cost_max` (giá/vốn lớn nhất trong tập train). Hai dòng `legacy_*_grid_1.80_unsupported` là phiên bản đầu dùng lưới tới x1,8: nó THUA markup cố định 25% vì dữ liệu huấn luyện chỉ có markup 5-60%; ngoài vùng đó cây quyết định ngoại suy phẳng và đánh giá P quá cao (`model_estimated_profit_vnd` gần gấp đôi lợi nhuận thật ở chế độ max_profit). Nguyên nhân gốc là ngoại suy, nên optimizer không bao giờ chào giá ngoài vùng hỗ trợ. Chế độ cân bằng (P >= 0,5) cố ý đánh đổi lợi nhuận lấy tỉ lệ chốt.
+Optimizer mặc định giới hạn lưới giá ở `price_support.price_ratio_cost_max` (giá/vốn lớn nhất trong tập train). Hai dòng `legacy_*_grid_1.80_unsupported` là phiên bản đầu dùng lưới tới x1,8: nó THUA markup cố định 25% vì dữ liệu huấn luyện chỉ có markup 5-60%; ngoài vùng đó cây quyết định ngoại suy phẳng và đánh giá P quá cao (`model_estimated_profit_vnd` gần gấp đôi lợi nhuận thật ở chế độ max_profit). Nguyên nhân gốc là ngoại suy, nên optimizer không bao giờ chào giá ngoài vùng hỗ trợ. Chế độ cân bằng: trong các mức giá giữ được >= 95% lợi nhuận kỳ vọng tối đa, chọn mức có P chốt cao nhất.

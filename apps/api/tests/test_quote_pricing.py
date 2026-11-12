@@ -17,7 +17,7 @@ def test_modes_ordered_and_above_floor():
     floor_pp = 20_000_000 / 20 * 1.10
     assert r["safe"]["price_per_pax"] <= r["balanced"]["price_per_pax"] <= r["max_profit"]["price_per_pax"]
     assert all(r[m]["price_per_pax"] >= floor_pp and r[m]["margin_pct"] > 0 for m in ("safe", "balanced", "max_profit"))
-    assert r["safe"]["p_win"] >= 0.75 and r["balanced"]["p_win"] >= 0.5
+    assert r["safe"]["p_win"] >= 0.75
 
 
 def test_max_profit_is_exact_argmax_and_ep_formula():
@@ -34,7 +34,7 @@ def test_max_profit_is_exact_argmax_and_ep_formula():
 
 def test_floor_bound_when_no_price_reaches_p():
     r = run(fn=lambda f: 0.4)
-    assert r["balanced"]["floor_bound"] and r["safe"]["floor_bound"] and not r["max_profit"]["floor_bound"]
+    assert r["safe"]["floor_bound"] and not r["max_profit"]["floor_bound"] and not r["balanced"]["floor_bound"]
     assert r["safe"]["price_per_pax"] == r["curve"][0]["price_per_pax"]
 
 
@@ -57,3 +57,26 @@ def test_default_ceiling_is_training_support_and_never_exceeded():
     assert all(r[m]["price_per_pax"] <= 1_000_000 * cap for m in ("safe", "balanced", "max_profit"))
     wide = optimize(20_000_000, 20, CTX, 0.10, lambda f: 0.9, ceiling=2.0)  # explicit override still works
     assert wide["max_profit"]["price_per_pax"] > r["max_profit"]["price_per_pax"]
+
+
+def test_balanced_is_highest_p_within_95pct_of_max_ep():
+    r = run()
+    max_ep = r["max_profit"]["expected_profit"]
+    assert r["balanced"]["expected_profit"] >= 0.95 * max_ep
+    near = [pt for pt in r["curve"] if pt["expected_profit"] >= 0.95 * max_ep and pt["price_per_pax"] >= r["safe"]["price_per_pax"]]
+    assert r["balanced"]["p_win"] == max(pt["p_win"] for pt in near)
+    assert r["balanced"]["p_win"] >= r["max_profit"]["p_win"]
+
+
+def test_balanced_exact_on_stub_with_flat_top():
+    # EP = p*(price-cost): p chosen so points 4,5,6 have EP 100, 98, 96 (all >=95% of max 100) and others far lower.
+    base = optimize(20_000_000, 20, CTX, 0.10, lambda f: 0.5)["curve"]
+    prices = [pt["price_per_pax"] for pt in base]
+    ep = {prices[4]: 100.0, prices[5]: 98.0, prices[6]: 96.0}
+    def stub(f):
+        price = round(f["price_ratio_cost"] * 1_000_000)
+        return ep[price] / ((price - 1_000_000) * 20) if price in ep else 1e-12
+
+    r = optimize(20_000_000, 20, CTX, 0.10, stub)
+    assert r["max_profit"]["price_per_pax"] == prices[4]
+    assert r["balanced"]["price_per_pax"] == prices[4]  # highest P among {4,5,6} is the cheapest

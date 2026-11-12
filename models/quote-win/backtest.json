@@ -15,12 +15,12 @@
       "avg_margin_pct_on_wins": 20.52
     },
     "optimizer_balanced": {
-      "expected_profit_vnd": 4212424161,
-      "expected_profit_per_quote_vnd": 1163011,
-      "expected_win_rate": 0.4304,
-      "avg_margin_pct_offered": 12.51,
-      "avg_margin_pct_on_wins": 12.97,
-      "model_estimated_profit_vnd": 4460633894
+      "expected_profit_vnd": 5968957526,
+      "expected_profit_per_quote_vnd": 1647973,
+      "expected_win_rate": 0.2456,
+      "avg_margin_pct_offered": 26.55,
+      "avg_margin_pct_on_wins": 25.39,
+      "model_estimated_profit_vnd": 7072369399
     },
     "optimizer_max_profit": {
       "expected_profit_vnd": 5846774251,
@@ -38,12 +38,12 @@
       "avg_margin_pct_on_wins": 24.58
     },
     "legacy_balanced_grid_1.80_unsupported": {
-      "expected_profit_vnd": 4212424161,
-      "expected_profit_per_quote_vnd": 1163011,
-      "expected_win_rate": 0.4304,
-      "avg_margin_pct_offered": 12.51,
-      "avg_margin_pct_on_wins": 12.97,
-      "model_estimated_profit_vnd": 4460633894
+      "expected_profit_vnd": 5125439092,
+      "expected_profit_per_quote_vnd": 1415085,
+      "expected_win_rate": 0.1634,
+      "avg_margin_pct_offered": 34.85,
+      "avg_margin_pct_on_wins": 28.53,
+      "model_estimated_profit_vnd": 8035355708
     },
     "legacy_max_profit_grid_1.80_unsupported": {
       "expected_profit_vnd": 4809932559,
