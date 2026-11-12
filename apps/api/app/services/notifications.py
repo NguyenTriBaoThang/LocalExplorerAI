@@ -131,7 +131,7 @@ def queue_account_link(db: Session, user: User, *, purpose: str, token_id: str, 
         path, subject = "verify-email", "Local Explorer AI: xác minh địa chỉ email"
         intro = "Hãy xác minh email để có thể giữ chỗ và thanh toán. Liên kết có hiệu lực trong 24 giờ"
         outro = "Nếu bạn không tạo tài khoản này, hãy bỏ qua email."
-    base = settings.portal_app_url if user.role in {"provider", "admin"} and settings.portal_app_url else settings.web_app_url
+    base = settings.portal_app_url if user.role in {"provider", "operator", "admin"} and settings.portal_app_url else settings.web_app_url
     link = f"{base.rstrip('/')}/{path}?token={raw_token}"
     return enqueue_email(
         db, idempotency_key=f"{SENSITIVE_KEY_PREFIX}{purpose}:{token_id}", recipient=user, subject=subject,

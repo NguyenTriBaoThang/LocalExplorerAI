@@ -109,10 +109,29 @@ class Provider(Base):
     experiences: Mapped[list["Experience"]] = relationship(back_populates="provider")
 
 
+class OperatorOrg(Base):
+    """A tour-operator tenant for the quote & margin copilot."""
+    __tablename__ = "operator_orgs"
+    __table_args__ = (UniqueConstraint("slug", name="uq_operator_orgs_slug"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    name: Mapped[str] = mapped_column(String(180))
+    slug: Mapped[str] = mapped_column(String(200))
+    margin_floor_pct: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
+    default_markup_pct: Mapped[int] = mapped_column(Integer, default=25, server_default="25")
+    deposit_pct: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
+    quote_validity_days: Mapped[int] = mapped_column(Integer, default=7, server_default="7")
+    ota_commission_pct: Mapped[int] = mapped_column(Integer, default=18, server_default="18")
+    manual_minutes_per_quote: Mapped[int] = mapped_column(Integer, default=90, server_default="90")
+    settings: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('traveler', 'provider', 'admin')", name="ck_users_role"),
+        CheckConstraint("role IN ('traveler', 'provider', 'operator', 'admin')", name="ck_users_role"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -122,6 +141,7 @@ class User(Base):
     google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(24), default="traveler", index=True)
     provider_id: Mapped[str | None] = mapped_column(ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
+    operator_org_id: Mapped[str | None] = mapped_column(ForeignKey("operator_orgs.id", ondelete="SET NULL"), nullable=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # Bumped on role change, deactivation, password change or "sign out everywhere": invalidates every access token at once.

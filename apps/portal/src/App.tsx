@@ -22,6 +22,10 @@ import { AdminFloodRiskPage } from './pages/admin/AdminFloodRiskPage'
 import { AccountPage } from './pages/AccountPage'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { adminApi, partnerApi } from './lib/api'
+import { OperatorLayout } from './pages/operator/OperatorLayout'
+import { OperatorOverviewPage } from './pages/operator/OperatorOverviewPage'
+import { OperatorSettingsPage } from './pages/operator/OperatorSettingsPage'
+import { OperatorComingSoonPage } from './pages/operator/OperatorComingSoonPage'
 import { PartnerAnalyticsPage } from './pages/partner/PartnerAnalyticsPage'
 import { PartnerCalendarPage } from './pages/partner/PartnerCalendarPage'
 import { PartnerPlacesPage } from './pages/partner/PartnerPlacesPage'
@@ -90,6 +94,28 @@ export function App() {
                   </Route>
                   <Route element={<RequirePermission permission="provider:audit" />}>
                     <Route path="activity" element={<AuditLogPage title="Nhật ký hoạt động" description="Các thay đổi trên trải nghiệm, slot và địa điểm của bạn." load={loadPartnerAudit} />} />
+                  </Route>
+                  <Route path="account" element={<AccountPage />} />
+                </Route>
+              </Route>
+              <Route element={<RequireRole role="operator" />}>
+                <Route path="/operator" element={<OperatorLayout />}>
+                  <Route index element={<OperatorOverviewPage />} />
+                  <Route element={<RequirePermission permission="operator:quote" />}>
+                    <Route path="quotes" element={<OperatorComingSoonPage title="Báo giá" />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:rate_card" />}>
+                    <Route path="rate-cards" element={<OperatorComingSoonPage title="Bảng giá" />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:reconcile" />}>
+                    <Route path="reconcile" element={<OperatorComingSoonPage title="Đối chiếu" />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:analytics" />}>
+                    <Route path="margin" element={<OperatorComingSoonPage title="Biên lợi nhuận" />} />
+                    <Route path="roi" element={<OperatorComingSoonPage title="ROI" />} />
+                  </Route>
+                  <Route element={<RequirePermission permission="operator:settings" />}>
+                    <Route path="settings" element={<OperatorSettingsPage />} />
                   </Route>
                   <Route path="account" element={<AccountPage />} />
                 </Route>

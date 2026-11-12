@@ -88,7 +88,7 @@ def test_matrix_is_visible_to_admins_only(client, db_session):
     matrix = client.get("/api/admin/rbac", headers=bearer_for(make_user(db_session, "admin")))
     assert matrix.status_code == 200
     roles = {r["name"]: r for r in matrix.json()["roles"]}
-    assert set(roles) == {"traveler", "provider", "admin"} and all(r["is_system"] for r in roles.values())
+    assert set(roles) == {"traveler", "provider", "operator", "admin"} and all(r["is_system"] for r in roles.values())
     assert "admin:rbac" in roles["admin"]["permissions"] and "admin:rbac" not in roles["traveler"]["permissions"]
 
 
@@ -223,6 +223,7 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
     m0019 = _load_migration("m0019", "migrations/versions/0019_itinerary_collaboration.py")
     m0019_reviews = _load_migration("m0019_reviews", "migrations/versions/0019_place_reviews.py")
     m0020 = _load_migration("m0020", "migrations/versions/0020_trip_planner.py")
+    m0025 = _load_migration("m0025", "migrations/versions/0025_operator_orgs.py")
     later = [_load_migration("m0013", "migrations/versions/0013_account_recovery.py"), _load_migration("m0014", "migrations/versions/0014_mfa.py"),
              # 0016 also changes the schema; only its permission seed applies to this bare RBAC database.
              type("PermissionsOnly0016", (), {"upgrade": staticmethod(m0016.upgrade_permissions), "downgrade": staticmethod(m0016.downgrade_permissions)}),
@@ -231,7 +232,9 @@ def test_seed_migration_runs_and_loads_the_expected_matrix():
              # 0019 also adds schema; exercise only its traveler permission seed here.
              type("PermissionsOnly0019", (), {"upgrade": staticmethod(m0019.upgrade_permissions), "downgrade": staticmethod(m0019.downgrade_permissions)}),
              # 0020 also adds schema; exercise only its trip:use seed here.
-             type("PermissionsOnly0020", (), {"upgrade": staticmethod(m0020.upgrade_permissions), "downgrade": staticmethod(m0020.downgrade_permissions)})]
+             type("PermissionsOnly0020", (), {"upgrade": staticmethod(m0020.upgrade_permissions), "downgrade": staticmethod(m0020.downgrade_permissions)}),
+             # 0025 also adds schema; exercise only its operator role seed here.
+             type("PermissionsOnly0025", (), {"upgrade": staticmethod(m0025.upgrade_permissions), "downgrade": staticmethod(m0025.downgrade_permissions)})]
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE roles (name VARCHAR(40) PRIMARY KEY, description VARCHAR(255), is_system BOOLEAN, created_at DATETIME)"))

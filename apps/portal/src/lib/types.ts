@@ -1,4 +1,4 @@
-export type Role = 'traveler' | 'provider' | 'admin'
+export type Role = 'traveler' | 'provider' | 'operator' | 'admin'
 
 export type AuthUser = {
   id: string
