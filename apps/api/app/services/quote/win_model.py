@@ -18,7 +18,17 @@ FEATURE_NAMES = [
     "cost_per_pax", "price_ratio_cost", "price_ratio_comp",
 ]
 PRICE_FEATURES = ("price_ratio_cost", "price_ratio_comp")  # the only price-dependent features; monotone -1
-DEFAULT_DIR = Path(os.environ.get("QUOTE_WIN_MODEL_DIR") or Path(__file__).resolve().parents[5] / "models" / "quote-win")
+def _default_dir() -> Path:
+    """Same lookup as config._default_ranker_model_dir: the /models mount in Docker, else <repo>/models."""
+    if os.environ.get("QUOTE_WIN_MODEL_DIR"):
+        return Path(os.environ["QUOTE_WIN_MODEL_DIR"])
+    if os.name != "nt" and Path("/models/quote-win").is_dir():
+        return Path("/models/quote-win")
+    from app.core.config import _PROJECT_ROOT
+    return _PROJECT_ROOT / "models" / "quote-win"
+
+
+DEFAULT_DIR = _default_dir()
 
 
 DEFAULT_PRICE_RATIO_MAX = 1.6  # heuristic fallback: the synthetic data's max markup (60%)
