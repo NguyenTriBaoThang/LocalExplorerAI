@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { restorePalaceTexture } from './landmark/palaceMaterial'
 
-export function Walkthrough3D({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
+export function Walkthrough3D({ url, title, onClose, startInside = false }: { url: string; title: string; onClose: () => void; startInside?: boolean }) {
   const mount = useRef<HTMLDivElement>(null)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
@@ -63,8 +63,12 @@ export function Walkthrough3D({ url, title, onClose }: { url: string; title: str
       bounds = new THREE.Box3().setFromObject(model)
       eyeHeight = Math.min(1.7, Math.max(0.5, bounds.max.y * 0.08))
       speed = Math.max(2, Math.min(8, bounds.getSize(new THREE.Vector3()).length() / 30))
-      camera.position.set(0, bounds.min.y + eyeHeight, bounds.max.z + Math.max(4, bounds.getSize(new THREE.Vector3()).z * 0.08))
-      camera.lookAt(0, bounds.min.y + eyeHeight + 1, 0)
+      camera.position.set(
+        0,
+        bounds.min.y + eyeHeight,
+        startInside ? (bounds.min.z + bounds.max.z) / 2 : bounds.max.z + Math.max(4, bounds.getSize(new THREE.Vector3()).z * 0.08),
+      )
+      camera.lookAt(0, bounds.min.y + eyeHeight + (startInside ? 0 : 1), startInside ? bounds.min.z : 0)
       yaw = Math.atan2(-camera.getWorldDirection(new THREE.Vector3()).x, -camera.getWorldDirection(new THREE.Vector3()).z)
       ready = true
       setProgress(100)
@@ -126,7 +130,7 @@ export function Walkthrough3D({ url, title, onClose }: { url: string; title: str
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [url])
+  }, [url, startInside])
 
   return <div className="absolute inset-0 z-30 bg-slate-950 text-white" role="dialog" aria-label={`Đi bộ trong ${title}`}>
     <div ref={mount} className="absolute inset-0" />

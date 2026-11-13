@@ -8,7 +8,7 @@ import type { Itinerary, Place } from '../../api/trips'
 import { selectedPlace, tourStops, type Selected } from './place'
 import PlacePopup from './PlacePopup'
 import LocationConditions from './LocationConditions'
-import { DEFAULT_CALIBRATIONS, sanitizeCalibration } from '../3d/landmark/types'
+import { DEFAULT_CALIBRATIONS, sanitizeCalibration, type ModelCalibration } from '../3d/landmark/types'
 import { createLandmarkLayer } from './landmarkLayer'
 import { installMissingStyleImageFallback } from '../map/missingStyleImages'
 
@@ -53,13 +53,20 @@ export default function TripMap(props: Props) {
     m.on('load', () => {
       if (disposed) return
       setReady(true)
-      const defaults = Object.values(DEFAULT_CALIBRATIONS).filter(c => c.latitude > 10.6 && c.latitude < 11.2 && c.longitude < 107)
-      void Promise.all(defaults.map(async c => {
-        try {
-          const response = await fetch(`/api/models-3d/calibration/${encodeURIComponent(c.model_name)}`)
-          return response.ok ? sanitizeCalibration(await response.json(), c) : c
-        } catch { return c }
-      })).then(cals => { if (!disposed) m.addLayer(createLandmarkLayer('trip-landmarks', cals)) })
+      void api.get<Record<string, ModelCalibration>>('/models-3d/calibration')
+        .then(({ data }) => {
+          if (disposed) return
+          const calibrations = Object.entries(DEFAULT_CALIBRATIONS)
+            .map(([id, fallback]) => sanitizeCalibration(data?.[id] ?? {}, fallback))
+            .filter(c => c.latitude > 10.6 && c.latitude < 11.2 && c.longitude < 107)
+          m.addLayer(createLandmarkLayer('trip-landmarks', calibrations))
+        })
+        .catch(() => {
+          if (disposed) return
+          const calibrations = Object.values(DEFAULT_CALIBRATIONS)
+            .filter(c => c.latitude > 10.6 && c.latitude < 11.2 && c.longitude < 107)
+          m.addLayer(createLandmarkLayer('trip-landmarks', calibrations))
+        })
     })
     m.on('dragstart', stop)
     m.on('click', (event: any) => {
