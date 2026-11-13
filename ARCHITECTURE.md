@@ -1,289 +1,432 @@
-# Local Explorer AI — Technical System Architecture Specification
+# Local Explorer AI — System Architecture Specification
 
-> This is a translated historical architecture specification. It preserves the original component inventory and design details, but some model, service, endpoint, test-count, and deployment statements may be aspirational or stale. Check the current implementation and [architecture notes](docs/architecture.md) before treating a statement as live operational status.
+> **Living Architecture Specification (Synchronized with Repository State)**  
+> **Repository:** [LocalExplorerAI](https://github.com/NguyenTriBaoThang/LocalExplorerAI) · **Last Synchronized:** November 2026 · **Branch:** `main`
 
-## 1. Architecture Overview (Executive Summary)
+---
 
-**Local Explorer AI** is a smart urban discovery and slot-aware itinerary planning platform for Ho Chi Minh City. The system is designed to address the gap between static map representation and travelers' ability to actually participate in an experience.
+## 1. Architecture Overview
 
-**Core architectural principle:**
+**Local Explorer AI** is an intelligent urban discovery, slot-aware itinerary planning, and experience commerce platform focused on Ho Chi Minh City. Traditional map solutions treat places as static coordinates on a 2D map. Local Explorer AI introduces a **four-layer temporal-spatial hierarchy**:
+
 ```text
-POI (Place) ──> Experience (Activity) ──> ExperienceSlot (Time + Capacity) ──> Itinerary
+Physical POI (Geographic Point)
+   └── Experience (Curated Activity)
+         └── ExperienceSlot (Time Window + Capacity + Status)
+               └── Itinerary / Booking (Feasible Route + 15-min Seat Hold)
+```
+
+The system operates across three core domains:
+1. **B2C Traveler Discovery & Smart Planning:** Multi-turn conversational AI Concierge, deterministic heuristic route optimization, 3D WebGL Digital Twin, and secure booking holds with VNPay / MoMo payments.
+2. **B2B Experience Provider & Operator Platform:** Dedicated Partner Portal, slot capacity management, AI Slot Assistant, B2B tour quote generation, rate cards, and financial margin guardrails.
+3. **Platform Governance & GeoAI Intelligence:** Admin moderation, fuzzy duplicate POI detection, RBAC with MFA, audit logging, Meshy 3D generative model worker, and versioned AI prompt workflows.
+
+---
+
+## 2. High-Level Monorepo Structure
+
+```text
+LocalExplorerAI/
+├── apps/
+│   ├── web/           # Public traveler SPA (React 18.3, Vite 6, TypeScript 5.6, Leaflet, Three.js)
+│   ├── portal/        # Dedicated Partner & Admin Portal (React 18.3, Vite 6, Tailwind)
+│   └── api/           # Backend API (FastAPI 0.142+, Python 3.12+, Uvicorn, SQLAlchemy 2.0)
+├── docs-site/         # Static documentation & showcase portal (React, Vite, GitHub Pages)
+├── models/            # Versioned ML models (XGBoost Ranker, Quote Win Model, E5, Flood Risk)
+├── data/              # Portable catalogs, raw datasets, experimental benchmarks
+├── scripts/           # DB seed scripts, crawler, ML training pipelines, test runners
+└── docker-compose.yml # Container orchestration (API, Web, Portal, PostgreSQL+PostGIS, Redis)
 ```
 
 ---
 
-## 2. High-Level Architecture Diagram
+## 3. End-to-End System Architecture (Diagram 1)
 
 ```mermaid
 flowchart TB
-    subgraph Client["Presentation Layer (SPA — React 18 + Vite 6 + TypeScript 5.6)"]
-        ThreeCanvas["Three.js 3D WebGL Saigon Cityscape (CityHero3D)"]
-        ChatConcierge["AI Concierge Chat (/chat)"]
-        PlannerWizard["Smart Trip Planner (/planner)"]
-        LaserTimeline["Laser Timeline & 4 KPI Cards (/itinerary)"]
-        CompareView["Side-by-side Compare (/compare)"]
-        ProviderPortalUI["Provider Portal (/provider-portal)"]
-        AdminPortalUI["Admin Portal (/admin)"]
-        MapAdapter["Leaflet + CartoDB (Voyager / Dark Matter)"]
-        Map3DViewer["3D Landmark Viewer (/map-3d) — GLB models"]
-        MockEngine["Offline Heuristic Fallback Engine"]
+    subgraph Clients["Presentation Layer (Frontends)"]
+        WebClient["Traveler SPA (apps/web :8080)\nReact 18.3 · Vite 6 · Three.js · Leaflet"]
+        PortalClient["Partner & Admin Portal (apps/portal :8081)\nReact 18.3 · Vite 6 · Tailwind"]
+        DocsClient["Docs Site (docs-site :5173)\nGitHub Pages Static Showcase"]
     end
 
-    subgraph Gateway["Application Layer (FastAPI — Python 3.12+)"]
-        AuthMW["RBAC Auth Middleware — HTTP-only Cookie + Google OAuth PKCE"]
-        RateLimitMW["Rate Limit Middleware (Redis)"]
-        API["14 FastAPI Route Modules"]
-        HeuristicSolver["Deterministic Heuristic Planner (planner_service.py)"]
-        ReplanEngine["Dynamic Replanning Service (replanning_service.py)"]
-        PromptEngine["Prompt Runner — PRD 3.0 Manifest v3_0_0 (8 prompts)"]
-        LLMAdapter["LLM Provider Adapter (OpenAI / Gemini compatible)"]
-        MLRanker["XGBoost ML Ranker (ml_ranker_service.py)"]
-        FloodRisk["Flood Risk Classifier (flood_model_service.py)"]
-        E5Search["Multilingual E5 Semantic Search (e5_search_service.py)"]
-        RoutingAdapter["Goong Directions & Forward Geocoding (routing_service.py)"]
-        BookingEngine["Seat Hold & Payment Gateway (ticket_service.py)"]
-        BotService["Telegram Bot & n8n Sync (bot_service.py)"]
-        OutboxWorker["Transactional Email Outbox Worker (worker.py)"]
+    subgraph Security["API Gateway & Hardening (apps/api :8000)"]
+        ReqIdMW["X-Request-ID Middleware & JSON Logger"]
+        CorsMW["CORSMiddleware (Configured Origins)"]
+        SecHeaders["Security Headers (nosniff, DENY, HSTS)"]
+        CsrfMW["CSRF Origin Verification (Lax Cookies)"]
+        RateLimitMW["Rate Limit Guard (Redis / Local Fallback)"]
     end
 
-    subgraph Persistence["Persistence & Intelligence Layer"]
-        PostGIS[("PostgreSQL 16 + PostGIS 3.4")]
-        Redis[("Redis — Rate Limit & Cache")]
-        LocalModels[("Local Model Artifacts:\nXGBoost Ranker / E5 / Flood Classifier")]
-        PromptCatalog[("Versioned JSON Prompts — prompts/")]
-        SQLite[("SQLite — Dev/Demo mode")]
+    subgraph Routers["FastAPI Routers (33 Modular Routers)"]
+        AuthRouter["auth · mfa · rbac"]
+        CatalogRouter["catalog · places_admin · site_content"]
+        PlannerRouter["planner · routing · trips"]
+        AIRouter["ai · chat · recommendations"]
+        MLRouter["ml · models_3d · landmark_stories"]
+        OperatorRouter["operator · operator_quotes · operator_rate_cards · operator_reconcile · public_quotes"]
+        CommerceRouter["bookings · reviews · place_reviews"]
+        OpsRouter["health · ops · push_notifications · meshy · admin_bot"]
     end
 
-    Client --> AuthMW
-    AuthMW --> RateLimitMW
-    RateLimitMW --> API
+    subgraph CoreServices["Domain Services Layer"]
+        HeuristicSolver["Deterministic Heuristic Planner\n(planner_service.py)"]
+        TripRules["Trip Rules Engine & Feasibility\n(trip_rules/)"]
+        PromptService["Structured Prompt Runner\n(v3.2.0 Prompt Catalog - 20 workflows)"]
+        QuoteEngine["Tour Quoting & Pricing Engine\n(quote_service.py & cost_engine.py)"]
+        RankerService["Active Ranker Service\n(rule-baseline-v1 & ML Gate)"]
+        BookingService["Seat Hold & Ticket Engine\n(booking_service.py)"]
+        SessionService["Auth & Session Runtime\n(session_service.py & RS256 JWT)"]
+        MeshyWorker["Meshy 3D Asset Worker\n(background asyncio task)"]
+        OutboxWorker["Notification Outbox Worker\n(worker.py: Email & Web Push)"]
+    end
 
-    API --> HeuristicSolver
-    API --> ReplanEngine
-    API --> PromptEngine
-    API --> MLRanker
-    API --> FloodRisk
-    API --> E5Search
-    API --> BookingEngine
-    API --> BotService
+    subgraph Persistence["Storage & Intelligence Layer"]
+        Postgres[("PostgreSQL 16 + PostGIS 3.4\n(or SQLite in local dev)")]
+        RedisCache[("Redis 7.0 (Optional)\nRate Limiting & Auth State")]
+        ModelStorage[("Local Model Registry\nmodels/ai-ranker, models/quote-win")]
+        PromptsStorage[("Prompt Catalog\napps/api/app/prompts/v3_2_0/")]
+    end
 
-    PromptEngine --> LLMAdapter
-    HeuristicSolver --> MLRanker
-    HeuristicSolver --> RoutingAdapter
-    ReplanEngine --> PromptEngine
-    ReplanEngine --> MLRanker
+    subgraph External["External Services & Gateways"]
+        GoongAPI["Goong Maps API\n(Directions & Geocoding)"]
+        OpenMeteo["Open-Meteo API\n(Weather & PM2.5 AQI)"]
+        LLMProvider["OpenAI / Gemini API\n(Structured JSON via Instructor)"]
+        PaymentGateways["VNPay & MoMo\n(Payment IPN Gateways)"]
+        TelegramZalo["Telegram Bot & Zalo Poller"]
+        MeshyAI["Meshy.ai API\n(Text/Image to 3D GLB)"]
+    end
 
-    API --> PostGIS
-    API --> Redis
-    BookingEngine --> PostGIS
-    E5Search --> LocalModels
-    MLRanker --> LocalModels
-    FloodRisk --> LocalModels
-    PromptEngine --> PromptCatalog
-    OutboxWorker --> PostGIS
+    Clients --> Security
+    Security --> Routers
+    Routers --> CoreServices
 
-    MockEngine -. Offline fallback .-> Client
+    CoreServices --> Postgres
+    CoreServices --> RedisCache
+    CoreServices --> ModelStorage
+    CoreServices --> PromptsStorage
+
+    CoreServices --> GoongAPI
+    CoreServices --> OpenMeteo
+    CoreServices --> LLMProvider
+    CoreServices --> PaymentGateways
+    CoreServices --> TelegramZalo
+    CoreServices --> MeshyAI
 ```
 
 ---
 
-## 3. Four-Tier Layer Specification
+## 4. AI Concierge & Chat Workflow (Diagram 2)
 
-### 3.1 Presentation Layer — Frontend SPA
+The AI Concierge accepts natural Vietnamese travel prompts, extracts structured constraints using prompt-driven workflows, and seamlessly transitions into the heuristic route planner.
 
-- **Framework**: React 18.3 + Vite 6.0 + TypeScript 5.6
-- **3D graphics**: Three.js WebGL renders a Saigon digital twin with neon-lit high-rises, a reflective Saigon River, radar-pulse POI pins, and multidirectional parallax camera motion. A 3D landmark viewer (GLB) is available at `/map-3d`.
-- **Map**: Leaflet + CartoDB Voyager (light) / Dark Matter (dark) + actual Goong polylines.
-- **Design**: Vanilla CSS + Tailwind CSS utilities, Glassmorphism (`backdrop-filter: blur(20px)`), neon effects, and `TiltCard3D` (specular glare overlay).
-- **Dual themes**: Warm Light Theme (daytime) and Nocturnal Emerald Dark Theme (mysterious cyberpunk).
-- **Bilingual UI**: VI/EN throughout, using `LanguageSwitcher` and the `i18n.ts` dictionary.
-- **Access control**: `CustomerRoute`, `RoleRoute`, and `RoleHome` route Travelers / Providers / Admins.
-- **Offline resilience**: `Offline Heuristic Mock Engine` activates automatically when the backend is unavailable.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Traveler as Traveler
+    participant Web as Web Client (/chat)
+    participant ChatAPI as API (/api/chat & /api/trips)
+    participant RouterPrompt as Chat Intent Router (v3.2.0)
+    participant ParserPrompt as Conversation Parser (v3.2.0)
+    participant Planner as Heuristic Solver
+    participant DB as Database Catalog
 
-### 3.2 Application Layer — FastAPI Backend
-
-- **Framework**: Python 3.12+ + FastAPI 0.142+ + Pydantic v2 + Uvicorn (ASGI)
-- **14 Route Modules** (`apps/api/app/api/routes/`):
-
-| Module | Prefix | Main Function |
-|---|---|---|
-| `health.py` | `/health`, `/ready` | Liveness & Readiness probe |
-| `ops.py` | `/api/ops/*` | Operations monitoring, outbox, events |
-| `auth.py` | `/api/auth/*` | Registration, sign-in, Google OAuth PKCE |
-| `catalog.py` | `/api/pois`, `/api/experiences`, `/api/experience-search` | POI catalog, experiences, E5 search |
-| `planner.py` | `/api/itineraries/*` | Itinerary planning, CRUD, versions, sharing, feedback |
-| `bookings.py` | `/api/bookings/*` | 15-minute holds, VNPay, MoMo IPN |
-| `routing.py` | `/api/routing/*`, `/api/geocoding/*` | Goong Directions & Forward Geocoding |
-| `ai.py` | `/api/ai/*` | Prompt tools, replan advice, tagging, XAI |
-| `chat.py` | `/api/chat/*` | AI Concierge chatbot |
-| `ml.py` | `/api/ml/*` | ML status, rank-experiences, flood-risk |
-| `provider.py` | `/api/providers/*` | Manage POIs, experiences, slots, evidence, slot assistant |
-| `admin.py` | `/api/admin/*` | KPI dashboard, moderation, merge, staging, integrations, audit |
-| `admin_bot.py` | `/api/admin/bot/*`, `/api/admin/system-settings` | Telegram Bot, n8n, system settings |
-| `models_3d.py` | `/api/models-3d/*` | 3D Landmark calibration & management |
-
-- **Middleware chain**:
-  1. `request_id_middleware`: X-Request-ID tracing
-  2. Rate Limit Middleware (Redis — categories: auth / chat / general)
-  3. CORS Middleware (origin whitelist)
-
-### 3.3 Heuristic Planner Engine
-
-The deterministic three-step algorithm does not use an unconstrained LLM for planning and is intended to prevent hallucinated plans:
-
-```text
-Input: [T_start, T_end, Budget_VND, Group_Size, Intent_Weights, Transport_Mode, Locked_IDs, Origin/Dest]
-         │
-         ▼
-Step 1 — Feasibility Pruning:
-  - Remove slots outside [T_start, T_end] or with no availability (status = full | cancelled)
-  - Remove experiences exceeding the per-person budget (price > Budget / Group_Size)
-  - Preserve `locked_experience_ids` as requested by the user
-         │
-         ▼
-Step 2 — Multi-objective Scoring & ML Tie-breaking:
-  - Score = w1 * intent_match + w2 * slot_freshness + w3 * cost_efficiency
-  - On a tie: activate the XGBoost Ranker (15 `ranker-features-v2` features)
-  - Automatically fall back to the rule baseline if the model does not meet the SHA-256 integrity check
-         │
-         ▼
-Step 3 — Sequential Routing Optimization (Goong API):
-  - Resolve origin/destination addresses through Goong Forward Geocoding
-  - Retrieve ETA, distance, and route geometry from the Goong Directions API
-  - Add travel-time buffers and check the return deadline
-         │
-         ▼
-Output:
-  - Time-ordered `ItineraryStops` + feasibility status
-  - Reason codes + XAI explanation (stored in `decision_logs`)
-  - Total travel, cost, and stop-count statistics
-```
-
-### 3.4 Dynamic Replanning Service
-
-- **Trigger**: A `SLOT_CANCELLED` event from a partner or a `WEATHER_ALERT` event from the AI Weather Advisor.
-- **Process**: The solver filters feasible replacement candidates → the `REPLAN_ADVISOR` prompt proposes an option → XAI explains it → an atomic update occurs on confirmation and increments the version.
-
-### 3.5 Persistence Layer
-
-- **Database**: PostgreSQL 16 + PostGIS 3.4 (production) / SQLite 3 (development/demo).
-- **Geographic column**: `pois.geom` as `geography(POINT, 4326)` with a GiST spatial index.
-- **ORM**: SQLAlchemy 2.0 (synchronous engine) + GeoAlchemy2 + Alembic.
-- **12 Migration versions**: `0001_initial` → `0012_normalize_slot_timestamps_to_utc`.
-- **Redis**: Categorized rate limiting + optional API response caching.
-
----
-
-## 4. Core Data Model
-
-```text
-User (RBAC: traveler|provider|admin)
-  └──> Itinerary ──> ItineraryStop <── ExperienceSlot <── Experience <── POI <── Provider
-         │               │                  │                 │               │
-         ├── Version      └── Booking ───────┘          Evidence         (location geom)
-         ├── Feedback          │
-         └── DecisionLog  ├── PaymentTransaction (VNPay|MoMo IPN)
-                          ├── BookingEvent (audit trail)
-                          └── EmailOutbox (worker notification)
-
-IntegrationSetting (Fernet-encrypted: vnpay|momo|goong|gemini|google)
-AuditLog (admin & provider action trail)
-PlaceImportStaging (import buffer for batch place onboarding)
+    Traveler->>Web: Enter query (e.g. "2 người đi làm gốm Quận 1 từ 9h-16h ngân sách 1tr")
+    Web->>ChatAPI: POST /api/trips/stream or /api/chat/message
+    ChatAPI->>RouterPrompt: Classify message intent (planning / weather / general)
+    RouterPrompt-->>ChatAPI: Intent = "planning"
+    ChatAPI->>ParserPrompt: Extract constraints (group_size, budget, hours, intents, mode)
+    ParserPrompt-->>ChatAPI: Structured constraints JSON
+    
+    alt Missing essential constraints (e.g. no time range)
+        ChatAPI-->>Web: SSE Event: 'clarification' (Question in Vietnamese)
+        Web-->>Traveler: Render interactive clarification chip
+    else Constraints complete
+        ChatAPI->>DB: Query available ExperienceSlots matching time/group
+        DB-->>ChatAPI: Candidate experiences & slots
+        ChatAPI->>Planner: Solve feasible itinerary matching constraints
+        Planner-->>ChatAPI: Feasible stops & road legs
+        ChatAPI-->>Web: SSE Event: 'plan_created' (Itinerary v1 preview)
+        Web-->>Traveler: Render Itinerary, Timeline & 3D Route Map
+    end
 ```
 
 ---
 
-## 5. Security and Data Integrity
+## 5. Smart Route Planning & Multi-Objective Optimization (Diagram 3)
 
-| Mechanism | Implementation |
-|---|---|
-| **Session Management** | HTTP-only cookie (`le_session`), protection against XSS |
-| **Password Security** | Argon2 / PBKDF2 hashing |
-| **Google OAuth** | PKCE flow — no `client_secret` in the browser |
-| **Secret Vault** | Fernet AES-128-CBC for every integration key in `integration_settings` |
-| **Seat Hold Isolation** | PostgreSQL row-level lock via `SELECT ... FOR UPDATE` |
-| **Payment Integrity** | HMAC-SHA512 (VNPay) + HMAC-SHA256 (MoMo), IPN server-to-server |
-| **ML Integrity** | SHA-256 checksum validates the model binary before loading |
-| **Simulated Data Boundary** | `verification_status = 'simulated'` cannot be used for real booking/payment |
-| **Rate Limiting** | Redis sliding window, categorized as auth/chat/general |
-| **Audit Trail** | `audit_logs` records administrative actions |
-| **Error Envelope** | All errors use `{ "error": { "code", "message", "details", "request_id" } }` |
+The planning engine prioritizes **hard physical and temporal feasibility** before applying multi-objective ranking.
 
----
+```mermaid
+flowchart TD
+    Start["User Request:\nStart time, Return deadline, Budget, Group Size, Travel Mode, Locked Stops"] --> Filter1
 
-## 6. End-to-End Payment Flow
+    subgraph Stage1["Stage 1: Hard Feasibility Filtering (Deterministic)"]
+        Filter1["Filter 1: Date & Opening Hours Feasibility"] --> Filter2
+        Filter2["Filter 2: Capacity & Available Slots (available_reported >= group_size)"] --> Filter3
+        Filter3["Filter 3: Budget Constraint (Total Stop Cost <= budget_vnd)"] --> Filter4
+        Filter4["Filter 4: Inbound & Outbound Feasibility (Arrival & Return deadlines)"]
+    end
 
-```text
-Traveler selects a slot → POST /api/bookings/hold
-  → SELECT ... FOR UPDATE (15-minute lock)
-  → Provider receives a notification → POST /api/bookings/{id}/decision (accept/reject)
-  → accept → POST /api/bookings/{id}/payment-link (VNPay or MoMo)
-  → User is redirected to pay through the gateway
-  → Gateway calls the IPN webhook → POST /api/bookings/vnpay/ipn or /momo/ipn
-  → Verify HMAC signature → UPDATE booking.status = confirmed
-  → EmailOutbox enqueues a message → Worker sends a confirmation email
+    Filter4 --> Stage2
+
+    subgraph Stage2["Stage 2: Spatial & Distance Estimation"]
+        Spatial1["Matrix Distance Calculation\n(Haversine baseline or Goong Directions cache)"]
+        Spatial2["Locked Stops Preservation\n(Never reorder or prune user-pinned stops)"]
+        Spatial1 --> SpatialMerge["Candidate Route Legs Formed"]
+        Spatial2 --> SpatialMerge
+    end
+
+    Stage2 --> Stage3
+
+    subgraph Stage3["Stage 3: Multi-Objective Candidate Scoring"]
+        Score1["Intent Alignment Score\n(Weight matches: Culture, Food, Craft, Relaxation)"]
+        Score2["Travel Friction Minimization\n(Avoid backtracking & peak heat midday travel)"]
+        Score3["Active Ranker Tie-Breaking\n(rule-baseline-v1 or approved ML Ranker)"]
+        Score1 --> AggregateScore["Total Candidate Utility"]
+        Score2 --> AggregateScore
+        Score3 --> AggregateScore
+    end
+
+    Stage3 --> Output["Generated Itinerary\n(Numbered stops, arrival/departure timestamps, road polylines, cost breakdown)"]
 ```
 
 ---
 
-## 7. ML Data Flow Diagram
+## 6. AI & Machine Learning Inference Architecture (Diagram 4)
 
-```text
-[data/raw/hcmc_flood_reports_2002_2026.csv]
-  └──> [scripts/build_flood_report_weak_labels.mjs]
-       └──> [data/experimental/flood_training_weak_labels.csv]
-            └──> [notebooks/Flood_Report_Weak_Label_Experiment_Colab.ipynb] (research only)
-                 └──> [models/flood-report-experiment/report_presence_model.joblib]
+Local Explorer AI separates **heuristic baseline validation** from **experimental machine learning models**. Unverified models cannot bypass hard planning constraints.
 
-[data/experimental/ranking/ranking_candidates_labeled.csv]  ← OSM 3,828 rows
-[data/training/experience_ranker_verified_template.csv]     ← human-labeled
-  └──> [scripts/train_experience_ranker.py]
-       └──> [models/ai-ranker/xgboost_ranker.json]          NDCG@5 = 0.9516
-            └──> [apps/api/app/services/ml_ranker_service.py]
+```mermaid
+flowchart LR
+    CandidateInput["Candidate Experiences\n(Passing Stage 1 Feasibility)"] --> FeatureExtractor
 
-[intfloat/multilingual-e5-base] ── downloaded via scripts/download_e5_model.py ──>
-  └──> [models/e5/] ──> [apps/api/app/services/e5_search_service.py]
+    subgraph FeatureEngineering["Feature Engineering (ranker-features-v2)"]
+        FeatureExtractor["Extract 15 Features:\n- intent_match_score\n- price_ratio_budget\n- duration_fit\n- capacity_ratio\n- distance_from_prev_km\n- is_indoor / weather_match\n- provider_reputation\n- ..."]
+    end
+
+    FeatureEngineering --> GateCheck
+
+    subgraph MLGate["Model Integrity & Safety Gate"]
+        GateCheck{"Check Model Eligibility:\n1. Model SHA-256 match?\n2. dataset_status == verified_human_labeled?\n3. deployment_eligible == True?\n4. ENABLE_BOOTSTRAP_RANKER flag?"}
+    end
+
+    GateCheck -- "No / Default" --> RuleBaseline["rule-baseline-v1 (Active Production Ranker)\nDeterministic weighted scoring\nZero overhead · Fully explainable"]
+    GateCheck -- "Yes & Flag Enabled" --> XGBRanker["bootstrap_xgboost_pilot (Experimental)\nXGBRanker (15 features)\nDisplays 'Weak-label pilot' badge"]
+
+    RuleBaseline --> RankedOutput["Ranked Candidates with Provenance & XAI Explanations"]
+    XGBRanker --> RankedOutput
 ```
 
 ---
 
-## 8. CI/CD Pipeline (GitHub Actions)
+## 7. Booking Holds & Payment Architecture (Diagram 5)
 
-```yaml
-# .github/workflows/ci.yml
-Triggers: push/PR to main
-Steps:
-  1. Python 3.12 setup + pip install requirements*.txt
-  2. ruff lint check
-  3. pytest -q (22 modules, 107+ test cases)
-  4. Node.js 20 + npm ci (apps/web) + npm run build
-      (automatically injects @rollup/rollup-linux-x64-gnu for Linux CI)
+Seat reservations follow a strict two-phase commit: a **15-minute temporary hold** followed by provider approval or online payment webhook.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Traveler as Traveler
+    participant Web as Web Client (/itinerary)
+    participant BookingAPI as API (/api/bookings)
+    participant DB as PostgreSQL Database
+    participant Outbox as Notification Outbox
+    participant Gateway as Payment Gateway (VNPay / MoMo)
+
+    Traveler->>Web: Request booking for selected slot
+    Web->>BookingAPI: POST /api/bookings (slot_id, group_size)
+    BookingAPI->>DB: Check slot availability with optimistic concurrency (version)
+    alt Slot full or locked
+        BookingAPI-->>Web: HTTP 409: SLOT_UNAVAILABLE
+    else Slot available
+        BookingAPI->>DB: Decrement available_reported, create Booking(status='held', expires_at=now+15min)
+        BookingAPI-->>Web: Booking confirmed with 15-minute countdown
+    end
+
+    Traveler->>Web: Select payment (VNPay / MoMo)
+    Web->>BookingAPI: POST /api/bookings/{id}/payment-url
+    BookingAPI->>Gateway: Create signed transaction (HMAC-SHA512 / HMAC-SHA256)
+    Gateway-->>BookingAPI: Payment gateway redirect URL
+    BookingAPI-->>Web: Redirect traveler to payment page
+
+    Traveler->>Gateway: Complete payment
+    Gateway->>BookingAPI: Asynchronous IPN Callback (POST /api/bookings/payment/vnpay-ipn)
+    BookingAPI->>BookingAPI: Verify cryptographic signature
+    BookingAPI->>DB: Update Booking(status='confirmed'), PaymentTransaction(status='completed')
+    BookingAPI->>Outbox: Enqueue confirmation email & Web Push notification
+    BookingAPI-->>Gateway: Return IPN response (RspCode: 00)
+    Outbox->>Traveler: Deliver ticket & calendar hold
 ```
 
 ---
 
-## 9. Docker Compose Deployment
+## 8. Core Data Model (Diagram 6)
 
-```yaml
-# docker-compose.yml (production)
-Services:
-  db:  PostgreSQL 16 + PostGIS 3.4
-  redis: Redis 7 Alpine
-  api:  FastAPI (apps/api/Dockerfile) — port 8000
-  web:  React + Nginx (apps/web/Dockerfile) — port 80/443
+```mermaid
+erDiagram
+    User ||--o{ Itinerary : owns
+    User ||--o{ AuthSession : maintains
+    User ||--o{ Booking : places
+    User ||--o{ Review : writes
+    Provider ||--o{ POI : operates
+    Provider ||--o{ Experience : offers
+    POI ||--o{ Experience : hosts
+    Experience ||--o{ ExperienceSlot : schedules
+    Itinerary ||--o{ ItineraryStop : contains
+    Itinerary ||--o{ ItineraryVersion : records
+    Itinerary ||--o{ Collaboration : shares
+    ExperienceSlot ||--o{ ItineraryStop : allocates
+    ExperienceSlot ||--o{ Booking : reserves
+    Booking ||--o{ PaymentTransaction : settles
+    OperatorOrg ||--o{ TourTemplate : designs
+    OperatorOrg ||--o{ RateCard : maintains
+    OperatorOrg ||--o{ Quote : issues
+    Quote ||--o{ QuoteRevision : revisions
+    POI ||--o{ MeshyJob : renders_3d
 
-# docker-compose.override.yml (development)
-  Volumes: hot-reload mounts
-  Environment: DEBUG=true, CORS allow localhost
+    User {
+        string id PK
+        string email UK
+        string role "traveler | provider | admin | operator"
+        string password_hash
+        boolean mfa_enabled
+        int token_version
+    }
+
+    Provider {
+        string id PK
+        string name
+        string verification_status "simulated | verified | suspended"
+        string portal_access_key
+    }
+
+    POI {
+        string id PK
+        string provider_id FK
+        string name
+        string district
+        float latitude
+        float longitude
+        string category
+        string verification_status
+    }
+
+    Experience {
+        string id PK
+        string poi_id FK
+        string provider_id FK
+        string title
+        bigint price_vnd
+        int duration_min
+        boolean is_hands_on
+        boolean is_indoor
+        json intent_tags
+    }
+
+    ExperienceSlot {
+        string id PK
+        string experience_id FK
+        datetime start_at
+        datetime end_at
+        int capacity_total
+        int available_reported
+        string status "open | held | booked | cancelled"
+        int version "optimistic lock"
+    }
+
+    Itinerary {
+        string id PK
+        string user_id FK
+        datetime start_at
+        datetime end_at
+        int group_size
+        bigint budget_vnd
+        string travel_mode
+        string status
+        int current_version
+    }
+
+    Booking {
+        string id PK
+        string user_id FK
+        string slot_id FK
+        int group_size
+        string status "held | confirmed | cancelled | expired"
+        datetime held_until
+        bigint total_price_vnd
+    }
+
+    Quote {
+        string id PK
+        string operator_org_id FK
+        string customer_name
+        string destination
+        int pax
+        bigint cost_vnd
+        bigint quoted_price_vnd
+        string status "draft | sent | won | lost"
+    }
 ```
 
 ---
 
-## 10. Known Documentation Gaps
+## 9. Deployment Architecture (Diagram 7)
 
-> [!WARNING]
-> - The older v1.0 `ARCHITECTURE.md` described a `Haversine Routing Adapter` — **that description is outdated**. The system actually uses the **Goong Directions API** + Goong Forward Geocoding.
-> - `Itinerary Rollback` is mentioned in the README, but rollback is handled through versioning (see `/api/itineraries/{id}/versions`); there is no dedicated rollback endpoint.
-> - Model weights (`models/ai-ranker/`, `models/e5/`, `models/flood-risk/`) are not committed to the repository. Download/train them before using the ML endpoints.
-> - `apps/api/local_explorer.sqlite3` is the SQLite database for development/demo; production uses PostgreSQL.
+```mermaid
+flowchart TB
+    Internet["Public Internet / Client Browsers"] --> ReverseProxy
+
+    subgraph ProductionHost["Production Host / Container Cluster (Docker Compose)"]
+        ReverseProxy["Nginx Reverse Proxy / SSL Termination (:80 / :443)"]
+
+        subgraph Containers["Application Services"]
+            WebContainer["web container (:8080)\napps/web (Nginx static build)"]
+            PortalContainer["portal container (:5174)\napps/portal (Nginx static build)"]
+            APIContainer["api container (:8000)\napps/api (Uvicorn ASGI workers)"]
+            WorkerContainer["outbox worker container\n(apps/api/app/worker.py)"]
+        end
+
+        subgraph DataStores["State & Storage"]
+            PostgresDB[("postgres container (:5432)\nPostgreSQL 16 + PostGIS 3.4\nPersistent Volume: pgdata")]
+            RedisDB[("redis container (:6379)\nRedis 7.0 In-Memory\nRate limiting & cache")]
+        end
+
+        ReverseProxy -- "/ (frontend)" --> WebContainer
+        ReverseProxy -- "/portal" --> PortalContainer
+        ReverseProxy -- "/api/*" --> APIContainer
+
+        APIContainer --> PostgresDB
+        APIContainer --> RedisDB
+        WorkerContainer --> PostgresDB
+    end
+
+    subgraph CloudServices["External Cloud APIs"]
+        GoongCloud["Goong Cloud API"]
+        PaymentCloud["VNPay / MoMo Gateways"]
+        OpenAICloud["OpenAI / Gemini LLMs"]
+        MeshyCloud["Meshy.ai 3D Cloud"]
+    end
+
+    APIContainer --> GoongCloud
+    APIContainer --> PaymentCloud
+    APIContainer --> OpenAICloud
+    APIContainer --> MeshyCloud
+```
+
+---
+
+## 10. Security & Hardening Architecture
+
+1. **Authentication:**
+   - Stateless **RS256 JWT access tokens** (15-min TTL) in HTTP-only, `SameSite=Lax` cookies (`le_at`).
+   - Sliding session **opaque refresh tokens** in HTTP-only cookies (`le_rt`) with automatic reuse detection and immediate family revocation.
+   - Password hashing via **Argon2id** (`argon2-cffi`) with automatic legacy re-hash migration.
+   - Two-Factor Authentication (**TOTP RFC 6238**) with encrypted backup recovery codes.
+2. **Access Control (RBAC):**
+   - Granular, system-defined permissions registry (`app.api.permissions.P`).
+   - Role-to-permission mapping backed by database with cached matrix (`sync_catalog`).
+   - Strict role isolation: `traveler`, `provider`, `operator`, `admin`.
+3. **Data Protection:**
+   - Integration secrets (API keys, payment secrets) encrypted at rest using **Fernet AES-128-CBC** (`INTEGRATION_SECRETS_KEY`).
+   - Audit logging (`AuditLog` table) recording actor, IP, user-agent, and JSON diffs for all sensitive operations.

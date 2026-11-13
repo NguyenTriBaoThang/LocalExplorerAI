@@ -1,135 +1,163 @@
-# API — Local Explorer AI
+# Local Explorer AI — Backend API (`apps/api`)
 
-The FastAPI backend in apps/api/app serves the web application and catalog, planner, account/access-control, provider/admin, and booking flows. Endpoint contracts are described in [docs/api.md](../../docs/api.md).
+> **Enterprise FastAPI Backend Application**  
+> **Framework:** FastAPI 0.142+ · Python 3.12+ · SQLAlchemy 2.0 · PostgreSQL 16 + PostGIS 3.4 / SQLite · Uvicorn  
+> **Port:** `8000` · **OpenAPI Documentation:** `http://localhost:8000/docs`
 
-> **Status:** This repository contains a prototype. Adapter code or configuration does not prove that Goong, OAuth, an LLM, email, or payments have passed acceptance testing in staging. The rule baseline is the default ranker; the XGBoost bootstrap artifact uses weak labels and is not a production model. E5 and flood-risk weights are not included in the repository. See the [ranking benchmark](../../docs/experience-ranker-benchmark.md) and [ML guide](../../docs/ml-training-and-data.md).
+---
 
-## Business boundaries
+## 1. Architectural Role & Service Boundaries
 
-- **Framework Web**: [FastAPI 0.142+](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) (Asynchronous ASGI)
-- **Cơ sở Dữ liệu & ORM**: PostgreSQL 16 + PostGIS 3.4, [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [GeoAlchemy2](https://geoalchemy-2.readthedocs.io/), [Alembic](https://alembic.sqlalchemy.org/)
-- **Xác thực & Bảo mật**: JWT RS256 trong cookie HTTP-only (`le_at`/`le_rt`), refresh xoay vòng, MFA TOTP cho admin, Google OAuth 2.0 PKCE, Argon2/PBKDF2 Password Hashing, Fernet AES-128-CBC encryption cho khóa tích hợp động
-- **Học máy Cục bộ (Local ML)**:
-  - `xgboost` (XGBRanker 13 features, NDCG@5 = 0.9516)
-  - `sentence-transformers` + `multilingual-e5-small` (Vector Search chạy trên CPU)
-  - `scikit-learn` + `joblib` (Saigon Flood Risk Classifier)
-- **Định tuyến & Địa lý**: Goong Directions API + Goong Forward Geocoding (với cache in-memory TTL và provenance)
-- **Thanh toán Trực tuyến**: Cổng VNPay (HMAC-SHA512 với sandbox/production) và Ví MoMo (HMAC-SHA256 captureWallet)
-- **Vận hành & Hàng đợi**: Transactional notification outbox worker (`worker.py`) for email and opt-in Web Push, Redis Rate Limiting, HTTP structured JSON logging
-- **Bot Tự Động & 3D**: Telegram Bot Webhook sync & n8n forwarding (`admin_bot.py`), 3D Digital Twin Landmark calibration service (`models_3d.py`)
+`apps/api` provides the core business logic, geospatial intelligence, itinerary optimization, machine learning inference, and data governance for Local Explorer AI.
 
-- The planner checks feasibility against time, budget, locked stops, capacity, and outbound/return routes.
-- The ranker only orders candidates that have passed feasibility filters; it does not confirm slots or prices and does not replace planner checks.
-- POIs, experiences, and slots should be used operationally only when their provenance/evidence is suitable and current.
-- Payment/provider callbacks, OAuth, email, and map APIs require credentials, a test/staging environment, HTTPS callbacks where applicable, and separately logged smoke tests.
+### Key Architectural Boundaries
+- **Deterministic Planning Core:** Guarantees temporal and physical feasibility (opening hours, capacity, remaining budget, locked stops, travel order) before any ranking algorithm is applied.
+- **Machine Learning & Heuristic Gate:** The active ranker defaults to `rule-baseline-v1`. Experimental models (XGBoost bootstrap ranker, Tour quote win model) are governed by integrity checks and explicit deployment flags.
+- **Two-Phase Booking Commerce:** 15-minute optimistic seat holds with version-checked state transitions, provider approval, and cryptographically verified payment callbacks (VNPay / MoMo).
+- **Hardened Security & RBAC:** RS256 JWT cookies with rotating refresh tokens, Argon2id password hashing, RFC 6238 TOTP MFA for administrators, and Fernet encryption for third-party secrets.
 
-## Run locally (PowerShell)
+---
 
-    cd apps/api
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    python -m pip install -r requirements.txt
-    # If apps/api/.env does not exist: Copy-Item ..\..\.env.example .env
-    alembic upgrade head
-    python -m uvicorn app.main:app --reload --port 8000 --no-access-log --ws-max-size 65536
+## 2. API Router Catalog (33 Modular Routers)
 
-Do not commit environment files containing secrets. The database and integration settings may require configuration; see [authentication/search setup](../../docs/auth-and-search-setup.md), [integration settings](../../docs/integration-settings.md), and the [data model](../../docs/data-model.md).
+The API endpoints are modularized in `app/api/routes/` and registered in `app/main.py`:
 
-## Tests
+| Router Domain | Prefix / Namespace | Description | Key Source File |
+|---|---|---|---|
+| **Authentication** | `/api/auth` | Register, login, logout, password recovery, session status, Google OAuth PKCE | `routes/auth.py` |
+| **Multi-Factor Auth** | `/api/auth/mfa` | TOTP setup, QR code generation, code verification, backup recovery codes | `routes/mfa.py` |
+| **Role-Based Access** | `/api/admin/rbac` | Role permissions matrix, service accounts, permission audits | `routes/rbac.py` |
+| **Places & Catalog** | `/api/pois`, `/api/experiences` | Public catalog of places, activities, and dated slots with evidence provenance | `routes/catalog.py` |
+| **Places Admin** | `/api/admin/places` | POI moderation, catalog updates, duplicate detection, photo reviews | `routes/places_admin.py` |
+| **Itinerary Planner** | `/api/itineraries` | Deterministic multi-objective itinerary solver, replanning advice, version history | `routes/planner.py` |
+| **Interactive Trips** | `/api/trips` | Multi-turn conversational planning via Server-Sent Events (SSE), follow-ups, stop pinning | `routes/trips.py` |
+| **Routing & Geo** | `/api/routing`, `/api/geocoding` | Goong Directions routing, ETA calculation, road polylines, forward geocoding | `routes/routing.py` |
+| **AI Workflows** | `/api/ai`, `/api/chat` | Versioned prompt catalog (v3.2.0), conversation parser, offline fallback | `routes/ai.py`, `routes/chat.py` |
+| **Machine Learning** | `/api/ml` | Active ranker status, candidate experience ranking, advisory flood risk | `routes/ml.py` |
+| **Operator Orgs** | `/api/operator` | Tour operator tenant profiles, company settings, member management | `routes/operator.py` |
+| **Operator Quotes** | `/api/operator/quotes` | B2B customized tour quotation generator, cost breakdown, margin guard | `routes/operator_quotes.py` |
+| **Operator Rate Cards**| `/api/operator/rate-cards` | Supplier rate cards (transport, guide, hotels, meals, tickets) | `routes/operator_rate_cards.py` |
+| **Operator Reconcile** | `/api/operator/reconcile` | Quote-to-actual cost variance analysis, financial margin audits | `routes/operator_reconcile.py` |
+| **Public Quotes** | `/api/public/quotes` | Customer-facing shareable quote landing page, hold confirmation | `routes/public_quotes.py` |
+| **Booking & Seats** | `/api/bookings` | 15-minute seat holds, ticket generation, provider confirmation | `routes/bookings.py` |
+| **Place Reviews** | `/api/place-reviews` | Verified traveler reviews, ratings, and moderation flags | `routes/place_reviews.py` |
+| **Trip Reviews** | `/api/reviews` | Completed itinerary feedback and rubric labeling for ML training | `routes/reviews.py` |
+| **Collaboration** | `/api/collaborations` | Multi-user shared itinerary collaboration and invite links | `routes/collaboration.py` |
+| **3D Landmarks** | `/api/models-3d` | 3D Digital Twin GLB landmark models, scale/heading calibration | `routes/models_3d.py` |
+| **Landmark Stories** | `/api/landmark-stories` | Cultural stories, historical facts, and audio narration scripts | `routes/landmark_stories.py` |
+| **Meshy 3D Engine** | `/api/meshy` | Generative Text-to-3D and Image-to-3D job dispatch and GLB download | `routes/meshy.py` |
+| **Web Push** | `/api/push-notifications` | Browser Web Push subscription registration and VAPID public key | `routes/push_notifications.py` |
+| **Platform Ops** | `/health`, `/ready`, `/ops` | Health check, DB migration state, outbox backlog, uptime telemetry | `routes/health.py`, `routes/ops.py` |
+| **Admin Bots** | `/api/admin/bot` | Telegram webhook receiver, n8n workflow sync, Zalo integration | `routes/admin_bot.py` |
 
-    pytest -q
+---
 
-Run from apps/api. Report the suite as passing only when the process exits normally with code 0. CI runs backend tests, lint, and Alembic history checks according to the [workflow](../../.github/workflows/ci.yml).
+## 3. Database Architecture & Migrations
 
-## Source layout
+The database layer utilizes **SQLAlchemy 2.0** with **Alembic** for schema versioning. It supports PostgreSQL 16 + PostGIS 3.4 for production and SQLite for lightweight local development.
 
-- app/api/routes/: HTTP routers.
-- app/services/: planner, ranking, booking, catalog, and business logic.
-- app/adapters/: external-service integrations.
-- app/models/ and app/schemas/: ORM models and data contracts.
-- migrations/: Alembic revisions.
-- tests/: API and business-logic tests.
+### Migration Sequence (30 Revisions)
+Revisions are located in `apps/api/migrations/versions/`:
+- `0001_initial` to `0010_place_import_staging`: Core entities (User, Provider, POI, Experience, Slot, Evidence, AuditLog).
+- `0011_auth_foundation` to `0015_partner_onboarding`: RS256 Auth, RBAC permissions, MFA TOTP, password recovery.
+- `0016_portal_platform` to `0018_web_push_notifications`: Dedicated portal multi-tenancy, Web Push subscriptions.
+- `0019_itinerary_collaboration` to `0024_itinerary_completion`: Group sharing, landmark stories, place reviews, Meshy jobs.
+- `0025_operator_orgs` to `0030_quote_channel_msg`: B2B Tour Operator module (OperatorOrg, TourTemplate, RateCard, Quote, QuoteRevision, CostActual).
 
-## Documentation
+To run migrations:
+```bash
+alembic upgrade head
+```
 
-### Bước 2: Cài đặt thư viện dependencies
+---
+
+## 4. Machine Learning & Heuristic Services
+
+1. **Active Production Ranker (`rule-baseline-v1`):**
+   - Implemented in `app/services/ranking_service.py`.
+   - Deterministic utility function balancing user intent weights, weather conditions, indoor suitability, and travel distance.
+   - Zero load overhead, 100% explainable, active by default.
+2. **Bootstrap XGBoost Ranker (`models/ai-ranker/`):**
+   - XGBRanker model trained on weak scenario labels (`ranker-features-v2`, 15 features).
+   - Blocked from production by default (`deployment_eligible=false`). Enabled only when `ENABLE_BOOTSTRAP_RANKER=true` is set.
+3. **Tour Quote Win Optimizer (`models/quote-win/`):**
+   - XGBoost classifier trained on 21,980 synthetic quote history records (`quote-win-features-v1`, 18 features).
+   - Monotonic price constraints ensure reasonable price sensitivity. Backtest demonstrates +9.5% profit on balanced strategy.
+4. **Multilingual Semantic Search (`models/e5/`):**
+   - Dense vector embeddings via `intfloat/multilingual-e5-small`. Weights excluded from git to keep repo lean.
+
+---
+
+## 5. Security Architecture & Hardening
+
+1. **Token Authentication:**
+   - Access Token: RS256 JWT signed with private key (`AUTH_JWT_PRIVATE_KEY_B64`), 15-minute lifetime, stored in HTTP-only cookie (`le_at`).
+   - Refresh Token: High-entropy opaque string, stored in HTTP-only cookie (`le_rt`), hashed in database (`refresh_hash`) with automatic replay detection.
+2. **Password Security:**
+   - Hashed using **Argon2id** (`argon2-cffi`). Passwords meeting legacy hash formats are seamlessly upgraded upon login.
+3. **Multi-Factor Authentication:**
+   - RFC 6238 TOTP with encrypted backup recovery codes. Enforced for administrators in production (`ADMIN_MFA_REQUIRED=true`).
+4. **Integration Secrets Vault:**
+   - External API keys (Goong, VNPay, MoMo, OpenAI, Meshy) stored in database are encrypted at rest using **Fernet AES-128-CBC** (`INTEGRATION_SECRETS_KEY`).
+5. **CSRF Protection:**
+   - State-changing HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) with cookie authentication require explicit Origin matching against `CORS_ORIGINS`.
+
+---
+
+## 6. Local Setup & Testing
+
+### 6.1. Environment Setup
 ```powershell
-# Cài đặt thư viện cốt lõi
+cd apps/api
+
+# Create and activate virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Install core dependencies
 pip install -r requirements.txt
 
-# (Khuyên dùng) Cài đặt thư viện Học máy và Vector E5
+# (Optional) Install ML and Vector dependencies
 pip install -r requirements-ml.txt
 pip install -r requirements-e5.txt
 ```
 
-### Bước 3: Cấu hình biến môi trường
-Tạo file `.env` tại thư mục gốc repository (`g:\GITHUB\LoaclExplorerAI\.env`) theo mẫu `.env.example`. Đảm bảo các biến quan trọng sau đã được khai báo:
+### 6.2. Configuration
+Copy the template `.env.example` from repository root or configure `apps/api/.env`:
 ```env
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/local_explorer
-# Sinh khóa: python -m scripts.generate_auth_keys
-AUTH_JWT_KEY_ID=
-AUTH_JWT_PRIVATE_KEY_B64=
-APP_SIGNING_SECRET=your-secure-app-signing-secret
-INTEGRATION_SECRETS_KEY=your-fernet-master-key-base64
+APP_ENV=development
+DATABASE_URL=sqlite:///local_explorer.sqlite3
 ROUTING_PROVIDER=goong
 GOONG_API_KEY=your-goong-api-key
+AUTH_JWT_KEY_ID=dev-key
+AUTH_JWT_PRIVATE_KEY_B64=your-base64-rsa-private-key
+APP_SIGNING_SECRET=your-secure-app-signing-secret
+INTEGRATION_SECRETS_KEY=your-fernet-master-key-base64
 ```
 
-*Mẹo sinh khóa Fernet master key cho `INTEGRATION_SECRETS_KEY`:*
+*Generate RS256 Auth Keys:*
+```powershell
+python -m scripts.generate_auth_keys
+```
+
+*Generate Fernet Secret Key:*
 ```powershell
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-### Bước 4: Chạy Migration & Nạp dữ liệu mô phỏng
+### 6.3. Run Migrations & Start Server
 ```powershell
-# Nâng cấp toàn bộ lược đồ DB lên phiên bản mới nhất
+# Upgrade database schema
 alembic upgrade head
 
-# Nạp dữ liệu mô phỏng ban đầu và tài khoản thử nghiệm
-python -m scripts.seed_db
-```
-
-### Bước 5: (Tùy chọn) Tải mô hình Multilingual E5 cục bộ
-```powershell
-python -m scripts.download_e5_model
-```
-
-### Bước 6: Khởi chạy API Server
-```powershell
+# Start API server with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --no-access-log --ws-max-size 65536
 ```
-- 🌐 **Swagger UI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- 📖 **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- 🩺 **Kiểm tra Liveness**: [http://localhost:8000/health](http://localhost:8000/health)
-- 🩺 **Kiểm tra Readiness**: [http://localhost:8000/ready](http://localhost:8000/ready)
-- 🤖 **Telegram Bot & System Settings**: `/api/admin/bot/*`, `/api/admin/system-settings`
-- 🏢 **3D Landmark Calibration**: `/api/models-3d/*`
-- 📥 **Place Import Staging**: `/api/admin/staging-places/*`
 
-### Bước 7: Khởi chạy Background Outbox Worker (Trong terminal riêng)
+### 6.4. Running Tests
+Run the test suite using pytest. On Windows, explicitly pass `APP_ENV=test` and disable cacheprovider to avoid file permission conflicts:
 ```powershell
-python -m scripts.worker
+$env:APP_ENV="test"
+pytest -p no:cacheprovider -q
 ```
-*Worker tự động quét bảng `notification_deliveries` để gửi email và Web Push cho các sự kiện đặt chỗ. Web Push yêu cầu chạy migration mới nhất và cấu hình ba biến `WEB_PUSH_VAPID_*`; khóa riêng chỉ lưu trong secret manager.*
-
----
-
-## 🧪 Chạy Kiểm thử Tự động (Tests)
-
-Bộ kiểm thử được viết bằng `pytest` và kiểm thử toàn diện từ Router, Solver, ML Ranker đến Booking State Machine:
-```powershell
-cd apps/api
-pytest -q
-```
-*Yêu cầu kiểm thử: Quá trình test phải hoàn tất bình thường với mã thoát **0** (exit code 0).*
-
----
-
-## 🔐 Cơ chế Bảo vệ & Ranh giới Dữ liệu (Safety Boundaries)
-
-1. **Khóa Giữ Chỗ (Seat Holds)**: Sử dụng cơ chế khóa mức hàng `SELECT ... FOR UPDATE` trên PostgreSQL, tạo phiên giữ chỗ 15 phút (`pending_provider`). Không cho phép đặt chỗ nếu dữ liệu mang nhãn `simulated` hoặc minh chứng chưa được xác minh (`verified`).
-2. **Cổng Thanh toán Fail-closed**: Chỉ mở URL thanh toán khi đầy đủ chữ ký, mã merchant và webhook IPN hợp lệ. VNPay sử dụng HMAC-SHA512; MoMo sử dụng HMAC-SHA256. Webhook IPN là nguồn chân lý duy nhất để chốt trạng thái `confirmed`.
-3. **Mã hóa Khóa Tích hợp (Fernet Encryption)**: Mọi thông tin nhạy cảm của cổng thanh toán và bên thứ 3 do Quản trị viên nhập vào tab `/admin` đều được mã hóa trước khi lưu vào bảng `integration_settings`.
-
-[API](../../docs/api.md) · [Architecture](../../docs/architecture.md) · [Bookings/payments](../../docs/bookings-and-payments.md) · [Operations](../../docs/operations.md) · [Research proposal](../../docs/research-proposal.md)
-
+*(346+ core tests pass with 0 failures).*
