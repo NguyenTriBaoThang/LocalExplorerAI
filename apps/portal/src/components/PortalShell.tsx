@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Menu, X, type LucideIcon } from 'lucide-react'
 import { BrandLogo } from './Brand'
+import { PortalLanguageSwitcher } from '../lib/portalLocale'
 import { UserMenu } from './UserMenu'
 import { cx } from './ui'
 
@@ -59,6 +60,7 @@ export function PortalShell({ area, nav, sidebarFooter, banner }: { area: string
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6 lg:px-8">
           <button type="button" aria-label="Mở menu" onClick={() => setMobileOpen(true)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"><Menu className="h-5 w-5" /></button>
           <div className="flex-1" />
+          <PortalLanguageSwitcher />
           <UserMenu />
         </header>
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{banner && <div className="mb-6">{banner}</div>}<Outlet /></main>

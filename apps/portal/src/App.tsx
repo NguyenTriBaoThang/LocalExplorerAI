@@ -1,6 +1,7 @@
 import { AdminMeshyPage } from './pages/admin/AdminMeshyPage'
 import { useEffect } from 'react'
 import { webOrigin } from './lib/webOrigin'
+import { usePortalLocaleBridge } from './lib/portalLocale'
 import { AdminLandmarkStoriesPage } from './pages/admin/AdminLandmarkStoriesPage'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
@@ -63,6 +64,7 @@ function MapPreviewRedirect() {
 }
 
 export function App() {
+  usePortalLocaleBridge()
   return (
     <BrowserRouter>
       <ToastProvider>

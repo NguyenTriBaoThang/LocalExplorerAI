@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { ApplicationForm, cleanApplication, EMPTY_APPLICATION } from '../components/ApplicationForm'
 import { BrandLogo } from '../components/Brand'
 import { UserMenu } from '../components/UserMenu'
+import { PortalLanguageSwitcher } from '../lib/portalLocale'
 import { Alert, Button, cx, Modal, useToast } from '../components/ui'
 import { authApi, errorMessage } from '../lib/api'
 import type { Role } from '../lib/types'
@@ -82,7 +83,7 @@ export function HomePage() {
       <header className="relative z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
           <BrandLogo />
-          <UserMenu />
+          <div className="flex items-center gap-3"><PortalLanguageSwitcher /><UserMenu /></div>
         </div>
       </header>
 
