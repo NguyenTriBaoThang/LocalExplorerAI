@@ -28,15 +28,16 @@ export function createLandmarkLayer(id: string, calibrations: ModelCalibration[]
             .scale(new THREE.Vector3(scale, -scale, scale))
             .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
             .multiply(new THREE.Matrix4().makeRotationY(-cal.heading * Math.PI / 180))
-            .multiply(new THREE.Matrix4().makeRotationX(cal.pitch * Math.PI / 180))
-            .multiply(new THREE.Matrix4().makeRotationZ(cal.roll * Math.PI / 180))
           models.push({ scene, transform, dispose: model.dispose }); map.triggerRepaint()
         }).catch(() => console.warn('Không tải được landmark', cal.model_name))
       }
     },
     render(_gl: WebGLRenderingContext, matrix: number[]) {
       for (const model of models) {
-        camera.projectionMatrix.fromArray(matrix).multiply(model.transform)
+        // Use the same Goong custom-layer matrix as Map3DLandmarkViewer so
+        // saved latitude/longitude calibrations land at the same screen point.
+        const mapMatrix = map.transform?.customLayerMatrix?.() ?? matrix
+        camera.projectionMatrix.fromArray(mapMatrix).multiply(model.transform)
         camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()
         renderer.resetState(); renderer.render(model.scene, camera)
       }

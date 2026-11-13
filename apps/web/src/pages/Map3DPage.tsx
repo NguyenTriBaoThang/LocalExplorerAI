@@ -157,9 +157,9 @@ export function Map3DPage() {
 
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">
-        {selectedLandmark === 'gyeongbokgung' && !walkOpen && (
+        {['gyeongbokgung', 'nhathoducba'].includes(selectedLandmark) && !walkOpen && (
           <button type="button" onClick={() => setWalkOpen(true)} className="absolute right-4 top-4 z-30 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg hover:bg-emerald-400">
-            Đi bộ trong cung điện
+            {selectedLandmark === 'gyeongbokgung' ? 'Đi bộ trong cung điện' : 'Đi bộ bên trong nhà thờ'}
           </button>
         )}
         <Map3DLandmarkViewer
@@ -168,7 +168,12 @@ export function Map3DPage() {
           className="w-full h-full min-h-[calc(100vh-140px)]"
         />
         <Map3DGuidePanel landmark={selectedCalibration} modelId={selectedLandmark} />
-        {walkOpen && <Walkthrough3D url={selectedCalibration.file_url} title={selectedCalibration.display_name} onClose={() => setWalkOpen(false)} />}
+        {walkOpen && <Walkthrough3D
+          url={selectedLandmark === 'nhathoducba' ? '/models_3d/ducba_interior.glb' : selectedCalibration.file_url}
+          title={selectedLandmark === 'nhathoducba' ? 'Bên trong Nhà thờ Đức Bà' : selectedCalibration.display_name}
+          startInside={selectedLandmark === 'nhathoducba'}
+          onClose={() => setWalkOpen(false)}
+        />}
       </div>
     </div>
   )

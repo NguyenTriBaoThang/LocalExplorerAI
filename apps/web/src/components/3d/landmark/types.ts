@@ -18,7 +18,8 @@ export interface ModelCalibration {
 }
 
 /** Official POI coordinate of Nhà thờ Đức Bà — the scene origin. */
-export const NOTRE_DAME_ORIGIN: GeoPoint = { lat: 10.779785, lng: 106.699018 }
+// Keep the offline fallback aligned with the calibration served by /map-3d.
+export const NOTRE_DAME_ORIGIN: GeoPoint = { lat: 10.779740, lng: 106.699040 }
 
 export const DEFAULT_CALIBRATION: ModelCalibration = {
   model_name: 'nhathoducba',
@@ -27,10 +28,10 @@ export const DEFAULT_CALIBRATION: ModelCalibration = {
   latitude: NOTRE_DAME_ORIGIN.lat,
   longitude: NOTRE_DAME_ORIGIN.lng,
   altitude: 0,
-  heading: 0,
+  heading: 312.5,
   pitch: 0,
   roll: 0,
-  scale: 58,
+  scale: 77.5,
   description: 'Vương cung thánh đường Chính tòa Đức Mẹ Vô nhiễm Nguyên tội tại Công xã Paris, Quận 1.',
 }
 
