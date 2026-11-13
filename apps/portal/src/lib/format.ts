@@ -1,11 +1,25 @@
-const dateTime = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' })
-const dateOnly = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' })
-const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
-const relative = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' })
+type Locale = 'vi' | 'en'
+const activeLocale = (): Locale => typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'vi'
+const dateTime = {
+  vi: new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }),
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+}
+const dateOnly = {
+  vi: new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }),
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }),
+}
+const money = {
+  vi: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }),
+  en: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }),
+}
+const relative = {
+  vi: new Intl.RelativeTimeFormat('vi', { numeric: 'auto' }),
+  en: new Intl.RelativeTimeFormat('en', { numeric: 'auto' }),
+}
 
-export const formatDateTime = (value: string | null | undefined) => (value ? dateTime.format(new Date(value)) : '—')
-export const formatDate = (value: string | null | undefined) => (value ? dateOnly.format(new Date(value)) : '—')
-export const formatMoney = (value: number) => money.format(value)
+export const formatDateTime = (value: string | null | undefined) => (value ? dateTime[activeLocale()].format(new Date(value)) : '—')
+export const formatDate = (value: string | null | undefined) => (value ? dateOnly[activeLocale()].format(new Date(value)) : '—')
+export const formatMoney = (value: number) => money[activeLocale()].format(value)
 
 export function timeAgo(value: string | null | undefined): string {
   if (!value) return '—'
@@ -13,10 +27,10 @@ export function timeAgo(value: string | null | undefined): string {
   const steps: Array<[number, Intl.RelativeTimeFormatUnit]> = [[60, 'second'], [60, 'minute'], [24, 'hour'], [30, 'day'], [12, 'month']]
   let amount = seconds
   for (const [size, unit] of steps) {
-    if (Math.abs(amount) < size) return relative.format(Math.round(amount), unit)
+    if (Math.abs(amount) < size) return relative[activeLocale()].format(Math.round(amount), unit)
     amount /= size
   }
-  return relative.format(Math.round(amount), 'year')
+  return relative[activeLocale()].format(Math.round(amount), 'year')
 }
 
 export function initials(name: string): string {

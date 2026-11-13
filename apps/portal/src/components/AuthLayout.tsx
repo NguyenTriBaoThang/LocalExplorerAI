@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CalendarClock, MapPinned, ShieldCheck } from 'lucide-react'
 import { BrandLogo } from './Brand'
+import { PortalLanguageSwitcher } from '../lib/portalLocale'
 
 const HIGHLIGHTS = [
   { icon: CalendarClock, title: 'Slot theo thời gian thực', text: 'Mở ca, cập nhật số chỗ và nhận yêu cầu đặt chỗ ngay khi khách lên lịch trình.' },
@@ -38,7 +39,8 @@ export function AuthLayout({ title, subtitle, children, wide }: { title: string;
           <p className="absolute bottom-4 left-12 rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600 backdrop-blur">© {new Date().getFullYear()} Local Explorer AI · TP. Hồ Chí Minh</p>
         </div>
       </section>
-      <section className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <section className="relative flex items-center justify-center px-4 py-10 sm:px-8">
+        <div className="absolute right-4 top-4 sm:right-8"><PortalLanguageSwitcher /></div>
         <div className={wide ? 'w-full max-w-xl' : 'w-full max-w-sm'}>
           <div className="mb-8 lg:hidden"><BrandLogo /></div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">{title}</h1>
