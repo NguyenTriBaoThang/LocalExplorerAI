@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Map3DLandmarkViewer } from '../components/3d/Map3DLandmarkViewer'
 import { Map3DGuidePanel } from '../components/3d/Map3DGuidePanel'
+import { Walkthrough3D } from '../components/3d/Walkthrough3D'
 import {
   Compass,
   ArrowLeft,
@@ -24,6 +25,7 @@ export function Map3DPage() {
   }, [previewJobId])
   const [selectedLandmark, setSelectedLandmark] = useTripField('modelId')
   const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
+  const [walkOpen, setWalkOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -106,7 +108,7 @@ export function Map3DPage() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setSelectedLandmark(id)}
+                onClick={() => { setWalkOpen(false); setSelectedLandmark(id) }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   isSelected
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20'
@@ -142,12 +144,18 @@ export function Map3DPage() {
 
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">
+        {selectedLandmark === 'gyeongbokgung' && !walkOpen && (
+          <button type="button" onClick={() => setWalkOpen(true)} className="absolute right-4 top-4 z-30 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg hover:bg-emerald-400">
+            Đi bộ trong cung điện
+          </button>
+        )}
         <Map3DLandmarkViewer
           modelId={selectedLandmark}
           defaultCalibration={selectedCalibration}
           className="w-full h-full min-h-[calc(100vh-140px)]"
         />
         <Map3DGuidePanel landmark={selectedCalibration} modelId={selectedLandmark} />
+        {walkOpen && <Walkthrough3D url={selectedCalibration.file_url} title={selectedCalibration.display_name} onClose={() => setWalkOpen(false)} />}
       </div>
     </div>
   )
