@@ -126,6 +126,19 @@ export const DEFAULT_CALIBRATIONS: Record<string, ModelCalibration> = {
   },
   hoian: HOI_AN_CALIBRATION,
   vungtauchrist: VUNG_TAU_CHRIST_CALIBRATION,
+  gyeongbokgung: {
+    model_name: 'gyeongbokgung',
+    display_name: 'Cung Gyeongbokgung · Seoul',
+    file_url: '/models_3d/gyeongbokgung_palace.glb',
+    latitude: 37.5796,
+    longitude: 126.9770,
+    altitude: 0,
+    heading: 0,
+    pitch: 0,
+    roll: 0,
+    scale: 80,
+    description: 'Mô hình tham quan Cung Gyeongbokgung tại Seoul, Hàn Quốc.',
+  },
 }
 
 export function getDefaultCalibration(modelId: string): ModelCalibration {

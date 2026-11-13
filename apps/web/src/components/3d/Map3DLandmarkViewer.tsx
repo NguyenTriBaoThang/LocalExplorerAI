@@ -33,6 +33,7 @@ import { installMissingStyleImageFallback } from '../map/missingStyleImages'
 
 export type { ModelCalibration } from './landmark/types'
 import { GOONG_MAPTILES_KEY } from '../map/goongConfig'
+import { restorePalaceTexture } from './landmark/palaceMaterial'
 
 const GOONG_STYLES = {
   streets: 'https://tiles.goong.io/assets/goong_map_web.json',
@@ -444,6 +445,7 @@ export function Map3DLandmarkViewer({
       (gltf) => {
         if (cancelled) return
         const raw = gltf.scene
+        if (modelId === 'gyeongbokgung') restorePalaceTexture(raw)
 
         raw.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
