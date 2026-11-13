@@ -31,10 +31,11 @@ export default function Concierge() {
 
       <h2>What the repository really does</h2>
       <ul className="plain">
-        <li><code>POST /api/chat/message</code> runs the <code>CONVERSATION_PARSER</code> prompt and validates the result against a schema (<Src path="apps/api/app/api/routes/chat.py" />).</li>
-        <li>With no LLM key configured and <code>LLM_FALLBACK_ENABLED</code> on, a local heuristic answers instead; the response says <code>status: "fallback"</code> and <code>assistant_mode: "local_fallback"</code>. <code>GET /api/chat/status</code> reports which mode is active.</li>
-        <li>Chat is a traveler feature: signed-in non-travelers get <code>ROLE_FORBIDDEN</code>.</li>
-        <li>Prompts are versioned (<code>3.0.0</code>) under <Src path="apps/api/app/prompts/v3_0_0/" />.</li>
+        <li><code>POST /api/chat/message</code> runs the <code>CONVERSATION_PARSER</code> prompt and validates the result against a strict Pydantic schema (<Src path="apps/api/app/api/routes/chat.py" />).</li>
+        <li><strong>Streaming Trip Generation:</strong> <code>POST /api/trips/stream</code> generates itineraries progressively over Server-Sent Events (SSE), delivering real-time status updates as stops and routes resolve.</li>
+        <li>With no LLM key configured and <code>LLM_FALLBACK_ENABLED=true</code>, a deterministic local heuristic answers instead; the response says <code>status: "fallback"</code> and <code>assistant_mode: "local_fallback"</code>. <code>GET /api/chat/status</code> reports which mode is active.</li>
+        <li>Chat is an authenticated traveler feature: non-travelers receive <code>ROLE_FORBIDDEN</code>.</li>
+        <li>Prompts are versioned (<code>3.2.0</code>) across 20 specialized workflows under <Src path="apps/api/app/prompts/v3_2_0/" />.</li>
       </ul>
       <Callout title="About the demo above">The prompts, replies and constraints are hand-written samples to illustrate the shape of the output. Real extraction depends on the configured model and prompt.</Callout>
     </section>

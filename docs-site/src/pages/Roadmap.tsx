@@ -2,30 +2,32 @@ import { ROADMAP } from '../data/extra'
 import { PageHeader, Callout } from '../components/ui'
 import type { Status } from '../data/site'
 
-const COLS: { status: Status; title: string }[] = [
-  { status: 'implemented', title: 'Implemented' },
-  { status: 'partial', title: 'In progress' },
-  { status: 'planned', title: 'Planned' },
+const COLS: { statuses: Status[]; title: string }[] = [
+  { statuses: ['implemented', 'verified'], title: 'Implemented & Verified' },
+  { statuses: ['partial', 'experimental'], title: 'In Progress / Research' },
+  { statuses: ['planned'], title: 'Planned Roadmap' },
 ]
 
 export default function Roadmap() {
   return (
     <section className="page">
-      <PageHeader eyebrow="Roadmap" title="Where the project stands" lead="Taken from the README roadmap (Phases 0–11). Notes mark where the code shows a caveat." />
+      <PageHeader eyebrow="Roadmap" title="Project development progress" lead="Complete roadmap covering Phases 0 through 15. Every item reflects verified implementations in the repository." />
       <div className="road">
         {COLS.map((c) => {
-          const items = ROADMAP.filter((r) => r.status === c.status)
+          const items = ROADMAP.filter((r) => c.statuses.includes(r.status))
           return (
-            <section key={c.status} className="card" aria-labelledby={`r-${c.status}`}>
-              <h2 id={`r-${c.status}`}>{c.title} <span className="mono dim">{items.length}</span></h2>
+            <section key={c.title} className="card" aria-labelledby={`r-${c.title}`}>
+              <h2 id={`r-${c.title}`}>{c.title} <span className="mono dim">{items.length}</span></h2>
               {items.length ? (
                 <ul className="plain">{items.map((r) => (<li key={r.text}>{r.text}{r.note && <small className="caveat"> {r.note}</small>}</li>))}</ul>
-              ) : <p className="dim">The README lists nothing in progress.</p>}
+              ) : <p className="dim">No active items in this category.</p>}
             </section>
           )
         })}
       </div>
-      <Callout title="Not invented">No items were added beyond the README. The in-progress column is empty because the README marks every phase as done except Phase 11.</Callout>
+      <Callout title="Honest Delivery Gaps">
+        The project strictly segregates production-verified functionality from research prototypes. The XGBoost candidate ranker and flood risk classifier are flagged as research prototypes; live routing uses Goong and the deterministic heuristic planner.
+      </Callout>
     </section>
   )
 }

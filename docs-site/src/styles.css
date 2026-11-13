@@ -70,6 +70,8 @@ kbd { font-family: var(--mono); font-size: .7rem; color: var(--muted); border: 1
 .src { display: inline-block; font-size: .75rem; color: var(--muted); }
 .badge { font-family: var(--mono); font-size: .68rem; padding: 2px 8px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
 .badge-implemented { color: var(--green); border-color: #1c5d49; } .badge-partial { color: var(--amber); border-color: #6b5316; } .badge-planned { color: var(--blue); border-color: #254a94; }
+.badge-verified { color: var(--cyan); border-color: #0e7490; background: rgba(34, 211, 238, 0.08); }
+.badge-experimental { color: var(--amber); border-color: #b45309; background: rgba(245, 158, 11, 0.08); }
 .callout { border: 1px solid var(--line); border-left: 3px solid var(--cyan); background: var(--panel); padding: 12px 16px; margin: 1.2rem 0; border-radius: 0 6px 6px 0; font-size: .94rem; }
 .callout-warn { border-left-color: var(--amber); } .callout strong { display: block; margin-bottom: 4px; }
 .demo-label { display: inline-flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--green); border: 1px solid #1c5d49; border-radius: 99px; padding: 3px 12px; margin-bottom: 14px; }
