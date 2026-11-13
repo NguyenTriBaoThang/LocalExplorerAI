@@ -7,6 +7,9 @@ import './design-system.css'
 import { router } from './router'
 import { AuthProvider, useAuth } from './auth'
 import { JourneyProvider } from './journey'
+import { initLocale } from './i18n'
+
+initLocale()
 
 function JourneyApp() {
   const { user, loading } = useAuth()

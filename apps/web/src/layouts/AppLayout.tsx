@@ -96,7 +96,7 @@ export function AppLayout() {
   return (
     <div className="app-frame-3d">
       {!isOnline && <div role="status" aria-live="polite" style={{ position: 'sticky', top: 0, zIndex: 2000, padding: '8px 16px', textAlign: 'center', background: '#fff4d6', color: '#654a00', fontSize: 13 }}>
-        Đang ngoại tuyến. Nội dung đã lưu có thể cũ; lịch trống và đặt chỗ cần kết nối để xác nhận.
+        {t('common.offlineBanner')}
       </div>}
       {/* Floating Glass Navigation Header with Scroll Mask */}
       <div className="header-outer-sticky">
@@ -151,7 +151,7 @@ export function AppLayout() {
                   className="user-profile-trigger"
                   onClick={() => setUserDropdown(!userDropdown)}
                   aria-expanded={userDropdown}
-                  aria-label="Menu tài khoản"
+                  aria-label={t('common.accountMenu')}
                 >
                   <div className="user-avatar-gem">
                     <span>{userInitials}</span>
@@ -274,7 +274,7 @@ export function AppLayout() {
           <div className="mobile-nav-drawer animate-fadeIn">
             <div className="mobile-links-list">
               <div className="mobile-lang-row" style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Ngôn ngữ / Language:</span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>{t('common.langLabel')}:</span>
                 <LanguageSwitcher />
               </div>
 

@@ -151,11 +151,11 @@ export function HomePage() {
             </div>
             <div className="feature-pill">
               <Clock size={14} className="text-emerald" />
-              <span>{locale === 'vi' ? 'Khung giờ Slot thực' : 'Slot-Aware Realtime'}</span>
+              <span>{t('home.slotRealtime')}</span>
             </div>
             <div className="feature-pill">
               <Coins size={14} className="text-cyan" />
-              <span>{locale === 'vi' ? 'Tối ưu hóa ngân sách' : 'Budget-Optimized'}</span>
+              <span>{t('home.budgetOptimized')}</span>
             </div>
           </div>
         </div>
@@ -173,13 +173,11 @@ export function HomePage() {
       <section className="vibe-section-3d">
         <div className="section-header-center">
           <span className="section-eyebrow">
-            {locale === 'vi' ? 'CHỌN THEO NHỊP ĐI' : 'CURATED VIBES'}
+            {t('home.curatedVibesEyebrow')}
           </span>
           <h2 className="section-title-3d">{t('home.categoriesTitle')}</h2>
           <p className="section-subtitle-3d">
-            {locale === 'vi'
-              ? 'Khám phá các hoạt động đặc trưng theo phong cách và sở thích riêng của bạn tại Sài Gòn.'
-              : 'Discover signature local activities curated by style and tempo across Ho Chi Minh City.'}
+            {t('home.curatedVibesSub')}
           </p>
         </div>
 
@@ -193,7 +191,7 @@ export function HomePage() {
                 <h3 className="vibe-title">{cat.name}</h3>
                 <p className="vibe-desc">{cat.desc}</p>
                 <div className="vibe-action">
-                  <span>{locale === 'vi' ? 'Khám phá ngay' : 'Explore now'}</span>
+                  <span>{t('home.exploreNow')}</span>
                   <ArrowRight size={15} />
                 </div>
               </TiltCard3D>
@@ -207,7 +205,7 @@ export function HomePage() {
         <div className="section-header-split">
           <div>
             <span className="section-eyebrow">
-              {locale === 'vi' ? 'GỢI Ý ĐẶC SẮC' : 'FEATURED PICKS'}
+              {t('home.featuredPicksEyebrow')}
             </span>
             <h2 className="section-title-3d">{t('home.curatedTitle')}</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13.5px', marginTop: '4px' }}>
@@ -216,11 +214,11 @@ export function HomePage() {
           </div>
           <div className="home-showcase-links">
             <Link to="/places" className="view-all-link">
-              <span>{locale === 'vi' ? 'Danh sách địa điểm' : 'Browse places'}</span>
+              <span>{t('home.browsePlaces')}</span>
               <ArrowRight size={16} />
             </Link>
             <Link to="/map-3d" className="view-all-link">
-              <span>{locale === 'vi' ? 'Bản đồ 3D' : '3D map'}</span>
+              <span>{t('home.map3dNav')}</span>
               <ArrowRight size={16} />
             </Link>
             <Link to="/explore" className="view-all-link">
@@ -280,9 +278,7 @@ export function HomePage() {
             </span>
             <h2 className="section-title-3d">{t('home.whyTitle')}</h2>
             <p className="section-subtitle-3d">
-              {locale === 'vi'
-                ? 'Không còn cảnh đến nơi phát hiện workshop đã kín chỗ hay quán nghỉ sớm.'
-                : 'Say goodbye to arriving at closed workshops, sold-out slots, or rushing through rush-hour traffic.'}
+              {t('home.noOvercrowding')}
             </p>
           </div>
 
@@ -310,7 +306,7 @@ export function HomePage() {
         <div className="cta-banner-inner">
           <div className="cta-text-side">
             <span className="section-eyebrow text-emerald-300">
-              {locale === 'vi' ? 'SÀI GÒN ĐANG CHỜ BẠN' : 'SAIGON IS CALLING'}
+              {t('home.saigonCalling')}
             </span>
             <h2 className="cta-heading-3d">
               {t('home.ctaBannerTitle')}
@@ -325,9 +321,7 @@ export function HomePage() {
               <ArrowRight size={20} />
             </Link>
             <span className="cta-guarantee">
-              {locale === 'vi'
-                ? 'Hoàn toàn miễn phí · Dữ liệu mô phỏng minh bạch'
-                : '100% Free · Transparent Feasible Data'}
+              {t('home.freeSimulatedSub')}
             </span>
           </div>
         </div>

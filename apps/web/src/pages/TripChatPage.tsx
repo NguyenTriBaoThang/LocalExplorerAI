@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ApiError, applyGroupReview, applyProposal, cancelGroupReview, clarifyAfter, confirmAfter, getMessages, getTrip,
   listTrips, optionPlaces, reportDisruption, restoreVersion, searchLine, setPin, streamGroupReview, streamPlan,
-  streamReplan, streamTrip, tripLabel, viewingOld, vnd,
+  streamReplan, streamTrip, tripLabel, viewingOld,
   type AgentEvent, type Answers, type Clarify, type ConfirmReplan, type DisruptionReq, type GroupReview, type Itinerary,
   type ItineraryEvent, type Place, type Proposal, type TripSummary,
 } from '../api/trips'
@@ -22,9 +22,11 @@ import { NARROW, setPanel, type Panels } from '../components/trip/layout'
 import { type Selected } from '../components/trip/place'
 import { buildTripPrintModel, type TripPrintModel } from '../components/trip/tripPrint'
 import { useJourney } from '../journey'
+import { useTranslation } from '../i18n'
 
 function TripWorkspace() {
   const { user, setUser } = useAuth()
+  const { t, formatCurrency } = useTranslation()
   const navigate = useNavigate()
   const { syncChatTrip, syncChatItinerary } = useJourney()
   const [chat, setChat] = useState<ChatItem[]>([])
@@ -129,7 +131,7 @@ function TripWorkspace() {
       await stream(handle)
     } catch (err) {
       if (err instanceof Error && err.message === 'unauthorized') { setUser(null) }
-      else add({ role: 'error', text: 'Mất kết nối tới máy chủ. Kiểm tra server đã chạy chưa.' })
+      else add({ role: 'error', text: t('common.serverOffline') })
     } finally {
       setBusy(false)
     }
@@ -142,7 +144,7 @@ function TripWorkspace() {
     } catch (err) {
       if (err instanceof Error && err.message === 'unauthorized') { setUser(null) }
       else if (err instanceof Error && !(err instanceof TypeError)) add({ role: 'error', text: err.message })
-      else add({ role: 'error', text: 'Mất kết nối tới máy chủ. Kiểm tra server đã chạy chưa.' })
+      else add({ role: 'error', text: t('common.serverOffline') })
     } finally {
       setBusy(false)
     }
@@ -170,7 +172,7 @@ function TripWorkspace() {
       if (id === tripId) syncLatestTrip(t)
     } catch (err) {
       if (err instanceof Error && err.message === 'unauthorized') { setUser(null) }
-      else add({ role: 'error', text: err instanceof Error ? err.message : 'Không tải được bản mới nhất.' })
+      else add({ role: 'error', text: err instanceof Error ? err.message : t('itinerary.fetchLatestFailed') })
     } finally {
       setBusy(false)
     }
@@ -203,7 +205,7 @@ function TripWorkspace() {
     if (!ev) return
     setVersions((vs) => [...vs, ev.version]); setLatest(ev.version); setPins(ev.pinned_place_ids)
     showView(ev)
-    add({ role: 'ai', text: `Đã quay lại bản ${version} (thành bản ${ev.version}).` })
+    add({ role: 'ai', text: t('tripChat.revertedTo', { from: version ?? 1, to: ev.version }) })
   }
 
   const pin = async (placeId: number, pinned: boolean) => {
@@ -235,7 +237,7 @@ function TripWorkspace() {
         setGroupReviewStale(false)
         setGroupReviewRetry({
           feedback, sourceVersion,
-          message: `Lịch trình đã có bản mới hơn. Góp ý trên v${sourceVersion} vẫn được giữ lại để bạn tạo preview mới.`,
+          message: t('tripChat.newerVersionWarning', { source: sourceVersion }),
         })
       }
       on(event)
@@ -268,20 +270,20 @@ function TripWorkspace() {
       setChanged(review.changed)
       setVersions((currentVersions) => currentVersions.includes(event.version)
         ? currentVersions : [...currentVersions, event.version])
-      add({ role: 'ai', text: `Đã áp dụng preview góp ý nhóm — lịch trình bản ${event.version}.`, version: event.version })
+      add({ role: 'ai', text: t('tripChat.appliedPreview', { version: event.version }), version: event.version })
       try {
         const refreshed = await getTrip(appliedTripId)
         if (appliedTripId === tripId) syncLatestTrip(refreshed)
       } catch (err) {
         if (err instanceof Error && err.message === 'unauthorized') { setUser(null) }
-        else add({ role: 'error', text: err instanceof Error ? err.message : 'Không đồng bộ được phiên bản mới nhất.' })
+        else add({ role: 'error', text: err instanceof Error ? err.message : t('itinerary.fetchLatestFailed') })
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setGroupReviewStale(true)
         setGroupReviewRetry({
           feedback: review.feedback, sourceVersion: review.source_version,
-          message: `Lịch trình đã có bản mới hơn. Preview nền v${review.base_version} không thể áp dụng; hãy tạo lại từ góp ý này.`,
+          message: t('tripChat.previewConflictWarning', { base: review.base_version }),
         })
         await refreshLatestTrip()
       } else if (err instanceof Error && err.message === 'unauthorized') {
@@ -289,7 +291,7 @@ function TripWorkspace() {
       } else if (err instanceof Error && !(err instanceof TypeError)) {
         add({ role: 'error', text: err.message })
       } else {
-        add({ role: 'error', text: 'Mất kết nối tới máy chủ. Kiểm tra server đã chạy chưa.' })
+        add({ role: 'error', text: t('common.serverOffline') })
       }
     } finally {
       setBusy(false)
@@ -313,7 +315,7 @@ function TripWorkspace() {
     setPlaces(ev.places); setItinerary(ev.itinerary); setVersion(ev.version)
     syncChatItinerary(ev.itinerary, ev.places)
     setLatest(ev.version); setVersions((vs) => [...vs, ev.version])
-    add({ role: 'ai', text: `Đã áp dụng phương án — lịch trình bản ${ev.version}.` })
+    add({ role: 'ai', text: t('tripChat.appliedOption', { version: ev.version }) })
   }
 
   const send = async (message: string) => {
@@ -355,8 +357,8 @@ function TripWorkspace() {
           onPin={tripId != null && version != null && !proposal && !busy && !viewingOld(version, latest) ? pin : undefined} />
         <Rail busy={busy} trips={trips} currentId={tripId} onNewTrip={tripId != null ? newTrip : undefined}
           onOpenTrip={(id) => openTrip(id)} />
-        <FloatingPanel side="left" title={current ? tripLabel(current) : 'Chuyến mới'}
-          subtitle={budget != null ? `Ngân sách ${vnd(budget)}` : 'Trợ lý lập lịch trình'}
+        <FloatingPanel side="left" title={current ? tripLabel(current) : t('tripChat.newTrip')}
+          subtitle={budget != null ? t('tripChat.budget', { amount: formatCurrency(budget) }) : t('tripChat.assistant')}
           open={panels.chat} onToggle={() => openPanel('chat', !panels.chat)}
           badge={panels.chat ? 0 : unread}>
           <ChatPanel key={tripId ?? 'new'} items={chat} busy={busy} onSend={send}
@@ -368,11 +370,11 @@ function TripWorkspace() {
               onSubmit={(a) => answer(clarify.tripId, a)} />}
             {confirm && <ConfirmCard text={confirm.text} busy={busy}
               onYes={() => run((on) => streamReplan(confirm, on))}
-              onNo={() => { setConfirm(null); add({ role: 'ai', text: 'Đã giữ nguyên lịch trình.' }) }} />}
+              onNo={() => { setConfirm(null); add({ role: 'ai', text: t('tripChat.keptOriginal') }) }} />}
           </ChatPanel>
         </FloatingPanel>
         {itinerary && (
-          <FloatingPanel side="right" title="Lịch trình" open={panels.timeline} onToggle={() => openPanel('timeline', !panels.timeline)}>
+          <FloatingPanel side="right" title={t('tripChat.itineraryPanel')} open={panels.timeline} onToggle={() => openPanel('timeline', !panels.timeline)}>
             <Timeline itinerary={itinerary} places={places} budget={budget} busy={busy} changed={changed}
               onDisrupt={tripId != null && version != null ? disrupt : undefined}
               versions={versions} version={version} latest={latest} pins={pins}
@@ -393,8 +395,9 @@ function TripWorkspace() {
 
 export default function TripChatPage() {
   const { user, loading } = useAuth()
-  if (loading) return <p className="page-wrap">Đang kiểm tra phiên đăng nhập…</p>
-  if (!user) return <section className="page-wrap"><h1>Đăng nhập để lập và lưu lịch trình</h1><Link className="btn-primary-3d" to="/login?next=/chat" state={{ from: '/chat' }}>Đăng nhập</Link></section>
-  if (user.role !== 'traveler') return <section className="page-wrap">AI Chat dành cho tài khoản du khách.</section>
+  const { t } = useTranslation()
+  if (loading) return <p className="page-wrap">{t('common.authChecking')}</p>
+  if (!user) return <section className="page-wrap"><h1>{t('tripChat.loginRequired')}</h1><Link className="btn-primary-3d" to="/login?next=/chat" state={{ from: '/chat' }}>{t('auth.loginTitle')}</Link></section>
+  if (user.role !== 'traveler') return <section className="page-wrap">{t('tripChat.travelerOnly')}</section>
   return <TripWorkspace key={user.id} />
 }

@@ -12,15 +12,18 @@ import { useTripField } from '../journey'
 import { api } from '../api/client'
 import { useAuth } from '../auth'
 import { contentApi } from '../api/content'
+import { useTranslation } from '../i18n'
 import type { POI } from '../types'
 import { DEFAULT_CALIBRATIONS, type ModelCalibration } from '../components/3d/landmark/types'
 
 export function Map3DPage() {
   const { user, loading: authLoading } = useAuth()
+  const { t } = useTranslation()
   const [search] = useSearchParams()
   const previewJobId = search.get("meshyPreview") || undefined
   const [draft, setDraft] = useState<ModelCalibration | null>(null)
   const [draftError, setDraftError] = useState("")
+
   useEffect(() => {
     setDraft(null)
     setDraftError('')
@@ -28,9 +31,10 @@ export function Map3DPage() {
     let active = true
     api.get<ModelCalibration>(`/admin/meshy/jobs/${previewJobId}/calibration`)
       .then(r => { if (active) setDraft(r.data) })
-      .catch(() => { if (active) setDraftError('Không thể mở bản nháp. Kiểm tra quyền quản lý mô hình 3D và mã mô hình.') })
+      .catch(() => { if (active) setDraftError(t('map3d.draftError')) })
     return () => { active = false }
-  }, [previewJobId, authLoading, user?.id])
+  }, [previewJobId, authLoading, user?.id, t])
+
   const [selectedLandmark, setSelectedLandmark] = useTripField('modelId')
   const [landmarks, setLandmarks] = useState<Record<string, ModelCalibration>>(DEFAULT_CALIBRATIONS)
   const [walkOpen, setWalkOpen] = useState(false)
@@ -68,14 +72,14 @@ export function Map3DPage() {
   const selectedCalibration = landmarks[selectedLandmark] ?? DEFAULT_CALIBRATIONS.nhathoducba
 
   if (previewJobId) return <div className="p-3">
-    <p className="rounded-lg bg-amber-50 p-3 text-amber-900">Bản nháp riêng tư · Mô hình do AI tạo. Căn vị trí rồi lưu trước khi quay về Portal xuất bản.</p>
-    {authLoading ? <p>Đang kiểm tra phiên đăng nhập…</p> : !user && <section className="rounded-xl bg-white p-6 my-4">
-      <h1 className="text-xl font-bold">Đăng nhập để mở mô hình 3D</h1>
-      <p className="my-3">Website và Portal có phiên đăng nhập riêng. Đăng nhập bằng tài khoản quản trị đã tạo mô hình; bạn sẽ quay lại đúng bản nháp này.</p>
-      <Link className="btn-primary-3d" to="/login" state={{ from: `/map-3d?${search.toString()}` }}>Đăng nhập và mở mô hình</Link>
+    <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('map3d.draftNotice')}</p>
+    {authLoading ? <p>{t('map3d.authChecking')}</p> : !user && <section className="rounded-xl bg-white p-6 my-4">
+      <h1 className="text-xl font-bold">{t('map3d.loginTitle')}</h1>
+      <p className="my-3">{t('map3d.loginDesc')}</p>
+      <Link className="btn-primary-3d" to="/login" state={{ from: `/map-3d?${search.toString()}` }}>{t('map3d.loginButton')}</Link>
     </section>}
     {draftError && <p role="alert">{draftError}</p>}
-    {!authLoading && user && !draft && !draftError && <p>Đang tải bản nháp…</p>}
+    {!authLoading && user && !draft && !draftError && <p>{t('map3d.loadingDraft')}</p>}
     {draft && <Map3DLandmarkViewer key={previewJobId} modelId={draft.model_name} previewJobId={previewJobId} defaultCalibration={draft} className="h-[80vh]" />}
   </div>
 
@@ -88,7 +92,7 @@ export function Map3DPage() {
             to="/explore"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all"
           >
-            <ArrowLeft size={14} /> Quay lại Khám Phá
+            <ArrowLeft size={14} /> {t('map3d.backToExplore')}
           </Link>
 
           <div className="h-4 w-px bg-slate-700 hidden sm:block" />
@@ -99,13 +103,13 @@ export function Map3DPage() {
             </span>
             <div>
               <h1 className="text-sm font-bold text-white flex items-center gap-2">
-                Bản Đồ 3D Di Sản Việt Nam
+                {t('map3d.title')}
                 <span className="whitespace-nowrap text-[10px] bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                   WebGL 3D
                 </span>
               </h1>
               <p className="text-[11px] text-slate-400 hidden md:block">
-                Tương tác 3D với các di sản và công trình biểu tượng tại Sài Gòn và Hội An
+                {t('map3d.subtitle')}
               </p>
             </div>
           </div>
@@ -138,14 +142,14 @@ export function Map3DPage() {
 
       {portalLandmarks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 px-4 sm:px-8 py-2.5 bg-slate-900/60 border-b border-slate-800">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Danh thắng</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t('map3d.landmarks')}</span>
           {portalLandmarks.map((place) => {
             const model = modelFor(place)
             return (
               <span key={place.id} className="inline-flex items-center overflow-hidden rounded-lg border border-slate-700/60 text-xs">
                 <Link to={`/places/${place.id}`} className="px-2.5 py-1 text-slate-200 hover:bg-slate-800">{place.name}</Link>
                 {model && (
-                  <button type="button" onClick={() => setSelectedLandmark(model)} className="border-l border-slate-700/60 px-2 py-1 text-emerald-400 hover:bg-slate-800" title="Xem mô hình 3D">3D</button>
+                  <button type="button" onClick={() => setSelectedLandmark(model)} className="border-l border-slate-700/60 px-2 py-1 text-emerald-400 hover:bg-slate-800" title="3D">3D</button>
                 )}
               </span>
             )
@@ -153,13 +157,13 @@ export function Map3DPage() {
         </div>
       )}
 
-      {selectedLandmark.startsWith("meshy-") && <p className="bg-amber-50 px-4 py-2 text-sm text-amber-900">Mô hình do AI tạo · Hình dáng có thể khác công trình thực tế.</p>}
+      {selectedLandmark.startsWith("meshy-") && <p className="bg-amber-50 px-4 py-2 text-sm text-amber-900">{t('map3d.modelCalibrating')}</p>}
 
       {/* Main 3D Canvas Area */}
       <div className="flex-1 w-full relative min-h-[680px]">
         {selectedLandmark === 'gyeongbokgung' && !walkOpen && (
           <button type="button" onClick={() => setWalkOpen(true)} className="absolute right-4 top-4 z-30 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg hover:bg-emerald-400">
-            Đi bộ trong cung điện
+            {t('map3d.walkthroughPalace')}
           </button>
         )}
         <Map3DLandmarkViewer

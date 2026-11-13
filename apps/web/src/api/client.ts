@@ -1,8 +1,15 @@
 import axios from 'axios'
-import { t } from '../i18n'
+import { t, getLocale, type Locale } from '../i18n'
 import type { AuthUser, MfaChallenge, MfaSetup, MfaStatus, Booking, ChatMessageRequest, ChatReply, ChatServiceStatus, CollaborationInviteSnapshot, CreateCollaborationInviteResponse, Experience, GeocodeResponse, GoogleOAuthStatus, Itinerary, OwnerCollaborationProposals, PlanPreview, PlanRequest, POI, POIDetail, RoutingCapabilities, SessionInfo } from '../types'
 
 export const api = axios.create({ baseURL: '/api', timeout: 30000, withCredentials: true })
+
+api.interceptors.request.use((config) => {
+  const locale = getLocale()
+  config.headers = config.headers || {}
+  config.headers['Accept-Language'] = locale === 'en' ? 'en-US,en;q=0.9' : 'vi-VN,vi;q=0.9,en;q=0.8'
+  return config
+})
 
 export type LocationContext = {
   coordinates: { latitude: number; longitude: number }
@@ -445,7 +452,7 @@ function weakPasswordMessage(serverMessage: string): string {
   return reasons.length ? `${t('password.weak')}: ${reasons.join('; ')}.` : t('password.weak')
 }
 
-export function apiErrorMessage(error: unknown, locale: 'vi' | 'en' = 'vi'): string {
+export function apiErrorMessage(error: unknown, locale: Locale = getLocale()): string {
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { error?: { message?: string; code?: string; diagnostics?: {
       reason_codes?: string[]

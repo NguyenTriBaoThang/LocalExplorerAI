@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage, getSharedItinerary, claimTicket } from '../api/client'
 import { useAuth } from '../auth'
 import { MapAdapter, LEG_COLORS, type MapPoint } from '../components/map/MapAdapter'
+import { useTranslation } from '../i18n'
 import type { Itinerary } from '../types'
 
 export function SharedItineraryPage() {
@@ -10,7 +11,7 @@ export function SharedItineraryPage() {
   const token = rawToken.split('[')[0].split('(')[0].replace(/[\]\)]+$/, '').trim()
 
   const { user, setUser, refresh } = useAuth()
-  // The chat bot's link carries a single-use ?claim= secret. The public share token alone can only be *viewed*.
+  const { t, formatCurrency, formatDate, formatTime, formatDistance, formatDuration } = useTranslation()
   const [searchParams] = useSearchParams()
   const claimToken = searchParams.get('claim') ?? ''
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
@@ -21,7 +22,7 @@ export function SharedItineraryPage() {
   // Claim form state
   const [claimEmail, setClaimEmail] = useState(user?.email ?? '')
   const [claimPassword, setClaimPassword] = useState('')
-  const [claimName, setClaimName] = useState('')
+  const [claimName, setClaimName] = useState(user?.display_name ?? '')
   const [claimLoading, setClaimLoading] = useState(false)
   const [claimSuccess, setClaimSuccess] = useState(false)
   const [claimError, setClaimError] = useState('')
@@ -35,12 +36,12 @@ export function SharedItineraryPage() {
         setError('')
       })
       .catch(() => {
-        setError('Mã vé không tồn tại hoặc liên kết chia sẻ đã hết hạn.')
+        setError(t('shared.notFoundDesc'))
       })
       .finally(() => {
         setLoading(false)
       })
-  }, [token])
+  }, [token, t])
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href)
@@ -58,15 +59,15 @@ export function SharedItineraryPage() {
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!claimEmail || !claimPassword) {
-      setClaimError('Vui lòng điền đầy đủ email và mật khẩu.')
+      setClaimError(t('shared.errorEmptyFields'))
       return
     }
     if (!claimToken) {
-      setClaimError('Liên kết nhận vé không hợp lệ. Hãy mở lại liên kết từ tin nhắn của bot.')
+      setClaimError(t('shared.errorInvalidToken'))
       return
     }
     if (claimPassword.length < 12) {
-      setClaimError('Mật khẩu tối thiểu 12 ký tự (nếu email đã có tài khoản, nhập mật khẩu hiện tại của bạn).')
+      setClaimError(t('shared.errorPasswordLength'))
       return
     }
 
@@ -107,8 +108,8 @@ export function SharedItineraryPage() {
     return (
       <div className="page-wrap" style={{ textAlign: 'center', paddingTop: 80 }}>
         <div className="loader-orbit" style={{ margin: '0 auto 20px' }} />
-        <h2>Đang kiểm tra & kích hoạt Vé Smart Travel Pass…</h2>
-        <p style={{ color: '#94a3b8' }}>Mã vé: {token}</p>
+        <h2>{t('shared.activatingPass')}</h2>
+        <p style={{ color: '#94a3b8' }}>{t('shared.passCode', { token })}</p>
       </div>
     )
   }
@@ -117,12 +118,12 @@ export function SharedItineraryPage() {
     return (
       <div className="page-wrap" style={{ textAlign: 'center', paddingTop: 60, maxWidth: 600, margin: '0 auto' }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎟️</div>
-        <h1 style={{ fontSize: 24, marginBottom: 12 }}>{error || 'Không tìm thấy vé'}</h1>
+        <h1 style={{ fontSize: 24, marginBottom: 12 }}>{error || t('shared.notFound')}</h1>
         <p style={{ color: '#94a3b8', marginBottom: 24 }}>
-          Mã vé này có thể đã hết hiệu lực hoặc chưa được tạo đúng. Bạn có thể lên lịch trình mới ngay lập tức.
+          {t('shared.notFoundDesc')}
         </p>
         <Link to="/planner" className="btn-primary" style={{ display: 'inline-block', padding: '10px 24px' }}>
-          Tự thiết kế lịch trình mới
+          {t('shared.designNewTrip')}
         </Link>
       </div>
     )
@@ -156,10 +157,10 @@ export function SharedItineraryPage() {
               <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{token}</span>
             </div>
             <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px', color: '#f8fafc' }}>
-              Vé Khám Phá Điện Tử Sài Gòn
+              {t('shared.passTitle')}
             </h1>
             <p style={{ color: '#94a3b8', margin: 0, fontSize: 14 }}>
-              Lịch trình cá nhân hóa đồng bộ trực tiếp từ trợ lý Zalo Bot Local Explorer
+              {t('shared.passSubtitle')}
             </p>
           </div>
 
@@ -181,7 +182,7 @@ export function SharedItineraryPage() {
                 gap: 6,
               }}
             >
-              <span>{copied ? '✅ Đã chép link' : '🔗 Chia sẻ vé'}</span>
+              <span>{copied ? t('shared.copiedPass') : t('shared.sharePass')}</span>
             </button>
             <button
               type="button"
@@ -201,7 +202,7 @@ export function SharedItineraryPage() {
                 gap: 6,
               }}
             >
-              🗺️ Xem Bản Đồ Lộ Trình
+              {t('shared.viewRouteMap')}
             </button>
           </div>
         </div>
@@ -218,38 +219,38 @@ export function SharedItineraryPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Trạng thái</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{t('shared.status')}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#34d399' }} />
-              Đã xác nhận
+              {t('shared.statusConfirmed')}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Điểm dừng</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{t('shared.stops')}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
-              {itinerary.stops.length} trải nghiệm
+              {t('shared.stopsCount', { count: itinerary.stops.length })}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Dự toán chi phí</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{t('shared.budgetEstimate')}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#38bdf8' }}>
-              {itinerary.estimated_cost_vnd.toLocaleString('vi-VN')} ₫
+              {formatCurrency(itinerary.estimated_cost_vnd)}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Thời gian di chuyển</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{t('shared.travelTime')}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
-              ~{itinerary.total_travel_min} phút
+              {t('shared.approxMinutes', { count: itinerary.total_travel_min })}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Thời gian khởi hành</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{t('shared.startTime')}</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#f8fafc' }}>
-              {startDate.toLocaleDateString('vi-VN')} · {startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              {formatDate(startDate)} · {formatTime(startDate)}
             </div>
           </div>
         </div>
@@ -270,11 +271,11 @@ export function SharedItineraryPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{ fontSize: 20 }}>✨</span>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#60a5fa' }}>
-              Lưu vé vào tài khoản để mở mọi lúc
+              {t('shared.saveToAccount')}
             </h3>
           </div>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
-            Nhập email và mật khẩu để lưu vé này vào tài khoản. Nếu email đã có tài khoản, hãy nhập mật khẩu hiện tại của bạn. Với tài khoản mới, bạn sẽ nhận email xác minh để có thể giữ chỗ và thanh toán.
+            {t('shared.saveToAccountDesc')}
           </p>
 
           {claimError && (
@@ -285,11 +286,11 @@ export function SharedItineraryPage() {
 
           <form onSubmit={handleClaim} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, alignItems: 'flex-end' }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>Email của bạn *</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>{t('shared.email')}</label>
               <input
                 type="email"
                 required
-                placeholder="vidu@gmail.com"
+                placeholder="example@gmail.com"
                 value={claimEmail}
                 onChange={(e) => setClaimEmail(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13 }}
@@ -297,11 +298,11 @@ export function SharedItineraryPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>Mật khẩu * (≥ 12 ký tự cho tài khoản mới)</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>{t('shared.password')}</label>
               <input
                 type="password"
                 required
-                placeholder="Tối thiểu 12 ký tự"
+                placeholder={t('shared.passwordPlaceholder')}
                 value={claimPassword}
                 onChange={(e) => setClaimPassword(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13 }}
@@ -309,10 +310,10 @@ export function SharedItineraryPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>Tên của bạn (Tùy chọn)</label>
+              <label style={{ display: 'block', fontSize: 12, color: '#cbd5e1', marginBottom: 4 }}>{t('shared.nameOptional')}</label>
               <input
                 type="text"
-                placeholder="Tên du khách"
+                placeholder={t('shared.namePlaceholder')}
                 value={claimName}
                 onChange={(e) => setClaimName(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13 }}
@@ -340,7 +341,7 @@ export function SharedItineraryPage() {
                   gap: 6,
                 }}
               >
-                {claimLoading ? 'Đang tạo tài khoản...' : '💾 Lưu Vé Vào Tài Khoản'}
+                {claimLoading ? t('shared.savingAccount') : t('shared.savePassBtn')}
               </button>
             </div>
           </form>
@@ -364,15 +365,15 @@ export function SharedItineraryPage() {
             <span style={{ fontSize: 20 }}>🎉</span>
             <div>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#34d399' }}>
-                Vé đã được liên kết với tài khoản: {user?.display_name || user?.email}
+                {t('shared.linkedNotice', { user: user?.display_name || user?.email || '' })}
               </span>
               <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-                Bạn có thể mở và quản lý lịch trình này mọi lúc trong mục Chuyến đi của tôi.
+                {t('shared.manageAnytime')}
               </p>
             </div>
           </div>
           <Link to="/planner" style={{ fontSize: 13, color: '#60a5fa', textDecoration: 'none', fontWeight: 600 }}>
-            Xem danh sách hành trình →
+            {t('shared.viewMyTrips')}
           </Link>
         </div>
       ) : null}
@@ -381,10 +382,10 @@ export function SharedItineraryPage() {
       <div id="ticket-map" style={{ marginBottom: 36 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>🗺️</span> Bản đồ hành trình chuyên biệt ({itinerary.stops.length} điểm dừng)
+            <span>🗺️</span> {t('shared.dedicatedMap', { count: itinerary.stops.length })}
           </h2>
           <span style={{ fontSize: 12, color: '#38bdf8', fontWeight: 600 }}>
-            ● Lộ trình tối ưu hoá theo thời gian thực
+            ● {t('shared.realtimeOptimized')}
           </span>
         </div>
 
@@ -402,7 +403,7 @@ export function SharedItineraryPage() {
       {/* Stops Timeline */}
       <div style={{ marginBottom: 40 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>📍</span> Chi tiết các điểm dừng trong hành trình
+          <span>📍</span> {t('shared.stopDetails')}
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -428,7 +429,7 @@ export function SharedItineraryPage() {
                   >
                     <div style={{ width: 2, height: 24, background: 'rgba(255,255,255,0.15)', margin: '0 16px' }} />
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.05)', padding: '2px 10px', borderRadius: 12 }}>
-                      🚗 Di chuyển ~{routeLeg.duration_min} phút ({Math.round(routeLeg.distance_m / 100) / 10} km)
+                      {t('shared.travelLeg', { duration: formatDuration(routeLeg.duration_min), distance: formatDistance(routeLeg.distance_m) })}
                     </span>
                   </div>
                 )}
@@ -497,11 +498,11 @@ export function SharedItineraryPage() {
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 12, color: '#cbd5e1' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>🕒</span> {stopStart.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {stopEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({stop.duration_min} phút)
+                        <span>🕒</span> {formatTime(stopStart)} - {formatTime(stopEnd)} ({formatDuration(stop.duration_min)})
                       </span>
 
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#34d399', fontWeight: 600 }}>
-                        <span>💵</span> {stop.cost_vnd ? `${stop.cost_vnd.toLocaleString('vi-VN')} ₫` : 'Miễn phí'}
+                        <span>💵</span> {stop.cost_vnd ? formatCurrency(stop.cost_vnd) : t('common.free')}
                       </span>
                     </div>
                   </div>
